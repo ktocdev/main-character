@@ -1,0 +1,18 @@
+# Environment
+.env
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Data (local-only)
+chroma_data/
+journal_entries/
+entity_graph/
+summaries/
+
+# IDE
+.vscode/
+.idea/
