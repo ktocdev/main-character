@@ -16,6 +16,8 @@ Usage:
     Options:
         --dry-run       Preview what would be imported without storing anything
         --filter TEXT   Only import conversations whose title contains TEXT
+        --ids FILE      Only import conversations whose UUID matches a line in FILE
+                        (full UUIDs or 8-char prefixes; extra text per line is ignored)
         --min-length N  Skip user messages shorter than N characters (default: 100)
         --summaries     Prioritize conversations that look like summaries
 """
@@ -115,6 +117,24 @@ def extract_user_entries(conversation: dict) -> list[dict]:
         "uuid": conv_uuid,
         "message_count": len(user_messages),
     }]
+
+
+def load_id_list(filepath: str) -> list[str]:
+    """
+    Load conversation UUID prefixes from a file, one per line.
+
+    Lenient parsing: grabs the first hex-looking token (8+ chars) on each
+    line, so a pasted list like "831adaf5 — journal chat (Dec 22)" works
+    as-is. Lines with no hex token are ignored.
+    """
+    import re
+    prefixes = []
+    with open(filepath, "r", encoding="utf-8") as f:
+        for line in f:
+            match = re.search(r"\b[0-9a-f]{8,}\b", line.lower())
+            if match:
+                prefixes.append(match.group(0))
+    return prefixes
 
 
 def is_likely_summary(conversation: dict) -> bool:
@@ -237,8 +257,9 @@ def import_entry(entry: dict, collection, dry_run: bool = False) -> dict:
     # Also save raw text to disk
     JOURNAL_DIR.mkdir(exist_ok=True)
     safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in title)[:50]
-    filepath = JOURNAL_DIR / f"{date}_{safe_title}.md"
-    with open(filepath, "w") as f:
+    chunk_suffix = f"_part{chunk_idx + 1}" if chunk_idx else ""
+    filepath = JOURNAL_DIR / f"{date}_{safe_title}{chunk_suffix}.md"
+    with open(filepath, "w", encoding="utf-8") as f:
         f.write(f"# {title}\n_Date: {date}_\n\n{text}")
 
     return {
@@ -253,6 +274,7 @@ def run_import(
     filepath: str,
     dry_run: bool = False,
     filter_text: str = None,
+    ids_file: str = None,
     min_length: int = 100,
     summaries_only: bool = False,
 ):
@@ -279,6 +301,23 @@ def run_import(
             if filter_text.lower() in (c.get("name", "") or "").lower()
         ]
         print(f"  After filter '{filter_text}': {len(conversations)} conversations\n")
+
+    if ids_file:
+        prefixes = load_id_list(ids_file)
+        conversations = [
+            c for c in conversations
+            if any((c.get("uuid", "") or "").lower().startswith(p) for p in prefixes)
+        ]
+        print(f"  ID list: {len(prefixes)} IDs -> matched {len(conversations)} conversations")
+        if len(conversations) < len(prefixes):
+            matched_prefixes = {
+                p for p in prefixes
+                if any((c.get("uuid", "") or "").lower().startswith(p) for c in conversations)
+            }
+            for p in prefixes:
+                if p not in matched_prefixes:
+                    print(f"    WARNING: no conversation found for ID {p}")
+        print()
 
     # Tag summaries
     summary_count = 0
@@ -359,6 +398,7 @@ if __name__ == "__main__":
     parser.add_argument("filepath", help="Path to conversations.json from Claude export")
     parser.add_argument("--dry-run", action="store_true", help="Preview without importing")
     parser.add_argument("--filter", type=str, default=None, help="Only import conversations with this text in the title")
+    parser.add_argument("--ids", type=str, default=None, help="Path to a file of conversation UUIDs (one per line, prefixes OK)")
     parser.add_argument("--min-length", type=int, default=100, help="Skip messages shorter than N chars (default: 100)")
     parser.add_argument("--summaries", action="store_true", help="Only import detected summaries")
 
@@ -372,6 +412,7 @@ if __name__ == "__main__":
         filepath=args.filepath,
         dry_run=args.dry_run,
         filter_text=args.filter,
+        ids_file=args.ids,
         min_length=args.min_length,
         summaries_only=args.summaries,
     )
