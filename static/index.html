@@ -46,8 +46,7 @@
   .tab { flex: 1; display: none; flex-direction: column; overflow: hidden; }
   .tab.active { display: flex; }
 
-  /* Chat */
-  #log { flex: 1; overflow-y: auto; padding: 1.5rem; max-width: 46rem; margin: 0 auto; width: 100%; }
+  /* Conversation */
   .msg { margin-bottom: 1.4rem; white-space: pre-wrap; }
   .msg.you { color: var(--you); }
   .msg.you::before { content: "you"; }
@@ -77,10 +76,11 @@
   }
 
   /* Write */
-  #write { padding: 1.5rem; max-width: 46rem; margin: 0 auto; width: 100%; overflow-y: auto; }
-  #write h2, #entities-pane h2 { font-weight: normal; font-style: italic; font-size: 1.05rem; color: var(--text-dim); margin-bottom: 1rem; }
-  #entry-text { min-height: 14rem; margin-bottom: .8rem; }
-  #entry-response { margin-top: 1.5rem; white-space: pre-wrap; }
+  #entities-pane h2 { font-weight: normal; font-style: italic; font-size: 1.05rem; color: var(--text-dim); margin-bottom: 1rem; }
+  #write-log { flex: 1; overflow-y: auto; padding: 1.5rem; max-width: 46rem; margin: 0 auto; width: 100%; }
+  .write-composer { flex-direction: column; gap: .5rem; }
+  #entry-text { min-height: 5.5rem; }
+  .write-controls { display: flex; align-items: center; gap: .6rem; }
   .saved-note { font: .8rem system-ui, sans-serif; color: var(--accent-dim); margin-left: 1rem; }
 
   /* Entities */
@@ -250,6 +250,29 @@
     margin-left: .8rem; cursor: pointer;
   }
 
+  /* History (sessions) */
+  #history-pane { flex: 1; display: flex; overflow: hidden; }
+  #session-list { width: 19rem; border-right: 1px solid var(--border); overflow-y: auto; padding: 1rem .8rem; flex-shrink: 0; }
+  .session-item {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    border-radius: 8px; padding: .5rem .6rem; cursor: pointer; color: var(--text);
+    font: .88rem system-ui, sans-serif; margin-bottom: .15rem;
+  }
+  .session-item:hover, .session-item.sel { background: var(--bg-input); }
+  .session-item .dates { display: block; font-size: .72rem; color: var(--text-dim); margin-top: .1rem; }
+  .session-item.open .dates { color: var(--accent); }
+  .session-item.open .dates::before { content: "● "; }
+  #session-view { flex: 1; overflow-y: auto; padding: 1.5rem; }
+  #session-view-inner { max-width: 46rem; margin: 0 auto; }
+  .session-head { display: flex; align-items: baseline; gap: .8rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
+  .session-head h2 { font-style: italic; font-weight: normal; font-size: 1.05rem; color: var(--accent); }
+  .session-head .dates { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  .session-part-label {
+    font: .7rem system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent-dim); margin: 1.1rem 0 .3rem;
+  }
+  .session-part { white-space: pre-wrap; color: var(--you); margin-bottom: 1.4rem; font-size: .95rem; }
+
   /* Help */
   #help { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
   #help h2 { font-style: italic; font-weight: normal; font-size: 1.15rem; color: var(--accent); margin: 1.6rem 0 .8rem; }
@@ -272,42 +295,34 @@
   <h1>journal</h1>
   <span class="status" id="status"></span>
   <nav>
-    <button data-tab="chat" class="active">chat</button>
-    <button data-tab="write">write</button>
+    <button data-tab="write" class="active">write</button>
     <button data-tab="entities">entities</button>
     <button data-tab="categories">categories</button>
     <button data-tab="patterns">patterns</button>
     <button data-tab="dreams">dreams</button>
+    <button data-tab="history">history</button>
     <button data-tab="triage">triage</button>
     <button data-tab="help">help</button>
     <button class="quiet" id="undo-btn" title="undo last entity change">↺</button>
     <button class="quiet" id="redo-btn" title="redo">↻</button>
     <button class="quiet" id="refresh-summaries" title="regenerate the weekly arc + status snapshot after new entries">refresh memory</button>
-    <button class="quiet" id="reset" title="start a fresh conversation">new chat</button>
+    <button class="quiet" id="reset" title="the summarize point — close this chat (your side becomes a journal entry, memory updates in the background) and start a fresh one">close chat</button>
   </nav>
 </header>
 <main>
-  <section class="tab active" id="tab-chat">
-    <div id="log"></div>
-    <div class="composer">
-      <textarea id="chat-text" rows="2" placeholder="ask about your journal…"></textarea>
-      <button class="quiet" id="reflect-btn" title="let the companion open — it connects a dot or two across time">reflect</button>
-      <button class="send" id="chat-send">send</button>
-    </div>
-  </section>
-
-  <section class="tab" id="tab-write">
-    <div id="write">
-      <h2>new entry</h2>
-      <textarea id="entry-text" placeholder="write freely…"></textarea>
-      <div>
-        <button class="send" id="entry-send">save entry</button>
+  <section class="tab active" id="tab-write">
+    <div id="write-log"></div>
+    <div class="composer write-composer">
+      <textarea id="entry-text" rows="4" placeholder="write freely, or ask about your journal…"></textarea>
+      <div class="write-controls">
+        <button class="send" id="entry-send" title="save as a journal entry (markdown backup now, journal memory at close)">save entry</button>
+        <button class="send" id="chat-send" title="say or ask something — part of the chat, not a journal entry">send</button>
         <label class="dream-flag" title="stored in the dream realm — never mixes into waking-life memory">
           <input type="checkbox" id="entry-dream"> this was a dream
         </label>
+        <button class="quiet" id="reflect-btn" title="let the companion open — it connects a dot or two across time">reflect</button>
         <span class="saved-note" id="entry-saved"></span>
       </div>
-      <div id="entry-response" class="msg companion" style="display:none"></div>
     </div>
   </section>
 
@@ -352,6 +367,25 @@
     </div>
   </section>
 
+  <section class="tab" id="tab-history">
+    <div id="history-pane">
+      <div id="session-list">
+        <div id="session-list-items"></div>
+      </div>
+      <div id="session-view">
+        <div id="session-view-inner">
+          <div class="session-head">
+            <h2 id="session-title"></h2>
+            <span class="dates" id="session-dates"></span>
+            <button class="quiet" id="session-close-btn" style="display:none"
+              title="the summarize point — your side of this chat becomes a journal entry and a fresh chat opens">summarize &amp; start new chat</button>
+          </div>
+          <div id="session-body"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="tab" id="tab-triage">
     <div id="triage">
       <div id="triage-progress"></div>
@@ -380,6 +414,21 @@
 
   <section class="tab" id="tab-help">
     <div id="help">
+      <h2>chats &amp; the summarize point</h2>
+      <p>One chat stays open for as long as it feels right — about a week in practice. Everything
+      happens in <em>write</em>: journal entries (<b>save entry</b>), questions and follow-ups
+      (<b>send</b>), and the companion's replies, all in one conversation. It survives refreshes
+      and server restarts.</p>
+      <p>When a chat feels finished, hit <b>close chat</b> (nav) or <b>summarize &amp; start new chat</b>
+      (history tab). That's the <em>summarize point</em>: your side of the chat becomes a journal
+      entry — the same shape as your imported conversations — and tagging, entity extraction,
+      summaries, and dream scanning all run in the background. A fresh empty chat opens.</p>
+      <p>The <em>history</em> tab lands on the open chat — including the imported conversation it
+      continues — with every past chat in the sidebar, one open at a time. Until you close a chat,
+      its entries live only in the conversation itself, not yet in long-term memory; closing is
+      what commits them. Dream-flagged entries are the exception: they go straight to the dream
+      realm and never enter waking memory.</p>
+
       <h2>curation workflow — the efficient order</h2>
 
       <div class="help-step">
@@ -424,15 +473,13 @@
 
       <div class="help-step">
         <h3><span class="step-n">5</span> ongoing habit</h3>
-        <p>After journaling, the light refresh is now <em>automatic</em> — each saved entry tags
-        itself, updates the week's arc, its own summary, and the status snapshot in the background.
-        <em>refresh memory</em> is still worth an occasional press: it also regenerates the
-        <em>domain documents</em> (the per-category living docs), which the automatic pass skips to
-        keep costs down — and <em>detect patterns</em> in the patterns tab re-reads everything for
-        new recurring shapes. New entries create new entities that arrive <em>unreviewed</em>, so an
-        occasional minute in triage keeps the graph clean forever. You never redo work — reviewed
-        marks persist, and category fixes (× a wrong tag in the categories tab) stick the same way
-        entity merges do.</p>
+        <p>Memory now updates at the <em>summarize point</em> — closing a chat tags it, extracts
+        its entities, refreshes the week's arc, its summary, the domain documents, and the status
+        snapshot, and scans it for dreams, all in the background. <em>detect patterns</em> in the
+        patterns tab still re-reads everything for new recurring shapes when you ask. Closed chats
+        create new entities that arrive <em>unreviewed</em>, so an occasional minute in triage keeps
+        the graph clean forever. You never redo work — reviewed marks persist, and category fixes
+        (× a wrong tag in the categories tab) stick the same way entity merges do.</p>
       </div>
 
       <h2>which fix do i want?</h2>
@@ -508,17 +555,20 @@ const $ = id => document.getElementById(id);
 let entities = {}, selected = null;
 
 // ---- tabs ----
-let activeTab = 'chat';
+let activeTab = 'write';
+loadWriteLog();  // restore the open session on page load
 document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button[data-tab]').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
   b.classList.add('active');
   activeTab = b.dataset.tab;
   $('tab-' + activeTab).classList.add('active');
+  if (activeTab === 'write' && !$('entry-send').disabled) loadWriteLog();
   if (activeTab === 'entities') loadEntities();
   if (activeTab === 'categories') loadCategories();
   if (activeTab === 'patterns') loadPatterns();
   if (activeTab === 'dreams') loadDreams();
+  if (activeTab === 'history') loadHistory();
   if (activeTab === 'triage') startTriage();
 });
 
@@ -529,13 +579,13 @@ async function refreshStatus() {
 }
 refreshStatus();
 
-// ---- chat ----
+// ---- conversation helpers ----
 function addMsg(cls, text) {
   const d = document.createElement('div');
   d.className = 'msg ' + cls;
   d.textContent = text;
-  $('log').appendChild(d);
-  $('log').scrollTop = $('log').scrollHeight;
+  $('write-log').appendChild(d);
+  $('write-log').scrollTop = $('write-log').scrollHeight;
   return d;
 }
 
@@ -553,37 +603,47 @@ async function streamInto(el, url, payload) {
     const {done, value} = await reader.read();
     if (done) break;
     el.textContent += dec.decode(value, {stream: true});
-    if (el.closest('#log')) $('log').scrollTop = $('log').scrollHeight;
+    if (el.closest('#write-log')) $('write-log').scrollTop = $('write-log').scrollHeight;
   }
   return res;
 }
 
-async function sendChat() {
-  const text = $('chat-text').value.trim();
+function composerBusy(busy) {
+  $('chat-send').disabled = busy;
+  $('entry-send').disabled = busy;
+  $('reflect-btn').disabled = busy;
+}
+
+$('chat-send').onclick = async () => {
+  const text = $('entry-text').value.trim();
   if (!text) return;
-  $('chat-text').value = '';
-  $('chat-send').disabled = true;
+  $('entry-text').value = '';
+  composerBusy(true);
   addMsg('you', text);
   const el = addMsg('companion thinking', '…');
   try { await streamInto(el, '/api/chat', {message: text}); }
-  finally { $('chat-send').disabled = false; $('chat-text').focus(); }
-}
-$('chat-send').onclick = sendChat;
+  finally { composerBusy(false); $('entry-text').focus(); }
+};
+
 $('reflect-btn').onclick = async () => {
-  const b = $('reflect-btn');
-  b.disabled = true;
-  $('chat-send').disabled = true;
+  composerBusy(true);
   const el = addMsg('companion thinking', '…');
   try { await streamInto(el, '/api/reflect', {}); }
-  finally { b.disabled = false; $('chat-send').disabled = false; $('chat-text').focus(); }
+  finally { composerBusy(false); $('entry-text').focus(); }
 };
-$('chat-text').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
-});
-$('reset').onclick = async () => {
-  await fetch('/api/reset', {method: 'POST'});
-  $('log').innerHTML = '';
-};
+
+$('reset').onclick = closeSession;
+
+async function closeSession() {
+  if (!confirm('Close this chat?\n\nYour side of it becomes a journal entry — tagging, entities, summaries, and dream extraction run in the background. A fresh chat starts empty.')) return;
+  const r = await api('/api/sessions/close', {});
+  if (!r) return;
+  $('write-log').innerHTML = '';
+  $('entry-saved').textContent = `chat closed — saved as "${r.title}"`;
+  sessionSel = 'current';
+  if (activeTab === 'history') await loadHistory();
+  refreshStatus();
+}
 
 $('refresh-summaries').onclick = async () => {
   const b = $('refresh-summaries');
@@ -597,25 +657,51 @@ $('refresh-summaries').onclick = async () => {
   }
 };
 
-// ---- write ----
+// ---- write (the one conversation surface) ----
+// A chat over the current journal cluster: everything the open session
+// contains (the chat it continues + entries + replies) scrolls above,
+// the composer stays at the bottom, newest message right above it.
+async function loadWriteLog() {
+  const el = $('write-log');
+  el.innerHTML = '';
+  try {
+    // one-time migration: the chat an older version of this page kept
+    // in localStorage joins the open session on the server
+    const old = localStorage.getItem('rag_chat');
+    if (old) {
+      try {
+        await fetch('/api/sessions/seed', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({messages: JSON.parse(old)}),
+        });
+      } catch (e) { }
+      localStorage.removeItem('rag_chat');
+    }
+    const r = await (await fetch('/api/sessions/current')).json();
+    for (const p of r.parts) renderSessionPart(el, p);
+    addSessionBraid(el, r.messages);
+    el.scrollTop = el.scrollHeight;
+  } catch (e) { }
+}
+
 $('entry-send').onclick = async () => {
   const text = $('entry-text').value.trim();
   if (!text) return;
-  $('entry-send').disabled = true;
+  composerBusy(true);
   $('entry-saved').textContent = 'saving…';
-  const el = $('entry-response');
-  el.style.display = 'block';
-  el.classList.add('thinking');
-  el.textContent = '…';
+  addMsg('you', text);
+  const el = addMsg('companion thinking', '…');
   try {
     const dream = $('entry-dream').checked;
     const res = await streamInto(el, '/api/entry', {text, dream});
     const id = res.headers.get('X-Entry-Id');
-    $('entry-saved').textContent = id ? `saved${dream ? ' to the dream realm' : ''} (${id})` : 'saved';
+    $('entry-saved').textContent = dream
+      ? (id ? `saved to the dream realm (${id})` : 'saved')
+      : 'entry saved — becomes journal memory when you close the chat';
     $('entry-text').value = '';
     $('entry-dream').checked = false;
     refreshStatus();
-  } finally { $('entry-send').disabled = false; }
+  } finally { composerBusy(false); $('entry-text').focus(); }
 };
 
 // ---- dreams ----
@@ -673,6 +759,133 @@ $('dream-extract').onclick = async () => {
     setTimeout(() => { b.textContent = 'extract dreams from history'; b.disabled = false; }, 4000);
   }
 };
+
+// ---- history (sessions) ----
+// The landing view is the open chat: the conversation it continues, the
+// journal entries, the companion's replies, and every follow-up — one
+// braid. Older chats live in the sidebar, one open at a time.
+let sessionIndex = null, sessionSel = 'current';
+
+async function loadHistory() {
+  sessionIndex = await (await fetch('/api/sessions')).json();
+  renderSessionList();
+  await showSession(sessionSel);
+}
+
+function renderSessionList() {
+  const el = $('session-list-items');
+  el.innerHTML = '';
+  const mk = (key, title, dates, open) => {
+    const b = document.createElement('button');
+    b.className = 'session-item' + (sessionSel === key ? ' sel' : '') + (open ? ' open' : '');
+    const t = document.createElement('span');
+    t.textContent = title;
+    const d = document.createElement('span');
+    d.className = 'dates';
+    d.textContent = dates;
+    b.append(t, d);
+    b.onclick = () => { sessionSel = key; renderSessionList(); showSession(key); };
+    el.appendChild(b);
+  };
+  const cur = sessionIndex.current;
+  mk('current',
+     cur.title || 'new chat',
+     `open · ${cur.message_count} message${cur.message_count === 1 ? '' : 's'}`,
+     true);
+  for (const s of sessionIndex.sessions) {
+    const key = s.kind === 'archive' ? 'a:' + s.id : 'c:' + JSON.stringify([s.date, s.title]);
+    mk(key, s.title || '(untitled)', s.start === s.end ? s.start : `${s.start} → ${s.end}`, false);
+  }
+}
+
+function addSessionPart(container, label, text) {
+  const l = document.createElement('div');
+  l.className = 'session-part-label';
+  l.textContent = label;
+  const t = document.createElement('div');
+  t.className = 'session-part';
+  t.textContent = text;
+  container.append(l, t);
+}
+
+// a part with both sides (backfilled from the Claude export) renders as
+// an interleaved chat; otherwise the flat user-side text
+function renderSessionPart(container, p) {
+  const label = `${p.date} — ${p.title}`;
+  if (p.messages) {
+    const l = document.createElement('div');
+    l.className = 'session-part-label';
+    l.textContent = label;
+    container.appendChild(l);
+    addSessionBraid(container, p.messages);
+  } else {
+    addSessionPart(container, label, p.text);
+  }
+}
+
+function addSessionBraid(container, msgs) {
+  for (const m of msgs) {
+    const d = document.createElement('div');
+    d.className = 'msg ' + (m.role === 'you' ? 'you' : 'companion');
+    d.textContent = m.text;
+    if (m.dream) d.title = 'dream entry — lives in the dream realm';
+    container.appendChild(d);
+  }
+}
+
+async function showSession(key) {
+  const body = $('session-body');
+  body.textContent = 'loading…';
+  $('session-close-btn').style.display = 'none';
+
+  if (key === 'current') {
+    const r = await (await fetch('/api/sessions/current')).json();
+    if (sessionSel !== 'current') return;
+    $('session-title').textContent = r.parts.length ? r.parts[0].title : 'current chat';
+    $('session-dates').textContent = 'open since ' + r.started;
+    body.innerHTML = '';
+    for (const p of r.parts) renderSessionPart(body, p);
+    addSessionBraid(body, r.messages);
+    if (!r.parts.length && !r.messages.length) {
+      body.textContent = 'nothing here yet — chat or write to begin.';
+    } else {
+      $('session-close-btn').style.display = 'inline-block';
+    }
+
+  } else if (key.startsWith('a:')) {
+    const r = await (await fetch('/api/sessions/archive?id=' + encodeURIComponent(key.slice(2)))).json();
+    if (sessionSel !== key) return;
+    if (r.error) { body.textContent = r.error; return; }
+    $('session-title').textContent = r.title;
+    $('session-dates').textContent = `${r.started} → closed ${r.closed}`;
+    body.innerHTML = '';
+    for (const p of r.parts) {
+      if (p.text || p.messages) renderSessionPart(body, p);
+    }
+    addSessionBraid(body, r.messages);
+
+  } else {
+    const [date, title] = JSON.parse(key.slice(2));
+    const r = await (await fetch(
+      `/api/entry?date=${encodeURIComponent(date)}&title=${encodeURIComponent(title)}`
+    )).json();
+    if (sessionSel !== key) return;
+    if (r.error) { body.textContent = r.error; return; }
+    $('session-title').textContent = r.title || '(untitled)';
+    $('session-dates').textContent = r.date;
+    body.innerHTML = '';
+    if (r.summary) {
+      const s = document.createElement('div');
+      s.className = 'cat-summary';
+      s.textContent = r.summary;
+      body.appendChild(s);
+    }
+    if (r.messages) addSessionBraid(body, r.messages);
+    else addSessionPart(body, 'your side of this chat (imported)', r.text);
+  }
+}
+
+$('session-close-btn').onclick = closeSession;
 
 // ---- entities ----
 async function loadEntities() {
