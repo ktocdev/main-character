@@ -20,6 +20,7 @@ Layout (all gitignored — this is personal data):
 """
 
 import json
+import os
 import re
 import sys
 from collections import defaultdict
@@ -37,7 +38,8 @@ MODEL = "claude-opus-4-8"
 ENTITY_DIR = Path(__file__).parent / "entity_graph"
 RAW_DIR = ENTITY_DIR / "raw"
 CURATION_FILE = ENTITY_DIR / "curation.json"
-MAX_ENTRY_CHARS = 60_000  # cap per-conversation text sent to the API
+SEGMENT_CHARS = 45_000  # long conversations are split, not truncated
+AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 
 EXTRACTION_SCHEMA = {
     "type": "object",
@@ -104,30 +106,39 @@ EXTRACTION_SCHEMA = {
 }
 
 EXTRACTION_PROMPT = """\
-You are building an entity graph from one person's journal. Below is one \
-journal entry (originally a conversation with an AI companion; only the \
-author's side is included), written on {date}.
+You are building an entity graph from one person's journal. The journal \
+author is {author}. Below is one journal entry (originally a conversation \
+with an AI companion; only the author's side is included), written on {date}.
 
 Extract the PEOPLE, PROJECTS, and PLACES that actually appear.
 
 Rules:
-- Do not include the journal author themselves, or the AI companion.
-- Use the name the author uses ("Pip", "Mom", "Wren") — normalize \
-"my mom" to "Mom" but don't invent formal names.
-- Only include people who are actually part of the author's life or story — \
-skip celebrities or public figures mentioned in passing.
-- Projects are ongoing efforts with a name or clear identity (a work project, \
-an app they're building, a creative pursuit). One-off tasks don't count.
-- Places only if they matter to the story (venues, cities visited, home) — \
-not incidental mentions.
-- Observations are short, concrete, dated-to-this-entry facts: what happened, \
-what the author said or felt about the entity. 1-4 per entity, most \
-significant first.
-- If the entry describes a dream, note it in the observation ("in a dream: ...").
+- Never include the author ({author}) themselves — first-person statements \
+are about the author, not an entity. Never include the AI companion.
+- Never include celebrities or public figures, even if discussed at length. \
+Only people the author actually knows or encounters.
+- Use the shortest natural name the author uses ("Pip", "Mom", "Orbit \
+Nuxt"). No descriptive parentheticals, no slashes, no combined names — if \
+two things are mentioned, they are two entities.
+{known_block}- Capture EVERY concrete mention as its own observation — one per distinct \
+fact or event, however minor or recurring (a pet making a mess counts, every \
+time it happens). Short, factual, no editorializing.
+- Projects are ongoing named efforts and pursuits (a work project, an app, \
+a class, a creative pursuit) — including named games, shows, or hobbies the \
+author returns to repeatedly (e.g. a video game they keep playing). One-off \
+tasks don't count.
+- Places are physical locations that matter to the story (venues, bars, \
+cities, homes) — not incidental geography.
+- If something happens in a dream, prefix the observation with "in a dream:".
 
 <journal_entry date="{date}" title="{title}">
 {text}
 </journal_entry>"""
+
+KNOWN_BLOCK = """\
+- These people are already known from earlier entries — when a mention \
+matches one of them, use exactly this spelling: {names}.
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -166,21 +177,59 @@ def conversation_cache_key(conv: dict) -> str:
 # EXTRACTION (one API call per conversation, cached to disk)
 # ---------------------------------------------------------------------------
 
-def extract_conversation(client, conv: dict) -> dict:
-    """Extract entities from one conversation via the Claude API."""
-    text = conv["text"][:MAX_ENTRY_CHARS]
-    prompt = EXTRACTION_PROMPT.format(date=conv["date"], title=conv["title"], text=text)
+def _segments(text: str, size: int = SEGMENT_CHARS) -> list[str]:
+    """Split long text into segments at paragraph boundaries (no truncation)."""
+    if len(text) <= size:
+        return [text]
+    segments, current, length = [], [], 0
+    for para in text.split("\n\n"):
+        if length + len(para) > size and current:
+            segments.append("\n\n".join(current))
+            current, length = [], 0
+        current.append(para)
+        length += len(para) + 2
+    if current:
+        segments.append("\n\n".join(current))
+    return segments
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=8000,
-        output_config={"format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}},
-        messages=[{"role": "user", "content": prompt}],
+
+def known_people_hint() -> list[str]:
+    """Canonical people names from the current index, for name consistency."""
+    index_file = ENTITY_DIR / "index.json"
+    if not index_file.exists():
+        return []
+    index = json.loads(index_file.read_text(encoding="utf-8"))
+    people = sorted(
+        ((i["mentions"], n) for n, i in index.items() if i["type"] == "person"),
+        reverse=True,
     )
-    if response.stop_reason == "refusal":
-        raise RuntimeError("model declined this entry")
-    raw = next(b.text for b in response.content if b.type == "text")
-    return json.loads(raw)
+    return [n for _, n in people[:80]]
+
+
+def extract_conversation(client, conv: dict, known_people: list[str] | None = None) -> dict:
+    """Extract entities from one conversation via the Claude API."""
+    known_block = (
+        KNOWN_BLOCK.format(names=", ".join(known_people)) if known_people else ""
+    )
+    combined = {"people": [], "projects": [], "places": []}
+    for segment in _segments(conv["text"]):
+        prompt = EXTRACTION_PROMPT.format(
+            author=AUTHOR, date=conv["date"], title=conv["title"],
+            text=segment, known_block=known_block,
+        )
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=16000,
+            output_config={"format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}},
+            messages=[{"role": "user", "content": prompt}],
+        )
+        if response.stop_reason == "refusal":
+            raise RuntimeError("model declined this entry")
+        raw = next(b.text for b in response.content if b.type == "text")
+        data = json.loads(raw)
+        for group in combined:
+            combined[group].extend(data.get(group, []))
+    return combined
 
 
 def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
@@ -195,6 +244,7 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
     conversations = get_conversations()
     if not quiet:
         print(f"  {len(conversations)} conversations to process")
+    known = known_people_hint()
 
     records = []
     for i, conv in enumerate(conversations):
@@ -207,7 +257,7 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
                 print(f"  {label} (cached)")
         else:
             try:
-                entities = extract_conversation(client, conv)
+                entities = extract_conversation(client, conv, known_people=known)
             except Exception as e:
                 print(f"  {label} FAILED: {e}")
                 continue
@@ -224,14 +274,33 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
 # ---------------------------------------------------------------------------
 # CURATION (user corrections that survive rebuilds)
 # ---------------------------------------------------------------------------
-# curation.json:
-#   "merge":  {"project:orbit-web": "Orbit", ...}   kind:lowername -> canonical
-#   "delete": ["place:teddy bear", ...]                kind:lowername
+# curation.json fields (keys are "kind:lowername"):
+#   "merge":        {key: canonical-or-"kind:Name"}  combine; old name kept as alias
+#   "correct":      {key: canonical-or-"kind:Name"}  typo fix; NO alias recorded
+#   "retype":       {key: {"type": kind, "name": optional new name}}
+#   "alias_add":    {key: [names]}   extra aliases for matching
+#   "alias_remove": {key: [names]}   suppress unwanted aliases
+#   "delete":       [keys]
+#
+# merge/correct targets may be kind-qualified ("person:Dr. Reyes") to
+# move an entity across kinds while combining.
+
+KINDS = ("person", "project", "place")
+_CURATION_DEFAULTS = {
+    "merge": {}, "correct": {}, "retype": {},
+    "alias_add": {}, "alias_remove": {}, "delete": [],
+}
+
 
 def load_curation() -> dict:
+    curation = dict(_CURATION_DEFAULTS)
     if CURATION_FILE.exists():
-        return json.loads(CURATION_FILE.read_text(encoding="utf-8"))
-    return {"merge": {}, "delete": []}
+        stored = json.loads(CURATION_FILE.read_text(encoding="utf-8"))
+        for field, default in _CURATION_DEFAULTS.items():
+            curation[field] = stored.get(field, default if isinstance(default, list) else dict(default))
+    else:
+        curation = {k: (list(v) if isinstance(v, list) else dict(v)) for k, v in _CURATION_DEFAULTS.items()}
+    return curation
 
 
 def save_curation(curation: dict):
@@ -243,6 +312,42 @@ def save_curation(curation: dict):
 
 def curation_key(kind: str, name: str) -> str:
     return f"{kind}:{name.lower()}"
+
+
+def _parse_target(value: str, default_kind: str) -> tuple[str, str]:
+    """A merge/correct target may be 'Name' or 'kind:Name'."""
+    if ":" in value:
+        prefix, rest = value.split(":", 1)
+        if prefix in KINDS:
+            return prefix, rest.strip()
+    return default_kind, value.strip()
+
+
+def apply_curation(curation: dict, kind: str, name: str):
+    """
+    Resolve one extracted (kind, name) through the curation rules.
+    Returns (kind, canonical_name, alias_of_canonical: bool) or None if deleted.
+    """
+    if curation_key(kind, name) in {d.lower() for d in curation["delete"]}:
+        return None
+
+    rt = curation["retype"].get(curation_key(kind, name))
+    if rt:
+        kind = rt.get("type", kind)
+        name = rt.get("name") or name
+
+    key = curation_key(kind, name)
+    is_alias = False
+    if key in curation["correct"]:
+        kind, name = _parse_target(curation["correct"][key], kind)
+    elif key in curation["merge"]:
+        new_kind, new_name = _parse_target(curation["merge"][key], kind)
+        is_alias = new_name.lower() != name.lower()
+        kind, name = new_kind, new_name
+
+    if curation_key(kind, name) in {d.lower() for d in curation["delete"]}:
+        return None
+    return kind, name, is_alias
 
 
 # ---------------------------------------------------------------------------
@@ -260,8 +365,6 @@ def build_entity_docs(records: list[dict]) -> dict:
     Returns the entity index {name: {type, path, mentions}}.
     """
     curation = load_curation()
-    merge_map = {k.lower(): v for k, v in curation.get("merge", {}).items()}
-    deleted = {d.lower() for d in curation.get("delete", [])}
 
     # merged[(kind, name_lower)] = {name, kind, attr, aliases, timeline}
     merged = {}
@@ -270,6 +373,7 @@ def build_entity_docs(records: list[dict]) -> dict:
         "projects": ("project", "status"),
         "places": ("place", "kind"),
     }
+    attr_for_kind = {kind: attr for _, (kind, attr) in kind_fields.items()}
 
     for record in records:
         for group, (kind, attr_field) in kind_fields.items():
@@ -277,26 +381,40 @@ def build_entity_docs(records: list[dict]) -> dict:
                 name = ent.get("name", "").strip()
                 if not name:
                     continue
-                if curation_key(kind, name) in deleted:
+                resolved = apply_curation(curation, kind, name)
+                if resolved is None:
                     continue
-                canonical = merge_map.get(curation_key(kind, name))
-                display = canonical or name
-                if curation_key(kind, display) in deleted:
-                    continue
-                key = (kind, display.lower())
+                final_kind, display, is_alias = resolved
+                key = (final_kind, display.lower())
                 if key not in merged:
                     merged[key] = {
-                        "name": display, "kind": kind, "attr": "",
+                        "name": display, "kind": final_kind, "attr": "",
                         "aliases": set(), "timeline": [],
                     }
-                if canonical and name.lower() != display.lower():
+                if is_alias:
                     merged[key]["aliases"].add(name)
-                attr = (ent.get(attr_field) or "").strip()
-                if attr and attr != "unknown":
-                    merged[key]["attr"] = attr  # latest wins
+                # attr only carries over within the same kind (a person's
+                # relationship isn't a place's type)
+                if final_kind == kind:
+                    attr = (ent.get(attr_field) or "").strip()
+                    if attr and attr != "unknown":
+                        merged[key]["attr"] = attr  # latest wins
                 merged[key]["timeline"].append(
                     (record["date"], record["title"], ent.get("observations", []))
                 )
+
+    # manual alias adjustments
+    for key_str, names in curation["alias_add"].items():
+        kind, _, lname = key_str.partition(":")
+        if (kind, lname) in merged:
+            merged[(kind, lname)]["aliases"].update(names)
+    for key_str, names in curation["alias_remove"].items():
+        kind, _, lname = key_str.partition(":")
+        if (kind, lname) in merged:
+            drop = {n.lower() for n in names}
+            merged[(kind, lname)]["aliases"] = {
+                a for a in merged[(kind, lname)]["aliases"] if a.lower() not in drop
+            }
 
     attr_labels = {"person": "relationship", "project": "status", "place": "type"}
     index = {}
@@ -344,6 +462,208 @@ def build_entity_docs(records: list[dict]) -> dict:
         json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     return index
+
+
+# ---------------------------------------------------------------------------
+# OBSERVATION-LEVEL EDITING (operates on the raw extraction cache, so edits
+# survive rebuilds; a --force re-extraction DOES discard them)
+# ---------------------------------------------------------------------------
+
+GROUP_FOR_KIND = {"person": "people", "project": "projects", "place": "places"}
+_NEW_RECORD = {
+    "people": lambda name: {"name": name, "relationship": "", "observations": []},
+    "projects": lambda name: {"name": name, "domain": "personal", "status": "unknown", "observations": []},
+    "places": lambda name: {"name": name, "kind": "", "observations": []},
+}
+
+
+def _conversation_lookup() -> dict:
+    """Map raw-cache filename stems to (date, title)."""
+    return {
+        conversation_cache_key(c): (c["date"], c["title"])
+        for c in get_conversations()
+    }
+
+
+def _raw_path(filename: str) -> Path:
+    path = RAW_DIR / Path(filename).name  # basename only — no traversal
+    if not path.exists():
+        raise FileNotFoundError(filename)
+    return path
+
+
+def list_observations(kind: str, canonical_name: str) -> list[dict]:
+    """
+    Every observation that rolls up into the given curated entity, with
+    enough provenance (file/group/indices) to edit it in place.
+    """
+    curation = load_curation()
+    lookup = _conversation_lookup()
+    target = canonical_name.lower()
+    out = []
+    for path in sorted(RAW_DIR.glob("*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        date, title = lookup.get(path.stem, (path.stem[:10], path.stem))
+        for group, raw_kind in (("people", "person"), ("projects", "project"), ("places", "place")):
+            for ent_index, ent in enumerate(data.get(group, [])):
+                name = (ent.get("name") or "").strip()
+                if not name:
+                    continue
+                resolved = apply_curation(curation, raw_kind, name)
+                if not resolved or resolved[0] != kind or resolved[1].lower() != target:
+                    continue
+                for obs_index, text in enumerate(ent.get("observations", [])):
+                    out.append({
+                        "file": path.name, "group": group,
+                        "ent_index": ent_index, "obs_index": obs_index,
+                        "text": text, "date": date, "title": title,
+                        "extracted_name": name,
+                    })
+    out.sort(key=lambda o: o["date"])
+    return out
+
+
+def _mutate_raw(filename: str, group: str, ent_index: int, obs_index: int):
+    """Load a raw file and validate indices; returns (path, data, entity)."""
+    path = _raw_path(filename)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    ents = data.get(group, [])
+    if not (0 <= ent_index < len(ents)):
+        raise IndexError("entity index out of range")
+    if not (0 <= obs_index < len(ents[ent_index].get("observations", []))):
+        raise IndexError("observation index out of range")
+    return path, data, ents[ent_index]
+
+
+def _save_raw(path: Path, data: dict):
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def edit_observation(filename: str, group: str, ent_index: int, obs_index: int, new_text: str):
+    path, data, ent = _mutate_raw(filename, group, ent_index, obs_index)
+    ent["observations"][obs_index] = new_text.strip()
+    _save_raw(path, data)
+
+
+def delete_observation(filename: str, group: str, ent_index: int, obs_index: int):
+    path, data, ent = _mutate_raw(filename, group, ent_index, obs_index)
+    ent["observations"].pop(obs_index)
+    if not ent["observations"]:
+        data[group].pop(ent_index)  # entity had nothing else to say here
+    _save_raw(path, data)
+
+
+def reassign_observation(
+    filename: str, group: str, ent_index: int, obs_index: int,
+    target_kind: str, target_name: str,
+):
+    """Move one observation to a different (possibly new) entity."""
+    if target_kind not in GROUP_FOR_KIND:
+        raise ValueError(f"unknown kind: {target_kind}")
+    path, data, ent = _mutate_raw(filename, group, ent_index, obs_index)
+    text = ent["observations"].pop(obs_index)
+
+    target_group = GROUP_FOR_KIND[target_kind]
+    data.setdefault(target_group, [])
+    target = next(
+        (e for e in data[target_group]
+         if (e.get("name") or "").lower() == target_name.lower()),
+        None,
+    )
+    if target is None:
+        target = _NEW_RECORD[target_group](target_name)
+        data[target_group].append(target)
+    target.setdefault("observations", []).append(text)
+
+    if not ent["observations"] and target is not ent:
+        data[group].remove(ent)
+    _save_raw(path, data)
+
+
+# ---------------------------------------------------------------------------
+# MERGE SUGGESTIONS (Claude proposes; the user approves each group)
+# ---------------------------------------------------------------------------
+
+SUGGEST_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "groups": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "canonical": {"type": "string"},
+                    "members": {"type": "array", "items": {"type": "string"}},
+                    "reason": {"type": "string"},
+                },
+                "required": ["canonical", "members", "reason"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["groups"],
+    "additionalProperties": False,
+}
+
+SUGGEST_PROMPT = """\
+Below is a list of {kind} entities extracted from one person's journal, as \
+JSON with name, attribute, and mention count. Some are duplicate or variant \
+names for the same real-world {kind} (long descriptive names, slash-combined \
+names, spelling variants).
+
+Propose merge groups — but ONLY where you are confident the names refer to \
+the same real-world thing. Similar names can be genuinely different things \
+(two people with the same first name, an old and new version of a project \
+tracked separately); when unsure, leave them alone. The user reviews every \
+suggestion, and precision matters more than coverage.
+
+For each group: "canonical" is the best short name (prefer the existing \
+member with the most mentions), "members" are the OTHER names to fold into \
+it (do not repeat the canonical), and "reason" is one short sentence.
+
+<entities>
+{listing}
+</entities>"""
+
+
+def suggest_merges(kind: str) -> list[dict]:
+    """Ask Claude to propose merge groups for one entity kind."""
+    index_file = ENTITY_DIR / "index.json"
+    if not index_file.exists():
+        return []
+    index = json.loads(index_file.read_text(encoding="utf-8"))
+    listing = [
+        {"name": n, "attribute": "", "mentions": i["mentions"]}
+        for n, i in sorted(index.items(), key=lambda kv: -kv[1]["mentions"])
+        if i["type"] == kind
+    ]
+    if len(listing) < 2:
+        return []
+
+    client = anthropic.Anthropic()
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=8000,
+        output_config={"format": {"type": "json_schema", "schema": SUGGEST_SCHEMA}},
+        messages=[{
+            "role": "user",
+            "content": SUGGEST_PROMPT.format(
+                kind=kind, listing=json.dumps(listing, ensure_ascii=False),
+            ),
+        }],
+    )
+    if response.stop_reason == "refusal":
+        return []
+    raw = next(b.text for b in response.content if b.type == "text")
+    groups = json.loads(raw).get("groups", [])
+    known = {n.lower() for n in index}
+    cleaned = []
+    for g in groups:
+        members = [m for m in g["members"]
+                   if m.lower() in known and m.lower() != g["canonical"].lower()]
+        if members:
+            cleaned.append({**g, "members": members})
+    return cleaned
 
 
 def build(force: bool = False, quiet: bool = False) -> dict:

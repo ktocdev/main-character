@@ -65,6 +65,33 @@ class NameIn(BaseModel):
     name: str
 
 
+class RetypeIn(BaseModel):
+    name: str
+    new_type: str
+    new_name: str = ""
+
+
+class AliasIn(BaseModel):
+    name: str
+    add: str = ""
+    remove: str = ""
+
+
+class KindIn(BaseModel):
+    kind: str
+
+
+class ObservationIn(BaseModel):
+    action: str  # edit | delete | reassign
+    file: str
+    group: str
+    ent_index: int
+    obs_index: int
+    text: str = ""
+    target_kind: str = ""
+    target_name: str = ""
+
+
 @app.get("/")
 def home():
     return FileResponse(STATIC_DIR / "index.html")
@@ -137,8 +164,8 @@ def _rebuild():
     STATE["entity_index"] = entities.build(quiet=True)
 
 
-@app.post("/api/entities/merge")
-def merge_entities(body: MergeIn):
+def _combine(body: MergeIn, field: str, verb: str):
+    """Shared logic for merge (keeps alias) and correct (no alias)."""
     index = STATE["entity_index"]
     src = companion.resolve_entity(index, body.source)
     if not src:
@@ -148,14 +175,115 @@ def merge_entities(body: MergeIn):
         return JSONResponse({"error": "already the same entity"}, status_code=400)
 
     curation = entities.load_curation()
-    kind = index[src]["type"]
-    curation["merge"][entities.curation_key(kind, src)] = dst
-    for k, v in list(curation["merge"].items()):
-        if v.lower() == src.lower():
-            curation["merge"][k] = dst
+    src_kind = index[src]["type"]
+    # kind-qualify the target when it exists under a different kind
+    # (e.g. merge place:Reyes into person:Dr. Reyes)
+    dst_kind = index[dst]["type"] if dst in index else src_kind
+    value = f"{dst_kind}:{dst}" if dst_kind != src_kind else dst
+    curation[field][entities.curation_key(src_kind, src)] = value
+    for other in ("merge", "correct"):
+        for k, v in list(curation[other].items()):
+            _, tname = entities._parse_target(v, src_kind)
+            if tname.lower() == src.lower():
+                curation[other][k] = value
     entities.save_curation(curation)
     _rebuild()
-    return {"ok": True, "merged": src, "into": dst}
+    return {"ok": True, verb: src, "into": dst}
+
+
+@app.post("/api/entities/merge")
+def merge_entities(body: MergeIn):
+    return _combine(body, "merge", "merged")
+
+
+@app.post("/api/entities/correct")
+def correct_entity(body: MergeIn):
+    return _combine(body, "correct", "corrected")
+
+
+@app.post("/api/entities/retype")
+def retype_entity(body: RetypeIn):
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    if body.new_type not in entities.KINDS:
+        return JSONResponse({"error": f"kind must be one of {entities.KINDS}"}, status_code=400)
+
+    curation = entities.load_curation()
+    curation["retype"][entities.curation_key(index[name]["type"], name)] = {
+        "type": body.new_type,
+        "name": body.new_name.strip() or name,
+    }
+    entities.save_curation(curation)
+    _rebuild()
+    return {"ok": True, "retyped": name, "to": body.new_type}
+
+
+@app.post("/api/entities/alias")
+def alias_entity(body: AliasIn):
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+
+    curation = entities.load_curation()
+    key = entities.curation_key(index[name]["type"], name)
+    if body.add.strip():
+        curation["alias_add"].setdefault(key, [])
+        if body.add.strip() not in curation["alias_add"][key]:
+            curation["alias_add"][key].append(body.add.strip())
+    if body.remove.strip():
+        curation["alias_remove"].setdefault(key, [])
+        if body.remove.strip() not in curation["alias_remove"][key]:
+            curation["alias_remove"][key].append(body.remove.strip())
+        curation["alias_add"][key] = [
+            a for a in curation["alias_add"].get(key, [])
+            if a.lower() != body.remove.strip().lower()
+        ]
+    entities.save_curation(curation)
+    _rebuild()
+    return {"ok": True}
+
+
+@app.get("/api/entities/observations")
+def entity_observations(name: str):
+    index = STATE["entity_index"]
+    canonical = companion.resolve_entity(index, name)
+    if not canonical:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    kind = index[canonical]["type"]
+    return {
+        "name": canonical, "type": kind,
+        "observations": entities.list_observations(kind, canonical),
+    }
+
+
+@app.post("/api/observation")
+def mutate_observation(body: ObservationIn):
+    try:
+        if body.action == "edit":
+            entities.edit_observation(body.file, body.group, body.ent_index, body.obs_index, body.text)
+        elif body.action == "delete":
+            entities.delete_observation(body.file, body.group, body.ent_index, body.obs_index)
+        elif body.action == "reassign":
+            entities.reassign_observation(
+                body.file, body.group, body.ent_index, body.obs_index,
+                body.target_kind, body.target_name,
+            )
+        else:
+            return JSONResponse({"error": "unknown action"}, status_code=400)
+    except (FileNotFoundError, IndexError, ValueError) as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    _rebuild()
+    return {"ok": True}
+
+
+@app.post("/api/entities/suggest")
+def suggest(body: KindIn):
+    if body.kind not in entities.KINDS:
+        return JSONResponse({"error": f"kind must be one of {entities.KINDS}"}, status_code=400)
+    return {"groups": entities.suggest_merges(body.kind)}
 
 
 @app.post("/api/entities/delete")
