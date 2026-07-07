@@ -148,6 +148,31 @@
   .dup-row { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding: .5rem 0; }
   .dup-row .why { font: .75rem system-ui, sans-serif; color: var(--text-dim); }
 
+  /* Categories */
+  #categories { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
+  #cat-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  #cat-status { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  #cat-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.2rem; }
+  .cat-chip {
+    background: var(--bg-input); border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 999px; padding: .15rem .8rem; font: .85rem system-ui, sans-serif; cursor: pointer;
+  }
+  .cat-chip.active { border-color: var(--accent); color: var(--accent); }
+  .cat-hint { color: var(--text-dim); font-style: italic; }
+  .cat-entry { border-bottom: 1px solid var(--border); padding: .7rem 0; }
+  .cat-entry h3 { font-size: .95rem; font-weight: 600; cursor: pointer; }
+  .cat-entry h3:hover { color: var(--accent); }
+  .cat-ev { color: var(--text-dim); font-size: .85rem; font-style: italic; }
+  .cat-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .35rem; align-items: center; }
+  .cat-add {
+    background: none; border: none; color: var(--text-dim);
+    font: .8rem system-ui, sans-serif; cursor: pointer;
+  }
+  .cat-full {
+    white-space: pre-wrap; background: var(--bg-input); border-radius: 8px;
+    padding: .8rem 1rem; margin-top: .6rem; font-size: .9rem;
+  }
+
   /* Help */
   #help { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
   #help h2 { font-style: italic; font-weight: normal; font-size: 1.15rem; color: var(--accent); margin: 1.6rem 0 .8rem; }
@@ -173,6 +198,7 @@
     <button data-tab="chat" class="active">chat</button>
     <button data-tab="write">write</button>
     <button data-tab="entities">entities</button>
+    <button data-tab="categories">categories</button>
     <button data-tab="triage">triage</button>
     <button data-tab="help">help</button>
     <button class="quiet" id="undo-btn" title="undo last entity change">↺</button>
@@ -199,6 +225,17 @@
         <span class="saved-note" id="entry-saved"></span>
       </div>
       <div id="entry-response" class="msg companion" style="display:none"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-categories">
+    <div id="categories">
+      <div id="cat-header">
+        <span id="cat-status"></span>
+        <button class="quiet" id="cat-build" title="tag any untagged entries with Claude (incremental — already-tagged entries are free)">tag new entries</button>
+      </div>
+      <div id="cat-chips"></div>
+      <div id="cat-entries"></div>
     </div>
   </section>
 
@@ -274,9 +311,11 @@
 
       <div class="help-step">
         <h3><span class="step-n">5</span> ongoing habit</h3>
-        <p>After journaling: hit <em>refresh memory</em> (updates the week's arc + status snapshot, ~30s).
-        New entries create new entities that arrive <em>unreviewed</em>, so an occasional minute in triage
-        keeps the graph clean forever. You never redo work — reviewed marks persist.</p>
+        <p>After journaling: hit <em>refresh memory</em> (updates the week's arc + status snapshot and
+        tags the new entry's categories, ~30s). New entries create new entities that arrive
+        <em>unreviewed</em>, so an occasional minute in triage keeps the graph clean forever.
+        You never redo work — reviewed marks persist, and category fixes (× a wrong tag in the
+        categories tab) stick the same way entity merges do.</p>
       </div>
 
       <h2>which fix do i want?</h2>
@@ -360,6 +399,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () =>
   activeTab = b.dataset.tab;
   $('tab-' + activeTab).classList.add('active');
   if (activeTab === 'entities') loadEntities();
+  if (activeTab === 'categories') loadCategories();
   if (activeTab === 'triage') startTriage();
 });
 
@@ -907,6 +947,124 @@ document.querySelectorAll('[data-suggest]').forEach(b => b.onclick = async () =>
     panel.appendChild(div);
   }
 });
+
+// ---- categories ----
+let catIndex = null, catSelected = null;
+
+async function loadCategories() {
+  catIndex = await (await fetch('/api/categories')).json();
+  renderCategories();
+}
+
+function renderCategories() {
+  $('cat-status').textContent = catIndex.tagged < catIndex.total
+    ? `${catIndex.tagged} of ${catIndex.total} entries tagged`
+    : `all ${catIndex.total} entries tagged`;
+  const chips = $('cat-chips');
+  chips.innerHTML = '';
+  const untagged = Object.values(catIndex.conversations)
+    .filter(c => !Object.keys(c.categories).length).length;
+  const mkChip = (name, count, label) => {
+    const b = document.createElement('button');
+    b.className = 'cat-chip' + (catSelected === name ? ' active' : '');
+    b.textContent = `${label || name.replace('_', ' ')} ${count}`;
+    b.onclick = () => { catSelected = catSelected === name ? null : name; renderCategories(); };
+    chips.appendChild(b);
+  };
+  for (const [name, count] of Object.entries(catIndex.counts).sort((a, b) => b[1] - a[1])) {
+    mkChip(name, count);
+  }
+  if (untagged) mkChip('__untagged', untagged, 'untagged');
+  renderCatEntries();
+}
+
+function renderCatEntries() {
+  const el = $('cat-entries');
+  el.innerHTML = '';
+  if (!catSelected) {
+    el.innerHTML = '<p class="cat-hint">pick a category to browse its entries — click a title for the full text, × a wrong tag to remove it (your fixes stick)</p>';
+    return;
+  }
+  const rows = Object.entries(catIndex.conversations)
+    .filter(([, c]) => catSelected === '__untagged'
+      ? !Object.keys(c.categories).length
+      : catSelected in c.categories)
+    .sort((a, b) => b[1].date.localeCompare(a[1].date));
+  for (const [key, c] of rows) {
+    const row = document.createElement('div');
+    row.className = 'cat-entry';
+    const h = document.createElement('h3');
+    h.textContent = `${c.date} — ${c.title}`;
+    h.title = 'show full entry';
+    h.onclick = () => toggleEntryText(row, c);
+    row.appendChild(h);
+    if (c.categories[catSelected]) {
+      const ev = document.createElement('div');
+      ev.className = 'cat-ev';
+      ev.textContent = c.categories[catSelected];
+      row.appendChild(ev);
+    }
+    const tags = document.createElement('div');
+    tags.className = 'cat-tags';
+    for (const [n, evid] of Object.entries(c.categories).sort()) {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.title = evid;
+      chip.textContent = n.replace('_', ' ') + ' ';
+      const x = document.createElement('button');
+      x.textContent = '×';
+      x.title = 'remove this tag (kept as your correction)';
+      x.onclick = async () => {
+        const r = await api('/api/categories/tag', {key, name: n, present: false});
+        if (r) { catIndex = r; renderCategories(); }
+      };
+      chip.appendChild(x);
+      tags.appendChild(chip);
+    }
+    const add = document.createElement('select');
+    add.className = 'cat-add';
+    add.innerHTML = '<option value="">+ tag…</option>' +
+      Object.keys(catIndex.counts)
+        .filter(n => !(n in c.categories))
+        .map(n => `<option value="${n}">${n.replace('_', ' ')}</option>`).join('');
+    add.onchange = async () => {
+      if (!add.value) return;
+      const r = await api('/api/categories/tag', {key, name: add.value, present: true});
+      if (r) { catIndex = r; renderCategories(); }
+    };
+    tags.appendChild(add);
+    row.appendChild(tags);
+    el.appendChild(row);
+  }
+}
+
+async function toggleEntryText(row, c) {
+  const existing = row.querySelector('.cat-full');
+  if (existing) { existing.remove(); return; }
+  const d = document.createElement('div');
+  d.className = 'cat-full';
+  d.textContent = 'loading…';
+  row.appendChild(d);
+  const r = await (await fetch(
+    `/api/entry?date=${encodeURIComponent(c.date)}&title=${encodeURIComponent(c.title)}`
+  )).json();
+  d.textContent = r.error || r.text;
+}
+
+$('cat-build').onclick = async () => {
+  const b = $('cat-build');
+  b.disabled = true;
+  b.textContent = 'tagging… (~5s per new entry)';
+  try {
+    const r = await api('/api/categories/build', {});
+    if (r) {
+      await loadCategories();
+      b.textContent = r.new ? `tagged ${r.new} new` : 'nothing new to tag';
+    }
+  } finally {
+    setTimeout(() => { b.textContent = 'tag new entries'; b.disabled = false; }, 4000);
+  }
+};
 </script>
 </body>
 </html>

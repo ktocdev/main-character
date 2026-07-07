@@ -12,6 +12,7 @@ Usage:
 """
 
 import json
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -24,6 +25,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+import categories
 import companion
 import entities
 from rag_journal import get_collection
@@ -102,6 +104,16 @@ class DismissDupIn(BaseModel):
     kind: str
     a: str
     b: str
+
+
+class CategoryTagIn(BaseModel):
+    key: str      # conversation cache key from the category index
+    name: str     # category name
+    present: bool
+
+
+class CategoryBuildIn(BaseModel):
+    force: bool = False
 
 
 @app.get("/")
@@ -399,10 +411,51 @@ def dismiss_duplicate(body: DismissDupIn):
 
 @app.post("/api/summaries/refresh")
 def refresh_summaries():
-    """Regenerate stale weekly arcs + the status snapshot (incremental)."""
+    """Regenerate stale weekly arcs + the status snapshot, and tag any
+    new entries with categories (all incremental)."""
     import summarizer
     result = summarizer.build(quiet=True)
-    return {"ok": True, **result}
+    cat = categories.build(quiet=True)
+    return {"ok": True, **result, "categories_tagged": cat["new"]}
+
+
+@app.get("/api/categories")
+def category_index():
+    return categories.load_index()
+
+
+@app.post("/api/categories/build")
+def build_categories(body: CategoryBuildIn):
+    """Tag untagged conversations with Claude (incremental unless force)."""
+    return {"ok": True, **categories.build(force=body.force, quiet=True)}
+
+
+@app.post("/api/categories/tag")
+def set_category_tag(body: CategoryTagIn):
+    """Manually add/remove a tag on one entry — recorded as an override."""
+    try:
+        return categories.set_tag(body.key, body.name, body.present)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+
+@app.get("/api/entry")
+def entry_text(date: str, title: str):
+    """Full text of one entry, reassembled from its chunks."""
+    data = STATE["collection"].get(
+        where={"$and": [{"date": {"$eq": date}}, {"title": {"$eq": title}}]},
+        include=["documents"],
+    )
+    if not data["ids"]:
+        return JSONResponse({"error": "not found"}, status_code=404)
+
+    def chunk_idx(doc_id):
+        m = re.search(r"_c(\d+)$", doc_id)
+        return int(m.group(1)) if m else 0
+
+    chunks = sorted(zip(data["ids"], data["documents"]), key=lambda p: chunk_idx(p[0]))
+    return {"date": date, "title": title,
+            "text": "\n\n".join(doc for _, doc in chunks)}
 
 
 @app.post("/api/entities/delete")
