@@ -287,7 +287,7 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
 
 KINDS = ("person", "project", "place")
 _CURATION_DEFAULTS = {
-    "merge": {}, "correct": {}, "retype": {},
+    "merge": {}, "correct": {}, "retype": {}, "rename": {},
     "alias_add": {}, "alias_remove": {}, "delete": [],
 }
 
@@ -344,6 +344,15 @@ def apply_curation(curation: dict, kind: str, name: str):
         new_kind, new_name = _parse_target(curation["merge"][key], kind)
         is_alias = new_name.lower() != name.lower()
         kind, name = new_kind, new_name
+
+    # rename controls display spelling (incl. case-only changes: book club ->
+    # Book Club); a rename that changes more than case keeps the old name as
+    # an alias so matching still works
+    rn = curation["rename"].get(curation_key(kind, name))
+    if rn:
+        if rn.lower() != name.lower():
+            is_alias = True
+        name = rn
 
     if curation_key(kind, name) in {d.lower() for d in curation["delete"]}:
         return None
@@ -415,6 +424,8 @@ def build_entity_docs(records: list[dict]) -> dict:
             merged[(kind, lname)]["aliases"] = {
                 a for a in merged[(kind, lname)]["aliases"] if a.lower() not in drop
             }
+    for ent in merged.values():
+        ent["aliases"] = {a for a in ent["aliases"] if a.lower() != ent["name"].lower()}
 
     attr_labels = {"person": "relationship", "project": "status", "place": "type"}
     index = {}
@@ -462,6 +473,80 @@ def build_entity_docs(records: list[dict]) -> dict:
         json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     return index
+
+
+# ---------------------------------------------------------------------------
+# UNDO / REDO HISTORY
+# ---------------------------------------------------------------------------
+# Every curation or observation mutation records a before/after snapshot.
+# Curation snapshots are the whole curation dict (small); observation
+# snapshots are the affected raw file's content.
+
+HISTORY_FILE = ENTITY_DIR / "history.json"
+HISTORY_LIMIT = 50
+
+
+def _load_history() -> dict:
+    if HISTORY_FILE.exists():
+        return json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
+    return {"undo": [], "redo": []}
+
+
+def _save_history(history: dict):
+    history["undo"] = history["undo"][-HISTORY_LIMIT:]
+    history["redo"] = history["redo"][-HISTORY_LIMIT:]
+    HISTORY_FILE.write_text(
+        json.dumps(history, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def record_change(description: str, kind: str, before, after, filename: str = ""):
+    """kind: 'curation' (before/after are curation dicts) or 'raw' (file text)."""
+    history = _load_history()
+    history["undo"].append({
+        "description": description, "kind": kind,
+        "before": before, "after": after, "file": filename,
+    })
+    history["redo"] = []  # a new change invalidates the redo stack
+    _save_history(history)
+
+
+def _apply_snapshot(entry: dict, direction: str):
+    payload = entry[direction]
+    if entry["kind"] == "curation":
+        save_curation(payload)
+    else:  # raw file content
+        (RAW_DIR / Path(entry["file"]).name).write_text(payload, encoding="utf-8")
+
+
+def undo() -> str | None:
+    history = _load_history()
+    if not history["undo"]:
+        return None
+    entry = history["undo"].pop()
+    _apply_snapshot(entry, "before")
+    history["redo"].append(entry)
+    _save_history(history)
+    return entry["description"]
+
+
+def redo() -> str | None:
+    history = _load_history()
+    if not history["redo"]:
+        return None
+    entry = history["redo"].pop()
+    _apply_snapshot(entry, "after")
+    history["undo"].append(entry)
+    _save_history(history)
+    return entry["description"]
+
+
+def history_peek() -> dict:
+    history = _load_history()
+    return {
+        "undo": history["undo"][-1]["description"] if history["undo"] else None,
+        "redo": history["redo"][-1]["description"] if history["redo"] else None,
+    }
 
 
 # ---------------------------------------------------------------------------

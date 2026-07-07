@@ -39,6 +39,8 @@ EXCERPT_CHARS = 2000
 ENTITY_DIR = Path(__file__).parent / "entity_graph"
 N_ENTITY_DOCS = 3       # max entity docs loaded per message
 ENTITY_DOC_CHARS = 4000
+SUMMARY_DIR = Path(__file__).parent / "summaries"
+SUMMARY_CHARS = 3500
 
 # Persona translated from persona-spec.md. The journal history gives the
 # companion Phase 2-3 context (it knows the cast), but the entity graph and
@@ -132,6 +134,18 @@ def match_entities(text: str, entity_index: dict) -> list[str]:
     return [name for _, name in hits[:N_ENTITY_DOCS]]
 
 
+def load_status_snapshot() -> str:
+    """Layer 1: the always-current life summary (empty if not generated)."""
+    path = SUMMARY_DIR / "status_snapshot.md"
+    return path.read_text(encoding="utf-8")[:SUMMARY_CHARS] if path.exists() else ""
+
+
+def load_latest_arc() -> str:
+    """Layer 1: the most recent weekly arc summary."""
+    arcs = sorted((SUMMARY_DIR / "arcs").glob("*.md")) if (SUMMARY_DIR / "arcs").exists() else []
+    return arcs[-1].read_text(encoding="utf-8")[:SUMMARY_CHARS] if arcs else ""
+
+
 def get_recent_chunks(collection, n: int = N_RECENT) -> list[tuple[str, dict]]:
     """Return the n most recent chunks (document, metadata), oldest first."""
     data = collection.get(include=["documents", "metadatas"])
@@ -149,7 +163,16 @@ def build_context_block(question: str, collection, entity_index: dict) -> str:
     recent = get_recent_chunks(collection)
     recent_texts = {doc for doc, _ in recent}
 
-    lines = [f"<current_time>{now}</current_time>", "", "<recent_entries>"]
+    lines = [f"<current_time>{now}</current_time>", ""]
+
+    snapshot = load_status_snapshot()
+    if snapshot:
+        lines += ["<status_snapshot>", snapshot, "</status_snapshot>", ""]
+    arc = load_latest_arc()
+    if arc:
+        lines += ["<current_week_arc>", arc, "</current_week_arc>", ""]
+
+    lines.append("<recent_entries>")
     for doc, meta in recent:
         lines.append(f"[{meta.get('date', '?')}] {meta.get('title', 'Untitled')}")
         lines.append(doc[:EXCERPT_CHARS])
