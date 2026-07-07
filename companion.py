@@ -1,0 +1,276 @@
+"""
+Journal Companion — interactive chat with memory.
+
+Ask mode: ask questions about your journal history. Each question
+retrieves relevant entries (recent + semantically similar) and injects
+them as context, so the companion responds with real memory.
+
+Write mode: type /write in the chat loop to capture a new journal entry.
+The entry is stored (vector store + markdown backup), then the companion
+responds to it with retrieved context.
+
+Usage:
+    python companion.py            # interactive chat loop
+    python companion.py "question" # one-shot question
+
+Persona defined in docs/discovery/persona-spec.md.
+"""
+
+import hashlib
+import sys
+from datetime import datetime
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import anthropic
+
+from rag_journal import JOURNAL_DIR, extract_metadata, get_collection, query_journal
+
+MODEL = "claude-opus-4-8"
+MAX_TOKENS = 8000
+N_SEMANTIC = 6      # semantically similar chunks per question
+N_RECENT = 3        # most recent chunks always included
+EXCERPT_CHARS = 2000
+
+# Persona translated from persona-spec.md. The journal history gives the
+# companion Phase 2-3 context (it knows the cast), but the entity graph and
+# pattern library don't exist yet — so the prompt claims only what retrieval
+# can actually deliver.
+SYSTEM_PROMPT = """\
+You are a journal companion — a structured witness to one person's life. \
+You are not a therapist, not a cheerleader, not an assistant. You are closer \
+to a sharp, warm friend who has read every previous entry and remembers what \
+matters.
+
+The user's journal spans December 2025 to the present. You don't hold the \
+full journal in memory; each message comes with retrieved excerpts — the most \
+recent entries plus passages semantically related to the current question. \
+Treat these excerpts as your memory. If the excerpts don't contain something, \
+say you don't have it in front of you rather than inventing it.
+
+Voice and tone:
+- Match the user's register. Funny when they're funny, grounded when they're \
+spiraling, brief when they're brief. Never be more formal or more emotional \
+than the moment calls for.
+- Be direct, not precious. "I say this with love — you know exactly what \
+you're doing right now" beats "have you considered how this might make you \
+feel?"
+- Default to prose. No bullet points, headers, or bold unless the content \
+genuinely demands structure.
+- No emojis unless the user uses them first, and even then sparingly.
+- No therapy-speak. Never say "I hear you," "that sounds really hard," \
+"let's unpack that," or "how does that make you feel?" Respond to what they \
+actually said.
+- No performative wellness. Never push meditation, gratitude lists, or \
+breathing exercises. They're already journaling — that's why you exist.
+- Warm, not sycophantic. The goal is clarity, not comfort.
+
+Working with their history:
+- Reference people naturally by name once established — "Dane," not "your \
+friend Dane" every time.
+- Anchor observations to the real timeline. "You did X three weeks after Y" \
+is more powerful than "great job with X." Use the dates on the excerpts.
+- Name patterns without lecturing — "this is the same pipeline as two weeks \
+ago" — then let them course-correct. Don't prescribe the fix.
+- Quote their own language back naturally, not like scripture.
+- Notice time of day. A 2am entry is a different person than a 9am Sunday \
+reflection.
+
+Boundaries:
+- Not a therapist. Observe patterns; don't diagnose or play amateur \
+psychologist.
+- Not a replacement for human connection. If that line blurs, name it gently.
+- Never encourage unsafe or self-destructive behavior, even if their patterns \
+include it. Name it, don't enable it.
+- Hold boundaries they've set for themselves, even when they're tempted to \
+break them.
+- If they show signs of crisis, express concern directly and offer to help \
+find appropriate resources — but don't play therapist.
+
+Don't:
+- Turn every entry into a growth moment. Let light things be light.
+- Ask more than one question per response.
+- Recap what they just said unless you're reframing it.
+- Over-celebrate small things — specificity matters more than enthusiasm.
+- Give advice when they're just venting. Read the room.
+- Bring up sensitive stored information (health, identity, trauma) unless \
+they open that door first."""
+
+
+def get_recent_chunks(collection, n: int = N_RECENT) -> list[tuple[str, dict]]:
+    """Return the n most recent chunks (document, metadata), oldest first."""
+    data = collection.get(include=["documents", "metadatas"])
+    pairs = sorted(
+        zip(data["documents"], data["metadatas"]),
+        key=lambda p: p[1].get("date", ""),
+    )
+    return pairs[-n:]
+
+
+def build_context_block(question: str, collection) -> str:
+    """Assemble the retrieval context injected alongside each question."""
+    now = datetime.now().strftime("%A, %B %d, %Y, %I:%M %p")
+
+    recent = get_recent_chunks(collection)
+    recent_texts = {doc for doc, _ in recent}
+
+    lines = [f"<current_time>{now}</current_time>", "", "<recent_entries>"]
+    for doc, meta in recent:
+        lines.append(f"[{meta.get('date', '?')}] {meta.get('title', 'Untitled')}")
+        lines.append(doc[:EXCERPT_CHARS])
+        lines.append("")
+    lines.append("</recent_entries>")
+
+    lines.append("")
+    lines.append("<related_history>")
+    for match in query_journal(question, n_results=N_SEMANTIC):
+        if match["text"] in recent_texts:
+            continue
+        meta = match["metadata"]
+        lines.append(f"[{meta.get('date', '?')}] {meta.get('title', 'Untitled')}")
+        lines.append(match["text"][:EXCERPT_CHARS])
+        lines.append("")
+    lines.append("</related_history>")
+
+    return "\n".join(lines)
+
+
+def ask(client, collection, messages: list, question: str) -> str:
+    """Send a question with retrieved context; stream and return the reply."""
+    context = build_context_block(question, collection)
+    messages.append({
+        "role": "user",
+        "content": f"<journal_context>\n{context}\n</journal_context>\n\n{question}",
+    })
+
+    reply_parts = []
+    with client.messages.stream(
+        model=MODEL,
+        max_tokens=MAX_TOKENS,
+        thinking={"type": "adaptive"},
+        system=[{
+            "type": "text",
+            "text": SYSTEM_PROMPT,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=messages,
+    ) as stream:
+        for text in stream.text_stream:
+            print(text, end="", flush=True)
+            reply_parts.append(text)
+        final = stream.get_final_message()
+
+    print()
+    if final.stop_reason == "refusal":
+        print("  [The model declined to respond to this.]")
+
+    reply = "".join(reply_parts)
+    messages.append({"role": "assistant", "content": reply})
+    return reply
+
+
+def read_entry_lines() -> str:
+    """Collect a multi-line journal entry; finish with an empty line."""
+    print("  New entry — write freely, finish with an empty line.\n")
+    lines = []
+    while True:
+        try:
+            line = input()
+        except (EOFError, KeyboardInterrupt):
+            break
+        if not line.strip() and lines:
+            break
+        lines.append(line)
+    return "\n".join(lines).strip()
+
+
+def store_entry(collection, text: str) -> str:
+    """Store a new journal entry in the vector store + markdown backup."""
+    now = datetime.now()
+    date = now.strftime("%Y-%m-%d")
+    time_of_day = now.strftime("%H:%M")
+
+    meta = extract_metadata(text)
+    content_hash = hashlib.md5(text[:200].encode()).hexdigest()[:8]
+    entry_id = f"{date}_{content_hash}_c0"
+
+    collection.upsert(
+        ids=[entry_id],
+        documents=[text],
+        metadatas=[{
+            "date": date,
+            "time": time_of_day,
+            "title": f"Journal entry {date} {time_of_day}",
+            "people": ", ".join(meta.get("people", [])),
+            "topics": ", ".join(meta.get("topics", [])),
+            "mood": meta.get("mood", "unknown"),
+            "key_events": " | ".join(meta.get("key_events", [])),
+            "is_summary": "False",
+            "source": "write_mode",
+        }],
+    )
+
+    JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
+    filepath = JOURNAL_DIR / f"{date}_{now.strftime('%H%M')}_entry.md"
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(f"# Journal entry — {date} {time_of_day}\n_Date: {date}_\n\n{text}")
+
+    return entry_id
+
+
+def write_entry(client, collection, messages: list):
+    """Write mode: capture an entry, store it, let the companion respond."""
+    text = read_entry_lines()
+    if not text:
+        print("  (empty entry, nothing saved)\n")
+        return
+
+    entry_id = store_entry(collection, text)
+    print(f"\n  saved ({entry_id})\n")
+
+    entry_message = (
+        "The following is a new journal entry I just wrote — not a question. "
+        "Respond to it as my companion.\n\n" + text
+    )
+    ask(client, collection, messages, entry_message)
+
+
+def main():
+    client = anthropic.Anthropic()
+    collection = get_collection()
+    count = collection.count()
+
+    if len(sys.argv) > 1:
+        question = " ".join(sys.argv[1:])
+        ask(client, collection, [], question)
+        return
+
+    print(f"\n  Journal Companion — {count} entries in memory")
+    print("  Ask about your journal, or /write to add an entry. 'quit' to leave.\n")
+
+    messages = []
+    while True:
+        try:
+            question = input("you > ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n  goodnight.")
+            break
+        if not question:
+            continue
+        if question.lower() in ("quit", "exit", "q"):
+            print("  goodnight.")
+            break
+        if question.lower() in ("/write", "/w", "write"):
+            print()
+            write_entry(client, collection, messages)
+            print()
+            continue
+        print()
+        ask(client, collection, messages, question)
+        print()
+
+
+if __name__ == "__main__":
+    main()
