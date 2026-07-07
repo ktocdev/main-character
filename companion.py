@@ -17,8 +17,11 @@ Persona defined in docs/discovery/persona-spec.md.
 """
 
 import hashlib
+import json
+import re
 import sys
 from datetime import datetime
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -33,6 +36,9 @@ MAX_TOKENS = 8000
 N_SEMANTIC = 6      # semantically similar chunks per question
 N_RECENT = 3        # most recent chunks always included
 EXCERPT_CHARS = 2000
+ENTITY_DIR = Path(__file__).parent / "entity_graph"
+N_ENTITY_DOCS = 3       # max entity docs loaded per message
+ENTITY_DOC_CHARS = 4000
 
 # Persona translated from persona-spec.md. The journal history gives the
 # companion Phase 2-3 context (it knows the cast), but the entity graph and
@@ -99,6 +105,30 @@ Don't:
 they open that door first."""
 
 
+def load_entity_index() -> dict:
+    """Load the entity graph index built by entities.py (empty if not built)."""
+    index_file = ENTITY_DIR / "index.json"
+    if not index_file.exists():
+        return {}
+    return json.loads(index_file.read_text(encoding="utf-8"))
+
+
+def match_entities(text: str, entity_index: dict) -> list[str]:
+    """
+    Return names of known entities mentioned in the text, most-mentioned
+    first, capped at N_ENTITY_DOCS. Word-boundary match, case-insensitive.
+    """
+    text_lower = text.lower()
+    hits = []
+    for name, info in entity_index.items():
+        if len(name) < 3:
+            continue
+        if re.search(r"\b" + re.escape(name.lower()) + r"\b", text_lower):
+            hits.append((info.get("mentions", 0), name))
+    hits.sort(reverse=True)
+    return [name for _, name in hits[:N_ENTITY_DOCS]]
+
+
 def get_recent_chunks(collection, n: int = N_RECENT) -> list[tuple[str, dict]]:
     """Return the n most recent chunks (document, metadata), oldest first."""
     data = collection.get(include=["documents", "metadatas"])
@@ -109,7 +139,7 @@ def get_recent_chunks(collection, n: int = N_RECENT) -> list[tuple[str, dict]]:
     return pairs[-n:]
 
 
-def build_context_block(question: str, collection) -> str:
+def build_context_block(question: str, collection, entity_index: dict) -> str:
     """Assemble the retrieval context injected alongside each question."""
     now = datetime.now().strftime("%A, %B %d, %Y, %I:%M %p")
 
@@ -134,12 +164,23 @@ def build_context_block(question: str, collection) -> str:
         lines.append("")
     lines.append("</related_history>")
 
+    mentioned = match_entities(question, entity_index)
+    if mentioned:
+        lines.append("")
+        lines.append("<entity_context>")
+        for name in mentioned:
+            doc_path = ENTITY_DIR / entity_index[name]["path"]
+            if doc_path.exists():
+                lines.append(doc_path.read_text(encoding="utf-8")[:ENTITY_DOC_CHARS])
+                lines.append("")
+        lines.append("</entity_context>")
+
     return "\n".join(lines)
 
 
-def ask(client, collection, messages: list, question: str) -> str:
+def ask(client, collection, entity_index: dict, messages: list, question: str) -> str:
     """Send a question with retrieved context; stream and return the reply."""
-    context = build_context_block(question, collection)
+    context = build_context_block(question, collection, entity_index)
     messages.append({
         "role": "user",
         "content": f"<journal_context>\n{context}\n</journal_context>\n\n{question}",
@@ -220,7 +261,7 @@ def store_entry(collection, text: str) -> str:
     return entry_id
 
 
-def write_entry(client, collection, messages: list):
+def write_entry(client, collection, entity_index: dict, messages: list):
     """Write mode: capture an entry, store it, let the companion respond."""
     text = read_entry_lines()
     if not text:
@@ -234,20 +275,22 @@ def write_entry(client, collection, messages: list):
         "The following is a new journal entry I just wrote — not a question. "
         "Respond to it as my companion.\n\n" + text
     )
-    ask(client, collection, messages, entry_message)
+    ask(client, collection, entity_index, messages, entry_message)
 
 
 def main():
     client = anthropic.Anthropic()
     collection = get_collection()
+    entity_index = load_entity_index()
     count = collection.count()
 
     if len(sys.argv) > 1:
         question = " ".join(sys.argv[1:])
-        ask(client, collection, [], question)
+        ask(client, collection, entity_index, [], question)
         return
 
-    print(f"\n  Journal Companion — {count} entries in memory")
+    known = f", {len(entity_index)} known entities" if entity_index else ""
+    print(f"\n  Journal Companion — {count} entries in memory{known}")
     print("  Ask about your journal, or /write to add an entry. 'quit' to leave.\n")
 
     messages = []
@@ -264,11 +307,11 @@ def main():
             break
         if question.lower() in ("/write", "/w", "write"):
             print()
-            write_entry(client, collection, messages)
+            write_entry(client, collection, entity_index, messages)
             print()
             continue
         print()
-        ask(client, collection, messages, question)
+        ask(client, collection, entity_index, messages, question)
         print()
 
 
