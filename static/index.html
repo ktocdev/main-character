@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Journal</title>
+<style>
+  :root {
+    --bg: #211d19;          /* warm charcoal, not pitch black */
+    --bg-raised: #2a2521;
+    --bg-input: #322c27;
+    --text: #e8e0d5;
+    --text-dim: #a99f92;
+    --accent: #d99e5b;      /* lamp amber */
+    --accent-dim: #8a6a44;
+    --border: #3d362f;
+    --you: #c9b99f;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #faf7f2; --bg-raised: #ffffff; --bg-input: #f1ece4;
+      --text: #38322b; --text-dim: #8c8378; --accent: #b5732f;
+      --accent-dim: #d9b183; --border: #e4dcd0; --you: #6b5d49;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 17px/1.65 Georgia, 'Times New Roman', serif;
+    height: 100dvh; display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 1.5rem;
+    padding: 1rem 1.5rem .8rem; border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 1.15rem; font-weight: normal; font-style: italic; color: var(--accent); }
+  header .status { font-size: .8rem; color: var(--text-dim); font-family: system-ui, sans-serif; }
+  nav { margin-left: auto; display: flex; gap: .25rem; }
+  nav button {
+    background: none; border: none; color: var(--text-dim);
+    font: .9rem system-ui, sans-serif; padding: .35rem .8rem;
+    border-radius: 6px; cursor: pointer;
+  }
+  nav button.active { background: var(--bg-input); color: var(--text); }
+  main { flex: 1; overflow: hidden; display: flex; }
+  .tab { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+  .tab.active { display: flex; }
+
+  /* Chat */
+  #log { flex: 1; overflow-y: auto; padding: 1.5rem; max-width: 46rem; margin: 0 auto; width: 100%; }
+  .msg { margin-bottom: 1.4rem; white-space: pre-wrap; }
+  .msg.you { color: var(--you); }
+  .msg.you::before { content: "you"; }
+  .msg.companion::before { content: "companion"; }
+  .msg::before {
+    display: block; font: .7rem system-ui, sans-serif; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent-dim); margin-bottom: .25rem;
+  }
+  .composer {
+    display: flex; gap: .6rem; padding: 1rem 1.5rem 1.25rem;
+    max-width: 46rem; margin: 0 auto; width: 100%;
+  }
+  textarea, input[type=text] {
+    background: var(--bg-input); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: .7rem .9rem; font: inherit; width: 100%;
+    resize: none; outline: none;
+  }
+  textarea:focus, input[type=text]:focus { border-color: var(--accent-dim); }
+  button.send {
+    background: var(--accent); color: var(--bg); border: none; border-radius: 10px;
+    padding: 0 1.2rem; font: .95rem system-ui, sans-serif; cursor: pointer; flex-shrink: 0;
+  }
+  button.send:disabled { opacity: .45; cursor: default; }
+  button.quiet {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 8px; padding: .3rem .7rem; font: .8rem system-ui, sans-serif; cursor: pointer;
+  }
+
+  /* Write */
+  #write { padding: 1.5rem; max-width: 46rem; margin: 0 auto; width: 100%; overflow-y: auto; }
+  #write h2, #entities-pane h2 { font-weight: normal; font-style: italic; font-size: 1.05rem; color: var(--text-dim); margin-bottom: 1rem; }
+  #entry-text { min-height: 14rem; margin-bottom: .8rem; }
+  #entry-response { margin-top: 1.5rem; white-space: pre-wrap; }
+  .saved-note { font: .8rem system-ui, sans-serif; color: var(--accent-dim); margin-left: 1rem; }
+
+  /* Entities */
+  #entities-pane { flex: 1; display: flex; overflow: hidden; }
+  #entity-list { width: 21rem; border-right: 1px solid var(--border); overflow-y: auto; padding: 1.2rem; }
+  #entity-list .kind { font: .7rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-dim); margin: 1rem 0 .4rem; }
+  #entity-list .ent {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    color: var(--text); font: .95rem system-ui, sans-serif; padding: .25rem .4rem;
+    border-radius: 6px; cursor: pointer;
+  }
+  #entity-list .ent:hover, #entity-list .ent.sel { background: var(--bg-input); }
+  #entity-list .ent .n { color: var(--text-dim); font-size: .8rem; }
+  #entity-detail { flex: 1; overflow-y: auto; padding: 1.5rem; }
+  #entity-doc { white-space: pre-wrap; font-size: .95rem; margin-top: 1rem; }
+  .ent-actions { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .8rem; }
+  .ent-actions input { width: 14rem; padding: .35rem .6rem; font-size: .85rem; }
+  #search { margin-bottom: .5rem; font-size: .9rem; padding: .4rem .7rem; }
+  .thinking { color: var(--text-dim); font-style: italic; }
+</style>
+</head>
+<body>
+<header>
+  <h1>journal</h1>
+  <span class="status" id="status"></span>
+  <nav>
+    <button data-tab="chat" class="active">chat</button>
+    <button data-tab="write">write</button>
+    <button data-tab="entities">entities</button>
+    <button class="quiet" id="reset" title="start a fresh conversation">new chat</button>
+  </nav>
+</header>
+<main>
+  <section class="tab active" id="tab-chat">
+    <div id="log"></div>
+    <div class="composer">
+      <textarea id="chat-text" rows="2" placeholder="ask about your journal…"></textarea>
+      <button class="send" id="chat-send">send</button>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-write">
+    <div id="write">
+      <h2>new entry</h2>
+      <textarea id="entry-text" placeholder="write freely…"></textarea>
+      <div>
+        <button class="send" id="entry-send">save entry</button>
+        <span class="saved-note" id="entry-saved"></span>
+      </div>
+      <div id="entry-response" class="msg companion" style="display:none"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-entities">
+    <div id="entities-pane">
+      <div id="entity-list">
+        <input type="text" id="search" placeholder="filter…">
+        <div id="entity-groups"></div>
+      </div>
+      <div id="entity-detail">
+        <h2 id="entity-name">select an entity</h2>
+        <div class="ent-actions" id="entity-actions" style="display:none">
+          <input type="text" id="merge-target" placeholder="merge into… (name)">
+          <button class="quiet" id="merge-btn">merge</button>
+          <button class="quiet" id="delete-btn">delete</button>
+        </div>
+        <div id="entity-doc"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let entities = {}, selected = null;
+
+// ---- tabs ----
+document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button[data-tab]').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  $('tab-' + b.dataset.tab).classList.add('active');
+  if (b.dataset.tab === 'entities') loadEntities();
+});
+
+// ---- status ----
+async function refreshStatus() {
+  const s = await (await fetch('/api/status')).json();
+  $('status').textContent = `${s.entries} entries · ${s.entities} entities`;
+}
+refreshStatus();
+
+// ---- chat ----
+function addMsg(cls, text) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.textContent = text;
+  $('log').appendChild(d);
+  $('log').scrollTop = $('log').scrollHeight;
+  return d;
+}
+
+async function streamInto(el, url, payload) {
+  const res = await fetch(url, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) { el.textContent = 'error: ' + (await res.text()); return res; }
+  el.classList.remove('thinking');
+  el.textContent = '';
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    el.textContent += dec.decode(value, {stream: true});
+    if (el.closest('#log')) $('log').scrollTop = $('log').scrollHeight;
+  }
+  return res;
+}
+
+async function sendChat() {
+  const text = $('chat-text').value.trim();
+  if (!text) return;
+  $('chat-text').value = '';
+  $('chat-send').disabled = true;
+  addMsg('you', text);
+  const el = addMsg('companion thinking', '…');
+  try { await streamInto(el, '/api/chat', {message: text}); }
+  finally { $('chat-send').disabled = false; $('chat-text').focus(); }
+}
+$('chat-send').onclick = sendChat;
+$('chat-text').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+});
+$('reset').onclick = async () => {
+  await fetch('/api/reset', {method: 'POST'});
+  $('log').innerHTML = '';
+};
+
+// ---- write ----
+$('entry-send').onclick = async () => {
+  const text = $('entry-text').value.trim();
+  if (!text) return;
+  $('entry-send').disabled = true;
+  $('entry-saved').textContent = 'saving…';
+  const el = $('entry-response');
+  el.style.display = 'block';
+  el.classList.add('thinking');
+  el.textContent = '…';
+  try {
+    const res = await streamInto(el, '/api/entry', {text});
+    const id = res.headers.get('X-Entry-Id');
+    $('entry-saved').textContent = id ? `saved (${id})` : 'saved';
+    $('entry-text').value = '';
+    refreshStatus();
+  } finally { $('entry-send').disabled = false; }
+};
+
+// ---- entities ----
+async function loadEntities() {
+  entities = await (await fetch('/api/entities')).json();
+  renderEntityList();
+  refreshStatus();
+}
+
+function renderEntityList() {
+  const filter = $('search').value.trim().toLowerCase();
+  const groups = {person: [], project: [], place: []};
+  for (const [name, info] of Object.entries(entities)) {
+    const hay = (name + ' ' + (info.aliases || []).join(' ')).toLowerCase();
+    if (filter && !hay.includes(filter)) continue;
+    groups[info.type].push([name, info.mentions]);
+  }
+  const wrap = $('entity-groups');
+  wrap.innerHTML = '';
+  for (const kind of ['person', 'project', 'place']) {
+    const items = groups[kind].sort((a, b) => b[1] - a[1]);
+    if (!items.length) continue;
+    const h = document.createElement('div');
+    h.className = 'kind';
+    h.textContent = `${kind}s (${items.length})`;
+    wrap.appendChild(h);
+    for (const [name, mentions] of items) {
+      const b = document.createElement('button');
+      b.className = 'ent' + (name === selected ? ' sel' : '');
+      b.innerHTML = `${name} <span class="n">${mentions}</span>`;
+      b.onclick = () => showEntity(name);
+      wrap.appendChild(b);
+    }
+  }
+}
+$('search').oninput = renderEntityList;
+
+async function showEntity(name) {
+  selected = name;
+  renderEntityList();
+  const r = await (await fetch('/api/entities/doc?name=' + encodeURIComponent(name))).json();
+  $('entity-name').textContent = r.name || name;
+  $('entity-doc').textContent = r.doc || r.error || '';
+  $('entity-actions').style.display = 'flex';
+  $('merge-target').value = '';
+}
+
+$('merge-btn').onclick = async () => {
+  const target = $('merge-target').value.trim();
+  if (!selected || !target) return;
+  if (!confirm(`Merge "${selected}" into "${target}"?`)) return;
+  const res = await fetch('/api/entities/merge', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({source: selected, target}),
+  });
+  const r = await res.json();
+  if (r.error) { alert(r.error); return; }
+  selected = null;
+  $('entity-name').textContent = `merged into ${r.into}`;
+  $('entity-doc').textContent = '';
+  $('entity-actions').style.display = 'none';
+  loadEntities();
+};
+
+$('delete-btn').onclick = async () => {
+  if (!selected) return;
+  if (!confirm(`Delete "${selected}" from the entity graph?`)) return;
+  const res = await fetch('/api/entities/delete', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name: selected}),
+  });
+  const r = await res.json();
+  if (r.error) { alert(r.error); return; }
+  selected = null;
+  $('entity-name').textContent = 'deleted';
+  $('entity-doc').textContent = '';
+  $('entity-actions').style.display = 'none';
+  loadEntities();
+};
+</script>
+</body>
+</html>
