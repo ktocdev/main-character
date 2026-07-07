@@ -181,6 +181,25 @@
     text-transform: uppercase; letter-spacing: .05em; margin-bottom: .4rem;
   }
   .cat-domain-body { white-space: pre-wrap; font-size: .92rem; }
+  .cat-chip.custom { border-style: dashed; }
+  .cat-proposal {
+    border: 1px dashed var(--accent-dim); border-radius: 10px;
+    padding: .8rem 1rem; margin-bottom: .8rem; background: var(--bg-raised);
+  }
+  .cat-proposal b { color: var(--accent); }
+  .prop-meta { font: .75rem system-ui, sans-serif; color: var(--text-dim); margin-left: .5rem; }
+  .prop-members { font-size: .9rem; margin-top: .2rem; }
+  .prop-reason { color: var(--text-dim); font-style: italic; font-size: .85rem; margin-top: .15rem; }
+  .prop-actions { display: flex; gap: .4rem; margin-top: .5rem; }
+  #cat-custom-row {
+    display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; margin-bottom: .8rem;
+  }
+  .custom-label { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  #cat-newform { display: flex; gap: .4rem; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; }
+  #cat-newform input {
+    background: var(--bg-input); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: .3rem .6rem; font: .85rem system-ui, sans-serif;
+  }
   .cat-summary {
     font-style: italic; color: var(--text-dim);
     border-bottom: 1px solid var(--border); padding-bottom: .6rem; margin-bottom: .6rem;
@@ -267,8 +286,17 @@
       <div id="cat-header">
         <span id="cat-status"></span>
         <button class="quiet" id="cat-build" title="tag any untagged entries with Claude (incremental — already-tagged entries are free)">tag new entries</button>
+        <button class="quiet" id="cat-scan" title="cluster places/projects by what happened around them and propose new categories (local embeddings + one Claude naming call)">scan for new categories</button>
       </div>
+      <div id="cat-proposals"></div>
       <div id="cat-chips"></div>
+      <div id="cat-custom-row"></div>
+      <div id="cat-newform">
+        <input type="text" id="newcat-name" placeholder="new category…" style="width:10rem">
+        <input type="text" id="newcat-keywords" placeholder="keywords, comma-separated (optional)" style="width:16rem">
+        <input type="text" id="newcat-parent" placeholder="parent (optional)" style="width:9rem">
+        <button class="quiet" id="newcat-add">add</button>
+      </div>
       <div id="cat-entries"></div>
     </div>
   </section>
@@ -1006,10 +1034,15 @@ document.querySelectorAll('[data-suggest]').forEach(b => b.onclick = async () =>
 });
 
 // ---- categories ----
-let catIndex = null, catSelected = null;
+let catIndex = null, catSelected = null, organicState = {proposals: [], custom: []};
 
 async function loadCategories() {
-  catIndex = await (await fetch('/api/categories')).json();
+  const [ci, os] = await Promise.all([
+    fetch('/api/categories').then(r => r.json()),
+    fetch('/api/organic').then(r => r.json()),
+  ]);
+  catIndex = ci;
+  organicState = os;
   renderCategories();
 }
 
@@ -1021,10 +1054,13 @@ function renderCategories() {
   chips.innerHTML = '';
   const untagged = Object.values(catIndex.conversations)
     .filter(c => !Object.keys(c.categories).length).length;
+  const customNames = new Set(catIndex.custom || []);
   const mkChip = (name, count, label) => {
     const b = document.createElement('button');
-    b.className = 'cat-chip' + (catSelected === name ? ' active' : '');
+    b.className = 'cat-chip' + (catSelected === name ? ' active' : '')
+      + (customNames.has(name) ? ' custom' : '');
     b.textContent = `${label || name.replace('_', ' ')} ${count}`;
+    if (customNames.has(name)) b.title = 'organic category (yours)';
     b.onclick = () => { catSelected = catSelected === name ? null : name; renderCategories(); };
     chips.appendChild(b);
   };
@@ -1032,7 +1068,75 @@ function renderCategories() {
     mkChip(name, count);
   }
   if (untagged) mkChip('__untagged', untagged, 'untagged');
+  renderProposals();
+  renderCustomRow();
   renderCatEntries();
+}
+
+function renderProposals() {
+  const el = $('cat-proposals');
+  el.innerHTML = '';
+  for (const p of organicState.proposals) {
+    const d = document.createElement('div');
+    d.className = 'cat-proposal';
+    const head = document.createElement('div');
+    head.innerHTML = `<b>${p.name}</b> <span class="prop-meta">${p.confidence} confidence · ${p.weeks} weeks</span>`;
+    d.appendChild(head);
+    const mem = document.createElement('div');
+    mem.className = 'prop-members';
+    mem.textContent = p.members.join(' · ');
+    d.appendChild(mem);
+    const why = document.createElement('div');
+    why.className = 'prop-reason';
+    why.textContent = p.reason;
+    d.appendChild(why);
+    const row = document.createElement('div');
+    row.className = 'prop-actions';
+    const act = (label, action, title) => {
+      const b = document.createElement('button');
+      b.className = 'quiet';
+      b.textContent = label;
+      b.title = title;
+      b.onclick = async () => {
+        if (await api('/api/organic/respond', {id: p.id, action})) loadCategories();
+      };
+      row.appendChild(b);
+    };
+    act('confirm', 'confirm', 'create this category — entries mentioning these members get the tag');
+    act('not now', 'not_now', 'defer — re-surfaces when the cluster gains a new member');
+    act('dismiss', 'dismiss', 'not a real category — stays hidden unless new members appear');
+    d.appendChild(row);
+    el.appendChild(d);
+  }
+}
+
+function renderCustomRow() {
+  const el = $('cat-custom-row');
+  el.innerHTML = '';
+  if (!organicState.custom.length) return;
+  const label = document.createElement('span');
+  label.className = 'custom-label';
+  label.textContent = 'your categories:';
+  el.appendChild(label);
+  for (const c of organicState.custom) {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    const bits = [];
+    if (c.members.length) bits.push(`${c.members.length} members`);
+    if (c.keywords.length) bits.push(`keywords: ${c.keywords.join(', ')}`);
+    if (c.parent) bits.push(`rolls up to ${c.parent}`);
+    chip.title = bits.join(' · ') || 'empty definition';
+    chip.textContent = c.name + ' ';
+    const x = document.createElement('button');
+    x.textContent = '×';
+    x.title = 'delete this category (its tags disappear; entries are untouched)';
+    x.onclick = async () => {
+      if (!confirm(`delete category "${c.name}"?`)) return;
+      if (await api('/api/organic/custom/delete', {name: c.name})) loadCategories();
+    };
+    chip.appendChild(x);
+    el.appendChild(chip);
+  }
 }
 
 function renderCatEntries() {
@@ -1201,6 +1305,40 @@ $('pat-build').onclick = async () => {
   } finally {
     b.textContent = 'detect patterns';
     b.disabled = false;
+  }
+};
+
+$('cat-scan').onclick = async () => {
+  const b = $('cat-scan');
+  b.disabled = true;
+  b.textContent = 'scanning…';
+  try {
+    const r = await api('/api/organic/scan', {});
+    if (r) {
+      organicState = r;
+      await loadCategories();
+      b.textContent = r.proposals.length
+        ? `${r.proposals.length} proposal${r.proposals.length === 1 ? '' : 's'}`
+        : 'nothing new found';
+    }
+  } finally {
+    setTimeout(() => { b.textContent = 'scan for new categories'; b.disabled = false; }, 4000);
+  }
+};
+
+$('newcat-add').onclick = async () => {
+  const name = $('newcat-name').value.trim();
+  if (!name) return;
+  const r = await api('/api/organic/custom', {
+    name,
+    keywords: $('newcat-keywords').value,
+    parent: $('newcat-parent').value.trim(),
+  });
+  if (r) {
+    $('newcat-name').value = '';
+    $('newcat-keywords').value = '';
+    $('newcat-parent').value = '';
+    loadCategories();
   }
 };
 
