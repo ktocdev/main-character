@@ -181,8 +181,12 @@ def build_context_block(question: str, collection, entity_index: dict) -> str:
     return "\n".join(lines)
 
 
-def ask(client, collection, entity_index: dict, messages: list, question: str) -> str:
-    """Send a question with retrieved context; stream and return the reply."""
+def stream_reply(client, collection, entity_index: dict, messages: list, question: str):
+    """
+    Core companion turn: retrieve context, send, yield reply text chunks.
+    Appends both the user turn and the assistant reply to `messages`.
+    Usable from the CLI and the web server alike.
+    """
     context = build_context_block(question, collection, entity_index)
     messages.append({
         "role": "user",
@@ -202,17 +206,24 @@ def ask(client, collection, entity_index: dict, messages: list, question: str) -
         messages=messages,
     ) as stream:
         for text in stream.text_stream:
-            print(text, end="", flush=True)
             reply_parts.append(text)
+            yield text
         final = stream.get_final_message()
 
-    print()
     if final.stop_reason == "refusal":
-        print("  [The model declined to respond to this.]")
+        yield "\n[The model declined to respond to this.]"
 
-    reply = "".join(reply_parts)
-    messages.append({"role": "assistant", "content": reply})
-    return reply
+    messages.append({"role": "assistant", "content": "".join(reply_parts)})
+
+
+def ask(client, collection, entity_index: dict, messages: list, question: str) -> str:
+    """CLI wrapper: stream a reply to stdout and return it."""
+    reply_parts = []
+    for text in stream_reply(client, collection, entity_index, messages, question):
+        print(text, end="", flush=True)
+        reply_parts.append(text)
+    print()
+    return "".join(reply_parts)
 
 
 def read_entry_lines() -> str:

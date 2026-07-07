@@ -1,4 +1,8 @@
 # Core
 chromadb>=0.5          # local vector store (bundles all-MiniLM-L6-v2 embeddings)
-anthropic>=0.40        # Claude API — companion + future metadata extraction
+anthropic>=0.40        # Claude API — companion + metadata extraction
 python-dotenv>=1.0     # .env config
+
+# Web UI
+fastapi>=0.115         # local web server (server.py)
+uvicorn>=0.30          # ASGI runner
