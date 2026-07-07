@@ -95,10 +95,37 @@
   #entity-list .ent:hover, #entity-list .ent.sel { background: var(--bg-input); }
   #entity-list .ent .n { color: var(--text-dim); font-size: .8rem; }
   #entity-detail { flex: 1; overflow-y: auto; padding: 1.5rem; }
-  #entity-doc { white-space: pre-wrap; font-size: .95rem; margin-top: 1rem; }
+  #entity-doc { font-size: .95rem; margin-top: 1rem; }
+  #entity-meta { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
   .ent-actions { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .8rem; }
-  .ent-actions input { width: 14rem; padding: .35rem .6rem; font-size: .85rem; }
+  .ent-actions input { width: 12rem; padding: .35rem .6rem; font-size: .85rem; }
+  .ent-actions select {
+    background: var(--bg-input); color: var(--text-dim); border: 1px solid var(--border);
+    border-radius: 8px; padding: .3rem .5rem; font: .8rem system-ui, sans-serif;
+  }
+  .alias-label { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  .chip {
+    display: inline-flex; align-items: center; gap: .3rem; background: var(--bg-input);
+    border-radius: 999px; padding: .1rem .6rem; font: .8rem system-ui, sans-serif;
+    margin-right: .3rem;
+  }
+  .chip button { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: .9rem; padding: 0; }
+  .obs-date { font: .7rem system-ui, sans-serif; color: var(--accent-dim); text-transform: uppercase; letter-spacing: .06em; margin: 1.1rem 0 .3rem; }
+  .obs { display: flex; gap: .5rem; align-items: baseline; padding: .15rem 0; }
+  .obs .t { flex: 1; }
+  .obs .ops { visibility: hidden; display: flex; gap: .2rem; }
+  .obs:hover .ops { visibility: visible; }
+  .obs .ops button {
+    background: none; border: none; color: var(--text-dim); cursor: pointer;
+    font: .75rem system-ui, sans-serif; padding: .1rem .3rem;
+  }
+  .obs .ops button:hover { color: var(--accent); }
+  #suggest-panel { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.2rem; }
+  .sg { border-bottom: 1px solid var(--border); padding: .6rem 0; }
+  .sg:last-child { border-bottom: none; }
+  .sg .r { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin: .2rem 0 .4rem; }
   #search { margin-bottom: .5rem; font-size: .9rem; padding: .4rem .7rem; }
+  #suggest-btns { display: flex; gap: .4rem; margin-bottom: .6rem; }
   .thinking { color: var(--text-dim); font-style: italic; }
 </style>
 </head>
@@ -138,14 +165,34 @@
     <div id="entities-pane">
       <div id="entity-list">
         <input type="text" id="search" placeholder="filter…">
+        <div id="suggest-btns">
+          <button class="quiet" data-suggest="person">suggest people merges</button>
+          <button class="quiet" data-suggest="project">projects</button>
+          <button class="quiet" data-suggest="place">places</button>
+        </div>
         <div id="entity-groups"></div>
       </div>
       <div id="entity-detail">
+        <div id="suggest-panel" style="display:none"></div>
         <h2 id="entity-name">select an entity</h2>
+        <div id="entity-meta"></div>
         <div class="ent-actions" id="entity-actions" style="display:none">
-          <input type="text" id="merge-target" placeholder="merge into… (name)">
-          <button class="quiet" id="merge-btn">merge</button>
+          <input type="text" id="merge-target" placeholder="target name…">
+          <button class="quiet" id="merge-btn" title="combine; this name is kept as an alias">merge into</button>
+          <button class="quiet" id="correct-btn" title="typo fix; this name is NOT kept as an alias">correct to</button>
+          <select id="retype-kind">
+            <option value="">retype…</option>
+            <option value="person">person</option>
+            <option value="project">project</option>
+            <option value="place">place</option>
+          </select>
           <button class="quiet" id="delete-btn">delete</button>
+        </div>
+        <div class="ent-actions" id="alias-row" style="display:none">
+          <span class="alias-label">aliases:</span>
+          <span id="alias-chips"></span>
+          <input type="text" id="alias-new" placeholder="add alias…" style="width:9rem">
+          <button class="quiet" id="alias-add-btn">add</button>
         </div>
         <div id="entity-doc"></div>
       </div>
@@ -275,48 +322,188 @@ function renderEntityList() {
 }
 $('search').oninput = renderEntityList;
 
+async function api(url, payload) {
+  const res = await fetch(url, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  });
+  const r = await res.json();
+  if (r.error) { alert(r.error); return null; }
+  return r;
+}
+
 async function showEntity(name) {
   selected = name;
   renderEntityList();
-  const r = await (await fetch('/api/entities/doc?name=' + encodeURIComponent(name))).json();
-  $('entity-name').textContent = r.name || name;
-  $('entity-doc').textContent = r.doc || r.error || '';
+  const r = await (await fetch('/api/entities/observations?name=' + encodeURIComponent(name))).json();
+  if (r.error) { alert(r.error); return; }
+  selected = r.name;
+  const info = entities[r.name] || {};
+  $('entity-name').textContent = r.name;
+  $('entity-meta').textContent = `${r.type} · ${r.observations.length} observations`;
   $('entity-actions').style.display = 'flex';
   $('merge-target').value = '';
+  $('retype-kind').value = '';
+
+  // aliases
+  $('alias-row').style.display = 'flex';
+  const chips = $('alias-chips');
+  chips.innerHTML = '';
+  for (const a of (info.aliases || [])) {
+    const c = document.createElement('span');
+    c.className = 'chip';
+    c.textContent = a + ' ';
+    const x = document.createElement('button');
+    x.textContent = '×';
+    x.title = 'remove alias';
+    x.onclick = async () => {
+      if (await api('/api/entities/alias', {name: r.name, remove: a})) await reloadEntity(r.name);
+    };
+    c.appendChild(x);
+    chips.appendChild(c);
+  }
+
+  // observations grouped by date, each editable
+  const docEl = $('entity-doc');
+  docEl.innerHTML = '';
+  let lastDate = null;
+  for (const o of r.observations) {
+    if (o.date !== lastDate) {
+      lastDate = o.date;
+      const d = document.createElement('div');
+      d.className = 'obs-date';
+      d.textContent = o.date + (o.extracted_name !== r.name ? ` · as "${o.extracted_name}"` : '');
+      docEl.appendChild(d);
+    }
+    const row = document.createElement('div');
+    row.className = 'obs';
+    const t = document.createElement('span');
+    t.className = 't';
+    t.textContent = o.text;
+    const ops = document.createElement('span');
+    ops.className = 'ops';
+    const mk = (label, title, fn) => {
+      const b = document.createElement('button');
+      b.textContent = label; b.title = title; b.onclick = fn;
+      ops.appendChild(b);
+    };
+    mk('edit', 'edit this observation', async () => {
+      const text = prompt('Edit observation:', o.text);
+      if (text === null || text.trim() === o.text) return;
+      if (await api('/api/observation', {...o, action: 'edit', text: text.trim()})) await reloadEntity(r.name);
+    });
+    mk('move', 'reassign to a different entity', async () => {
+      const target = prompt('Move this observation to which entity?\n(prefix with person:/project:/place: if it\'s new)', '');
+      if (!target) return;
+      let kind = r.type, tname = target.trim();
+      const m = tname.match(/^(person|project|place):(.+)$/);
+      if (m) { kind = m[1]; tname = m[2].trim(); }
+      else if (entities[tname]) kind = entities[tname].type;
+      if (await api('/api/observation', {...o, action: 'reassign', target_kind: kind, target_name: tname})) await reloadEntity(r.name);
+    });
+    mk('×', 'delete this observation', async () => {
+      if (!confirm('Delete this observation?')) return;
+      if (await api('/api/observation', {...o, action: 'delete'})) await reloadEntity(r.name);
+    });
+    row.appendChild(t);
+    row.appendChild(ops);
+    docEl.appendChild(row);
+  }
+}
+
+async function reloadEntity(name) {
+  await loadEntities();
+  if (entities[name]) await showEntity(name);
+  else {
+    $('entity-name').textContent = 'select an entity';
+    $('entity-meta').textContent = '';
+    $('entity-doc').innerHTML = '';
+    $('entity-actions').style.display = 'none';
+    $('alias-row').style.display = 'none';
+  }
+}
+
+function clearDetail(msg) {
+  selected = null;
+  $('entity-name').textContent = msg;
+  $('entity-meta').textContent = '';
+  $('entity-doc').innerHTML = '';
+  $('entity-actions').style.display = 'none';
+  $('alias-row').style.display = 'none';
+  loadEntities();
 }
 
 $('merge-btn').onclick = async () => {
   const target = $('merge-target').value.trim();
   if (!selected || !target) return;
-  if (!confirm(`Merge "${selected}" into "${target}"?`)) return;
-  const res = await fetch('/api/entities/merge', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({source: selected, target}),
-  });
-  const r = await res.json();
-  if (r.error) { alert(r.error); return; }
-  selected = null;
-  $('entity-name').textContent = `merged into ${r.into}`;
-  $('entity-doc').textContent = '';
-  $('entity-actions').style.display = 'none';
-  loadEntities();
+  if (!confirm(`Merge "${selected}" into "${target}"?\n("${selected}" stays as an alias)`)) return;
+  const r = await api('/api/entities/merge', {source: selected, target});
+  if (r) clearDetail(`merged into ${r.into}`);
+};
+
+$('correct-btn').onclick = async () => {
+  const target = $('merge-target').value.trim();
+  if (!selected || !target) return;
+  if (!confirm(`Correct "${selected}" to "${target}"?\n(typo fix — "${selected}" is NOT kept as an alias)`)) return;
+  const r = await api('/api/entities/correct', {source: selected, target});
+  if (r) clearDetail(`corrected to ${r.into}`);
+};
+
+$('retype-kind').onchange = async () => {
+  const kind = $('retype-kind').value;
+  if (!selected || !kind) return;
+  const newName = prompt(`Move "${selected}" to ${kind}s. Rename it? (leave as-is to keep the name)`, selected);
+  if (newName === null) { $('retype-kind').value = ''; return; }
+  const r = await api('/api/entities/retype', {name: selected, new_type: kind, new_name: newName.trim()});
+  if (r) clearDetail(`moved to ${kind}s`);
+};
+
+$('alias-add-btn').onclick = async () => {
+  const a = $('alias-new').value.trim();
+  if (!selected || !a) return;
+  if (await api('/api/entities/alias', {name: selected, add: a})) {
+    $('alias-new').value = '';
+    await reloadEntity(selected);
+  }
 };
 
 $('delete-btn').onclick = async () => {
   if (!selected) return;
   if (!confirm(`Delete "${selected}" from the entity graph?`)) return;
-  const res = await fetch('/api/entities/delete', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({name: selected}),
-  });
-  const r = await res.json();
-  if (r.error) { alert(r.error); return; }
-  selected = null;
-  $('entity-name').textContent = 'deleted';
-  $('entity-doc').textContent = '';
-  $('entity-actions').style.display = 'none';
-  loadEntities();
+  const r = await api('/api/entities/delete', {name: selected});
+  if (r) clearDetail('deleted');
 };
+
+// ---- merge suggestions ----
+document.querySelectorAll('[data-suggest]').forEach(b => b.onclick = async () => {
+  const kind = b.dataset.suggest;
+  const panel = $('suggest-panel');
+  panel.style.display = 'block';
+  panel.textContent = `asking claude for ${kind} merge suggestions…`;
+  const r = await api('/api/entities/suggest', {kind});
+  if (!r) { panel.style.display = 'none'; return; }
+  panel.innerHTML = '';
+  if (!r.groups.length) { panel.textContent = 'no confident suggestions — looks clean.'; return; }
+  for (const g of r.groups) {
+    const div = document.createElement('div');
+    div.className = 'sg';
+    div.innerHTML = `<strong>${g.members.join(', ')}</strong> → ${g.canonical}<div class="r">${g.reason}</div>`;
+    const ok = document.createElement('button');
+    ok.className = 'quiet'; ok.textContent = 'apply';
+    ok.onclick = async () => {
+      for (const m of g.members) await api('/api/entities/merge', {source: m, target: g.canonical});
+      div.remove();
+      loadEntities();
+    };
+    const no = document.createElement('button');
+    no.className = 'quiet'; no.textContent = 'dismiss';
+    no.onclick = () => div.remove();
+    div.appendChild(ok);
+    div.appendChild(document.createTextNode(' '));
+    div.appendChild(no);
+    panel.appendChild(div);
+  }
+});
 </script>
 </body>
 </html>
