@@ -7,12 +7,16 @@ companion's Layer 1 context:
   Weekly arc summaries  — ~450-word narrative per ISO week, cached in
                           summaries/arcs/{YYYY-Www}.md; only weeks whose
                           entries changed are regenerated
+  Domain summaries      — one living document per category (work, health,
+                          dating, …) in summaries/domains/{name}.md, built
+                          from the entries tagged with that category; only
+                          domains whose entry set changed are regenerated
   Status snapshot       — summaries/status_snapshot.md, a compact
                           "what's going on in this person's life right now"
                           built from the recent arcs + the latest raw entries
 
 Usage:
-    python summarizer.py build            # incremental (only stale weeks)
+    python summarizer.py build            # incremental (only stale weeks/domains)
     python summarizer.py build --force    # regenerate everything
 """
 
@@ -29,15 +33,19 @@ load_dotenv()
 
 import anthropic
 
-from entities import get_conversations
+from entities import get_conversations, conversation_cache_key
 
 MODEL = "claude-opus-4-8"
 SUMMARY_DIR = Path(__file__).parent / "summaries"
 ARC_DIR = SUMMARY_DIR / "arcs"
+DOMAIN_DIR = SUMMARY_DIR / "domains"
 SNAPSHOT_FILE = SUMMARY_DIR / "status_snapshot.md"
 AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 ARC_INPUT_CHARS = 60_000
 SNAPSHOT_RECENT_ARCS = 4
+DOMAIN_INPUT_CHARS = 100_000   # newest entries kept in full, oldest dropped first
+DOMAIN_ENTRY_CHARS = 6_000     # per-entry cap inside a domain's input
+MIN_DOMAIN_ENTRIES = 3         # a "domain" of one entry isn't a story yet
 
 ARC_PROMPT = """\
 You are summarizing one week of {author}'s journal. Below are the journal \
@@ -53,6 +61,27 @@ moralize or append advice — this is a record, not a pep talk.
 <week entries_from="{start}" entries_to="{end}">
 {text}
 </week>"""
+
+DOMAIN_PROMPT = """\
+You maintain the living "{category}" document of {author}'s journal — the \
+one page to read to understand this part of {author}'s life. In this \
+journal, "{category}" covers: {definition}.
+
+Below are {author}'s journal entries tagged with this category, oldest \
+first (each originally a conversation with an AI companion; only \
+{author}'s side is included). Some entries touch many parts of life — \
+draw out the {category} thread and leave the rest.
+
+Write the document in about 400-600 words of plain prose. Open with where \
+things stand now, then how it got here — the key developments anchored to \
+their dates — and end with the open threads. Use people's names as \
+{author} does. This is a record, not a pep talk: no advice, no moralizing.
+
+Today is {today}.
+
+<entries category="{category}">
+{text}
+</entries>"""
 
 SNAPSHOT_PROMPT = """\
 You maintain a status snapshot for {author}'s journal companion: a compact, \
@@ -155,6 +184,94 @@ def build_arcs(force: bool = False, quiet: bool = False) -> int:
     return regenerated
 
 
+def build_domains(force: bool = False, quiet: bool = False) -> int:
+    """Generate/refresh the per-category domain documents. Returns how
+    many were (re)generated. Uses the category index (categories.py), so
+    entries must be tagged first."""
+    import categories as cats
+
+    index = cats.load_index()
+    client = anthropic.Anthropic()
+    DOMAIN_DIR.mkdir(parents=True, exist_ok=True)
+
+    by_key = {conversation_cache_key(c): c for c in get_conversations()}
+    regenerated = 0
+
+    for name, definition in cats.CATEGORIES.items():
+        tagged = sorted(
+            ((key, rec) for key, rec in index["conversations"].items()
+             if name in rec["categories"] and key in by_key),
+            key=lambda p: p[1]["date"],
+        )
+        path = DOMAIN_DIR / f"{name}.md"
+        if len(tagged) < MIN_DOMAIN_ENTRIES:
+            if not quiet:
+                print(f"  {name} (only {len(tagged)} entries — skipped)")
+            continue
+
+        current_hash = hashlib.md5("\n".join(
+            f"{rec['date']}|{rec['title']}|{len(by_key[key]['text'])}"
+            for key, rec in tagged
+        ).encode()).hexdigest()[:12]
+
+        if path.exists() and not force:
+            first_line = path.read_text(encoding="utf-8").splitlines()[0]
+            if current_hash in first_line:
+                if not quiet:
+                    print(f"  {name} (current)")
+                continue
+
+        # newest entries win the char budget; render oldest-first
+        picked, used = [], 0
+        for key, rec in reversed(tagged):
+            entry_text = by_key[key]["text"][:DOMAIN_ENTRY_CHARS]
+            block = (
+                f"[{rec['date']}] {rec['title']}"
+                f" (tagged: {rec['categories'][name]})\n{entry_text}"
+            )
+            if used + len(block) > DOMAIN_INPUT_CHARS and picked:
+                break
+            picked.append(block)
+            used += len(block)
+        text = "\n\n---\n\n".join(reversed(picked))
+
+        try:
+            response = client.messages.create(
+                model=MODEL,
+                max_tokens=2000,
+                messages=[{
+                    "role": "user",
+                    "content": DOMAIN_PROMPT.format(
+                        author=AUTHOR, category=name, definition=definition,
+                        today=datetime.now().strftime("%Y-%m-%d"), text=text,
+                    ),
+                }],
+            )
+            if response.stop_reason == "refusal":
+                raise RuntimeError("model declined")
+            doc = next(b.text for b in response.content if b.type == "text").strip()
+        except Exception as e:
+            print(f"  {name} FAILED: {e}")
+            continue
+
+        path.write_text(
+            f"<!-- hash: {current_hash} -->\n"
+            f"# {name} ({len(tagged)} entries, through {tagged[-1][1]['date']})\n\n{doc}\n",
+            encoding="utf-8",
+        )
+        regenerated += 1
+        if not quiet:
+            print(f"  {name} -> written ({len(tagged)} entries)")
+    return regenerated
+
+
+def load_domain_doc(name: str) -> str | None:
+    path = DOMAIN_DIR / f"{Path(name).name}.md"  # basename only — no traversal
+    if path.exists():
+        return path.read_text(encoding="utf-8")
+    return None
+
+
 def build_snapshot(quiet: bool = False):
     client = anthropic.Anthropic()
     arc_files = sorted(ARC_DIR.glob("*.md"))[-SNAPSHOT_RECENT_ARCS:]
@@ -193,10 +310,14 @@ def build_snapshot(quiet: bool = False):
 
 def build(force: bool = False, quiet: bool = False) -> dict:
     n = build_arcs(force=force, quiet=quiet)
+    d = build_domains(force=force, quiet=quiet)
     build_snapshot(quiet=quiet)
     arcs_total = len(list(ARC_DIR.glob("*.md")))
-    print(f"\n  Summaries: {arcs_total} weekly arcs ({n} regenerated) + status snapshot")
-    return {"arcs": arcs_total, "regenerated": n}
+    domains_total = len(list(DOMAIN_DIR.glob("*.md"))) if DOMAIN_DIR.exists() else 0
+    print(f"\n  Summaries: {arcs_total} weekly arcs ({n} regenerated) + "
+          f"{domains_total} domains ({d} regenerated) + status snapshot")
+    return {"arcs": arcs_total, "regenerated": n,
+            "domains": domains_total, "domains_regenerated": d}
 
 
 if __name__ == "__main__":

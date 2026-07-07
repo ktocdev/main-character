@@ -411,12 +411,22 @@ def dismiss_duplicate(body: DismissDupIn):
 
 @app.post("/api/summaries/refresh")
 def refresh_summaries():
-    """Regenerate stale weekly arcs + the status snapshot, and tag any
-    new entries with categories (all incremental)."""
+    """Tag any new entries with categories, then regenerate stale weekly
+    arcs, domain documents, and the status snapshot (all incremental).
+    Tagging runs first so fresh entries land in their domain docs."""
     import summarizer
-    result = summarizer.build(quiet=True)
     cat = categories.build(quiet=True)
+    result = summarizer.build(quiet=True)
     return {"ok": True, **result, "categories_tagged": cat["new"]}
+
+
+@app.get("/api/summaries/domain")
+def domain_summary(name: str):
+    import summarizer
+    doc = summarizer.load_domain_doc(name)
+    if doc is None:
+        return JSONResponse({"error": "no summary for this domain yet"}, status_code=404)
+    return {"name": name, "doc": doc}
 
 
 @app.get("/api/categories")
