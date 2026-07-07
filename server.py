@@ -429,6 +429,29 @@ def domain_summary(name: str):
     return {"name": name, "doc": doc}
 
 
+@app.get("/api/patterns")
+def get_patterns():
+    import patterns
+    library = patterns.load_library()
+    return {"generated": library["generated"], "patterns": patterns.load_patterns()}
+
+
+@app.post("/api/patterns/build")
+def build_patterns(body: CategoryBuildIn):
+    """Detect patterns from the current arcs + domain docs (one Claude
+    call; skipped when the inputs haven't changed unless force)."""
+    import patterns
+    library = patterns.build(force=body.force, quiet=True)
+    return {"generated": library["generated"], "patterns": patterns.load_patterns()}
+
+
+@app.post("/api/patterns/dismiss")
+def dismiss_pattern(body: NameIn):
+    import patterns
+    patterns.dismiss(body.name)
+    return {"ok": True, "dismissed": body.name}
+
+
 @app.get("/api/categories")
 def category_index():
     return categories.load_index()

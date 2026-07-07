@@ -13,6 +13,7 @@ journal_entries/
 entity_graph/
 summaries/
 categories/
+patterns/
 conversations.json
 *.export.json
 import_list.txt
