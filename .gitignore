@@ -14,6 +14,7 @@ entity_graph/
 summaries/
 categories/
 patterns/
+dreams/
 conversations.json
 *.export.json
 import_list.txt

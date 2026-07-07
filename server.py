@@ -57,6 +57,7 @@ class ChatIn(BaseModel):
 
 class EntryIn(BaseModel):
     text: str
+    dream: bool = False  # user-flagged; dreams go to the dream realm
 
 
 class MergeIn(BaseModel):
@@ -162,23 +163,49 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
     if not text:
         return JSONResponse({"error": "empty entry"}, status_code=400)
 
-    entry_id = companion.store_entry(STATE["collection"], text)
-    entry_message = (
-        "The following is a new journal entry I just wrote — not a question. "
-        "Respond to it as my companion.\n\n" + text
-    )
-    background_tasks.add_task(_after_entry_refresh)
+    if body.dream:
+        import dreams
+        entry_id = dreams.store_dream_entry(text)
+        entry_message = (
+            "The following is a dream I just had — I'm flagging it as a "
+            "dream, not a waking event. Respond to it as my companion: "
+            "receive it, don't decode it with generic symbolism.\n\n" + text
+        )
+        background_tasks.add_task(dreams.ingest_dream_entry, text, entry_id)
+    else:
+        entry_id = companion.store_entry(STATE["collection"], text)
+        entry_message = (
+            "The following is a new journal entry I just wrote — not a question. "
+            "Respond to it as my companion.\n\n" + text
+        )
+        background_tasks.add_task(_after_entry_refresh)
 
     def gen():
         yield from companion.stream_reply(
             STATE["client"], STATE["collection"], STATE["entity_index"],
-            STATE["messages"], entry_message,
+            STATE["messages"], entry_message, include_dreams=body.dream,
         )
     return StreamingResponse(
         gen(),
         media_type="text/plain; charset=utf-8",
         headers={"X-Entry-Id": entry_id},
     )
+
+
+@app.get("/api/dreams")
+def dream_index():
+    import dreams
+    index = dreams.load_index()
+    return {**index, "weather": dreams.dream_weather()}
+
+
+@app.post("/api/dreams/extract")
+def extract_dreams(body: CategoryBuildIn):
+    """Scan the journal for dreams (cached per conversation; incremental)."""
+    import dreams
+    dreams.extract(force=body.force, quiet=True)
+    index = dreams.load_index()
+    return {**index, "weather": dreams.dream_weather()}
 
 
 @app.post("/api/reflect")

@@ -224,6 +224,32 @@
   .pat-instances { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin-top: .5rem; }
   .pat-instances div { padding: .12rem 0; }
 
+  /* Dreams */
+  #dreams { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
+  #dream-header { display: flex; align-items: center; gap: 1rem; margin-bottom: .6rem; }
+  #dream-status { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  #dream-weather { font-style: italic; color: var(--accent); font-size: .9rem; margin-bottom: 1.2rem; }
+  .dream-card {
+    border: 1px solid var(--border); border-left: 3px solid var(--accent-dim);
+    border-radius: 10px; background: var(--bg-raised);
+    padding: 1rem 1.2rem; margin-bottom: 1rem;
+  }
+  .dream-card h3 {
+    font-size: .9rem; font-weight: 600; color: var(--text-dim);
+    font-family: system-ui, sans-serif; display: flex; align-items: center; gap: .4rem;
+  }
+  .dream-tone {
+    background: var(--bg-input); border-radius: 999px; padding: .05rem .6rem;
+    font: .72rem system-ui, sans-serif; color: var(--accent);
+  }
+  .dream-card p { margin: .45rem 0 0; font-size: .95rem; }
+  .dream-cast { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin-top: .4rem; }
+  .dream-read { color: var(--text-dim); font-style: italic; font-size: .9rem; }
+  .dream-flag {
+    font: .85rem system-ui, sans-serif; color: var(--text-dim);
+    margin-left: .8rem; cursor: pointer;
+  }
+
   /* Help */
   #help { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
   #help h2 { font-style: italic; font-weight: normal; font-size: 1.15rem; color: var(--accent); margin: 1.6rem 0 .8rem; }
@@ -251,6 +277,7 @@
     <button data-tab="entities">entities</button>
     <button data-tab="categories">categories</button>
     <button data-tab="patterns">patterns</button>
+    <button data-tab="dreams">dreams</button>
     <button data-tab="triage">triage</button>
     <button data-tab="help">help</button>
     <button class="quiet" id="undo-btn" title="undo last entity change">↺</button>
@@ -275,6 +302,9 @@
       <textarea id="entry-text" placeholder="write freely…"></textarea>
       <div>
         <button class="send" id="entry-send">save entry</button>
+        <label class="dream-flag" title="stored in the dream realm — never mixes into waking-life memory">
+          <input type="checkbox" id="entry-dream"> this was a dream
+        </label>
         <span class="saved-note" id="entry-saved"></span>
       </div>
       <div id="entry-response" class="msg companion" style="display:none"></div>
@@ -308,6 +338,17 @@
         <button class="quiet" id="pat-build" title="re-read the weekly arcs + domain documents and detect recurring patterns (one Claude call; skipped if nothing has changed)">detect patterns</button>
       </div>
       <div id="pat-list"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-dreams">
+    <div id="dreams">
+      <div id="dream-header">
+        <span id="dream-status"></span>
+        <button class="quiet" id="dream-extract" title="scan the journal for dreams (only entries mentioning dreams; already-scanned entries are free)">extract dreams from history</button>
+      </div>
+      <div id="dream-weather"></div>
+      <div id="dream-list"></div>
     </div>
   </section>
 
@@ -477,6 +518,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () =>
   if (activeTab === 'entities') loadEntities();
   if (activeTab === 'categories') loadCategories();
   if (activeTab === 'patterns') loadPatterns();
+  if (activeTab === 'dreams') loadDreams();
   if (activeTab === 'triage') startTriage();
 });
 
@@ -566,12 +608,70 @@ $('entry-send').onclick = async () => {
   el.classList.add('thinking');
   el.textContent = '…';
   try {
-    const res = await streamInto(el, '/api/entry', {text});
+    const dream = $('entry-dream').checked;
+    const res = await streamInto(el, '/api/entry', {text, dream});
     const id = res.headers.get('X-Entry-Id');
-    $('entry-saved').textContent = id ? `saved (${id})` : 'saved';
+    $('entry-saved').textContent = id ? `saved${dream ? ' to the dream realm' : ''} (${id})` : 'saved';
     $('entry-text').value = '';
+    $('entry-dream').checked = false;
     refreshStatus();
   } finally { $('entry-send').disabled = false; }
+};
+
+// ---- dreams ----
+async function loadDreams() {
+  renderDreams(await (await fetch('/api/dreams')).json());
+}
+
+function renderDreams(r) {
+  $('dream-status').textContent = r.dreams.length
+    ? `${r.dreams.length} dreams on record`
+    : 'no dreams extracted yet';
+  $('dream-weather').textContent = r.weather || '';
+  const el = $('dream-list');
+  el.innerHTML = '';
+  for (const d of r.dreams) {
+    const card = document.createElement('div');
+    card.className = 'dream-card';
+    const h = document.createElement('h3');
+    h.textContent = d.date;
+    for (const t of d.tones) {
+      const chip = document.createElement('span');
+      chip.className = 'dream-tone';
+      chip.textContent = t;
+      h.appendChild(chip);
+    }
+    card.appendChild(h);
+    const n = document.createElement('p');
+    n.textContent = d.narrative;
+    card.appendChild(n);
+    const cast = [...d.people, ...d.places];
+    if (cast.length) {
+      const c = document.createElement('div');
+      c.className = 'dream-cast';
+      c.textContent = cast.join(' · ');
+      card.appendChild(c);
+    }
+    if (d.interpretation) {
+      const i = document.createElement('p');
+      i.className = 'dream-read';
+      i.textContent = 'your read: ' + d.interpretation;
+      card.appendChild(i);
+    }
+    el.appendChild(card);
+  }
+}
+
+$('dream-extract').onclick = async () => {
+  const b = $('dream-extract');
+  b.disabled = true;
+  b.textContent = 'extracting… (~10s per unscanned entry)';
+  try {
+    const r = await api('/api/dreams/extract', {});
+    if (r) { renderDreams(r); b.textContent = `${r.dreams.length} dreams on record`; }
+  } finally {
+    setTimeout(() => { b.textContent = 'extract dreams from history'; b.disabled = false; }, 4000);
+  }
 };
 
 // ---- entities ----

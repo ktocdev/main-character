@@ -439,8 +439,30 @@ def build_snapshot(quiet: bool = False):
         f"# Status snapshot\n\n{snapshot}\n",
         encoding="utf-8",
     )
+    append_dream_weather()
     if not quiet:
         print("  status snapshot -> written")
+
+
+def append_dream_weather():
+    """Add (or refresh) the one-line dream-weather signal at the bottom of
+    the snapshot. The companion glances at dream tone without loading any
+    dream content into waking context."""
+    try:
+        from dreams import dream_weather
+        weather = dream_weather()
+    except Exception:
+        return
+    if not weather or not SNAPSHOT_FILE.exists():
+        return
+    lines = [
+        l for l in SNAPSHOT_FILE.read_text(encoding="utf-8").splitlines()
+        if not l.startswith("Dream weather")
+    ]
+    while lines and not lines[-1].strip():
+        lines.pop()
+    lines += ["", weather, ""]
+    SNAPSHOT_FILE.write_text("\n".join(lines), encoding="utf-8")
 
 
 def build(force: bool = False, quiet: bool = False) -> dict:
