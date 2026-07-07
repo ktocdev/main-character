@@ -172,6 +172,19 @@
     white-space: pre-wrap; background: var(--bg-input); border-radius: 8px;
     padding: .8rem 1rem; margin-top: .6rem; font-size: .9rem;
   }
+  .cat-domain {
+    background: var(--bg-raised); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.2rem;
+  }
+  .cat-domain-title {
+    font: .75rem system-ui, sans-serif; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: .4rem;
+  }
+  .cat-domain-body { white-space: pre-wrap; font-size: .92rem; }
+  .cat-summary {
+    font-style: italic; color: var(--text-dim);
+    border-bottom: 1px solid var(--border); padding-bottom: .6rem; margin-bottom: .6rem;
+  }
 
   /* Help */
   #help { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
@@ -985,6 +998,30 @@ function renderCatEntries() {
     el.innerHTML = '<p class="cat-hint">pick a category to browse its entries — click a title for the full text, × a wrong tag to remove it (your fixes stick)</p>';
     return;
   }
+  if (catSelected !== '__untagged') {
+    const box = document.createElement('div');
+    box.className = 'cat-domain';
+    box.textContent = 'loading domain summary…';
+    el.appendChild(box);
+    fetch('/api/summaries/domain?name=' + encodeURIComponent(catSelected))
+      .then(r => r.json())
+      .then(r => {
+        if (r.error) { box.remove(); return; }
+        const lines = r.doc.split('\n').filter(l => !l.startsWith('<!--'));
+        const title = (lines.find(l => l.startsWith('# ')) || '').replace(/^# /, '');
+        const body = lines.filter(l => !l.startsWith('# ')).join('\n').trim();
+        box.innerHTML = '';
+        const h = document.createElement('div');
+        h.className = 'cat-domain-title';
+        h.textContent = title;
+        const p = document.createElement('div');
+        p.className = 'cat-domain-body';
+        p.textContent = body;
+        box.appendChild(h);
+        box.appendChild(p);
+      })
+      .catch(() => box.remove());
+  }
   const rows = Object.entries(catIndex.conversations)
     .filter(([, c]) => catSelected === '__untagged'
       ? !Object.keys(c.categories).length
@@ -1048,7 +1085,17 @@ async function toggleEntryText(row, c) {
   const r = await (await fetch(
     `/api/entry?date=${encodeURIComponent(c.date)}&title=${encodeURIComponent(c.title)}`
   )).json();
-  d.textContent = r.error || r.text;
+  if (r.error) { d.textContent = r.error; return; }
+  d.textContent = '';
+  if (r.summary) {
+    const s = document.createElement('div');
+    s.className = 'cat-summary';
+    s.textContent = r.summary;
+    d.appendChild(s);
+  }
+  const t = document.createElement('div');
+  t.textContent = r.text;
+  d.appendChild(t);
 }
 
 $('cat-build').onclick = async () => {

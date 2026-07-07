@@ -29,7 +29,10 @@ load_dotenv()
 
 import anthropic
 
-from rag_journal import JOURNAL_DIR, extract_metadata, get_collection, query_journal
+from rag_journal import (
+    JOURNAL_DIR, extract_metadata, get_collection, get_summary_collection,
+    query_journal,
+)
 
 MODEL = "claude-opus-4-8"
 MAX_TOKENS = 8000
@@ -41,6 +44,8 @@ N_ENTITY_DOCS = 3       # max entity docs loaded per message
 ENTITY_DOC_CHARS = 4000
 SUMMARY_DIR = Path(__file__).parent / "summaries"
 SUMMARY_CHARS = 3500
+N_SUMMARY_HITS = 3      # zoomed-out documents (entry/arc/domain/entity) per question
+SUMMARY_HIT_CHARS = 1500
 
 # Persona translated from persona-spec.md. The journal history gives the
 # companion Phase 2-3 context (it knows the cast), but the entity graph and
@@ -156,6 +161,28 @@ def get_recent_chunks(collection, n: int = N_RECENT) -> list[tuple[str, dict]]:
     return pairs[-n:]
 
 
+def get_summary_hits(question: str, skip_entities: set[str]) -> list[tuple[str, str]]:
+    """Zoomed-out retrieval: query the summary collection (entry summaries,
+    week arcs, domain docs, entity docs) for documents matching the
+    question. Entity docs already loaded by name-match are skipped."""
+    try:
+        col = get_summary_collection()
+        if col.count() == 0:
+            return []
+        result = col.query(
+            query_texts=[question],
+            n_results=min(N_SUMMARY_HITS + len(skip_entities), col.count()),
+        )
+    except Exception:
+        return []  # summaries are a bonus layer — never break the turn
+    hits = []
+    for doc, meta in zip(result["documents"][0], result["metadatas"][0]):
+        if meta.get("level") == "entity doc" and meta.get("name") in skip_entities:
+            continue
+        hits.append((meta.get("level", "summary"), doc[:SUMMARY_HIT_CHARS]))
+    return hits[:N_SUMMARY_HITS]
+
+
 def build_context_block(question: str, collection, entity_index: dict) -> str:
     """Assemble the retrieval context injected alongside each question."""
     now = datetime.now().strftime("%A, %B %d, %Y, %I:%M %p")
@@ -191,6 +218,17 @@ def build_context_block(question: str, collection, entity_index: dict) -> str:
     lines.append("</related_history>")
 
     mentioned = match_entities(question, entity_index)
+
+    summary_hits = get_summary_hits(question, skip_entities=set(mentioned))
+    if summary_hits:
+        lines.append("")
+        lines.append("<related_summaries>")
+        for level, doc in summary_hits:
+            lines.append(f"({level})")
+            lines.append(doc)
+            lines.append("")
+        lines.append("</related_summaries>")
+
     if mentioned:
         lines.append("")
         lines.append("<entity_context>")
