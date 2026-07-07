@@ -464,7 +464,10 @@ def entry_text(date: str, title: str):
         return int(m.group(1)) if m else 0
 
     chunks = sorted(zip(data["ids"], data["documents"]), key=lambda p: chunk_idx(p[0]))
+    import summarizer
+    key = entities.conversation_cache_key({"date": date, "title": title})
     return {"date": date, "title": title,
+            "summary": summarizer.load_entry_summary(key),
             "text": "\n\n".join(doc for _, doc in chunks)}
 
 

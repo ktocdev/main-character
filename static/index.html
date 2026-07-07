@@ -181,6 +181,10 @@
     text-transform: uppercase; letter-spacing: .05em; margin-bottom: .4rem;
   }
   .cat-domain-body { white-space: pre-wrap; font-size: .92rem; }
+  .cat-summary {
+    font-style: italic; color: var(--text-dim);
+    border-bottom: 1px solid var(--border); padding-bottom: .6rem; margin-bottom: .6rem;
+  }
 
   /* Help */
   #help { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
@@ -1081,7 +1085,17 @@ async function toggleEntryText(row, c) {
   const r = await (await fetch(
     `/api/entry?date=${encodeURIComponent(c.date)}&title=${encodeURIComponent(c.title)}`
   )).json();
-  d.textContent = r.error || r.text;
+  if (r.error) { d.textContent = r.error; return; }
+  d.textContent = '';
+  if (r.summary) {
+    const s = document.createElement('div');
+    s.className = 'cat-summary';
+    s.textContent = r.summary;
+    d.appendChild(s);
+  }
+  const t = document.createElement('div');
+  t.textContent = r.text;
+  d.appendChild(t);
 }
 
 $('cat-build').onclick = async () => {
