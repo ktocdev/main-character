@@ -23,6 +23,7 @@ Layout (all gitignored — this is personal data):
 
 import json
 import os
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -188,13 +189,24 @@ def set_tag(key: str, name: str, present: bool) -> dict:
     """Manually add or remove a tag on one conversation. Records the fix
     in overrides.json so it survives re-tagging, then rebuilds the index
     and chunk metadata. Returns the fresh index."""
-    if name not in CATEGORIES:
+    valid = set(CATEGORIES)
+    try:
+        from organic import custom_names
+        valid |= custom_names()
+    except Exception:
+        pass
+    if name not in valid:
         raise ValueError(f"unknown category '{name}'")
 
     raw_tags = set()
     cache_file = RAW_DIR / f"{Path(key).name}.json"  # basename only — no traversal
     if cache_file.exists():
         raw_tags = set(json.loads(cache_file.read_text(encoding="utf-8")))
+    try:  # custom tags are part of the base set — removing one needs an override
+        from organic import custom_tags
+        raw_tags |= set(custom_tags().get(key, {}))
+    except Exception:
+        pass
 
     overrides = load_overrides()
     ov = overrides.setdefault(key, {"add": [], "remove": []})
@@ -220,11 +232,21 @@ def set_tag(key: str, name: str, present: bool) -> dict:
 # ---------------------------------------------------------------------------
 
 def build_index() -> dict:
-    """Merge raw tags + overrides into categories/index.json."""
+    """Merge raw tags + custom (organic/user-defined) categories +
+    overrides into categories/index.json."""
     overrides = load_overrides()
     counts = {name: 0 for name in CATEGORIES}
     convs = {}
     tagged = 0
+
+    try:
+        from organic import custom_names, custom_tags
+        extra = custom_tags()
+        custom = sorted(custom_names())
+    except Exception:
+        extra, custom = {}, []
+    for name in custom:
+        counts.setdefault(name, 0)
 
     conversations = get_conversations()
     for conv in conversations:
@@ -234,6 +256,8 @@ def build_index() -> dict:
         if cache_file.exists():
             tagged += 1
             tags = json.loads(cache_file.read_text(encoding="utf-8"))
+        for name, evidence in extra.get(key, {}).items():
+            tags.setdefault(name, evidence)
         ov = overrides.get(key, {})
         for name in ov.get("remove", []):
             tags.pop(name, None)
@@ -245,7 +269,7 @@ def build_index() -> dict:
                 counts[name] += 1
 
     index = {
-        "conversations": convs, "counts": counts,
+        "conversations": convs, "counts": counts, "custom": custom,
         "tagged": tagged, "total": len(conversations),
     }
     CATEGORY_DIR.mkdir(parents=True, exist_ok=True)
@@ -274,14 +298,22 @@ def update_chroma(index: dict):
     for doc_id, meta in zip(data["ids"], data["metadatas"]):
         by_conv[(meta.get("date", "?"), meta.get("title", "Untitled"))].append((doc_id, meta))
 
+    def slug(name):
+        return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+
+    all_names = set(CATEGORIES) | set(index.get("custom", []))
     ids, metas = [], []
     for rec in index["conversations"].values():
         names = set(rec["categories"])
         for doc_id, meta in by_conv.get((rec["date"], rec["title"]), []):
             new_meta = dict(meta)
             new_meta["categories"] = ", ".join(sorted(names))
-            for name in CATEGORIES:
-                new_meta[f"cat_{name}"] = name in names
+            current_keys = {f"cat_{slug(n)}" for n in all_names}
+            for k in meta:  # a removed custom category leaves a stale key
+                if k.startswith("cat_") and k not in current_keys:
+                    new_meta[k] = False
+            for name in all_names:
+                new_meta[f"cat_{slug(name)}"] = name in names
             if new_meta != meta:
                 ids.append(doc_id)
                 metas.append(new_meta)

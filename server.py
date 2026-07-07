@@ -480,6 +480,76 @@ def dismiss_pattern(body: NameIn):
     return {"ok": True, "dismissed": body.name}
 
 
+class OrganicRespondIn(BaseModel):
+    id: str
+    action: str  # confirm | dismiss | not_now
+
+
+class CustomCategoryIn(BaseModel):
+    name: str
+    keywords: str = ""   # comma-separated
+    parent: str = ""
+
+
+def _rebuild_category_index():
+    index = categories.build_index()
+    categories.update_chroma(index)
+    return index
+
+
+@app.get("/api/organic")
+def organic_state():
+    import organic
+    data = organic.load_organic()
+    return {
+        "generated": data["generated"],
+        "proposals": [p for p in data["proposals"] if p["status"] == "proposed"],
+        "custom": organic.load_custom(),
+    }
+
+
+@app.post("/api/organic/scan")
+def organic_scan():
+    """Cluster place/project entities by context and propose categories
+    (local embeddings + one Claude naming call)."""
+    import organic
+    organic.scan(quiet=True)
+    return organic_state()
+
+
+@app.post("/api/organic/respond")
+def organic_respond(body: OrganicRespondIn):
+    import organic
+    try:
+        proposal = organic.respond(body.id, body.action)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    if body.action == "confirm":
+        _rebuild_category_index()
+    return {"ok": True, "status": proposal["status"]}
+
+
+@app.post("/api/organic/custom")
+def create_custom_category(body: CustomCategoryIn):
+    import organic
+    keywords = [k.strip() for k in body.keywords.split(",") if k.strip()]
+    try:
+        cat = organic.add_custom(body.name, keywords=keywords, parent=body.parent)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    _rebuild_category_index()
+    return {"ok": True, "category": cat}
+
+
+@app.post("/api/organic/custom/delete")
+def delete_custom_category(body: NameIn):
+    import organic
+    if not organic.remove_custom(body.name):
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    _rebuild_category_index()
+    return {"ok": True, "deleted": body.name}
+
+
 @app.get("/api/categories")
 def category_index():
     return categories.load_index()
