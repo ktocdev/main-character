@@ -93,6 +93,17 @@ class ObservationIn(BaseModel):
     target_name: str = ""
 
 
+class ReviewedIn(BaseModel):
+    name: str
+    reviewed: bool
+
+
+class DismissDupIn(BaseModel):
+    kind: str
+    a: str
+    b: str
+
+
 @app.get("/")
 def home():
     return FileResponse(STATIC_DIR / "index.html")
@@ -348,6 +359,42 @@ def suggest(body: KindIn):
     if body.kind not in entities.KINDS:
         return JSONResponse({"error": f"kind must be one of {entities.KINDS}"}, status_code=400)
     return {"groups": entities.suggest_merges(body.kind)}
+
+
+@app.post("/api/entities/reviewed")
+def mark_reviewed(body: ReviewedIn):
+    """Toggle the reviewed flag. Patches the index in place — no rebuild,
+    so rapid triage keystrokes stay instant. Not recorded in undo history."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+
+    key = entities.curation_key(index[name]["type"], name)
+    curation = entities.load_curation()
+    reviewed = {r.lower() for r in curation["reviewed"]}
+    if body.reviewed and key not in reviewed:
+        curation["reviewed"].append(key)
+    if not body.reviewed:
+        curation["reviewed"] = [r for r in curation["reviewed"] if r.lower() != key]
+    entities.save_curation(curation)
+    index[name]["reviewed"] = body.reviewed
+    return {"ok": True, "name": name, "reviewed": body.reviewed}
+
+
+@app.get("/api/entities/duplicates")
+def duplicate_candidates():
+    return {"pairs": entities.find_duplicate_candidates()}
+
+
+@app.post("/api/entities/duplicates/dismiss")
+def dismiss_duplicate(body: DismissDupIn):
+    curation = entities.load_curation()
+    pk = entities.pair_key(body.kind, body.a, body.b)
+    if pk not in curation["not_duplicates"]:
+        curation["not_duplicates"].append(pk)
+    entities.save_curation(curation)
+    return {"ok": True}
 
 
 @app.post("/api/summaries/refresh")
