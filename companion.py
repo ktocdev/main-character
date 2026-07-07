@@ -46,6 +46,11 @@ SUMMARY_DIR = Path(__file__).parent / "summaries"
 SUMMARY_CHARS = 3500
 N_SUMMARY_HITS = 3      # zoomed-out documents (entry/arc/domain/entity) per question
 SUMMARY_HIT_CHARS = 1500
+N_DREAM_HITS = 4        # dream memories when the question crosses realms
+DREAM_HIT_CHARS = 1200
+DREAM_WORDS = re.compile(
+    r"\b(dream|dreams|dreamt|dreamed|dreaming|nightmare|nightmares)\b", re.I
+)
 
 # Persona translated from persona-spec.md. Retrieval now delivers the full
 # stack: recency + snapshot, semantic chunks, zoomed-out summaries, entity
@@ -182,7 +187,24 @@ def get_summary_hits(question: str, skip_entities: set[str]) -> list[tuple[str, 
     return hits[:N_SUMMARY_HITS]
 
 
-def build_context_block(question: str, collection, entity_index: dict) -> str:
+def get_dream_hits(question: str) -> list[str]:
+    """Explicit realm crossing: dream memories related to the question.
+    Only called when the question mentions dreams (or the turn is itself
+    a dream entry) — waking queries never see these."""
+    try:
+        from dreams import get_dream_collection
+        col = get_dream_collection()
+        if col.count() == 0:
+            return []
+        result = col.query(query_texts=[question],
+                           n_results=min(N_DREAM_HITS, col.count()))
+    except Exception:
+        return []
+    return [doc[:DREAM_HIT_CHARS] for doc in result["documents"][0]]
+
+
+def build_context_block(question: str, collection, entity_index: dict,
+                        include_dreams: bool = False) -> str:
     """Assemble the retrieval context injected alongside each question."""
     now = datetime.now().strftime("%A, %B %d, %Y, %I:%M %p")
 
@@ -238,6 +260,19 @@ def build_context_block(question: str, collection, entity_index: dict) -> str:
                 lines.append("")
         lines.append("</entity_context>")
 
+    if include_dreams or DREAM_WORDS.search(question):
+        dream_hits = get_dream_hits(question)
+        if dream_hits:
+            lines.append("")
+            lines.append("<dream_context>")
+            lines.append("Dream memories — a separate realm. A dream about "
+                         "someone is not an event with them; treat these as "
+                         "dream material only.")
+            for hit in dream_hits:
+                lines.append(hit)
+                lines.append("")
+            lines.append("</dream_context>")
+
     try:
         import patterns as pattern_lib
         pattern_block = pattern_lib.pattern_context()
@@ -279,21 +314,25 @@ def stream_reflection(client, collection, entity_index: dict, messages: list):
     )
 
 
-def stream_reply(client, collection, entity_index: dict, messages: list, question: str):
+def stream_reply(client, collection, entity_index: dict, messages: list,
+                 question: str, include_dreams: bool = False):
     """
     Core companion turn: retrieve context, send, yield reply text chunks.
     Appends both the user turn and the assistant reply to `messages`.
     Usable from the CLI and the web server alike.
     """
     yield from _stream_turn(client, collection, entity_index, messages,
-                            question=question, display_question=question)
+                            question=question, display_question=question,
+                            include_dreams=include_dreams)
 
 
 def _stream_turn(client, collection, entity_index: dict, messages: list,
-                 question: str, display_question: str):
+                 question: str, display_question: str,
+                 include_dreams: bool = False):
     """Shared turn body: `question` seeds retrieval, `display_question`
     is what the model is actually asked."""
-    context = build_context_block(question, collection, entity_index)
+    context = build_context_block(question, collection, entity_index,
+                                  include_dreams=include_dreams)
     messages.append({
         "role": "user",
         "content": f"<journal_context>\n{context}\n</journal_context>\n\n{display_question}",
