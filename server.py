@@ -164,6 +164,14 @@ def _rebuild():
     STATE["entity_index"] = entities.build(quiet=True)
 
 
+def _snapshot():
+    return json.loads(json.dumps(entities.load_curation()))
+
+
+def _record_curation(description: str, before: dict):
+    entities.record_change(description, "curation", before, _snapshot())
+
+
 def _combine(body: MergeIn, field: str, verb: str):
     """Shared logic for merge (keeps alias) and correct (no alias)."""
     index = STATE["entity_index"]
@@ -172,8 +180,9 @@ def _combine(body: MergeIn, field: str, verb: str):
         return JSONResponse({"error": f"'{body.source}' not found"}, status_code=404)
     dst = companion.resolve_entity(index, body.target) or body.target.strip()
     if src == dst:
-        return JSONResponse({"error": "already the same entity"}, status_code=400)
+        return JSONResponse({"error": "already the same entity — use rename to change spelling"}, status_code=400)
 
+    before = _snapshot()
     curation = entities.load_curation()
     src_kind = index[src]["type"]
     # kind-qualify the target when it exists under a different kind
@@ -187,6 +196,7 @@ def _combine(body: MergeIn, field: str, verb: str):
             if tname.lower() == src.lower():
                 curation[other][k] = value
     entities.save_curation(curation)
+    _record_curation(f"{verb} {src} into {dst}", before)
     _rebuild()
     return {"ok": True, verb: src, "into": dst}
 
@@ -210,14 +220,36 @@ def retype_entity(body: RetypeIn):
     if body.new_type not in entities.KINDS:
         return JSONResponse({"error": f"kind must be one of {entities.KINDS}"}, status_code=400)
 
+    before = _snapshot()
     curation = entities.load_curation()
     curation["retype"][entities.curation_key(index[name]["type"], name)] = {
         "type": body.new_type,
         "name": body.new_name.strip() or name,
     }
     entities.save_curation(curation)
+    _record_curation(f"retype {name} to {body.new_type}", before)
     _rebuild()
     return {"ok": True, "retyped": name, "to": body.new_type}
+
+
+@app.post("/api/entities/rename")
+def rename_entity(body: MergeIn):
+    """Rename an entity's display spelling (case-only changes included)."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.source)
+    if not name:
+        return JSONResponse({"error": f"'{body.source}' not found"}, status_code=404)
+    new_name = body.target.strip()
+    if not new_name or new_name == name:
+        return JSONResponse({"error": "nothing to rename"}, status_code=400)
+
+    before = _snapshot()
+    curation = entities.load_curation()
+    curation["rename"][entities.curation_key(index[name]["type"], name)] = new_name
+    entities.save_curation(curation)
+    _record_curation(f"rename {name} to {new_name}", before)
+    _rebuild()
+    return {"ok": True, "renamed": name, "to": new_name}
 
 
 @app.post("/api/entities/alias")
@@ -227,6 +259,7 @@ def alias_entity(body: AliasIn):
     if not name:
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
 
+    before = _snapshot()
     curation = entities.load_curation()
     key = entities.curation_key(index[name]["type"], name)
     if body.add.strip():
@@ -242,6 +275,7 @@ def alias_entity(body: AliasIn):
             if a.lower() != body.remove.strip().lower()
         ]
     entities.save_curation(curation)
+    _record_curation(f"alias change on {name}", before)
     _rebuild()
     return {"ok": True}
 
@@ -262,6 +296,8 @@ def entity_observations(name: str):
 @app.post("/api/observation")
 def mutate_observation(body: ObservationIn):
     try:
+        raw_path = entities._raw_path(body.file)
+        raw_before = raw_path.read_text(encoding="utf-8")
         if body.action == "edit":
             entities.edit_observation(body.file, body.group, body.ent_index, body.obs_index, body.text)
         elif body.action == "delete":
@@ -275,8 +311,35 @@ def mutate_observation(body: ObservationIn):
             return JSONResponse({"error": "unknown action"}, status_code=400)
     except (FileNotFoundError, IndexError, ValueError) as e:
         return JSONResponse({"error": str(e)}, status_code=400)
+    entities.record_change(
+        f"observation {body.action} in {body.file}", "raw",
+        raw_before, raw_path.read_text(encoding="utf-8"), body.file,
+    )
     _rebuild()
     return {"ok": True}
+
+
+@app.get("/api/history")
+def history_state():
+    return entities.history_peek()
+
+
+@app.post("/api/undo")
+def undo_change():
+    description = entities.undo()
+    if description is None:
+        return JSONResponse({"error": "nothing to undo"}, status_code=400)
+    _rebuild()
+    return {"ok": True, "undid": description}
+
+
+@app.post("/api/redo")
+def redo_change():
+    description = entities.redo()
+    if description is None:
+        return JSONResponse({"error": "nothing to redo"}, status_code=400)
+    _rebuild()
+    return {"ok": True, "redid": description}
 
 
 @app.post("/api/entities/suggest")
@@ -286,6 +349,14 @@ def suggest(body: KindIn):
     return {"groups": entities.suggest_merges(body.kind)}
 
 
+@app.post("/api/summaries/refresh")
+def refresh_summaries():
+    """Regenerate stale weekly arcs + the status snapshot (incremental)."""
+    import summarizer
+    result = summarizer.build(quiet=True)
+    return {"ok": True, **result}
+
+
 @app.post("/api/entities/delete")
 def delete_entity(body: NameIn):
     index = STATE["entity_index"]
@@ -293,9 +364,11 @@ def delete_entity(body: NameIn):
     if not name:
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
 
+    before = _snapshot()
     curation = entities.load_curation()
     curation["delete"].append(entities.curation_key(index[name]["type"], name))
     entities.save_curation(curation)
+    _record_curation(f"delete {name}", before)
     _rebuild()
     return {"ok": True, "deleted": name}
 

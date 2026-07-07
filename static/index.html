@@ -137,6 +137,9 @@
     <button data-tab="chat" class="active">chat</button>
     <button data-tab="write">write</button>
     <button data-tab="entities">entities</button>
+    <button class="quiet" id="undo-btn" title="undo last entity change">↺</button>
+    <button class="quiet" id="redo-btn" title="redo">↻</button>
+    <button class="quiet" id="refresh-summaries" title="regenerate the weekly arc + status snapshot after new entries">refresh memory</button>
     <button class="quiet" id="reset" title="start a fresh conversation">new chat</button>
   </nav>
 </header>
@@ -180,6 +183,7 @@
           <input type="text" id="merge-target" placeholder="target name…">
           <button class="quiet" id="merge-btn" title="combine; this name is kept as an alias">merge into</button>
           <button class="quiet" id="correct-btn" title="typo fix; this name is NOT kept as an alias">correct to</button>
+          <button class="quiet" id="rename-btn" title="change spelling/case of this entity's name">rename</button>
           <select id="retype-kind">
             <option value="">retype…</option>
             <option value="person">person</option>
@@ -266,6 +270,18 @@ $('chat-text').addEventListener('keydown', e => {
 $('reset').onclick = async () => {
   await fetch('/api/reset', {method: 'POST'});
   $('log').innerHTML = '';
+};
+
+$('refresh-summaries').onclick = async () => {
+  const b = $('refresh-summaries');
+  b.disabled = true;
+  b.textContent = 'refreshing…';
+  try {
+    const r = await api('/api/summaries/refresh', {});
+    if (r) b.textContent = `memory current (${r.arcs} weeks)`;
+  } finally {
+    setTimeout(() => { b.textContent = 'refresh memory'; b.disabled = false; }, 4000);
+  }
 };
 
 // ---- write ----
@@ -467,12 +483,42 @@ $('alias-add-btn').onclick = async () => {
   }
 };
 
+$('rename-btn').onclick = async () => {
+  if (!selected) return;
+  const newName = prompt(`Rename "${selected}" to:`, selected);
+  if (newName === null || !newName.trim() || newName.trim() === selected) return;
+  const r = await api('/api/entities/rename', {source: selected, target: newName.trim()});
+  if (r) { selected = r.to; await reloadEntity(r.to); }
+};
+
 $('delete-btn').onclick = async () => {
   if (!selected) return;
   if (!confirm(`Delete "${selected}" from the entity graph?`)) return;
   const r = await api('/api/entities/delete', {name: selected});
   if (r) clearDetail('deleted');
 };
+
+async function histStep(url) {
+  const res = await fetch(url, {method: 'POST'});
+  const r = await res.json();
+  if (r.error) { alert(r.error); return; }
+  await loadEntities();
+  if (selected && entities[selected]) await showEntity(selected);
+  else if (selected) clearDetail(r.undid ? `undid: ${r.undid}` : `redid: ${r.redid}`);
+  refreshHistoryButtons();
+}
+$('undo-btn').onclick = () => histStep('/api/undo');
+$('redo-btn').onclick = () => histStep('/api/redo');
+
+async function refreshHistoryButtons() {
+  const h = await (await fetch('/api/history')).json();
+  $('undo-btn').title = h.undo ? `undo: ${h.undo}` : 'nothing to undo';
+  $('redo-btn').title = h.redo ? `redo: ${h.redo}` : 'nothing to redo';
+  $('undo-btn').style.opacity = h.undo ? 1 : .4;
+  $('redo-btn').style.opacity = h.redo ? 1 : .4;
+}
+refreshHistoryButtons();
+setInterval(refreshHistoryButtons, 15000);
 
 // ---- merge suggestions ----
 document.querySelectorAll('[data-suggest]').forEach(b => b.onclick = async () => {
