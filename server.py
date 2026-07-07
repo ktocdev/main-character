@@ -21,7 +21,7 @@ load_dotenv()
 
 import anthropic
 import uvicorn
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
@@ -140,8 +140,24 @@ def chat(body: ChatIn):
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
 
 
+def _after_entry_refresh():
+    """Light memory refresh after each new entry: tag it, refresh the
+    current week's arc + its entry summary + the status snapshot, re-sync
+    embeddings. Domain docs and pattern re-detection stay on the manual
+    "refresh memory" / "detect patterns" buttons — they're the pricey part."""
+    import summarizer
+    try:
+        categories.build(quiet=True)
+        summarizer.build_arcs(quiet=True)
+        summarizer.build_entry_summaries(quiet=True)
+        summarizer.build_snapshot(quiet=True)
+        summarizer.sync_summary_embeddings(quiet=True)
+    except Exception as e:
+        print(f"  post-entry refresh failed: {e}")
+
+
 @app.post("/api/entry")
-def write_entry(body: EntryIn):
+def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
     text = body.text.strip()
     if not text:
         return JSONResponse({"error": "empty entry"}, status_code=400)
@@ -151,6 +167,7 @@ def write_entry(body: EntryIn):
         "The following is a new journal entry I just wrote — not a question. "
         "Respond to it as my companion.\n\n" + text
     )
+    background_tasks.add_task(_after_entry_refresh)
 
     def gen():
         yield from companion.stream_reply(
@@ -162,6 +179,17 @@ def write_entry(body: EntryIn):
         media_type="text/plain; charset=utf-8",
         headers={"X-Entry-Id": entry_id},
     )
+
+
+@app.post("/api/reflect")
+def reflect():
+    """The companion opens the conversation: connects dots across time."""
+    def gen():
+        yield from companion.stream_reflection(
+            STATE["client"], STATE["collection"], STATE["entity_index"],
+            STATE["messages"],
+        )
+    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
 
 
 @app.post("/api/reset")

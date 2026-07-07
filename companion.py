@@ -255,16 +255,48 @@ def build_context_block(question: str, collection, entity_index: dict) -> str:
     return "\n".join(lines)
 
 
+# Prompted reflection: the companion opens the conversation instead of
+# waiting for a question. Retrieval is seeded with the latest entry so the
+# dots it connects start from where life actually is right now.
+REFLECTION_REQUEST = """\
+Open today's conversation for me. Look across everything you have — the \
+snapshot, recent entries, related history, the pattern library — and \
+connect one or two dots I might not have connected myself: an intention I \
+voiced and haven't mentioned since, a pattern that looks active right now, \
+a then-versus-now contrast worth seeing, or a thread left hanging. Anchor \
+it to dates. Keep it short — a few sentences, warm and direct, no lecture, \
+and let it be light if nothing heavy is called for. At most one question."""
+
+
+def stream_reflection(client, collection, entity_index: dict, messages: list):
+    """Proactive companion turn: it speaks first, connecting dots across
+    time. Same pipeline as stream_reply, seeded from the latest entry."""
+    recent = get_recent_chunks(collection, n=1)
+    seed = recent[0][0][:2000] if recent else "how life has been lately"
+    yield from _stream_turn(
+        client, collection, entity_index, messages,
+        question=seed, display_question=REFLECTION_REQUEST,
+    )
+
+
 def stream_reply(client, collection, entity_index: dict, messages: list, question: str):
     """
     Core companion turn: retrieve context, send, yield reply text chunks.
     Appends both the user turn and the assistant reply to `messages`.
     Usable from the CLI and the web server alike.
     """
+    yield from _stream_turn(client, collection, entity_index, messages,
+                            question=question, display_question=question)
+
+
+def _stream_turn(client, collection, entity_index: dict, messages: list,
+                 question: str, display_question: str):
+    """Shared turn body: `question` seeds retrieval, `display_question`
+    is what the model is actually asked."""
     context = build_context_block(question, collection, entity_index)
     messages.append({
         "role": "user",
-        "content": f"<journal_context>\n{context}\n</journal_context>\n\n{question}",
+        "content": f"<journal_context>\n{context}\n</journal_context>\n\n{display_question}",
     })
 
     reply_parts = []
