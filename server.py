@@ -11,6 +11,7 @@ Usage:
     -> open http://127.0.0.1:8144
 """
 
+import json
 from pathlib import Path
 
 from dotenv import load_dotenv
