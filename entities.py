@@ -36,6 +36,7 @@ from rag_journal import get_collection
 MODEL = "claude-opus-4-8"
 ENTITY_DIR = Path(__file__).parent / "entity_graph"
 RAW_DIR = ENTITY_DIR / "raw"
+CURATION_FILE = ENTITY_DIR / "curation.json"
 MAX_ENTRY_CHARS = 60_000  # cap per-conversation text sent to the API
 
 EXTRACTION_SCHEMA = {
@@ -182,7 +183,7 @@ def extract_conversation(client, conv: dict) -> dict:
     return json.loads(raw)
 
 
-def run_extraction(force: bool = False) -> list[dict]:
+def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
     """
     Extract entities from every conversation, caching per-conversation
     results in entity_graph/raw/ so re-runs don't re-call the API.
@@ -192,7 +193,8 @@ def run_extraction(force: bool = False) -> list[dict]:
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
     conversations = get_conversations()
-    print(f"  {len(conversations)} conversations to process")
+    if not quiet:
+        print(f"  {len(conversations)} conversations to process")
 
     records = []
     for i, conv in enumerate(conversations):
@@ -201,7 +203,8 @@ def run_extraction(force: bool = False) -> list[dict]:
 
         if cache_file.exists() and not force:
             entities = json.loads(cache_file.read_text(encoding="utf-8"))
-            print(f"  {label} (cached)")
+            if not quiet:
+                print(f"  {label} (cached)")
         else:
             try:
                 entities = extract_conversation(client, conv)
@@ -219,6 +222,30 @@ def run_extraction(force: bool = False) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# CURATION (user corrections that survive rebuilds)
+# ---------------------------------------------------------------------------
+# curation.json:
+#   "merge":  {"project:orbit-web": "Orbit", ...}   kind:lowername -> canonical
+#   "delete": ["place:teddy bear", ...]                kind:lowername
+
+def load_curation() -> dict:
+    if CURATION_FILE.exists():
+        return json.loads(CURATION_FILE.read_text(encoding="utf-8"))
+    return {"merge": {}, "delete": []}
+
+
+def save_curation(curation: dict):
+    ENTITY_DIR.mkdir(parents=True, exist_ok=True)
+    CURATION_FILE.write_text(
+        json.dumps(curation, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def curation_key(kind: str, name: str) -> str:
+    return f"{kind}:{name.lower()}"
+
+
+# ---------------------------------------------------------------------------
 # AGGREGATION INTO ENTITY DOCS
 # ---------------------------------------------------------------------------
 
@@ -232,7 +259,11 @@ def build_entity_docs(records: list[dict]) -> dict:
     Merge per-conversation extractions into one markdown doc per entity.
     Returns the entity index {name: {type, path, mentions}}.
     """
-    # merged[(kind, name_lower)] = {name, kind, attrs, timeline: [(date, title, obs)]}
+    curation = load_curation()
+    merge_map = {k.lower(): v for k, v in curation.get("merge", {}).items()}
+    deleted = {d.lower() for d in curation.get("delete", [])}
+
+    # merged[(kind, name_lower)] = {name, kind, attr, aliases, timeline}
     merged = {}
     kind_fields = {
         "people": ("person", "relationship"),
@@ -246,9 +277,20 @@ def build_entity_docs(records: list[dict]) -> dict:
                 name = ent.get("name", "").strip()
                 if not name:
                     continue
-                key = (kind, name.lower())
+                if curation_key(kind, name) in deleted:
+                    continue
+                canonical = merge_map.get(curation_key(kind, name))
+                display = canonical or name
+                if curation_key(kind, display) in deleted:
+                    continue
+                key = (kind, display.lower())
                 if key not in merged:
-                    merged[key] = {"name": name, "kind": kind, "attr": "", "timeline": []}
+                    merged[key] = {
+                        "name": display, "kind": kind, "attr": "",
+                        "aliases": set(), "timeline": [],
+                    }
+                if canonical and name.lower() != display.lower():
+                    merged[key]["aliases"].add(name)
                 attr = (ent.get(attr_field) or "").strip()
                 if attr and attr != "unknown":
                     merged[key]["attr"] = attr  # latest wins
@@ -258,6 +300,11 @@ def build_entity_docs(records: list[dict]) -> dict:
 
     attr_labels = {"person": "relationship", "project": "status", "place": "type"}
     index = {}
+
+    # Clear generated docs so merged/deleted entities don't leave stale files
+    for kind_dir in ("people", "projects", "places"):
+        for old in (ENTITY_DIR / kind_dir).glob("*.md"):
+            old.unlink()
 
     for (kind, _), ent in sorted(merged.items()):
         ent["timeline"].sort(key=lambda t: t[0])
@@ -275,9 +322,10 @@ def build_entity_docs(records: list[dict]) -> dict:
             f"first_seen: {dates[0]}",
             f"last_seen: {dates[-1]}",
             f"mentions: {len(ent['timeline'])}",
-            "---",
-            "",
         ]
+        if ent["aliases"]:
+            lines.append(f"aliases: {', '.join(sorted(ent['aliases']))}")
+        lines += ["---", ""]
         for date, title, observations in ent["timeline"]:
             lines.append(f"### {date} — {title}")
             for obs in observations:
@@ -289,6 +337,7 @@ def build_entity_docs(records: list[dict]) -> dict:
             "type": kind,
             "path": str(path.relative_to(ENTITY_DIR)),
             "mentions": len(ent["timeline"]),
+            "aliases": sorted(ent["aliases"]),
         }
 
     (ENTITY_DIR / "index.json").write_text(
@@ -297,8 +346,8 @@ def build_entity_docs(records: list[dict]) -> dict:
     return index
 
 
-def build(force: bool = False):
-    records = run_extraction(force=force)
+def build(force: bool = False, quiet: bool = False) -> dict:
+    records = run_extraction(force=force, quiet=quiet)
     index = build_entity_docs(records)
     by_kind = defaultdict(int)
     for info in index.values():
@@ -307,7 +356,9 @@ def build(force: bool = False):
         f"\n  Entity graph built: {by_kind['person']} people, "
         f"{by_kind['project']} projects, {by_kind['place']} places"
     )
-    print(f"  Docs in {ENTITY_DIR}")
+    if not quiet:
+        print(f"  Docs in {ENTITY_DIR}")
+    return index
 
 
 def show_index():

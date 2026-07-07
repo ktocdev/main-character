@@ -116,15 +116,18 @@ def load_entity_index() -> dict:
 def match_entities(text: str, entity_index: dict) -> list[str]:
     """
     Return names of known entities mentioned in the text, most-mentioned
-    first, capped at N_ENTITY_DOCS. Word-boundary match, case-insensitive.
+    first, capped at N_ENTITY_DOCS. Word-boundary match, case-insensitive;
+    aliases (from merged entities) match too.
     """
     text_lower = text.lower()
     hits = []
     for name, info in entity_index.items():
-        if len(name) < 3:
-            continue
-        if re.search(r"\b" + re.escape(name.lower()) + r"\b", text_lower):
-            hits.append((info.get("mentions", 0), name))
+        for candidate in [name] + info.get("aliases", []):
+            if len(candidate) < 3:
+                continue
+            if re.search(r"\b" + re.escape(candidate.lower()) + r"\b", text_lower):
+                hits.append((info.get("mentions", 0), name))
+                break
     hits.sort(reverse=True)
     return [name for _, name in hits[:N_ENTITY_DOCS]]
 
@@ -278,6 +281,127 @@ def write_entry(client, collection, entity_index: dict, messages: list):
     ask(client, collection, entity_index, messages, entry_message)
 
 
+def resolve_entity(entity_index: dict, name: str) -> str | None:
+    """Find the canonical entity name for a user-typed name (or alias)."""
+    target = name.strip().lower()
+    for canonical, info in entity_index.items():
+        if canonical.lower() == target:
+            return canonical
+        if any(a.lower() == target for a in info.get("aliases", [])):
+            return canonical
+    return None
+
+
+MANAGE_HELP = """\
+  commands:
+    list [people|projects|places]   top entities by mentions
+    show <name>                     view an entity's doc
+    merge <name> into <name>        combine duplicates (e.g. merge orbit-web into Orbit)
+    delete <name>                   remove an entity entirely
+    done                            back to chat"""
+
+
+def manage_mode(entity_index: dict) -> dict:
+    """Curate the entity graph. Returns the (possibly rebuilt) index."""
+    import entities
+
+    print("  Entity curation." if entity_index else "  No entity graph yet — run: python entities.py build")
+    if not entity_index:
+        return entity_index
+    print(MANAGE_HELP + "\n")
+    dirty = False
+
+    while True:
+        try:
+            cmd = input("manage > ").strip()
+        except (EOFError, KeyboardInterrupt):
+            cmd = "done"
+        if not cmd:
+            continue
+        parts = cmd.split()
+        verb = parts[0].lower()
+
+        if verb in ("done", "exit", "quit", "q"):
+            break
+
+        elif verb == "help":
+            print(MANAGE_HELP)
+
+        elif verb == "list":
+            kind_filter = parts[1].rstrip("s") if len(parts) > 1 else None
+            for kind in ("person", "project", "place"):
+                if kind_filter and not kind_filter.startswith(kind[:5]) and kind_filter != kind:
+                    continue
+                names = sorted(
+                    (n for n, i in entity_index.items() if i["type"] == kind),
+                    key=lambda n: -entity_index[n]["mentions"],
+                )
+                print(f"\n  {kind}s ({len(names)}):")
+                for name in names[:20]:
+                    aliases = entity_index[name].get("aliases", [])
+                    alias_note = f"  (aka {', '.join(aliases)})" if aliases else ""
+                    print(f"    {name} ({entity_index[name]['mentions']}){alias_note}")
+                if len(names) > 20:
+                    print(f"    ... and {len(names) - 20} more")
+            print()
+
+        elif verb == "show" and len(parts) > 1:
+            name = resolve_entity(entity_index, " ".join(parts[1:]))
+            if not name:
+                print("  not found\n")
+                continue
+            doc = ENTITY_DIR / entity_index[name]["path"]
+            print("\n" + doc.read_text(encoding="utf-8")[:3000] + "\n")
+
+        elif verb == "merge" and "into" in [p.lower() for p in parts]:
+            into_at = [p.lower() for p in parts].index("into")
+            src_name = " ".join(parts[1:into_at])
+            dst_name = " ".join(parts[into_at + 1:])
+            src = resolve_entity(entity_index, src_name)
+            if not src:
+                print(f"  '{src_name}' not found\n")
+                continue
+            dst = resolve_entity(entity_index, dst_name) or dst_name.strip()
+            if src == dst:
+                print("  those are already the same entity\n")
+                continue
+            curation = entities.load_curation()
+            kind = entity_index[src]["type"]
+            curation["merge"][entities.curation_key(kind, src)] = dst
+            # re-point anything already merged into src
+            for k, v in list(curation["merge"].items()):
+                if v.lower() == src.lower():
+                    curation["merge"][k] = dst
+            entities.save_curation(curation)
+            print(f"  merged {src} -> {dst}")
+            dirty = True
+
+        elif verb == "delete" and len(parts) > 1:
+            name = resolve_entity(entity_index, " ".join(parts[1:]))
+            if not name:
+                print("  not found\n")
+                continue
+            confirm = input(f"  delete '{name}' from the entity graph? (y/n) ").strip().lower()
+            if confirm != "y":
+                print("  kept\n")
+                continue
+            curation = entities.load_curation()
+            kind = entity_index[name]["type"]
+            curation["delete"].append(entities.curation_key(kind, name))
+            entities.save_curation(curation)
+            print(f"  deleted {name}")
+            dirty = True
+
+        else:
+            print("  didn't catch that — 'help' for commands")
+
+    if dirty:
+        print("\n  rebuilding entity docs...")
+        entity_index = entities.build(quiet=True)
+        print()
+    return entity_index
+
+
 def main():
     client = anthropic.Anthropic()
     collection = get_collection()
@@ -291,13 +415,16 @@ def main():
 
     known = f", {len(entity_index)} known entities" if entity_index else ""
     print(f"\n  Journal Companion — {count} entries in memory{known}")
-    print("  Ask about your journal, or /write to add an entry. 'quit' to leave.\n")
+    print("  Ask about your journal. /write adds an entry, /manage curates entities. 'quit' to leave.\n")
 
     messages = []
     while True:
         try:
             question = input("you > ").strip()
-        except (EOFError, KeyboardInterrupt):
+        except KeyboardInterrupt:
+            print("\n  (Ctrl+C — type 'quit' when you want to leave)")
+            continue
+        except EOFError:
             print("\n  goodnight.")
             break
         if not question:
@@ -309,6 +436,10 @@ def main():
             print()
             write_entry(client, collection, entity_index, messages)
             print()
+            continue
+        if question.lower() in ("/manage", "/m", "manage"):
+            print()
+            entity_index = manage_mode(entity_index)
             continue
         print()
         ask(client, collection, entity_index, messages, question)
