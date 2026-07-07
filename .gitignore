@@ -12,6 +12,7 @@ chroma_data/
 journal_entries/
 entity_graph/
 summaries/
+categories/
 conversations.json
 *.export.json
 import_list.txt
