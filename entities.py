@@ -289,6 +289,8 @@ KINDS = ("person", "project", "place")
 _CURATION_DEFAULTS = {
     "merge": {}, "correct": {}, "retype": {}, "rename": {},
     "alias_add": {}, "alias_remove": {}, "delete": [],
+    "reviewed": [],        # entity keys the user has marked as checked
+    "not_duplicates": [],  # dismissed duplicate-pair keys ("kind:a|b")
 }
 
 
@@ -467,6 +469,9 @@ def build_entity_docs(records: list[dict]) -> dict:
             "path": str(path.relative_to(ENTITY_DIR)),
             "mentions": len(ent["timeline"]),
             "aliases": sorted(ent["aliases"]),
+            "reviewed": curation_key(kind, ent["name"]) in {
+                r.lower() for r in curation["reviewed"]
+            },
         }
 
     (ENTITY_DIR / "index.json").write_text(
@@ -663,6 +668,120 @@ def reassign_observation(
     if not ent["observations"] and target is not ent:
         data[group].remove(ent)
     _save_raw(path, data)
+
+
+# ---------------------------------------------------------------------------
+# LOCAL DUPLICATE DETECTION (free — no API calls)
+# ---------------------------------------------------------------------------
+
+NAME_SIM_THRESHOLD = 0.72
+EMB_SIM_THRESHOLD = 0.86
+
+
+def pair_key(kind: str, a: str, b: str) -> str:
+    lo, hi = sorted((a.lower(), b.lower()))
+    return f"{kind}:{lo}|{hi}"
+
+
+def _entity_texts() -> dict:
+    """(kind, canonical_lower) -> concatenated observation text (capped)."""
+    curation = load_curation()
+    texts = defaultdict(list)
+    for path in RAW_DIR.glob("*.json"):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for group, raw_kind in (("people", "person"), ("projects", "project"), ("places", "place")):
+            for ent in data.get(group, []):
+                name = (ent.get("name") or "").strip()
+                if not name:
+                    continue
+                resolved = apply_curation(curation, raw_kind, name)
+                if resolved:
+                    texts[(resolved[0], resolved[1].lower())].extend(
+                        ent.get("observations", [])
+                    )
+    return {k: " ".join(v)[:1200] for k, v in texts.items()}
+
+
+def find_duplicate_candidates(max_pairs: int = 60, use_embeddings: bool = True) -> list[dict]:
+    """
+    Rank likely duplicate pairs within each kind. Two signals:
+    - name similarity (catches typos/variants: Myra/Mira)
+    - embedding similarity of observation text (catches same-thing,
+      different-name: "metal bar" / "Blue Room")
+    Dismissed pairs (curation.not_duplicates) never come back.
+    """
+    import difflib
+
+    index_file = ENTITY_DIR / "index.json"
+    if not index_file.exists():
+        return []
+    index = json.loads(index_file.read_text(encoding="utf-8"))
+    curation = load_curation()
+    dismissed = {d.lower() for d in curation["not_duplicates"]}
+
+    by_kind = defaultdict(list)
+    for name, info in index.items():
+        by_kind[info["type"]].append((name, info))
+
+    candidates = {}
+
+    # signal 1: name similarity (canonical names + aliases)
+    for kind, items in by_kind.items():
+        for i, (a, ia) in enumerate(items):
+            a_names = [a] + ia.get("aliases", [])
+            for b, ib in items[i + 1:]:
+                pk = pair_key(kind, a, b)
+                if pk in dismissed:
+                    continue
+                b_names = [b] + ib.get("aliases", [])
+                best = max(
+                    difflib.SequenceMatcher(None, x.lower(), y.lower()).ratio()
+                    for x in a_names for y in b_names
+                )
+                if best >= NAME_SIM_THRESHOLD:
+                    candidates[pk] = {
+                        "kind": kind, "a": a, "b": b,
+                        "a_mentions": ia["mentions"], "b_mentions": ib["mentions"],
+                        "score": round(best, 3), "basis": "name",
+                    }
+
+    # signal 2: what-happened-there similarity
+    if use_embeddings:
+        try:
+            from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+            texts = _entity_texts()
+            for kind, items in by_kind.items():
+                keyed = [
+                    (name, info, texts.get((kind, name.lower()), ""))
+                    for name, info in items
+                ]
+                keyed = [(n, i, t) for n, i, t in keyed if len(t) > 60]
+                if len(keyed) < 2:
+                    continue
+                ef = DefaultEmbeddingFunction()
+                vecs = ef([t for _, _, t in keyed])
+                import numpy as np
+                mat = np.array(vecs)
+                mat = mat / np.linalg.norm(mat, axis=1, keepdims=True)
+                sims = mat @ mat.T
+                for i in range(len(keyed)):
+                    for j in range(i + 1, len(keyed)):
+                        a, ia, _ = keyed[i]
+                        b, ib, _ = keyed[j]
+                        pk = pair_key(kind, a, b)
+                        if pk in dismissed or pk in candidates:
+                            continue
+                        if sims[i, j] >= EMB_SIM_THRESHOLD:
+                            candidates[pk] = {
+                                "kind": kind, "a": a, "b": b,
+                                "a_mentions": ia["mentions"], "b_mentions": ib["mentions"],
+                                "score": round(float(sims[i, j]), 3), "basis": "context",
+                            }
+        except Exception:
+            pass  # embeddings unavailable -> name signal only
+
+    ranked = sorted(candidates.values(), key=lambda c: -c["score"])
+    return ranked[:max_pairs]
 
 
 # ---------------------------------------------------------------------------

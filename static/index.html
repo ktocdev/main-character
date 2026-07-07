@@ -125,8 +125,28 @@
   .sg:last-child { border-bottom: none; }
   .sg .r { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin: .2rem 0 .4rem; }
   #search { margin-bottom: .5rem; font-size: .9rem; padding: .4rem .7rem; }
-  #suggest-btns { display: flex; gap: .4rem; margin-bottom: .6rem; }
+  #suggest-btns { display: flex; gap: .4rem; margin-bottom: .6rem; flex-wrap: wrap; }
+  #filter-chips { display: flex; gap: .4rem; margin-bottom: .5rem; }
+  .chip-toggle.on { background: var(--accent-dim); color: var(--bg); border-color: var(--accent-dim); }
+  .rev-check { color: var(--accent-dim); font-size: .75rem; margin-left: .25rem; }
   .thinking { color: var(--text-dim); font-style: italic; }
+
+  /* Triage */
+  #triage { max-width: 44rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
+  #triage-progress { font: .85rem system-ui, sans-serif; color: var(--text-dim); margin-bottom: 1rem; }
+  #triage-card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 12px; padding: 1.3rem 1.5rem; }
+  #triage-card h2 { font-style: normal; font-size: 1.4rem; color: var(--text); margin-bottom: .2rem; }
+  #triage-meta { font: .85rem system-ui, sans-serif; color: var(--accent-dim); }
+  #triage-aliases { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin-top: .2rem; }
+  #triage-obs { margin-top: 1rem; font-size: .92rem; max-height: 22rem; overflow-y: auto; }
+  #triage-obs .obs-date { margin: .7rem 0 .2rem; }
+  #triage-help { margin-top: 1rem; font: .85rem system-ui, sans-serif; color: var(--text-dim); }
+  #triage-help b { color: var(--accent); font-weight: normal; }
+  #triage-input-row, #triage-kind-row { margin-top: 1rem; font: .9rem system-ui, sans-serif; color: var(--text-dim); display: flex; gap: .6rem; align-items: center; }
+  #triage-input { flex: 1; }
+  #triage-toast { margin-top: .8rem; font: .85rem system-ui, sans-serif; color: var(--accent); min-height: 1.2rem; }
+  .dup-row { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding: .5rem 0; }
+  .dup-row .why { font: .75rem system-ui, sans-serif; color: var(--text-dim); }
 </style>
 </head>
 <body>
@@ -137,6 +157,7 @@
     <button data-tab="chat" class="active">chat</button>
     <button data-tab="write">write</button>
     <button data-tab="entities">entities</button>
+    <button data-tab="triage">triage</button>
     <button class="quiet" id="undo-btn" title="undo last entity change">↺</button>
     <button class="quiet" id="redo-btn" title="redo">↻</button>
     <button class="quiet" id="refresh-summaries" title="regenerate the weekly arc + status snapshot after new entries">refresh memory</button>
@@ -164,12 +185,43 @@
     </div>
   </section>
 
+  <section class="tab" id="tab-triage">
+    <div id="triage">
+      <div id="triage-progress"></div>
+      <div id="triage-card">
+        <h2 id="triage-name">loading…</h2>
+        <div id="triage-meta"></div>
+        <div id="triage-aliases"></div>
+        <div id="triage-obs"></div>
+      </div>
+      <div id="triage-input-row" style="display:none">
+        <span id="triage-mode-label"></span>
+        <input type="text" id="triage-input" list="entity-names" placeholder="target entity… (Enter to apply, Esc to cancel)">
+      </div>
+      <div id="triage-kind-row" style="display:none">
+        move to: <button class="quiet" data-kind="person">1 person</button>
+        <button class="quiet" data-kind="project">2 project</button>
+        <button class="quiet" data-kind="place">3 place</button>
+      </div>
+      <div id="triage-help">
+        <b>k</b> keep (mark reviewed) · <b>m</b> merge · <b>c</b> correct · <b>r</b> rename ·
+        <b>t</b> retype · <b>d</b> delete · <b>s</b> skip · <b>u</b> undo
+      </div>
+      <div id="triage-toast"></div>
+    </div>
+  </section>
+
   <section class="tab" id="tab-entities">
     <div id="entities-pane">
       <div id="entity-list">
         <input type="text" id="search" placeholder="filter…">
+        <div id="filter-chips">
+          <button class="quiet chip-toggle" id="flt-unreviewed">unreviewed</button>
+          <button class="quiet chip-toggle" id="flt-single">1 mention</button>
+        </div>
         <div id="suggest-btns">
-          <button class="quiet" data-suggest="person">suggest people merges</button>
+          <button class="quiet" id="find-dups">find duplicates (free)</button>
+          <button class="quiet" data-suggest="person">ask claude: people</button>
           <button class="quiet" data-suggest="project">projects</button>
           <button class="quiet" data-suggest="place">places</button>
         </div>
@@ -180,7 +232,7 @@
         <h2 id="entity-name">select an entity</h2>
         <div id="entity-meta"></div>
         <div class="ent-actions" id="entity-actions" style="display:none">
-          <input type="text" id="merge-target" placeholder="target name…">
+          <input type="text" id="merge-target" list="entity-names" placeholder="target name…">
           <button class="quiet" id="merge-btn" title="combine; this name is kept as an alias">merge into</button>
           <button class="quiet" id="correct-btn" title="typo fix; this name is NOT kept as an alias">correct to</button>
           <button class="quiet" id="rename-btn" title="change spelling/case of this entity's name">rename</button>
@@ -203,18 +255,22 @@
     </div>
   </section>
 </main>
+<datalist id="entity-names"></datalist>
 
 <script>
 const $ = id => document.getElementById(id);
 let entities = {}, selected = null;
 
 // ---- tabs ----
+let activeTab = 'chat';
 document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button[data-tab]').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
   b.classList.add('active');
-  $('tab-' + b.dataset.tab).classList.add('active');
-  if (b.dataset.tab === 'entities') loadEntities();
+  activeTab = b.dataset.tab;
+  $('tab-' + activeTab).classList.add('active');
+  if (activeTab === 'entities') loadEntities();
+  if (activeTab === 'triage') startTriage();
 });
 
 // ---- status ----
@@ -306,9 +362,28 @@ $('entry-send').onclick = async () => {
 // ---- entities ----
 async function loadEntities() {
   entities = await (await fetch('/api/entities')).json();
+  const dl = $('entity-names');
+  dl.innerHTML = '';
+  for (const name of Object.keys(entities).sort()) {
+    const o = document.createElement('option');
+    o.value = name;
+    dl.appendChild(o);
+  }
   renderEntityList();
   refreshStatus();
 }
+
+const filters = {unreviewed: false, single: false};
+$('flt-unreviewed').onclick = () => {
+  filters.unreviewed = !filters.unreviewed;
+  $('flt-unreviewed').classList.toggle('on', filters.unreviewed);
+  renderEntityList();
+};
+$('flt-single').onclick = () => {
+  filters.single = !filters.single;
+  $('flt-single').classList.toggle('on', filters.single);
+  renderEntityList();
+};
 
 function renderEntityList() {
   const filter = $('search').value.trim().toLowerCase();
@@ -316,7 +391,9 @@ function renderEntityList() {
   for (const [name, info] of Object.entries(entities)) {
     const hay = (name + ' ' + (info.aliases || []).join(' ')).toLowerCase();
     if (filter && !hay.includes(filter)) continue;
-    groups[info.type].push([name, info.mentions]);
+    if (filters.unreviewed && info.reviewed) continue;
+    if (filters.single && info.mentions !== 1) continue;
+    groups[info.type].push([name, info.mentions, info.reviewed]);
   }
   const wrap = $('entity-groups');
   wrap.innerHTML = '';
@@ -327,16 +404,48 @@ function renderEntityList() {
     h.className = 'kind';
     h.textContent = `${kind}s (${items.length})`;
     wrap.appendChild(h);
-    for (const [name, mentions] of items) {
+    for (const [name, mentions, reviewed] of items) {
       const b = document.createElement('button');
       b.className = 'ent' + (name === selected ? ' sel' : '');
-      b.innerHTML = `${name} <span class="n">${mentions}</span>`;
+      b.innerHTML = `${name} <span class="n">${mentions}</span>` +
+        (reviewed ? '<span class="rev-check">✓</span>' : '');
       b.onclick = () => showEntity(name);
       wrap.appendChild(b);
     }
   }
 }
 $('search').oninput = renderEntityList;
+
+// ---- local duplicate finder ----
+$('find-dups').onclick = async () => {
+  const panel = $('suggest-panel');
+  panel.style.display = 'block';
+  panel.textContent = 'scanning for likely duplicates (local, free)…';
+  const r = await (await fetch('/api/entities/duplicates')).json();
+  panel.innerHTML = '';
+  if (!r.pairs || !r.pairs.length) { panel.textContent = 'no likely duplicates found.'; return; }
+  for (const p of r.pairs) {
+    const row = document.createElement('div');
+    row.className = 'dup-row';
+    row.innerHTML = `<strong>${p.a}</strong> (${p.a_mentions}) ↔ <strong>${p.b}</strong> (${p.b_mentions})
+      <span class="why">${p.kind} · ${p.basis} ${p.score}</span>`;
+    const mk = (label, fn) => {
+      const b = document.createElement('button');
+      b.className = 'quiet'; b.textContent = label; b.onclick = fn;
+      row.appendChild(b);
+    };
+    mk(`${p.a} → ${p.b}`, async () => {
+      if (await api('/api/entities/merge', {source: p.a, target: p.b})) { row.remove(); loadEntities(); }
+    });
+    mk(`${p.b} → ${p.a}`, async () => {
+      if (await api('/api/entities/merge', {source: p.b, target: p.a})) { row.remove(); loadEntities(); }
+    });
+    mk('not duplicates', async () => {
+      if (await api('/api/entities/duplicates/dismiss', {kind: p.kind, a: p.a, b: p.b})) row.remove();
+    });
+    panel.appendChild(row);
+  }
+};
 
 async function api(url, payload) {
   const res = await fetch(url, {
@@ -519,6 +628,164 @@ async function refreshHistoryButtons() {
 }
 refreshHistoryButtons();
 setInterval(refreshHistoryButtons, 15000);
+
+// ---- triage mode ----
+let queue = [], qpos = 0, triageMode = null;
+
+async function startTriage() {
+  await loadEntities();
+  queue = Object.entries(entities)
+    .filter(([, i]) => !i.reviewed)
+    .sort((a, b) => a[1].mentions - b[1].mentions)  // junk (1-mention) first
+    .map(([n]) => n);
+  qpos = 0;
+  renderTriage();
+}
+
+function toast(msg) {
+  $('triage-toast').textContent = msg;
+  setTimeout(() => { if ($('triage-toast').textContent === msg) $('triage-toast').textContent = ''; }, 3500);
+}
+
+async function renderTriage() {
+  triageMode = null;
+  $('triage-input-row').style.display = 'none';
+  $('triage-kind-row').style.display = 'none';
+  const total = Object.keys(entities).length;
+  const reviewed = Object.values(entities).filter(i => i.reviewed).length;
+  if (qpos >= queue.length) {
+    $('triage-progress').textContent = `${reviewed} of ${total} reviewed`;
+    $('triage-name').textContent = queue.length ? 'queue done 🎉' : 'everything is reviewed';
+    $('triage-meta').textContent = '';
+    $('triage-aliases').textContent = '';
+    $('triage-obs').innerHTML = '';
+    return;
+  }
+  const name = queue[qpos];
+  const info = entities[name];
+  if (!info) { qpos++; return renderTriage(); }
+  $('triage-progress').textContent =
+    `${reviewed} of ${total} reviewed · ${queue.length - qpos} left in this queue`;
+  $('triage-name').textContent = name;
+  $('triage-meta').textContent = `${info.type} · ${info.mentions} mention${info.mentions === 1 ? '' : 's'}`;
+  $('triage-aliases').textContent = (info.aliases || []).length ? 'aka ' + info.aliases.join(', ') : '';
+  const obsEl = $('triage-obs');
+  obsEl.innerHTML = '<span class="thinking">loading…</span>';
+  const r = await (await fetch('/api/entities/observations?name=' + encodeURIComponent(name))).json();
+  if (queue[qpos] !== name) return;  // user already moved on
+  obsEl.innerHTML = '';
+  let lastDate = null;
+  for (const o of (r.observations || []).slice(0, 12)) {
+    if (o.date !== lastDate) {
+      lastDate = o.date;
+      const d = document.createElement('div');
+      d.className = 'obs-date';
+      d.textContent = o.date;
+      obsEl.appendChild(d);
+    }
+    const p = document.createElement('div');
+    p.textContent = '– ' + o.text;
+    obsEl.appendChild(p);
+  }
+  if ((r.observations || []).length > 12) {
+    const more = document.createElement('div');
+    more.className = 'thinking';
+    more.textContent = `… and ${r.observations.length - 12} more`;
+    obsEl.appendChild(more);
+  }
+}
+
+function triageAdvance() { qpos++; renderTriage(); }
+
+async function triageAct(fn, successMsg) {
+  const name = queue[qpos];
+  const r = await fn(name);
+  if (r) {
+    toast(successMsg(r));
+    await loadEntities();
+    queue = queue.filter((n, i) => i <= qpos || entities[n]);  // drop vanished
+    triageAdvance();
+  }
+}
+
+function triagePrompt(mode, label) {
+  triageMode = mode;
+  $('triage-mode-label').textContent = label;
+  $('triage-input-row').style.display = 'flex';
+  $('triage-input').value = '';
+  $('triage-input').focus();
+}
+
+$('triage-input').addEventListener('keydown', async e => {
+  if (e.key === 'Escape') { triageMode = null; $('triage-input-row').style.display = 'none'; return; }
+  if (e.key !== 'Enter') return;
+  const target = $('triage-input').value.trim();
+  if (!target) return;
+  const name = queue[qpos], mode = triageMode;
+  triageMode = null;
+  $('triage-input-row').style.display = 'none';
+  if (mode === 'merge' || mode === 'correct') {
+    await triageAct(
+      n => api(`/api/entities/${mode}`, {source: n, target}),
+      r => `${mode === 'merge' ? 'merged' : 'corrected'} ${name} → ${r.into}`,
+    );
+  } else if (mode === 'rename') {
+    const r = await api('/api/entities/rename', {source: name, target});
+    if (r) {
+      toast(`renamed → ${r.to}`);
+      await loadEntities();
+      queue[qpos] = r.to;
+      renderTriage();
+    }
+  }
+});
+
+document.querySelectorAll('#triage-kind-row button').forEach(b => b.onclick = async () => {
+  $('triage-kind-row').style.display = 'none';
+  await triageAct(
+    n => api('/api/entities/retype', {name: n, new_type: b.dataset.kind, new_name: ''}),
+    r => `moved to ${r.to}s`,
+  );
+});
+
+document.addEventListener('keydown', async e => {
+  if (activeTab !== 'triage' || triageMode !== null) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (qpos >= queue.length && !'u'.includes(e.key)) return;
+  const name = queue[qpos];
+  switch (e.key) {
+    case 'k':
+      if (await api('/api/entities/reviewed', {name, reviewed: true})) {
+        entities[name].reviewed = true;
+        toast(`kept ${name} ✓`);
+        triageAdvance();
+      }
+      break;
+    case 's': triageAdvance(); break;
+    case 'd':
+      await triageAct(n => api('/api/entities/delete', {name: n}), r => `deleted ${r.deleted}`);
+      break;
+    case 'm': triagePrompt('merge', `merge ${name} into:`); e.preventDefault(); break;
+    case 'c': triagePrompt('correct', `correct ${name} to:`); e.preventDefault(); break;
+    case 'r': triagePrompt('rename', `rename ${name} to:`); e.preventDefault(); break;
+    case 't': $('triage-kind-row').style.display = 'flex'; break;
+    case '1': case '2': case '3': {
+      const row = $('triage-kind-row');
+      if (row.style.display !== 'none') {
+        row.querySelectorAll('button')[Number(e.key) - 1].click();
+      }
+      break;
+    }
+    case 'u': {
+      const res = await fetch('/api/undo', {method: 'POST'});
+      const r = await res.json();
+      if (r.error) { toast(r.error); break; }
+      toast(`undid: ${r.undid}`);
+      await startTriage();
+      break;
+    }
+  }
+});
 
 // ---- merge suggestions ----
 document.querySelectorAll('[data-suggest]').forEach(b => b.onclick = async () => {
