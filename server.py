@@ -28,6 +28,7 @@ from pydantic import BaseModel
 import categories
 import companion
 import entities
+import sessions
 from rag_journal import get_collection
 
 HOST = "127.0.0.1"
@@ -49,6 +50,8 @@ def startup():
     STATE["client"] = anthropic.Anthropic()
     STATE["collection"] = get_collection()
     STATE["entity_index"] = companion.load_entity_index()
+    # the open session survives restarts — rebuild the conversation from it
+    STATE["messages"] = sessions.conversation_messages()
 
 
 class ChatIn(BaseModel):
@@ -134,27 +137,29 @@ def status():
 @app.post("/api/chat")
 def chat(body: ChatIn):
     def gen():
+        sessions.append_message("you", body.message, collection=STATE["collection"])
         yield from companion.stream_reply(
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["messages"], body.message,
         )
+        sessions.append_message("companion", STATE["messages"][-1]["content"])
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
 
 
-def _after_entry_refresh():
-    """Light memory refresh after each new entry: tag it, refresh the
-    current week's arc + its entry summary + the status snapshot, re-sync
-    embeddings. Domain docs and pattern re-detection stay on the manual
-    "refresh memory" / "detect patterns" buttons — they're the pricey part."""
+def _after_close_refresh():
+    """Full memory pipeline after a chat closes: the closed chat is now a
+    journal entry. Tag it, extract its entities, refresh arcs + domain
+    docs + entry summaries + snapshot, scan it for dreams, re-sync
+    embeddings. Everything is incremental — cached work is skipped."""
+    import dreams
     import summarizer
     try:
         categories.build(quiet=True)
-        summarizer.build_arcs(quiet=True)
-        summarizer.build_entry_summaries(quiet=True)
-        summarizer.build_snapshot(quiet=True)
-        summarizer.sync_summary_embeddings(quiet=True)
+        STATE["entity_index"] = entities.build(quiet=True)
+        summarizer.build(quiet=True)
+        dreams.extract(quiet=True)
     except Exception as e:
-        print(f"  post-entry refresh failed: {e}")
+        print(f"  post-close refresh failed: {e}")
 
 
 @app.post("/api/entry")
@@ -166,6 +171,7 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
     if body.dream:
         import dreams
         entry_id = dreams.store_dream_entry(text)
+        sessions.append_message("you", text, dream=True, collection=STATE["collection"])
         entry_message = (
             "The following is a dream I just had — I'm flagging it as a "
             "dream, not a waking event. Respond to it as my companion: "
@@ -173,18 +179,22 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
         )
         background_tasks.add_task(dreams.ingest_dream_entry, text, entry_id)
     else:
-        entry_id = companion.store_entry(STATE["collection"], text)
+        # the entry joins the open session; it becomes journal memory
+        # when the chat is closed (the summarize point)
+        entry_id = "current-chat"
+        sessions.append_message("you", text, collection=STATE["collection"])
+        sessions.backup_entry_text(text)
         entry_message = (
             "The following is a new journal entry I just wrote — not a question. "
             "Respond to it as my companion.\n\n" + text
         )
-        background_tasks.add_task(_after_entry_refresh)
 
     def gen():
         yield from companion.stream_reply(
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["messages"], entry_message, include_dreams=body.dream,
         )
+        sessions.append_message("companion", STATE["messages"][-1]["content"])
     return StreamingResponse(
         gen(),
         media_type="text/plain; charset=utf-8",
@@ -216,7 +226,62 @@ def reflect():
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["messages"],
         )
+        sessions.append_message("companion", STATE["messages"][-1]["content"],
+                                collection=STATE["collection"])
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
+
+
+class SeedIn(BaseModel):
+    messages: list[dict] = []
+
+
+class CloseIn(BaseModel):
+    title: str = ""
+
+
+@app.get("/api/sessions")
+def list_sessions():
+    """The history sidebar: open session + every closed chat, newest first."""
+    return sessions.session_list(STATE["collection"])
+
+
+@app.get("/api/sessions/current")
+def current_session():
+    """The open session: base conversation text + the live braid."""
+    return sessions.current_view(STATE["collection"])
+
+
+@app.get("/api/sessions/archive")
+def archived_session(id: str):
+    """One closed session: stitched parts + the full braid."""
+    archive = sessions.load_archive(id)
+    if archive is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return archive
+
+
+@app.post("/api/sessions/seed")
+def seed_session(body: SeedIn):
+    """One-time migration of the browser's old localStorage chat log
+    into the open session. Only fills an empty session."""
+    n = sessions.seed_messages(body.messages, collection=STATE["collection"])
+    return {"ok": True, "seeded": n}
+
+
+@app.post("/api/sessions/close")
+def close_session(body: CloseIn, background_tasks: BackgroundTasks):
+    """The summarize point: the user's side of the chat becomes a journal
+    entry, the braid is archived, a fresh chat opens, and the full memory
+    pipeline runs in the background."""
+    try:
+        result = sessions.close_session(
+            STATE["collection"], STATE["client"], title_hint=body.title,
+        )
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    STATE["messages"] = []
+    background_tasks.add_task(_after_close_refresh)
+    return {"ok": True, **result}
 
 
 @app.post("/api/reset")
@@ -484,6 +549,28 @@ def domain_summary(name: str):
     return {"name": name, "doc": doc}
 
 
+@app.get("/api/summaries/entries")
+def entry_list():
+    """All entries sorted newest first, for the history tab."""
+    col = STATE["collection"]
+    result = col.get(limit=10000)
+    entries = []
+    seen = set()
+    for doc, meta in zip(result["documents"], result["metadatas"]):
+        # skip chunks that are parts of the same entry (same date + title)
+        key = (meta.get("date", ""), meta.get("title", ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        entries.append({
+            "date": meta.get("date", ""),
+            "title": meta.get("title", ""),
+            "text": doc[:500] + ("…" if len(doc) > 500 else ""),
+        })
+    entries.sort(key=lambda e: e["date"], reverse=True)
+    return {"entries": entries}
+
+
 @app.get("/api/patterns")
 def get_patterns():
     import patterns
@@ -616,6 +703,7 @@ def entry_text(date: str, title: str):
     key = entities.conversation_cache_key({"date": date, "title": title})
     return {"date": date, "title": title,
             "summary": summarizer.load_entry_summary(key),
+            "messages": sessions.load_braid(date, title),
             "text": "\n\n".join(doc for _, doc in chunks)}
 
 
