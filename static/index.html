@@ -186,6 +186,25 @@
     border-bottom: 1px solid var(--border); padding-bottom: .6rem; margin-bottom: .6rem;
   }
 
+  /* Patterns */
+  #patterns { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
+  #pat-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
+  #pat-status { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  .pattern {
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--bg-raised); padding: 1rem 1.2rem; margin-bottom: 1rem;
+  }
+  .pattern h3 {
+    font-size: 1.05rem; font-weight: 600; color: var(--accent);
+    display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
+  }
+  .pat-kind { font: .75rem system-ui, sans-serif; color: var(--text-dim); font-weight: normal; }
+  .pat-dismiss { margin-left: auto; }
+  .pattern p { margin: .4rem 0; font-size: .95rem; }
+  .pat-trigger { color: var(--text-dim); font-style: italic; font-size: .88rem; }
+  .pat-instances { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin-top: .5rem; }
+  .pat-instances div { padding: .12rem 0; }
+
   /* Help */
   #help { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
   #help h2 { font-style: italic; font-weight: normal; font-size: 1.15rem; color: var(--accent); margin: 1.6rem 0 .8rem; }
@@ -212,6 +231,7 @@
     <button data-tab="write">write</button>
     <button data-tab="entities">entities</button>
     <button data-tab="categories">categories</button>
+    <button data-tab="patterns">patterns</button>
     <button data-tab="triage">triage</button>
     <button data-tab="help">help</button>
     <button class="quiet" id="undo-btn" title="undo last entity change">↺</button>
@@ -249,6 +269,16 @@
       </div>
       <div id="cat-chips"></div>
       <div id="cat-entries"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-patterns">
+    <div id="patterns">
+      <div id="pat-header">
+        <span id="pat-status"></span>
+        <button class="quiet" id="pat-build" title="re-read the weekly arcs + domain documents and detect recurring patterns (one Claude call; skipped if nothing has changed)">detect patterns</button>
+      </div>
+      <div id="pat-list"></div>
     </div>
   </section>
 
@@ -413,6 +443,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () =>
   $('tab-' + activeTab).classList.add('active');
   if (activeTab === 'entities') loadEntities();
   if (activeTab === 'categories') loadCategories();
+  if (activeTab === 'patterns') loadPatterns();
   if (activeTab === 'triage') startTriage();
 });
 
@@ -1097,6 +1128,68 @@ async function toggleEntryText(row, c) {
   t.textContent = r.text;
   d.appendChild(t);
 }
+
+// ---- patterns ----
+async function loadPatterns() {
+  const r = await (await fetch('/api/patterns')).json();
+  renderPatterns(r);
+}
+
+function renderPatterns(r) {
+  $('pat-status').textContent = r.generated
+    ? `detected ${r.generated.replace('T', ' ')} · ${r.patterns.length} pattern${r.patterns.length === 1 ? '' : 's'}`
+    : 'nothing detected yet — hit detect patterns';
+  const el = $('pat-list');
+  el.innerHTML = '';
+  for (const p of r.patterns) {
+    const d = document.createElement('div');
+    d.className = 'pattern';
+    const h = document.createElement('h3');
+    h.textContent = p.name;
+    const kind = document.createElement('span');
+    kind.className = 'pat-kind';
+    kind.textContent = `${p.kind} · ${p.confidence} confidence`;
+    h.appendChild(kind);
+    const x = document.createElement('button');
+    x.className = 'quiet pat-dismiss';
+    x.textContent = 'dismiss';
+    x.title = 'not a real pattern — hide it, stays hidden across re-detections';
+    x.onclick = async () => {
+      if (await api('/api/patterns/dismiss', {name: p.name})) d.remove();
+    };
+    h.appendChild(x);
+    d.appendChild(h);
+    const desc = document.createElement('p');
+    desc.textContent = p.description;
+    d.appendChild(desc);
+    const trig = document.createElement('p');
+    trig.className = 'pat-trigger';
+    trig.textContent = 'trigger: ' + p.trigger;
+    d.appendChild(trig);
+    const inst = document.createElement('div');
+    inst.className = 'pat-instances';
+    for (const i of p.instances) {
+      const row = document.createElement('div');
+      row.textContent = `${i.date} — ${i.note}`;
+      inst.appendChild(row);
+    }
+    d.appendChild(inst);
+    el.appendChild(d);
+  }
+}
+
+$('pat-build').onclick = async () => {
+  const b = $('pat-build');
+  b.disabled = true;
+  b.textContent = 'detecting… (~1 min)';
+  try {
+    const r = await api('/api/patterns/build', {});
+    if (r) renderPatterns(r);
+  } finally {
+    b.textContent = 'detect patterns';
+    b.disabled = false;
+  }
+};
 
 $('cat-build').onclick = async () => {
   const b = $('cat-build');

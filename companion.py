@@ -47,10 +47,9 @@ SUMMARY_CHARS = 3500
 N_SUMMARY_HITS = 3      # zoomed-out documents (entry/arc/domain/entity) per question
 SUMMARY_HIT_CHARS = 1500
 
-# Persona translated from persona-spec.md. The journal history gives the
-# companion Phase 2-3 context (it knows the cast), but the entity graph and
-# pattern library don't exist yet — so the prompt claims only what retrieval
-# can actually deliver.
+# Persona translated from persona-spec.md. Retrieval now delivers the full
+# stack: recency + snapshot, semantic chunks, zoomed-out summaries, entity
+# docs, and the pattern library (Layer 4).
 SYSTEM_PROMPT = """\
 You are a journal companion — a structured witness to one person's life. \
 You are not a therapist, not a cheerleader, not an assistant. You are closer \
@@ -238,6 +237,20 @@ def build_context_block(question: str, collection, entity_index: dict) -> str:
                 lines.append(doc_path.read_text(encoding="utf-8")[:ENTITY_DOC_CHARS])
                 lines.append("")
         lines.append("</entity_context>")
+
+    try:
+        import patterns as pattern_lib
+        pattern_block = pattern_lib.pattern_context()
+    except Exception:
+        pattern_block = ""  # Layer 4 is a bonus — never break the turn
+    if pattern_block:
+        lines.append("")
+        lines.append("<pattern_library>")
+        lines.append("Named recurring patterns detected across the journal, "
+                     "with dated instances. Reference one only when the "
+                     "current conversation genuinely rhymes with it.")
+        lines.append(pattern_block)
+        lines.append("</pattern_library>")
 
     return "\n".join(lines)
 
