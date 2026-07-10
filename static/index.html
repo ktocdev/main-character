@@ -75,25 +75,55 @@
     border-radius: 8px; padding: .3rem .7rem; font: .8rem system-ui, sans-serif; cursor: pointer;
   }
 
-  /* Write */
+  /* Write + chat logs */
   #entities-pane h2 { font-weight: normal; font-style: italic; font-size: 1.05rem; color: var(--text-dim); margin-bottom: 1rem; }
-  #write-log { flex: 1; overflow-y: auto; padding: 1.5rem; max-width: 46rem; margin: 0 auto; width: 100%; }
+  #write-log, #chat-log { flex: 1; overflow-y: auto; padding: 1.5rem; max-width: 46rem; margin: 0 auto; width: 100%; }
   .write-composer { flex-direction: column; gap: .5rem; }
-  #entry-text { min-height: 5.5rem; }
+  #entry-text { min-height: 4.5rem; max-height: 40vh; overflow-y: auto; }
   .write-controls { display: flex; align-items: center; gap: .6rem; }
-  .saved-note { font: .8rem system-ui, sans-serif; color: var(--accent-dim); margin-left: 1rem; }
+  .saved-note { font: .8rem system-ui, sans-serif; color: var(--accent-dim); margin-left: 1rem; flex: 1; }
+  #write-actions { position: relative; margin-left: auto; }
+  #write-actions summary {
+    list-style: none; cursor: pointer; color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: .2rem .7rem; font: .9rem system-ui, sans-serif;
+  }
+  #write-actions summary::-webkit-details-marker { display: none; }
+  #write-actions[open] summary { background: var(--bg-input); }
+  #write-actions .menu {
+    position: absolute; bottom: 2.2rem; right: 0; background: var(--bg-raised);
+    border: 1px solid var(--border); border-radius: 10px; padding: .5rem;
+    box-shadow: 0 6px 24px rgba(0,0,0,.35); white-space: nowrap;
+    display: flex; flex-direction: column; gap: .4rem;
+  }
+  #write-actions .menu button { text-align: left; }
+  /* lamp-warm thinking pulse */
+  @keyframes lamp-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+  .msg.thinking::after {
+    content: "· · ·"; color: var(--accent); letter-spacing: .15em;
+    text-shadow: 0 0 10px var(--accent-dim);
+    animation: lamp-pulse 1.6s ease-in-out infinite;
+  }
 
   /* Entities */
   #entities-pane { flex: 1; display: flex; overflow: hidden; }
   #entity-list { width: 21rem; border-right: 1px solid var(--border); overflow-y: auto; padding: 1.2rem; }
   #entity-list .kind { font: .7rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-dim); margin: 1rem 0 .4rem; }
+  #entity-list .ent-row { display: flex; align-items: center; gap: .2rem; border-radius: 6px; }
+  #entity-list .ent-row:hover, #entity-list .ent-row.sel { background: var(--bg-input); }
   #entity-list .ent {
-    display: block; width: 100%; text-align: left; background: none; border: none;
+    flex: 1; min-width: 0; text-align: left; background: none; border: none;
     color: var(--text); font: .95rem system-ui, sans-serif; padding: .25rem .4rem;
     border-radius: 6px; cursor: pointer;
   }
-  #entity-list .ent:hover, #entity-list .ent.sel { background: var(--bg-input); }
   #entity-list .ent .n { color: var(--text-dim); font-size: .8rem; }
+  #entity-list .ent-keep {
+    flex-shrink: 0; background: none; border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 6px; font: .7rem system-ui, sans-serif; padding: .1rem .45rem;
+    cursor: pointer; visibility: hidden; margin-right: .2rem;
+  }
+  #entity-list .ent-row:hover .ent-keep { visibility: visible; }
+  #entity-list .ent-keep.on { visibility: visible; color: var(--accent); border-color: var(--accent-dim); }
   #entity-detail { flex: 1; overflow-y: auto; padding: 1.5rem; }
   #entity-doc { font-size: .95rem; margin-top: 1rem; }
   #entity-meta { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
@@ -125,6 +155,7 @@
   .sg:last-child { border-bottom: none; }
   .sg .r { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin: .2rem 0 .4rem; }
   #search { margin-bottom: .5rem; font-size: .9rem; padding: .4rem .7rem; }
+  #curation-tools { display: flex; gap: .4rem; margin-bottom: .5rem; }
   #suggest-btns { display: flex; gap: .4rem; margin-bottom: .6rem; flex-wrap: wrap; }
   #filter-chips { display: flex; gap: .4rem; margin-bottom: .5rem; }
   .chip-toggle.on { background: var(--accent-dim); color: var(--bg); border-color: var(--accent-dim); }
@@ -142,9 +173,11 @@
   #triage-obs .obs-date { margin: .7rem 0 .2rem; }
   #triage-help { margin-top: 1rem; font: .85rem system-ui, sans-serif; color: var(--text-dim); }
   #triage-help b { color: var(--accent); font-weight: normal; }
-  #triage-input-row, #triage-kind-row { margin-top: 1rem; font: .9rem system-ui, sans-serif; color: var(--text-dim); display: flex; gap: .6rem; align-items: center; }
-  #triage-input { flex: 1; }
+  #triage-input-row, #triage-kind-row { margin-top: 1rem; font: .9rem system-ui, sans-serif; color: var(--text-dim); display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+  #triage-input { flex: 1; min-width: 12rem; }
+  #triage-apply { padding: .3rem 1.1rem; font-size: .85rem; align-self: stretch; }
   #triage-toast { margin-top: .8rem; font: .85rem system-ui, sans-serif; color: var(--accent); min-height: 1.2rem; }
+  #triage-btns { display: flex; gap: .4rem; margin-top: .8rem; flex-wrap: wrap; }
   .dup-row { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding: .5rem 0; }
   .dup-row .why { font: .75rem system-ui, sans-serif; color: var(--text-dim); }
 
@@ -192,9 +225,29 @@
   .prop-reason { color: var(--text-dim); font-style: italic; font-size: .85rem; margin-top: .15rem; }
   .prop-actions { display: flex; gap: .4rem; margin-top: .5rem; }
   #cat-custom-row {
-    display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; margin-bottom: .8rem;
+    display: flex; flex-direction: column; gap: .4rem; align-items: flex-start; margin-bottom: .8rem;
   }
   .custom-label { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  .custom-cat { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+  .custom-cat .cc-name { font: .9rem system-ui, sans-serif; font-weight: 600; }
+  .custom-cat .cc-meta { font: .78rem system-ui, sans-serif; color: var(--text-dim); font-style: italic; }
+  .custom-cat .quiet { padding: .1rem .5rem; font-size: .75rem; }
+  .kw-chip {
+    background: var(--bg-input); border: 1px solid var(--border); border-radius: 999px;
+    padding: .05rem .55rem; font: .75rem system-ui, sans-serif; color: var(--text-dim);
+  }
+  .kw-chip.member { border-color: var(--accent-dim); color: var(--accent); }
+  .kw-chip button {
+    background: none; border: none; color: inherit; cursor: pointer;
+    font-size: .85rem; padding: 0; opacity: .6;
+  }
+  .kw-chip button:hover { opacity: 1; }
+  .cat-def {
+    display: flex; flex-wrap: wrap; gap: .3rem; align-items: center;
+    background: var(--bg-input); border-radius: 8px; padding: .5rem .8rem;
+    margin-bottom: .8rem; font: .82rem system-ui, sans-serif; color: var(--text-dim);
+  }
+  .cat-def .lbl { text-transform: uppercase; letter-spacing: .05em; font-size: .72rem; }
   #cat-newform { display: flex; gap: .4rem; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; }
   #cat-newform input {
     background: var(--bg-input); border: 1px solid var(--border); color: var(--text);
@@ -204,6 +257,13 @@
     font-style: italic; color: var(--text-dim);
     border-bottom: 1px solid var(--border); padding-bottom: .6rem; margin-bottom: .6rem;
   }
+  #cat-paused {
+    background: var(--bg-raised); border: 1px dashed var(--accent-dim); border-radius: 10px;
+    padding: 1rem 1.2rem; color: var(--text-dim); font: .92rem/1.55 system-ui, sans-serif;
+  }
+  #cat-paused b { color: var(--accent); }
+  #categories.paused > :not(#cat-paused) { display: none; }
+  nav button.paused { opacity: .5; }
 
   /* Patterns */
   #patterns { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
@@ -245,10 +305,6 @@
   .dream-card p { margin: .45rem 0 0; font-size: .95rem; }
   .dream-cast { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin-top: .4rem; }
   .dream-read { color: var(--text-dim); font-style: italic; font-size: .9rem; }
-  .dream-flag {
-    font: .85rem system-ui, sans-serif; color: var(--text-dim);
-    margin-left: .8rem; cursor: pointer;
-  }
 
   /* History (sessions) */
   #history-pane { flex: 1; display: flex; overflow: hidden; }
@@ -288,6 +344,15 @@
   #help b { color: var(--accent); font-weight: 600; }
   #help em { color: var(--text); }
   #help code { font-size: .85em; background: var(--bg-input); padding: .05rem .35rem; border-radius: 4px; }
+  #help-toc {
+    display: flex; flex-wrap: wrap; gap: .4rem; padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border); margin-bottom: .5rem;
+  }
+  #help-toc a {
+    color: var(--text-dim); text-decoration: none; font: .85rem system-ui, sans-serif;
+    background: var(--bg-input); border-radius: 999px; padding: .15rem .8rem;
+  }
+  #help-toc a:hover { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -296,38 +361,54 @@
   <span class="status" id="status"></span>
   <nav>
     <button data-tab="write" class="active">write</button>
+    <button data-tab="chat">chat</button>
     <button data-tab="entities">entities</button>
-    <button data-tab="categories">categories</button>
+    <button data-tab="categories" title="paused until entries are split by date (Phase 3)">categories</button>
     <button data-tab="patterns">patterns</button>
     <button data-tab="dreams">dreams</button>
     <button data-tab="history">history</button>
     <button data-tab="triage">triage</button>
     <button data-tab="help">help</button>
-    <button class="quiet" id="undo-btn" title="undo last entity change">↺</button>
-    <button class="quiet" id="redo-btn" title="redo">↻</button>
-    <button class="quiet" id="refresh-summaries" title="regenerate the weekly arc + status snapshot after new entries">refresh memory</button>
-    <button class="quiet" id="reset" title="the summarize point — close this chat (your side becomes a journal entry, memory updates in the background) and start a fresh one">close chat</button>
   </nav>
 </header>
 <main>
   <section class="tab active" id="tab-write">
     <div id="write-log"></div>
     <div class="composer write-composer">
-      <textarea id="entry-text" rows="4" placeholder="write freely, or ask about your journal…"></textarea>
+      <textarea id="entry-text" rows="3" placeholder="write freely…"></textarea>
       <div class="write-controls">
         <button class="send" id="entry-send" title="save as a journal entry (markdown backup now, journal memory at close)">save entry</button>
-        <button class="send" id="chat-send" title="say or ask something — part of the chat, not a journal entry">send</button>
-        <label class="dream-flag" title="stored in the dream realm — never mixes into waking-life memory">
-          <input type="checkbox" id="entry-dream"> this was a dream
-        </label>
+        <button class="send" id="chat-send" title="talk with the companion about it — part of the chat, becomes journal memory too">send</button>
         <button class="quiet" id="reflect-btn" title="let the companion open — it connects a dot or two across time">reflect</button>
         <span class="saved-note" id="entry-saved"></span>
+        <details id="write-actions">
+          <summary title="chat actions">⋯</summary>
+          <div class="menu">
+            <button class="quiet" id="reset" title="the summarize point — your side of this chat becomes a journal entry, memory updates in the background, a fresh chat opens">summarize &amp; close chat</button>
+            <button class="quiet" id="refresh-summaries" title="regenerate the weekly arcs, domain docs + status snapshot — a manual fallback; closing a chat does this automatically">refresh memory</button>
+          </div>
+        </details>
       </div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-chat">
+    <div id="chat-log"></div>
+    <div class="composer">
+      <textarea id="chat-text" rows="2" placeholder="look something up in your journal…"></textarea>
+      <button class="quiet" id="lookup-clear" title="clear this lookup conversation (it was never journal data)">clear</button>
+      <button class="send" id="lookup-send">send</button>
     </div>
   </section>
 
   <section class="tab" id="tab-categories">
     <div id="categories">
+      <div id="cat-paused" style="display:none">
+        <b>Categories are paused.</b> Right now an “entry” is a whole week-long chat, so browsing a
+        category shows a week's blob under one date instead of the individual days. This section
+        won't be trustworthy until entries are re-run split by date (Phase 3) — it's kept in the nav
+        as a reminder. Everything here still works; it's just switched off on purpose.
+      </div>
       <div id="cat-header">
         <span id="cat-status"></span>
         <button class="quiet" id="cat-build" title="tag any untagged entries with Claude (incremental — already-tagged entries are free)">tag new entries</button>
@@ -339,7 +420,6 @@
       <div id="cat-newform">
         <input type="text" id="newcat-name" placeholder="new category…" style="width:10rem">
         <input type="text" id="newcat-keywords" placeholder="keywords, comma-separated (optional)" style="width:16rem">
-        <input type="text" id="newcat-parent" placeholder="parent (optional)" style="width:9rem">
         <button class="quiet" id="newcat-add">add</button>
       </div>
       <div id="cat-entries"></div>
@@ -397,16 +477,29 @@
       </div>
       <div id="triage-input-row" style="display:none">
         <span id="triage-mode-label"></span>
-        <input type="text" id="triage-input" list="entity-names" placeholder="target entity… (Enter to apply, Esc to cancel)">
+        <input type="text" id="triage-input" list="entity-names" placeholder="type here…">
+        <button class="send" id="triage-apply" title="apply this action (or press Enter)">apply</button>
+        <button class="quiet" id="triage-cancel" title="cancel (or press Esc)">cancel</button>
       </div>
       <div id="triage-kind-row" style="display:none">
-        move to: <button class="quiet" data-kind="person">1 person</button>
-        <button class="quiet" data-kind="project">2 project</button>
-        <button class="quiet" data-kind="place">3 place</button>
+        move to: <button class="quiet" data-kind="person" title="retype to person (1)">1 person</button>
+        <button class="quiet" data-kind="project" title="retype to project (2)">2 project</button>
+        <button class="quiet" data-kind="place" title="retype to place (3)">3 place</button>
       </div>
       <div id="triage-help">
         <b>k</b> keep (mark reviewed) · <b>m</b> merge · <b>c</b> correct · <b>r</b> rename ·
-        <b>t</b> retype · <b>d</b> delete · <b>s</b> skip · <b>u</b> undo
+        <b>a</b> alias · <b>t</b> retype · <b>d</b> delete · <b>s</b> skip · <b>u</b> undo
+      </div>
+      <div id="triage-btns">
+        <button class="quiet" data-tkey="k" title="keep (k) — mark reviewed ✓ and move to the next. Your default.">keep</button>
+        <button class="quiet" data-tkey="m" title="merge (m) — fold this into another entity; this name is kept as an alias">merge</button>
+        <button class="quiet" data-tkey="c" title="correct (c) — typo fix; this name is NOT kept as an alias (Dana → Dane)">correct</button>
+        <button class="quiet" data-tkey="r" title="rename (r) — fix the spelling or case of this entity's own name">rename</button>
+        <button class="quiet" data-tkey="a" title="alias (a) — add another name this entity goes by (stays matchable by both)">alias</button>
+        <button class="quiet" data-tkey="t" title="retype (t) — move to a different kind: person / project / place">retype</button>
+        <button class="quiet" data-tkey="d" title="delete (d) — remove this entity; no confirm, undo brings it back">delete</button>
+        <button class="quiet" data-tkey="s" title="skip (s) — decide later; stays in the queue for next time">skip</button>
+        <button class="quiet" data-tkey="u" title="undo (u) — undo the last change (50 deep, works across sessions)">undo</button>
       </div>
       <div id="triage-toast"></div>
     </div>
@@ -414,22 +507,50 @@
 
   <section class="tab" id="tab-help">
     <div id="help">
-      <h2>chats &amp; the summarize point</h2>
-      <p>One chat stays open for as long as it feels right — about a week in practice. Everything
-      happens in <em>write</em>: journal entries (<b>save entry</b>), questions and follow-ups
-      (<b>send</b>), and the companion's replies, all in one conversation. It survives refreshes
-      and server restarts.</p>
-      <p>When a chat feels finished, hit <b>close chat</b> (nav) or <b>summarize &amp; start new chat</b>
-      (history tab). That's the <em>summarize point</em>: your side of the chat becomes a journal
-      entry — the same shape as your imported conversations — and tagging, entity extraction,
-      summaries, and dream scanning all run in the background. A fresh empty chat opens.</p>
-      <p>The <em>history</em> tab lands on the open chat — including the imported conversation it
-      continues — with every past chat in the sidebar, one open at a time. Until you close a chat,
-      its entries live only in the conversation itself, not yet in long-term memory; closing is
-      what commits them. Dream-flagged entries are the exception: they go straight to the dream
-      realm and never enter waking memory.</p>
+      <nav id="help-toc">
+        <a href="#h-write">write</a>
+        <a href="#h-chat">chat</a>
+        <a href="#h-history">history</a>
+        <a href="#h-entities">entities</a>
+        <a href="#h-triage">triage</a>
+        <a href="#h-categories">categories</a>
+        <a href="#h-patterns">patterns</a>
+        <a href="#h-dreams">dreams</a>
+        <a href="#h-safety">safety</a>
+      </nav>
 
-      <h2>curation workflow — the efficient order</h2>
+      <h2 id="h-write">write — the journal companion</h2>
+      <p>One chat stays open for as long as it feels right — about a week in practice. The write
+      screen is that whole conversation: the chat it continues, your entries, the companion's
+      replies, and everything you say back. <b>save entry</b> stores a journal entry (backed up to
+      a markdown file the moment you save); <b>send</b> talks with the companion about it — both
+      join the same chat and both become journal memory at close. Your draft autosaves as you type
+      and survives a refresh or closed tab; Enter just makes a new line, only the buttons send.</p>
+      <p>When the chat feels finished, open the <b>⋯</b> menu next to the composer and hit
+      <b>summarize &amp; close chat</b> (also available on the history tab). That's the
+      <em>summarize point</em>: your side of the chat becomes a journal entry — the same shape as
+      your imported conversations — and tagging, entity extraction, summaries, and dream scanning
+      all run in the background. A fresh empty chat opens. Until then, new entries live in the
+      conversation (and their markdown backups), not yet in long-term memory.</p>
+      <p>Dreams need no flag: write them the way you always have ("last night I had a dream…") and
+      the dream extractor finds them at the summarize point, pulling each one into the dream realm
+      while the entry itself stays in waking memory — exactly how your imported history behaves.</p>
+
+      <h2 id="h-chat">chat — look things up</h2>
+      <p>The chat screen is a tool, not the journal: ask it to pull things out of your history
+      ("when did I last see Sam?", "what did I say about the move?"). It runs the same
+      retrieval + companion brain, but it's a <em>separate conversation</em> — lookups never join
+      the open chat and never become journal memory. <b>clear</b> wipes it whenever you like.
+      Note its honest limit: it sees retrieved excerpts, not the whole journal, so answers are
+      representative rather than exhaustive.</p>
+
+      <h2 id="h-history">history — every chat, one at a time</h2>
+      <p>Lands on the open chat: the conversation it continues (with Claude's replies interleaved,
+      backfilled from your export), your entries, and the live thread. Every closed chat sits in
+      the sidebar — click one to read it in full. Closed chats keep both sides for reading, but
+      only your side is journal memory.</p>
+
+      <h2 id="h-entities">entities — curation workflow, the efficient order</h2>
 
       <div class="help-step">
         <h3><span class="step-n">1</span> find duplicates first <span class="where">entities tab → "find duplicates (free)"</span></h3>
@@ -446,7 +567,7 @@
         especially. Apply or dismiss each group; nothing merges without your click.</p>
       </div>
 
-      <div class="help-step">
+      <div class="help-step" id="h-triage">
         <h3><span class="step-n">3</span> live in triage until the queue is empty <span class="where">triage tab</span></h3>
         <p>Entities come one at a time, junk first (1-mention entities lead). Keep your hands on the keyboard:</p>
         <table>
@@ -455,11 +576,16 @@
           <tr><td><b>m</b></td><td>merge into another entity (autocomplete; old name kept as alias)</td></tr>
           <tr><td><b>c</b></td><td>correct — typo fix; old name is <em>not</em> kept as alias (Dana → Dane)</td></tr>
           <tr><td><b>r</b></td><td>rename — fix spelling or case of this entity's own name</td></tr>
+          <tr><td><b>a</b></td><td>alias — add another name this entity goes by (keeps it matchable by both)</td></tr>
           <tr><td><b>t</b> then <b>1/2/3</b></td><td>retype to person / project / place</td></tr>
           <tr><td><b>s</b></td><td>skip — decide later, stays in queue for next time</td></tr>
           <tr><td><b>u</b></td><td>undo last change (50 deep, works across sessions)</td></tr>
         </table>
-        <p>Most entities are a 1-second <b>k</b> or <b>d</b>. Don't deliberate on skips — that's what <b>s</b> is for.</p>
+        <p>Most entities are a 1-second <b>k</b> or <b>d</b>. Don't deliberate on skips — that's what
+        <b>s</b> is for. Every key also has a matching on-screen button if you're mousing; the ones
+        that need a target (merge, correct, rename, alias) open a field with <b>apply</b> / <b>cancel</b>
+        buttons — Enter and Esc still work. Undo/redo buttons live on the entities screen (they cover
+        triage actions too).</p>
       </div>
 
       <div class="help-step">
@@ -482,7 +608,7 @@
         (× a wrong tag in the categories tab) stick the same way entity merges do.</p>
       </div>
 
-      <h2>which fix do i want?</h2>
+      <h2 id="h-fixes">which fix do i want?</h2>
       <table class="decision">
         <tr><td>Two names, same real thing, both names legit</td><td><b>merge</b> (keeps alias — still matchable by either name)</td></tr>
         <tr><td>Misspelling/typo that shouldn't be remembered</td><td><b>correct</b> (no alias)</td></tr>
@@ -492,7 +618,32 @@
         <tr><td>Shouldn't exist at all</td><td><b>delete</b></td></tr>
       </table>
 
-      <h2>safety notes</h2>
+      <h2 id="h-categories">categories</h2>
+      <p>Every entry gets tagged with categories (work, dating, health…) — automatically when a
+      chat closes; <em>tag new entries</em> re-runs it manually for anything untagged (already-tagged
+      entries are cached and free). Click a category chip to browse its entries and read its
+      <em>domain document</em> — a living ~500-word summary of that area of life. × a wrong tag or
+      + a missing one; your fixes are permanent overrides. <em>scan for new categories</em> clusters
+      your places/projects and proposes organic categories — nothing is created without your
+      confirm. You can also hand-seed a category with keywords. Entry categories are deliberately
+      flat — broad and scannable — so there's no sub-category nesting here.</p>
+
+      <h2 id="h-patterns">patterns</h2>
+      <p><em>detect patterns</em> re-reads the weekly arcs + domain documents and names recurring
+      shapes — emotional cycles, behavioral pipelines, relationship dynamics — each with dated
+      instances and a confidence level. Patterns are injected into the companion's context only
+      when the conversation genuinely rhymes with one. <em>dismiss</em> hides a pattern; it only
+      returns if new evidence shows up.</p>
+
+      <h2 id="h-dreams">dreams</h2>
+      <p>Dreams live in their own realm: a separate collection that waking questions can never
+      accidentally surface. The extractor finds dreams inside your entries (at the summarize point,
+      or via <em>extract dreams from history</em>), keeping the narrative, cast, tones, and — only
+      if you gave one — your own interpretation. Recent dream tone shows up as the
+      <em>dream weather</em> line. Asking the companion about dreams crosses the boundary
+      explicitly.</p>
+
+      <h2 id="h-safety">safety notes</h2>
       <p>Everything is undoable — ↺/↻ in the nav cover every curation and observation change, 50 steps back.
       All your decisions live in <code>entity_graph/curation.json</code> and re-apply on every rebuild, so
       nothing you do here is ever lost by the system regenerating docs. One exception to know:
@@ -507,10 +658,15 @@
   <section class="tab" id="tab-entities">
     <div id="entities-pane">
       <div id="entity-list">
+        <div id="curation-tools">
+          <button class="quiet" id="undo-btn" title="undo last entity change">↺ undo</button>
+          <button class="quiet" id="redo-btn" title="redo">↻ redo</button>
+        </div>
         <input type="text" id="search" placeholder="filter…">
         <div id="filter-chips">
           <button class="quiet chip-toggle" id="flt-unreviewed">unreviewed</button>
           <button class="quiet chip-toggle" id="flt-single">1 mention</button>
+          <button class="quiet chip-toggle" id="sort-az" title="sort each group A–Z instead of by most mentions">A–Z</button>
         </div>
         <div id="suggest-btns">
           <button class="quiet" id="find-dups">find duplicates (free)</button>
@@ -555,6 +711,14 @@ const $ = id => document.getElementById(id);
 let entities = {}, selected = null;
 
 // ---- tabs ----
+// Categories are switched off until entries are split by date (Phase 3);
+// flip this to true after the per-day re-run to bring the section back.
+const CATEGORIES_ENABLED = false;
+$('cat-paused').style.display = CATEGORIES_ENABLED ? 'none' : 'block';
+$('categories').classList.toggle('paused', !CATEGORIES_ENABLED);
+document.querySelector('nav button[data-tab="categories"]')
+  .classList.toggle('paused', !CATEGORIES_ENABLED);
+
 let activeTab = 'write';
 loadWriteLog();  // restore the open session on page load
 document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () => {
@@ -564,8 +728,9 @@ document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () =>
   activeTab = b.dataset.tab;
   $('tab-' + activeTab).classList.add('active');
   if (activeTab === 'write' && !$('entry-send').disabled) loadWriteLog();
+  if (activeTab === 'chat') restoreLookupLog();
   if (activeTab === 'entities') loadEntities();
-  if (activeTab === 'categories') loadCategories();
+  if (activeTab === 'categories' && CATEGORIES_ENABLED) loadCategories();
   if (activeTab === 'patterns') loadPatterns();
   if (activeTab === 'dreams') loadDreams();
   if (activeTab === 'history') loadHistory();
@@ -594,17 +759,23 @@ async function streamInto(el, url, payload) {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload),
   });
-  if (!res.ok) { el.textContent = 'error: ' + (await res.text()); return res; }
-  el.classList.remove('thinking');
-  el.textContent = '';
+  if (!res.ok) { el.classList.remove('thinking'); el.textContent = 'error: ' + (await res.text()); return res; }
+  // headers arrive before the model has produced anything, so keep the
+  // thinking pulse until the first real token — that's the actual wait
   const reader = res.body.getReader();
   const dec = new TextDecoder();
+  let started = false;
   while (true) {
     const {done, value} = await reader.read();
     if (done) break;
-    el.textContent += dec.decode(value, {stream: true});
-    if (el.closest('#write-log')) $('write-log').scrollTop = $('write-log').scrollHeight;
+    const chunk = dec.decode(value, {stream: true});
+    if (!chunk) continue;
+    if (!started) { el.classList.remove('thinking'); el.textContent = ''; started = true; }
+    el.textContent += chunk;
+    const scroller = el.closest('#write-log, #chat-log');
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
+  if (!started) { el.classList.remove('thinking'); el.textContent = '[no response]'; }
   return res;
 }
 
@@ -614,25 +785,96 @@ function composerBusy(busy) {
   $('reflect-btn').disabled = busy;
 }
 
+// ---- draft persistence + growing textarea ----
+// the write box survives an accidental refresh or tab close; it grows
+// with its content (like Claude desktop) up to 40% of the window.
+// Enter never submits here — Enter and Shift+Enter both make new lines.
+function autosizeEntry() {
+  const t = $('entry-text');
+  t.style.height = 'auto';
+  t.style.height = Math.min(t.scrollHeight + 2, window.innerHeight * 0.4) + 'px';
+}
+function clearComposer() {
+  $('entry-text').value = '';
+  localStorage.removeItem('rag_draft');
+  autosizeEntry();
+}
+$('entry-text').value = localStorage.getItem('rag_draft') || '';
+autosizeEntry();
+$('entry-text').addEventListener('input', () => {
+  localStorage.setItem('rag_draft', $('entry-text').value);
+  autosizeEntry();
+});
+
 $('chat-send').onclick = async () => {
   const text = $('entry-text').value.trim();
   if (!text) return;
-  $('entry-text').value = '';
+  clearComposer();
   composerBusy(true);
   addMsg('you', text);
-  const el = addMsg('companion thinking', '…');
+  const el = addMsg('companion thinking', '');
   try { await streamInto(el, '/api/chat', {message: text}); }
   finally { composerBusy(false); $('entry-text').focus(); }
 };
 
 $('reflect-btn').onclick = async () => {
   composerBusy(true);
-  const el = addMsg('companion thinking', '…');
+  const el = addMsg('companion thinking', '');
   try { await streamInto(el, '/api/reflect', {}); }
   finally { composerBusy(false); $('entry-text').focus(); }
 };
 
-$('reset').onclick = closeSession;
+$('reset').onclick = () => { $('write-actions').removeAttribute('open'); closeSession(); };
+
+// ---- chat (lookup) ----
+// An information tool over the journal — its own conversation, never
+// part of the open chat, never journal memory. Display kept locally.
+function lookupMsg(role, text) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + role;
+  d.textContent = text;
+  $('chat-log').appendChild(d);
+  $('chat-log').scrollTop = $('chat-log').scrollHeight;
+  return d;
+}
+function saveLookupLog() {
+  const msgs = [...$('chat-log').querySelectorAll('.msg')].map(el => ({
+    role: el.classList.contains('you') ? 'you' : 'companion',
+    text: el.textContent,
+  }));
+  localStorage.setItem('rag_lookup', JSON.stringify(msgs));
+}
+function restoreLookupLog() {
+  if ($('chat-log').childElementCount) return;
+  try {
+    for (const m of JSON.parse(localStorage.getItem('rag_lookup') || '[]')) {
+      lookupMsg(m.role, m.text);
+    }
+  } catch (e) { }
+}
+async function sendLookup() {
+  const text = $('chat-text').value.trim();
+  if (!text) return;
+  $('chat-text').value = '';
+  $('lookup-send').disabled = true;
+  lookupMsg('you', text);
+  const el = lookupMsg('companion thinking', '');
+  try { await streamInto(el, '/api/lookup', {message: text}); }
+  finally {
+    saveLookupLog();
+    $('lookup-send').disabled = false;
+    $('chat-text').focus();
+  }
+}
+$('lookup-send').onclick = sendLookup;
+$('chat-text').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendLookup(); }
+});
+$('lookup-clear').onclick = async () => {
+  $('chat-log').innerHTML = '';
+  localStorage.removeItem('rag_lookup');
+  try { await fetch('/api/lookup/reset', {method: 'POST'}); } catch (e) { }
+};
 
 async function closeSession() {
   if (!confirm('Close this chat?\n\nYour side of it becomes a journal entry — tagging, entities, summaries, and dream extraction run in the background. A fresh chat starts empty.')) return;
@@ -690,17 +932,16 @@ $('entry-send').onclick = async () => {
   composerBusy(true);
   $('entry-saved').textContent = 'saving…';
   addMsg('you', text);
-  const el = addMsg('companion thinking', '…');
+  const el = addMsg('companion thinking', '');
   try {
-    const dream = $('entry-dream').checked;
-    const res = await streamInto(el, '/api/entry', {text, dream});
-    const id = res.headers.get('X-Entry-Id');
-    $('entry-saved').textContent = dream
-      ? (id ? `saved to the dream realm (${id})` : 'saved')
-      : 'entry saved — becomes journal memory when you close the chat';
-    $('entry-text').value = '';
-    $('entry-dream').checked = false;
-    refreshStatus();
+    const res = await streamInto(el, '/api/entry', {text});
+    if (res.ok) {
+      $('entry-saved').textContent = 'entry saved — becomes journal memory when you close the chat';
+      clearComposer();
+      refreshStatus();
+    } else {
+      $('entry-saved').textContent = 'save failed — your draft is untouched';
+    }
   } finally { composerBusy(false); $('entry-text').focus(); }
 };
 
@@ -902,6 +1143,7 @@ async function loadEntities() {
 }
 
 const filters = {unreviewed: false, single: false};
+let sortAlpha = false;
 $('flt-unreviewed').onclick = () => {
   filters.unreviewed = !filters.unreviewed;
   $('flt-unreviewed').classList.toggle('on', filters.unreviewed);
@@ -910,6 +1152,11 @@ $('flt-unreviewed').onclick = () => {
 $('flt-single').onclick = () => {
   filters.single = !filters.single;
   $('flt-single').classList.toggle('on', filters.single);
+  renderEntityList();
+};
+$('sort-az').onclick = () => {
+  sortAlpha = !sortAlpha;
+  $('sort-az').classList.toggle('on', sortAlpha);
   renderEntityList();
 };
 
@@ -926,19 +1173,39 @@ function renderEntityList() {
   const wrap = $('entity-groups');
   wrap.innerHTML = '';
   for (const kind of ['person', 'project', 'place']) {
-    const items = groups[kind].sort((a, b) => b[1] - a[1]);
+    const items = groups[kind].sort(sortAlpha
+      ? (a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase())
+      : (a, b) => b[1] - a[1]);
     if (!items.length) continue;
     const h = document.createElement('div');
     h.className = 'kind';
     h.textContent = `${kind}s (${items.length})`;
     wrap.appendChild(h);
     for (const [name, mentions, reviewed] of items) {
+      const row = document.createElement('div');
+      row.className = 'ent-row' + (name === selected ? ' sel' : '');
+
       const b = document.createElement('button');
-      b.className = 'ent' + (name === selected ? ' sel' : '');
-      b.innerHTML = `${name} <span class="n">${mentions}</span>` +
-        (reviewed ? '<span class="rev-check">✓</span>' : '');
+      b.className = 'ent';
+      b.innerHTML = `${name} <span class="n">${mentions}</span>`;
       b.onclick = () => showEntity(name);
-      wrap.appendChild(b);
+      row.appendChild(b);
+
+      const keep = document.createElement('button');
+      keep.className = 'ent-keep' + (reviewed ? ' on' : '');
+      keep.textContent = reviewed ? '✓' : 'keep';
+      keep.title = reviewed ? 'reviewed — click to unmark' : 'mark reviewed';
+      keep.onclick = async e => {
+        e.stopPropagation();
+        const next = !reviewed;
+        if (await api('/api/entities/reviewed', {name, reviewed: next})) {
+          entities[name].reviewed = next;
+          renderEntityList();
+        }
+      };
+      row.appendChild(keep);
+
+      wrap.appendChild(row);
     }
   }
 }
@@ -1236,19 +1503,29 @@ async function triageAct(fn, successMsg) {
   }
 }
 
-function triagePrompt(mode, label) {
+const TRIAGE_PROMPTS = {
+  merge:  n => `merge ${n} into (type a target entity):`,
+  correct: n => `correct ${n} to (type the right name):`,
+  rename: n => `rename ${n} to:`,
+  alias:  n => `add an alias to ${n} (another name it goes by):`,
+};
+
+function triagePrompt(mode) {
   triageMode = mode;
-  $('triage-mode-label').textContent = label;
+  $('triage-mode-label').textContent = TRIAGE_PROMPTS[mode](queue[qpos]);
   $('triage-input-row').style.display = 'flex';
   $('triage-input').value = '';
   $('triage-input').focus();
 }
 
-$('triage-input').addEventListener('keydown', async e => {
-  if (e.key === 'Escape') { triageMode = null; $('triage-input-row').style.display = 'none'; return; }
-  if (e.key !== 'Enter') return;
+function triageCancel() {
+  triageMode = null;
+  $('triage-input-row').style.display = 'none';
+}
+
+async function triageApply() {
   const target = $('triage-input').value.trim();
-  if (!target) return;
+  if (!target) { $('triage-input').focus(); return; }
   const name = queue[qpos], mode = triageMode;
   triageMode = null;
   $('triage-input-row').style.display = 'none';
@@ -1265,7 +1542,21 @@ $('triage-input').addEventListener('keydown', async e => {
       queue[qpos] = r.to;
       renderTriage();
     }
+  } else if (mode === 'alias') {
+    const r = await api('/api/entities/alias', {name, add: target});
+    if (r) {
+      toast(`“${target}” is now an alias of ${name}`);
+      await loadEntities();
+      renderTriage();  // stays on this entity; alias shown in its aka line
+    }
   }
+}
+
+$('triage-apply').onclick = triageApply;
+$('triage-cancel').onclick = triageCancel;
+$('triage-input').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); triageCancel(); }
+  else if (e.key === 'Enter') { e.preventDefault(); triageApply(); }
 });
 
 document.querySelectorAll('#triage-kind-row button').forEach(b => b.onclick = async () => {
@@ -1276,12 +1567,11 @@ document.querySelectorAll('#triage-kind-row button').forEach(b => b.onclick = as
   );
 });
 
-document.addEventListener('keydown', async e => {
-  if (activeTab !== 'triage' || triageMode !== null) return;
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (qpos >= queue.length && !'u'.includes(e.key)) return;
+async function triageKey(key) {
+  if (triageMode !== null) return;
+  if (qpos >= queue.length && key !== 'u') return;
   const name = queue[qpos];
-  switch (e.key) {
+  switch (key) {
     case 'k':
       if (await api('/api/entities/reviewed', {name, reviewed: true})) {
         entities[name].reviewed = true;
@@ -1293,14 +1583,15 @@ document.addEventListener('keydown', async e => {
     case 'd':
       await triageAct(n => api('/api/entities/delete', {name: n}), r => `deleted ${r.deleted}`);
       break;
-    case 'm': triagePrompt('merge', `merge ${name} into:`); e.preventDefault(); break;
-    case 'c': triagePrompt('correct', `correct ${name} to:`); e.preventDefault(); break;
-    case 'r': triagePrompt('rename', `rename ${name} to:`); e.preventDefault(); break;
+    case 'm': triagePrompt('merge'); break;
+    case 'c': triagePrompt('correct'); break;
+    case 'r': triagePrompt('rename'); break;
+    case 'a': triagePrompt('alias'); break;
     case 't': $('triage-kind-row').style.display = 'flex'; break;
     case '1': case '2': case '3': {
       const row = $('triage-kind-row');
       if (row.style.display !== 'none') {
-        row.querySelectorAll('button')[Number(e.key) - 1].click();
+        row.querySelectorAll('button')[Number(key) - 1].click();
       }
       break;
     }
@@ -1313,6 +1604,17 @@ document.addEventListener('keydown', async e => {
       break;
     }
   }
+}
+
+document.addEventListener('keydown', e => {
+  if (activeTab !== 'triage' || triageMode !== null) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (['m', 'c', 'r', 'a'].includes(e.key)) e.preventDefault();
+  triageKey(e.key);
+});
+
+document.querySelectorAll('#triage-btns button').forEach(b => {
+  b.onclick = () => triageKey(b.dataset.tkey);
 });
 
 // ---- merge suggestions ----
@@ -1427,28 +1729,72 @@ function renderCustomRow() {
   const el = $('cat-custom-row');
   el.innerHTML = '';
   if (!organicState.custom.length) return;
-  const label = document.createElement('span');
+  const label = document.createElement('div');
   label.className = 'custom-label';
   label.textContent = 'your categories:';
   el.appendChild(label);
   for (const c of organicState.custom) {
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    const bits = [];
-    if (c.members.length) bits.push(`${c.members.length} members`);
-    if (c.keywords.length) bits.push(`keywords: ${c.keywords.join(', ')}`);
-    if (c.parent) bits.push(`rolls up to ${c.parent}`);
-    chip.title = bits.join(' · ') || 'empty definition';
-    chip.textContent = c.name + ' ';
+    const row = document.createElement('div');
+    row.className = 'custom-cat';
+
+    const name = document.createElement('span');
+    name.className = 'cc-name';
+    name.textContent = c.name;
+    row.appendChild(name);
+
+    const removable = (chip, payload, label) => {
+      const x = document.createElement('button');
+      x.textContent = '×';
+      x.title = label;
+      x.onclick = async () => {
+        if (await api('/api/organic/custom/edit', {name: c.name, ...payload})) loadCategories();
+      };
+      chip.appendChild(document.createTextNode(' '));
+      chip.appendChild(x);
+    };
+    if (c.keywords.length) {
+      const l = document.createElement('span');
+      l.className = 'cc-meta';
+      l.textContent = 'keywords:';
+      row.appendChild(l);
+      for (const kw of c.keywords) {
+        const k = document.createElement('span');
+        k.className = 'kw-chip';
+        k.textContent = kw;
+        removable(k, {remove_keyword: kw}, 'remove this keyword');
+        row.appendChild(k);
+      }
+    }
+    if (c.members.length) {
+      const l = document.createElement('span');
+      l.className = 'cc-meta';
+      l.textContent = 'members:';
+      row.appendChild(l);
+      for (const mem of c.members) {
+        const m = document.createElement('span');
+        m.className = 'kw-chip member';
+        m.textContent = mem;
+        removable(m, {remove_member: mem}, 'remove this member');
+        row.appendChild(m);
+      }
+    }
+    if (!c.keywords.length && !c.members.length) {
+      const e = document.createElement('span');
+      e.className = 'cc-meta';
+      e.textContent = 'no keywords or members yet';
+      row.appendChild(e);
+    }
+
     const x = document.createElement('button');
-    x.textContent = '×';
+    x.className = 'quiet';
+    x.textContent = '× delete';
     x.title = 'delete this category (its tags disappear; entries are untouched)';
     x.onclick = async () => {
       if (!confirm(`delete category "${c.name}"?`)) return;
       if (await api('/api/organic/custom/delete', {name: c.name})) loadCategories();
     };
-    chip.appendChild(x);
-    el.appendChild(chip);
+    row.appendChild(x);
+    el.appendChild(row);
   }
 }
 
@@ -1459,6 +1805,41 @@ function renderCatEntries() {
     el.innerHTML = '<p class="cat-hint">pick a category to browse its entries — click a title for the full text, × a wrong tag to remove it (your fixes stick)</p>';
     return;
   }
+  // a custom category shows its definition (keywords + members)
+  const customDef = (organicState.custom || []).find(c => c.name === catSelected);
+  if (customDef) {
+    const def = document.createElement('div');
+    def.className = 'cat-def';
+    if (customDef.keywords.length) {
+      const l = document.createElement('span');
+      l.className = 'lbl';
+      l.textContent = 'keywords';
+      def.appendChild(l);
+      for (const kw of customDef.keywords) {
+        const k = document.createElement('span');
+        k.className = 'kw-chip';
+        k.textContent = kw;
+        def.appendChild(k);
+      }
+    }
+    if (customDef.members.length) {
+      const l = document.createElement('span');
+      l.className = 'lbl';
+      l.textContent = 'members';
+      def.appendChild(l);
+      for (const mem of customDef.members) {
+        const m = document.createElement('span');
+        m.className = 'kw-chip member';
+        m.textContent = mem;
+        def.appendChild(m);
+      }
+    }
+    if (!customDef.keywords.length && !customDef.members.length) {
+      def.textContent = 'no keywords or members defined yet';
+    }
+    el.appendChild(def);
+  }
+
   if (catSelected !== '__untagged') {
     const box = document.createElement('div');
     box.className = 'cat-domain';
@@ -1645,12 +2026,10 @@ $('newcat-add').onclick = async () => {
   const r = await api('/api/organic/custom', {
     name,
     keywords: $('newcat-keywords').value,
-    parent: $('newcat-parent').value.trim(),
   });
   if (r) {
     $('newcat-name').value = '';
     $('newcat-keywords').value = '';
-    $('newcat-parent').value = '';
     loadCategories();
   }
 };
