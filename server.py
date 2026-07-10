@@ -41,7 +41,8 @@ STATE = {
     "client": None,
     "collection": None,
     "entity_index": {},
-    "messages": [],  # single-user conversation history
+    "messages": [],  # the journal companion conversation (the open session)
+    "lookup": [],    # the chat screen: an information tool, never journal data
 }
 
 
@@ -144,6 +145,25 @@ def chat(body: ChatIn):
         )
         sessions.append_message("companion", STATE["messages"][-1]["content"])
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
+
+
+@app.post("/api/lookup")
+def lookup(body: ChatIn):
+    """The chat screen: pull information out of the journal. Its own
+    conversation, separate from the journal companion — lookups never
+    join the open session and never become journal memory."""
+    def gen():
+        yield from companion.stream_reply(
+            STATE["client"], STATE["collection"], STATE["entity_index"],
+            STATE["lookup"], body.message,
+        )
+    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
+
+
+@app.post("/api/lookup/reset")
+def reset_lookup():
+    STATE["lookup"] = []
+    return {"ok": True}
 
 
 def _after_close_refresh():
@@ -602,7 +622,12 @@ class OrganicRespondIn(BaseModel):
 class CustomCategoryIn(BaseModel):
     name: str
     keywords: str = ""   # comma-separated
-    parent: str = ""
+
+
+class CustomEditIn(BaseModel):
+    name: str
+    remove_keyword: str = ""
+    remove_member: str = ""
 
 
 def _rebuild_category_index():
@@ -648,7 +673,7 @@ def create_custom_category(body: CustomCategoryIn):
     import organic
     keywords = [k.strip() for k in body.keywords.split(",") if k.strip()]
     try:
-        cat = organic.add_custom(body.name, keywords=keywords, parent=body.parent)
+        cat = organic.add_custom(body.name, keywords=keywords)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     _rebuild_category_index()
@@ -662,6 +687,18 @@ def delete_custom_category(body: NameIn):
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
     _rebuild_category_index()
     return {"ok": True, "deleted": body.name}
+
+
+@app.post("/api/organic/custom/edit")
+def edit_custom_category(body: CustomEditIn):
+    """Remove a single keyword and/or member from a custom category."""
+    import organic
+    if not organic.remove_from_custom(
+        body.name, keyword=body.remove_keyword, member=body.remove_member
+    ):
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    _rebuild_category_index()
+    return {"ok": True}
 
 
 @app.get("/api/categories")

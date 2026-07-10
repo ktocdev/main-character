@@ -20,8 +20,8 @@ without killing — the proposal re-surfaces when the cluster gains a new
 member). Confirmed and user-defined categories live in
 categories/custom.json and tag entries automatically: an entry gets the
 tag when it mentions a member entity or matches a trigger keyword.
-A category with a parent rolls its entries up to the parent for
-navigation (Gardens -> Landmarks).
+Entry categories are deliberately flat — grouping/hierarchy belongs on
+the entities side, where it's for browsing, not on entry tags.
 
 Usage:
     python organic.py scan        # cluster + propose (one Claude call)
@@ -364,7 +364,7 @@ def _save_custom(cats: list[dict]):
 
 
 def add_custom(name: str, keywords: list[str] | None = None,
-               members: list[str] | None = None, parent: str = ""):
+               members: list[str] | None = None):
     name = name.strip()
     if not name:
         raise ValueError("category needs a name")
@@ -374,12 +374,10 @@ def add_custom(name: str, keywords: list[str] | None = None,
             # merge into the existing definition
             c["keywords"] = sorted({*c["keywords"], *(keywords or [])})
             c["members"] = sorted({*c["members"], *(members or [])})
-            if parent:
-                c["parent"] = parent.strip()
             _save_custom(cats)
             return c
     cat = {"name": name, "keywords": sorted(keywords or []),
-           "members": sorted(members or []), "parent": parent.strip()}
+           "members": sorted(members or [])}
     cats.append(cat)
     _save_custom(cats)
     return cat
@@ -390,17 +388,29 @@ def remove_custom(name: str) -> bool:
     kept = [c for c in cats if c["name"].lower() != name.lower()]
     if len(kept) == len(cats):
         return False
-    for c in kept:  # orphan any children
-        if c.get("parent", "").lower() == name.lower():
-            c["parent"] = ""
     _save_custom(kept)
     return True
+
+
+def remove_from_custom(name: str, keyword: str = "", member: str = "") -> bool:
+    """Drop a single keyword and/or member from a custom category.
+    Returns False if the category doesn't exist."""
+    cats = load_custom()
+    for c in cats:
+        if c["name"].lower() == name.lower():
+            if keyword:
+                c["keywords"] = [k for k in c["keywords"] if k.lower() != keyword.lower()]
+            if member:
+                c["members"] = [m for m in c["members"] if m.lower() != member.lower()]
+            _save_custom(cats)
+            return True
+    return False
 
 
 def custom_tags() -> dict:
     """conv_key -> {category_name: evidence} for every custom category.
     An entry is tagged when it mentions a member entity or matches a
-    trigger keyword; tags roll up to the category's parent."""
+    trigger keyword."""
     cats = load_custom()
     if not cats:
         return {}
@@ -413,9 +423,6 @@ def custom_tags() -> dict:
 
     def tag(key, cat, evidence):
         tags[key].setdefault(cat["name"], evidence)
-        parent = cat.get("parent", "").strip()
-        if parent:
-            tags[key].setdefault(parent, f"via {cat['name']}")
 
     for cat in cats:
         for member in cat["members"]:
@@ -433,12 +440,7 @@ def custom_tags() -> dict:
 
 
 def custom_names() -> set[str]:
-    names = set()
-    for c in load_custom():
-        names.add(c["name"])
-        if c.get("parent", "").strip():
-            names.add(c["parent"].strip())
-    return names
+    return {c["name"] for c in load_custom()}
 
 
 if __name__ == "__main__":
@@ -457,8 +459,6 @@ if __name__ == "__main__":
                 bits.append(f"members: {', '.join(c['members'])}")
             if c["keywords"]:
                 bits.append(f"keywords: {', '.join(c['keywords'])}")
-            if c.get("parent"):
-                bits.append(f"parent: {c['parent']}")
             print(f"custom: {c['name']} ({'; '.join(bits) or 'empty'})")
     else:
         print(__doc__)
