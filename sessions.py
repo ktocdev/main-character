@@ -29,7 +29,6 @@ Layout (gitignored — personal data):
     sessions/archive/        closed sessions, full braid + parts
 """
 
-import hashlib
 import json
 import re
 from datetime import datetime
@@ -337,16 +336,16 @@ def close_session(collection, client=None, title_hint: str = "") -> dict:
     never modified — the new material is its own dated entry, and the
     archive stitches the two for display."""
     cur = load_current(collection)
-    user_texts = [
-        m["text"] for m in cur["messages"]
+    user_msgs = [
+        m for m in cur["messages"]
         if m["role"] == "you" and not m.get("dream")
     ]
-    if not user_texts:
+    if not user_msgs:
         raise ValueError("nothing new in this chat yet — write or chat first")
 
     now = datetime.now()
     date = now.strftime("%Y-%m-%d")
-    new_text = "\n\n".join(user_texts)
+    new_text = "\n\n".join(m["text"] for m in user_msgs)
     base = cur.get("base") or []
 
     if base:
@@ -357,41 +356,50 @@ def close_session(collection, client=None, title_hint: str = "") -> dict:
             or f"Journal chat {date}"
         entry_title = session_title
 
-    # store the new material exactly like an imported conversation
-    from bulk_import import chunk_entry
-    for chunk in chunk_entry({"text": new_text, "date": date, "title": entry_title}):
-        text = chunk["text"]
-        idx = chunk.get("chunk_index", 0)
-        content_hash = hashlib.md5(text[:200].encode()).hexdigest()[:8]
-        meta = extract_metadata(text)
-        collection.upsert(
-            ids=[f"{date}_{content_hash}_c{idx}"],
-            documents=[text],
-            metadatas=[{
-                "date": date,
-                "title": entry_title,
-                "people": ", ".join(meta.get("people", [])),
-                "topics": ", ".join(meta.get("topics", [])),
-                "mood": meta.get("mood", "unknown"),
-                "key_events": " | ".join(meta.get("key_events", [])),
-                "is_summary": "False",
-                "source": "session_close",
-            }],
-        )
+    # store the new material exactly like an imported conversation:
+    # one dated entry per local calendar day the user wrote (session
+    # timestamps are already local time)
+    from bulk_import import chunk_entry, entry_chunk_id
+    by_day: dict[str, list[str]] = {}
+    for m in user_msgs:
+        day = (m.get("ts") or "")[:10] or date
+        by_day.setdefault(day, []).append(m["text"])
 
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
     safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in entry_title)[:50]
-    (JOURNAL_DIR / f"{date}_{safe_title}.md").write_text(
-        f"# {entry_title}\n_Date: {date}_\n\n{new_text}", encoding="utf-8"
-    )
+    day_parts = []
+    for day in sorted(by_day):
+        day_text = "\n\n".join(by_day[day])
+        for chunk in chunk_entry({"text": day_text, "date": day, "title": entry_title}):
+            text = chunk["text"]
+            idx = chunk.get("chunk_index", 0)
+            meta = extract_metadata(text)
+            collection.upsert(
+                ids=[entry_chunk_id(day, entry_title, text, idx)],
+                documents=[text],
+                metadatas=[{
+                    "date": day,
+                    "title": entry_title,
+                    "people": ", ".join(meta.get("people", [])),
+                    "topics": ", ".join(meta.get("topics", [])),
+                    "mood": meta.get("mood", "unknown"),
+                    "key_events": " | ".join(meta.get("key_events", [])),
+                    "is_summary": "False",
+                    "source": "session_close",
+                }],
+            )
+        (JOURNAL_DIR / f"{day}_{safe_title}.md").write_text(
+            f"# {entry_title}\n_Date: {day}_\n\n{day_text}", encoding="utf-8"
+        )
+        day_parts.append({"date": day, "title": entry_title})
 
     # archive the whole session: stitched parts + the full braid.
-    # Base parts carry their text; the closing part's content lives in
-    # the braid already, so it stays a reference (no duplication).
+    # Base parts carry their text; the closing parts' content lives in
+    # the braid already, so they stay references (no duplication).
     from entities import conversation_cache_key
     key = conversation_cache_key({"date": date, "title": entry_title})
     parts = [_part_content(collection, p) for p in base]
-    parts.append({"date": date, "title": entry_title})
+    parts.extend(day_parts)
     ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
     (ARCHIVE_DIR / f"{key}.json").write_text(json.dumps({
         "id": key,

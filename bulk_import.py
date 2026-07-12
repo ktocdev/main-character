@@ -31,7 +31,12 @@ from datetime import datetime
 from pathlib import Path
 
 # Reuse the core functions from rag_journal.py
-from rag_journal import get_collection, extract_metadata, JOURNAL_DIR
+from rag_journal import (
+    get_collection,
+    extract_metadata,
+    group_messages_by_local_day,
+    JOURNAL_DIR,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -67,9 +72,10 @@ def extract_user_entries(conversation: dict) -> list[dict]:
     coherent journal entries.
 
     Strategy:
-    - Concatenate all user messages in a conversation into one entry
-    - This preserves the full context of a journaling session
-    - Very long conversations get split at natural breaks (time gaps)
+    - One entry per local calendar day the user actually wrote
+      (export timestamps are UTC; they convert to local time first)
+    - A conversation spanning a week of journaling becomes that week's
+      individual dated entries, each carrying the conversation's title
     """
     messages = conversation.get("chat_messages", [])
     if not messages:
@@ -104,19 +110,20 @@ def extract_user_entries(conversation: dict) -> list[dict]:
     if not user_messages:
         return []
 
-    # Combine all user messages into one entry per conversation
-    combined_text = "\n\n".join(m["text"] for m in user_messages)
+    # One entry per local calendar day
+    fallback_date = conv_date[:10] if conv_date else datetime.now().strftime("%Y-%m-%d")
+    by_day = group_messages_by_local_day(user_messages, ts_key="created_at")
 
-    # Parse date for storage
-    date_str = conv_date[:10] if conv_date else datetime.now().strftime("%Y-%m-%d")
-
-    return [{
-        "text": combined_text,
-        "date": date_str,
-        "title": conv_title,
-        "uuid": conv_uuid,
-        "message_count": len(user_messages),
-    }]
+    return [
+        {
+            "text": "\n\n".join(m["text"] for m in msgs),
+            "date": day or fallback_date,
+            "title": conv_title,
+            "uuid": conv_uuid,
+            "message_count": len(msgs),
+        }
+        for day, msgs in by_day.items()
+    ]
 
 
 def load_id_list(filepath: str) -> list[str]:
@@ -210,6 +217,14 @@ def chunk_entry(entry: dict, max_tokens: int = 1500) -> list[dict]:
 # IMPORT PIPELINE
 # ---------------------------------------------------------------------------
 
+def entry_chunk_id(date: str, title: str, text: str, chunk_idx: int = 0) -> str:
+    """Stable vector-store id for one chunk. The title is part of the
+    hash: two different conversations can open with the identical message
+    on the same day, and their chunks must not collide."""
+    content_hash = hashlib.md5(f"{title}\n{text[:200]}".encode()).hexdigest()[:8]
+    return f"{date}_{content_hash}_c{chunk_idx}"
+
+
 def import_entry(entry: dict, collection, dry_run: bool = False) -> dict:
     """
     Import a single entry into the vector store.
@@ -220,9 +235,7 @@ def import_entry(entry: dict, collection, dry_run: bool = False) -> dict:
     title = entry.get("title", "Untitled")
     chunk_idx = entry.get("chunk_index", 0)
 
-    # Generate stable ID
-    content_hash = hashlib.md5(text[:200].encode()).hexdigest()[:8]
-    entry_id = f"{date}_{content_hash}_c{chunk_idx}"
+    entry_id = entry_chunk_id(date, title, text, chunk_idx)
 
     if dry_run:
         return {

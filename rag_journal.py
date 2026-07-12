@@ -14,6 +14,7 @@ Configuration (all optional, via .env or environment):
 
 import os
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -71,6 +72,47 @@ def get_summary_collection():
         name="journal_summaries",
         metadata={"hnsw:space": "cosine"},
     )
+
+
+# ---------------------------------------------------------------------------
+# DAY GROUPING
+# ---------------------------------------------------------------------------
+# One journal entry = one calendar day. Claude-export timestamps are UTC;
+# a late-evening entry belongs to the local day it was written, so
+# timestamps convert to local time before the day is taken.
+
+def local_day(ts: str, assume_utc: bool = True) -> str:
+    """The local calendar day (YYYY-MM-DD) a timestamp belongs to.
+
+    Accepts export timestamps ("2025-10-06T00:30:38.173062Z", UTC) and
+    session stamps ("2026-07-08 21:14", already local — pass
+    assume_utc=False). Falls back to the raw date prefix if unparseable.
+    """
+    raw = (ts or "").strip()
+    if not raw:
+        return ""
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00").replace(" ", "T"))
+    except ValueError:
+        return raw[:10]
+    if parsed.tzinfo is None:
+        if not assume_utc:
+            return parsed.strftime("%Y-%m-%d")
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone().strftime("%Y-%m-%d")
+
+
+def group_messages_by_local_day(
+    messages: list[dict], ts_key: str = "created_at", assume_utc: bool = True
+) -> dict[str, list[dict]]:
+    """Group an ordered message list by local calendar day, preserving
+    order within each day. Messages with no usable timestamp group under
+    "" — callers substitute their own fallback date."""
+    groups: dict[str, list[dict]] = {}
+    for msg in messages:
+        day = local_day(msg.get(ts_key, ""), assume_utc=assume_utc)
+        groups.setdefault(day, []).append(msg)
+    return dict(sorted(groups.items()))
 
 
 # ---------------------------------------------------------------------------

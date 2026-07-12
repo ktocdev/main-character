@@ -4,7 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
+  @font-face {
+    font-family: 'CMU Sans Demi Condensed';
+    src: url('/static/fonts/cmu-sans-demicondensed.ttf') format('truetype');
+    font-weight: 400 600;
+    font-display: swap;
+  }
   :root {
     --bg: #211d19;          /* warm charcoal, not pitch black */
     --bg-raised: #2a2521;
@@ -26,7 +35,7 @@
   * { box-sizing: border-box; margin: 0; }
   body {
     background: var(--bg); color: var(--text);
-    font: 17px/1.65 Georgia, 'Times New Roman', serif;
+    font: 17px/1.65 'Old Standard TT', Georgia, 'Times New Roman', serif;
     height: 100dvh; display: flex; flex-direction: column;
   }
   header {
@@ -34,11 +43,11 @@
     padding: 1rem 1.5rem .8rem; border-bottom: 1px solid var(--border);
   }
   header h1 { font-size: 1.15rem; font-weight: normal; font-style: italic; color: var(--accent); }
-  header .status { font-size: .8rem; color: var(--text-dim); font-family: system-ui, sans-serif; }
+  header .status { font-size: .8rem; color: var(--text-dim); font-family: 'CMU Sans Demi Condensed', system-ui, sans-serif; }
   nav { margin-left: auto; display: flex; gap: .25rem; }
   nav button {
     background: none; border: none; color: var(--text-dim);
-    font: .9rem system-ui, sans-serif; padding: .35rem .8rem;
+    font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif; padding: .35rem .8rem;
     border-radius: 6px; cursor: pointer;
   }
   nav button.active { background: var(--bg-input); color: var(--text); }
@@ -52,7 +61,7 @@
   .msg.you::before { content: "you"; }
   .msg.companion::before { content: "companion"; }
   .msg::before {
-    display: block; font: .7rem system-ui, sans-serif; letter-spacing: .08em;
+    display: block; font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; letter-spacing: .08em;
     text-transform: uppercase; color: var(--accent-dim); margin-bottom: .25rem;
   }
   .composer {
@@ -67,12 +76,12 @@
   textarea:focus, input[type=text]:focus { border-color: var(--accent-dim); }
   button.send {
     background: var(--accent); color: var(--bg); border: none; border-radius: 10px;
-    padding: 0 1.2rem; font: .95rem system-ui, sans-serif; cursor: pointer; flex-shrink: 0;
+    padding: 0 1.2rem; font: .95rem 'CMU Sans Demi Condensed', system-ui, sans-serif; cursor: pointer; flex-shrink: 0;
   }
   button.send:disabled { opacity: .45; cursor: default; }
   button.quiet {
     background: none; border: 1px solid var(--border); color: var(--text-dim);
-    border-radius: 8px; padding: .3rem .7rem; font: .8rem system-ui, sans-serif; cursor: pointer;
+    border-radius: 8px; padding: .3rem .7rem; font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; cursor: pointer;
   }
 
   /* Write + chat logs */
@@ -81,12 +90,12 @@
   .write-composer { flex-direction: column; gap: .5rem; }
   #entry-text { min-height: 4.5rem; max-height: 40vh; overflow-y: auto; }
   .write-controls { display: flex; align-items: center; gap: .6rem; }
-  .saved-note { font: .8rem system-ui, sans-serif; color: var(--accent-dim); margin-left: 1rem; flex: 1; }
+  .saved-note { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--accent-dim); margin-left: 1rem; flex: 1; }
   #write-actions { position: relative; margin-left: auto; }
   #write-actions summary {
     list-style: none; cursor: pointer; color: var(--text-dim);
     border: 1px solid var(--border); border-radius: 8px;
-    padding: .2rem .7rem; font: .9rem system-ui, sans-serif;
+    padding: .2rem .7rem; font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
   }
   #write-actions summary::-webkit-details-marker { display: none; }
   #write-actions[open] summary { background: var(--bg-input); }
@@ -105,55 +114,77 @@
     animation: lamp-pulse 1.6s ease-in-out infinite;
   }
 
+  /* Search */
+  #search-pane { flex: 1; max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
+  #search-bar { display: flex; gap: .5rem; margin-bottom: .8rem; }
+  #search-bar input { flex: 1; }
+  #search-bar .chip-toggle { flex-shrink: 0; }
+  #search-status {
+    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim);
+    margin-bottom: .8rem; display: flex; gap: .8rem; align-items: center; min-height: 1.4rem;
+  }
+  .search-hit { border-bottom: 1px solid var(--border); padding: .8rem 0; }
+  .search-hit h3 { font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif; font-weight: 600; cursor: pointer; }
+  .search-hit h3:hover { color: var(--accent); }
+  .search-hit .hits-n { font-weight: normal; color: var(--text-dim); font-size: .78rem; margin-left: .4rem; }
+  .search-hit .related-tag {
+    font-weight: normal; font-size: .68rem; color: var(--accent-dim);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: .05rem .5rem; margin-left: .5rem; vertical-align: middle;
+    letter-spacing: .04em;
+  }
+  .search-snip { font-size: .92rem; margin-top: .3rem; white-space: pre-wrap; }
+  .search-snip mark { background: none; color: var(--accent); font-weight: 600; }
+
   /* Entities */
   #entities-pane { flex: 1; display: flex; overflow: hidden; }
   #entity-list { width: 21rem; border-right: 1px solid var(--border); overflow-y: auto; padding: 1.2rem; }
-  #entity-list .kind { font: .7rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-dim); margin: 1rem 0 .4rem; }
+  #entity-list .kind { font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-dim); margin: 1rem 0 .4rem; }
   #entity-list .ent-row { display: flex; align-items: center; gap: .2rem; border-radius: 6px; }
   #entity-list .ent-row:hover, #entity-list .ent-row.sel { background: var(--bg-input); }
   #entity-list .ent {
     flex: 1; min-width: 0; text-align: left; background: none; border: none;
-    color: var(--text); font: .95rem system-ui, sans-serif; padding: .25rem .4rem;
+    color: var(--text); font: .95rem 'CMU Sans Demi Condensed', system-ui, sans-serif; padding: .25rem .4rem;
     border-radius: 6px; cursor: pointer;
   }
   #entity-list .ent .n { color: var(--text-dim); font-size: .8rem; }
   #entity-list .ent-keep {
     flex-shrink: 0; background: none; border: 1px solid var(--border); color: var(--text-dim);
-    border-radius: 6px; font: .7rem system-ui, sans-serif; padding: .1rem .45rem;
+    border-radius: 6px; font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; padding: .1rem .45rem;
     cursor: pointer; visibility: hidden; margin-right: .2rem;
   }
   #entity-list .ent-row:hover .ent-keep { visibility: visible; }
   #entity-list .ent-keep.on { visibility: visible; color: var(--accent); border-color: var(--accent-dim); }
   #entity-detail { flex: 1; overflow-y: auto; padding: 1.5rem; }
   #entity-doc { font-size: .95rem; margin-top: 1rem; }
-  #entity-meta { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  #entity-meta { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
   .ent-actions { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-top: .8rem; }
   .ent-actions input { width: 12rem; padding: .35rem .6rem; font-size: .85rem; }
   .ent-actions select {
     background: var(--bg-input); color: var(--text-dim); border: 1px solid var(--border);
-    border-radius: 8px; padding: .3rem .5rem; font: .8rem system-ui, sans-serif;
+    border-radius: 8px; padding: .3rem .5rem; font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
   }
-  .alias-label { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  .alias-label { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
   .chip {
     display: inline-flex; align-items: center; gap: .3rem; background: var(--bg-input);
-    border-radius: 999px; padding: .1rem .6rem; font: .8rem system-ui, sans-serif;
+    border-radius: 999px; padding: .1rem .6rem; font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
     margin-right: .3rem;
   }
   .chip button { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: .9rem; padding: 0; }
-  .obs-date { font: .7rem system-ui, sans-serif; color: var(--accent-dim); text-transform: uppercase; letter-spacing: .06em; margin: 1.1rem 0 .3rem; }
+  .obs-date { font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--accent-dim); text-transform: uppercase; letter-spacing: .06em; margin: 1.1rem 0 .3rem; }
   .obs { display: flex; gap: .5rem; align-items: baseline; padding: .15rem 0; }
   .obs .t { flex: 1; }
   .obs .ops { visibility: hidden; display: flex; gap: .2rem; }
   .obs:hover .ops { visibility: visible; }
   .obs .ops button {
     background: none; border: none; color: var(--text-dim); cursor: pointer;
-    font: .75rem system-ui, sans-serif; padding: .1rem .3rem;
+    font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; padding: .1rem .3rem;
   }
   .obs .ops button:hover { color: var(--accent); }
   #suggest-panel { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.2rem; }
   .sg { border-bottom: 1px solid var(--border); padding: .6rem 0; }
   .sg:last-child { border-bottom: none; }
-  .sg .r { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin: .2rem 0 .4rem; }
+  .sg .r { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin: .2rem 0 .4rem; }
   #search { margin-bottom: .5rem; font-size: .9rem; padding: .4rem .7rem; }
   #curation-tools { display: flex; gap: .4rem; margin-bottom: .5rem; }
   #suggest-btns { display: flex; gap: .4rem; margin-bottom: .6rem; flex-wrap: wrap; }
@@ -164,31 +195,31 @@
 
   /* Triage */
   #triage { max-width: 44rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
-  #triage-progress { font: .85rem system-ui, sans-serif; color: var(--text-dim); margin-bottom: 1rem; }
+  #triage-progress { font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin-bottom: 1rem; }
   #triage-card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 12px; padding: 1.3rem 1.5rem; }
   #triage-card h2 { font-style: normal; font-size: 1.4rem; color: var(--text); margin-bottom: .2rem; }
-  #triage-meta { font: .85rem system-ui, sans-serif; color: var(--accent-dim); }
-  #triage-aliases { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin-top: .2rem; }
+  #triage-meta { font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--accent-dim); }
+  #triage-aliases { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin-top: .2rem; }
   #triage-obs { margin-top: 1rem; font-size: .92rem; max-height: 22rem; overflow-y: auto; }
   #triage-obs .obs-date { margin: .7rem 0 .2rem; }
-  #triage-help { margin-top: 1rem; font: .85rem system-ui, sans-serif; color: var(--text-dim); }
+  #triage-help { margin-top: 1rem; font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
   #triage-help b { color: var(--accent); font-weight: normal; }
-  #triage-input-row, #triage-kind-row { margin-top: 1rem; font: .9rem system-ui, sans-serif; color: var(--text-dim); display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+  #triage-input-row, #triage-kind-row { margin-top: 1rem; font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
   #triage-input { flex: 1; min-width: 12rem; }
   #triage-apply { padding: .3rem 1.1rem; font-size: .85rem; align-self: stretch; }
-  #triage-toast { margin-top: .8rem; font: .85rem system-ui, sans-serif; color: var(--accent); min-height: 1.2rem; }
+  #triage-toast { margin-top: .8rem; font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--accent); min-height: 1.2rem; }
   #triage-btns { display: flex; gap: .4rem; margin-top: .8rem; flex-wrap: wrap; }
   .dup-row { display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding: .5rem 0; }
-  .dup-row .why { font: .75rem system-ui, sans-serif; color: var(--text-dim); }
+  .dup-row .why { font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
 
   /* Categories */
   #categories { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
   #cat-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-  #cat-status { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  #cat-status { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
   #cat-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.2rem; }
   .cat-chip {
     background: var(--bg-input); border: 1px solid var(--border); color: var(--text-dim);
-    border-radius: 999px; padding: .15rem .8rem; font: .85rem system-ui, sans-serif; cursor: pointer;
+    border-radius: 999px; padding: .15rem .8rem; font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif; cursor: pointer;
   }
   .cat-chip.active { border-color: var(--accent); color: var(--accent); }
   .cat-hint { color: var(--text-dim); font-style: italic; }
@@ -199,7 +230,7 @@
   .cat-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .35rem; align-items: center; }
   .cat-add {
     background: none; border: none; color: var(--text-dim);
-    font: .8rem system-ui, sans-serif; cursor: pointer;
+    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; cursor: pointer;
   }
   .cat-full {
     white-space: pre-wrap; background: var(--bg-input); border-radius: 8px;
@@ -210,7 +241,7 @@
     border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.2rem;
   }
   .cat-domain-title {
-    font: .75rem system-ui, sans-serif; color: var(--text-dim);
+    font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim);
     text-transform: uppercase; letter-spacing: .05em; margin-bottom: .4rem;
   }
   .cat-domain-body { white-space: pre-wrap; font-size: .92rem; }
@@ -220,21 +251,21 @@
     padding: .8rem 1rem; margin-bottom: .8rem; background: var(--bg-raised);
   }
   .cat-proposal b { color: var(--accent); }
-  .prop-meta { font: .75rem system-ui, sans-serif; color: var(--text-dim); margin-left: .5rem; }
+  .prop-meta { font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin-left: .5rem; }
   .prop-members { font-size: .9rem; margin-top: .2rem; }
   .prop-reason { color: var(--text-dim); font-style: italic; font-size: .85rem; margin-top: .15rem; }
   .prop-actions { display: flex; gap: .4rem; margin-top: .5rem; }
   #cat-custom-row {
     display: flex; flex-direction: column; gap: .4rem; align-items: flex-start; margin-bottom: .8rem;
   }
-  .custom-label { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  .custom-label { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
   .custom-cat { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
-  .custom-cat .cc-name { font: .9rem system-ui, sans-serif; font-weight: 600; }
-  .custom-cat .cc-meta { font: .78rem system-ui, sans-serif; color: var(--text-dim); font-style: italic; }
+  .custom-cat .cc-name { font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif; font-weight: 600; }
+  .custom-cat .cc-meta { font: .78rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); font-style: italic; }
   .custom-cat .quiet { padding: .1rem .5rem; font-size: .75rem; }
   .kw-chip {
     background: var(--bg-input); border: 1px solid var(--border); border-radius: 999px;
-    padding: .05rem .55rem; font: .75rem system-ui, sans-serif; color: var(--text-dim);
+    padding: .05rem .55rem; font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim);
   }
   .kw-chip.member { border-color: var(--accent-dim); color: var(--accent); }
   .kw-chip button {
@@ -245,13 +276,13 @@
   .cat-def {
     display: flex; flex-wrap: wrap; gap: .3rem; align-items: center;
     background: var(--bg-input); border-radius: 8px; padding: .5rem .8rem;
-    margin-bottom: .8rem; font: .82rem system-ui, sans-serif; color: var(--text-dim);
+    margin-bottom: .8rem; font: .82rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim);
   }
   .cat-def .lbl { text-transform: uppercase; letter-spacing: .05em; font-size: .72rem; }
   #cat-newform { display: flex; gap: .4rem; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; }
   #cat-newform input {
     background: var(--bg-input); border: 1px solid var(--border); color: var(--text);
-    border-radius: 6px; padding: .3rem .6rem; font: .85rem system-ui, sans-serif;
+    border-radius: 6px; padding: .3rem .6rem; font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
   }
   .cat-summary {
     font-style: italic; color: var(--text-dim);
@@ -259,7 +290,7 @@
   }
   #cat-paused {
     background: var(--bg-raised); border: 1px dashed var(--accent-dim); border-radius: 10px;
-    padding: 1rem 1.2rem; color: var(--text-dim); font: .92rem/1.55 system-ui, sans-serif;
+    padding: 1rem 1.2rem; color: var(--text-dim); font: .92rem/1.55 'CMU Sans Demi Condensed', system-ui, sans-serif;
   }
   #cat-paused b { color: var(--accent); }
   #categories.paused > :not(#cat-paused) { display: none; }
@@ -268,7 +299,7 @@
   /* Patterns */
   #patterns { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
   #pat-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
-  #pat-status { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  #pat-status { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
   .pattern {
     border: 1px solid var(--border); border-radius: 10px;
     background: var(--bg-raised); padding: 1rem 1.2rem; margin-bottom: 1rem;
@@ -277,17 +308,17 @@
     font-size: 1.05rem; font-weight: 600; color: var(--accent);
     display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
   }
-  .pat-kind { font: .75rem system-ui, sans-serif; color: var(--text-dim); font-weight: normal; }
+  .pat-kind { font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); font-weight: normal; }
   .pat-dismiss { margin-left: auto; }
   .pattern p { margin: .4rem 0; font-size: .95rem; }
   .pat-trigger { color: var(--text-dim); font-style: italic; font-size: .88rem; }
-  .pat-instances { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin-top: .5rem; }
+  .pat-instances { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin-top: .5rem; }
   .pat-instances div { padding: .12rem 0; }
 
   /* Dreams */
   #dreams { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
   #dream-header { display: flex; align-items: center; gap: 1rem; margin-bottom: .6rem; }
-  #dream-status { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  #dream-status { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
   #dream-weather { font-style: italic; color: var(--accent); font-size: .9rem; margin-bottom: 1.2rem; }
   .dream-card {
     border: 1px solid var(--border); border-left: 3px solid var(--accent-dim);
@@ -296,14 +327,14 @@
   }
   .dream-card h3 {
     font-size: .9rem; font-weight: 600; color: var(--text-dim);
-    font-family: system-ui, sans-serif; display: flex; align-items: center; gap: .4rem;
+    font-family: 'CMU Sans Demi Condensed', system-ui, sans-serif; display: flex; align-items: center; gap: .4rem;
   }
   .dream-tone {
     background: var(--bg-input); border-radius: 999px; padding: .05rem .6rem;
-    font: .72rem system-ui, sans-serif; color: var(--accent);
+    font: .72rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--accent);
   }
   .dream-card p { margin: .45rem 0 0; font-size: .95rem; }
-  .dream-cast { font: .8rem system-ui, sans-serif; color: var(--text-dim); margin-top: .4rem; }
+  .dream-cast { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin-top: .4rem; }
   .dream-read { color: var(--text-dim); font-style: italic; font-size: .9rem; }
 
   /* History (sessions) */
@@ -312,7 +343,7 @@
   .session-item {
     display: block; width: 100%; text-align: left; background: none; border: none;
     border-radius: 8px; padding: .5rem .6rem; cursor: pointer; color: var(--text);
-    font: .88rem system-ui, sans-serif; margin-bottom: .15rem;
+    font: .88rem 'CMU Sans Demi Condensed', system-ui, sans-serif; margin-bottom: .15rem;
   }
   .session-item:hover, .session-item.sel { background: var(--bg-input); }
   .session-item .dates { display: block; font-size: .72rem; color: var(--text-dim); margin-top: .1rem; }
@@ -322,9 +353,9 @@
   #session-view-inner { max-width: 46rem; margin: 0 auto; }
   .session-head { display: flex; align-items: baseline; gap: .8rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
   .session-head h2 { font-style: italic; font-weight: normal; font-size: 1.05rem; color: var(--accent); }
-  .session-head .dates { font: .8rem system-ui, sans-serif; color: var(--text-dim); }
+  .session-head .dates { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
   .session-part-label {
-    font: .7rem system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase;
+    font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase;
     color: var(--accent-dim); margin: 1.1rem 0 .3rem;
   }
   .session-part { white-space: pre-wrap; color: var(--you); margin-bottom: 1.4rem; font-size: .95rem; }
@@ -333,7 +364,7 @@
   #help { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
   #help h2 { font-style: italic; font-weight: normal; font-size: 1.15rem; color: var(--accent); margin: 1.6rem 0 .8rem; }
   #help h2:first-child { margin-top: 0; }
-  #help h3 { font: .95rem system-ui, sans-serif; font-weight: 600; margin-bottom: .3rem; }
+  #help h3 { font: .95rem 'CMU Sans Demi Condensed', system-ui, sans-serif; font-weight: 600; margin-bottom: .3rem; }
   #help .where { font-weight: normal; font-size: .78rem; color: var(--accent-dim); margin-left: .5rem; }
   #help .step-n { display: inline-flex; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--accent-dim); color: var(--bg); align-items: center; justify-content: center; font-size: .8rem; margin-right: .4rem; }
   #help p { font-size: .95rem; margin-bottom: .5rem; }
@@ -349,7 +380,7 @@
     border-bottom: 1px solid var(--border); margin-bottom: .5rem;
   }
   #help-toc a {
-    color: var(--text-dim); text-decoration: none; font: .85rem system-ui, sans-serif;
+    color: var(--text-dim); text-decoration: none; font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
     background: var(--bg-input); border-radius: 999px; padding: .15rem .8rem;
   }
   #help-toc a:hover { color: var(--accent); }
@@ -362,6 +393,7 @@
   <nav>
     <button data-tab="write" class="active">write</button>
     <button data-tab="chat">chat</button>
+    <button data-tab="search">search</button>
     <button data-tab="entities">entities</button>
     <button data-tab="categories" title="paused until entries are split by date (Phase 3)">categories</button>
     <button data-tab="patterns">patterns</button>
@@ -398,6 +430,19 @@
       <textarea id="chat-text" rows="2" placeholder="look something up in your journal…"></textarea>
       <button class="quiet" id="lookup-clear" title="clear this lookup conversation (it was never journal data)">clear</button>
       <button class="send" id="lookup-send">send</button>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-search">
+    <div id="search-pane">
+      <div id="search-bar">
+        <input type="text" id="search-q" placeholder="search your whole journal…">
+        <button class="quiet chip-toggle" id="search-mode"
+          title="meaning: passages ranked by similarity to what you describe · exact text: literal matches, newest first">meaning</button>
+        <button class="send" id="search-go">search</button>
+      </div>
+      <div id="search-status"></div>
+      <div id="search-results"></div>
     </div>
   </section>
 
@@ -510,6 +555,7 @@
       <nav id="help-toc">
         <a href="#h-write">write</a>
         <a href="#h-chat">chat</a>
+        <a href="#h-search">search</a>
         <a href="#h-history">history</a>
         <a href="#h-entities">entities</a>
         <a href="#h-triage">triage</a>
@@ -543,6 +589,19 @@
       the open chat and never become journal memory. <b>clear</b> wipes it whenever you like.
       Note its honest limit: it sees retrieved excerpts, not the whole journal, so answers are
       representative rather than exhaustive.</p>
+
+      <h2 id="h-search">search — every match, instantly</h2>
+      <p>The search screen sweeps your <em>entire</em> journal locally — free, instant, no API
+      calls. <b>meaning</b> mode ranks passages by how semantically close they are to whatever you
+      describe, in your own words ("times I felt proud of my work"); <b>exact text</b> mode finds
+      literal matches, newest first, with a ×N count when an entry contains several. Click any
+      result to read the full entry in place. This is the exhaustive counterpart to the chat
+      screen: chat retrieves a handful of excerpts and reasons about them, search shows you
+      <em>everything</em>. Dreams never appear here — they live in their own realm (dreams tab).
+      Two honest limits: highlighting is literal (a typo'd word won't light up even though
+      meaning-search still finds the right passages), and dates are the <em>conversation's</em>
+      date — a passage written mid-week inside a week-long chat shows that chat's date until
+      the Phase 3 per-day split.</p>
 
       <h2 id="h-history">history — every chat, one at a time</h2>
       <p>Lands on the open chat: the conversation it continues (with Claude's replies interleaved,
@@ -711,9 +770,8 @@ const $ = id => document.getElementById(id);
 let entities = {}, selected = null;
 
 // ---- tabs ----
-// Categories are switched off until entries are split by date (Phase 3);
-// flip this to true after the per-day re-run to bring the section back.
-const CATEGORIES_ENABLED = false;
+// Categories came back with Phase 3 (entries split by date, 2026-07-11).
+const CATEGORIES_ENABLED = true;
 $('cat-paused').style.display = CATEGORIES_ENABLED ? 'none' : 'block';
 $('categories').classList.toggle('paused', !CATEGORIES_ENABLED);
 document.querySelector('nav button[data-tab="categories"]')
@@ -729,6 +787,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () =>
   $('tab-' + activeTab).classList.add('active');
   if (activeTab === 'write' && !$('entry-send').disabled) loadWriteLog();
   if (activeTab === 'chat') restoreLookupLog();
+  if (activeTab === 'search') $('search-q').focus();
   if (activeTab === 'entities') loadEntities();
   if (activeTab === 'categories' && CATEGORIES_ENABLED) loadCategories();
   if (activeTab === 'patterns') loadPatterns();
@@ -875,6 +934,121 @@ $('lookup-clear').onclick = async () => {
   localStorage.removeItem('rag_lookup');
   try { await fetch('/api/lookup/reset', {method: 'POST'}); } catch (e) { }
 };
+
+// ---- search ----
+// Exhaustive, local, free: every matching journal moment. "meaning" ranks
+// by semantic similarity; "exact text" lists literal matches newest first.
+// Dreams never appear here — they live in their own realm.
+let searchMode = 'semantic', searchHits = [], searchSort = 'relevance';
+
+$('search-mode').onclick = () => {
+  searchMode = searchMode === 'semantic' ? 'exact' : 'semantic';
+  $('search-mode').textContent = searchMode === 'semantic' ? 'meaning' : 'exact text';
+  $('search-mode').classList.toggle('on', searchMode === 'exact');
+  if ($('search-q').value.trim() && searchHits.length) runSearch();
+};
+
+async function runSearch() {
+  const q = $('search-q').value.trim();
+  if (!q) return;
+  $('search-status').textContent = 'searching…';
+  $('search-results').innerHTML = '';
+  try {
+    const r = await (await fetch(
+      `/api/search?q=${encodeURIComponent(q)}&mode=${searchMode}`
+    )).json();
+    if (r.error) { $('search-status').textContent = r.error; return; }
+    searchHits = r.results;
+    searchSort = 'relevance';
+    renderSearchResults(q);
+  } catch (e) {
+    $('search-status').textContent = 'search failed — is the server up?';
+  }
+}
+$('search-go').onclick = runSearch;
+$('search-q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); runSearch(); }
+});
+
+// safe highlighting: build text nodes, wrap query words in <mark>
+function highlightInto(el, text, q) {
+  const terms = q.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+  el.textContent = '';
+  if (!terms.length) { el.textContent = text; return; }
+  const esc = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const splitter = new RegExp('(' + esc.join('|') + ')', 'ig');
+  const isTerm = new RegExp('^(?:' + esc.join('|') + ')$', 'i');
+  for (const part of text.split(splitter)) {
+    if (!part) continue;
+    if (isTerm.test(part)) {
+      const m = document.createElement('mark');
+      m.textContent = part;
+      el.appendChild(m);
+    } else {
+      el.appendChild(document.createTextNode(part));
+    }
+  }
+}
+
+function renderSearchResults(q) {
+  const el = $('search-results');
+  el.innerHTML = '';
+  const status = $('search-status');
+  status.innerHTML = '';
+  if (!searchHits.length) {
+    status.textContent = searchMode === 'exact'
+      ? 'no exact matches — try meaning mode for related passages'
+      : 'nothing found';
+    return;
+  }
+  const label = document.createElement('span');
+  label.textContent = `${searchHits.length} moment${searchHits.length === 1 ? '' : 's'}`
+    + (searchMode === 'exact' ? ' · newest first' : '');
+  status.appendChild(label);
+  if (searchMode === 'semantic') {
+    const sort = document.createElement('button');
+    sort.className = 'quiet';
+    sort.textContent = searchSort === 'relevance' ? 'sort: best match' : 'sort: newest';
+    sort.title = 'toggle between best-match order and newest-first';
+    sort.onclick = () => {
+      searchSort = searchSort === 'relevance' ? 'newest' : 'relevance';
+      renderSearchResults(q);
+    };
+    status.appendChild(sort);
+  }
+
+  const hits = [...searchHits];
+  if (searchMode === 'semantic' && searchSort === 'newest') {
+    hits.sort((a, b) => b.date.localeCompare(a.date));
+  }
+  for (const hit of hits) {
+    const d = document.createElement('div');
+    d.className = 'search-hit';
+    const h = document.createElement('h3');
+    h.textContent = `${hit.date} — ${hit.title || '(untitled)'}`;
+    h.title = 'show the full entry';
+    if (hit.hits > 1) {
+      const n = document.createElement('span');
+      n.className = 'hits-n';
+      n.textContent = `×${hit.hits}`;
+      h.appendChild(n);
+    }
+    if (hit.match === 'related') {
+      const rel = document.createElement('span');
+      rel.className = 'related-tag';
+      rel.textContent = 'related';
+      rel.title = "close in meaning — doesn't contain the exact words";
+      h.appendChild(rel);
+    }
+    h.onclick = () => toggleEntryText(d, hit);
+    d.appendChild(h);
+    const s = document.createElement('div');
+    s.className = 'search-snip';
+    highlightInto(s, hit.snippet, q);
+    d.appendChild(s);
+    el.appendChild(d);
+  }
+}
 
 async function closeSession() {
   if (!confirm('Close this chat?\n\nYour side of it becomes a journal entry — tagging, entities, summaries, and dream extraction run in the background. A fresh chat starts empty.')) return;

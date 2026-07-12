@@ -23,6 +23,7 @@ import anthropic
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import categories
@@ -36,6 +37,7 @@ PORT = 8144
 STATIC_DIR = Path(__file__).parent / "static"
 
 app = FastAPI(title="RAG Journal")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 STATE = {
     "client": None,
@@ -558,6 +560,109 @@ def refresh_summaries():
     cat = categories.build(quiet=True)
     result = summarizer.build(quiet=True)
     return {"ok": True, **result, "categories_tagged": cat["new"]}
+
+
+def _fold(s: str) -> str:
+    """Lowercase and strip accents, one char at a time so indexes still
+    line up with the original text (fiancé matches fiance)."""
+    import unicodedata
+    out = []
+    for c in s.lower():
+        d = unicodedata.normalize("NFKD", c)
+        out.append(d[0] if d else c)
+    return "".join(out)
+
+
+def _snippet_around(doc: str, q: str, before: int = 150, after: int = 300) -> str:
+    """A window of text centered on the first occurrence of any query word,
+    so the snippet shows the moment that matched — not the top of the chunk.
+    Falls back to the chunk opening when the match is purely semantic."""
+    hay = _fold(doc)
+    q = _fold(q)
+    terms = [q.lower()] + [w for w in q.lower().split() if len(w) > 2]
+    idx = -1
+    for term in terms:
+        found = hay.find(term)
+        if found != -1 and (idx == -1 or found < idx):
+            idx = found
+        if term == q.lower() and found != -1:
+            break  # the whole phrase matched — center on that
+    if idx == -1:
+        return doc[:450] + ("…" if len(doc) > 450 else "")
+    start = max(0, idx - before)
+    end = min(len(doc), idx + after)
+    return ("…" if start else "") + doc[start:end] + ("…" if end < len(doc) else "")
+
+
+@app.get("/api/search")
+def search_journal(q: str, mode: str = "semantic", limit: int = 100):
+    """Exhaustive search over the whole waking journal — local embeddings
+    and plain text scanning, no API calls. Dreams never appear here: they
+    live in their own collection (realm isolation).
+
+    mode=semantic  passages ranked by meaning-similarity to the query
+    mode=exact     literal substring matches, newest first, with counts"""
+    q = q.strip()
+    if not q:
+        return JSONResponse({"error": "empty query"}, status_code=400)
+    col = STATE["collection"]
+    results = []
+
+    if mode == "exact":
+        data = col.get(include=["documents", "metadatas"])
+        needle = _fold(q)
+        merged = {}  # (date, title) -> result; chunks of one entry combine
+        for doc, meta in zip(data["documents"], data["metadatas"]):
+            hay = _fold(doc)
+            if needle not in hay:
+                continue
+            key = (meta.get("date", ""), meta.get("title", ""))
+            if key in merged:
+                merged[key]["hits"] += hay.count(needle)
+            else:
+                merged[key] = {
+                    "date": key[0],
+                    "title": key[1],
+                    "snippet": _snippet_around(doc, q),
+                    "hits": hay.count(needle),
+                }
+        results = sorted(merged.values(), key=lambda r: r["date"], reverse=True)
+    else:
+        # Rank every chunk, then keep only what's worth reading: literal
+        # matches always stay (however far down the ranking), and
+        # non-literal neighbors stay only while they're close to the best
+        # hit — and never more than a handful. When nothing matches
+        # literally, the whole corpus sits inside the margin (weak best
+        # hit), so the hard cap is what keeps a no-match query short.
+        RELATED_MARGIN = 0.12
+        RELATED_MAX = 12
+        n = col.count()
+        if n:
+            r = col.query(query_texts=[q], n_results=n)
+            needle = _fold(q)
+            best = r["distances"][0][0]
+            related_kept = 0
+            for doc, meta, dist in zip(
+                r["documents"][0], r["metadatas"][0], r["distances"][0]
+            ):
+                literal = needle in _fold(doc)
+                if not literal:
+                    if dist > best + RELATED_MARGIN or related_kept >= RELATED_MAX:
+                        continue
+                    related_kept += 1
+                results.append({
+                    "date": meta.get("date", ""),
+                    "title": meta.get("title", ""),
+                    "snippet": _snippet_around(doc, q),
+                    "distance": round(dist, 3),
+                    "match": "exact" if literal else "related",
+                })
+            # direct matches first (best first), then the related tail
+            exact_hits = [x for x in results if x["match"] == "exact"][:limit]
+            related_list = [x for x in results if x["match"] == "related"]
+            results = exact_hits + related_list[:max(0, limit - len(exact_hits))]
+
+    return {"query": q, "mode": mode, "results": results}
 
 
 @app.get("/api/summaries/domain")
