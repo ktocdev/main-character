@@ -23,3 +23,7 @@ import_list.txt
 # IDE
 .vscode/
 .idea/
+
+# Local run artifacts
+*.log
+backups/
