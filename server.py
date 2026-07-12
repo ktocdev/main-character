@@ -113,6 +113,24 @@ class DismissDupIn(BaseModel):
     b: str
 
 
+class GroupIn(BaseModel):
+    name: str
+    parent: str = ""
+
+
+class GroupMemberIn(BaseModel):
+    group: str
+    entity: str
+    remove: bool = False
+
+
+class GroupEditIn(BaseModel):
+    name: str
+    rename: str = ""
+    parent: str | None = None  # None = unchanged, "" = make root
+    delete: bool = False
+
+
 class CategoryTagIn(BaseModel):
     key: str      # conversation cache key from the category index
     name: str     # category name
@@ -275,11 +293,41 @@ def current_session():
 
 @app.get("/api/sessions/archive")
 def archived_session(id: str):
-    """One closed session: stitched parts + the full braid."""
+    """One closed session: stitched parts + the full braid, each part
+    carrying its entry summary when the pipeline has written one."""
     archive = sessions.load_archive(id)
     if archive is None:
         return JSONResponse({"error": "not found"}, status_code=404)
+    import summarizer
+    for part in archive.get("parts", []):
+        key = entities.conversation_cache_key(part)
+        part["summary"] = summarizer.load_entry_summary(key)
     return archive
+
+
+@app.get("/api/sessions/conversation")
+def conversation_view(title: str, start: str = "", end: str = ""):
+    """One imported conversation as its stitched per-day parts (braid or
+    text, each with its entry summary), bounded to [start, end] so days
+    already covered by the open session or an archive stay out."""
+    col = STATE["collection"]
+    data = col.get(include=["metadatas"])
+    dates = sorted({
+        m.get("date", "") for m in data["metadatas"]
+        if m.get("title", "") == title
+        and (not start or m.get("date", "") >= start)
+        and (not end or m.get("date", "") <= end)
+    })
+    if not dates:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    import summarizer
+    parts = []
+    for d in dates:
+        part = sessions._part_content(col, {"date": d, "title": title})
+        key = entities.conversation_cache_key(part)
+        part["summary"] = summarizer.load_entry_summary(key)
+        parts.append(part)
+    return {"title": title, "start": dates[0], "end": dates[-1], "parts": parts}
 
 
 @app.post("/api/sessions/seed")
@@ -336,6 +384,14 @@ def _snapshot():
 
 def _record_curation(description: str, before: dict):
     entities.record_change(description, "curation", before, _snapshot())
+
+
+def _groups_snapshot():
+    return json.loads(json.dumps(entities.load_groups()))
+
+
+def _record_groups(description: str, before: list):
+    entities.record_change(description, "groups", before, _groups_snapshot())
 
 
 def _combine(body: MergeIn, field: str, verb: str):
@@ -549,6 +605,149 @@ def dismiss_duplicate(body: DismissDupIn):
         curation["not_duplicates"].append(pk)
     entities.save_curation(curation)
     return {"ok": True}
+
+
+@app.get("/api/groups")
+def list_groups():
+    """Entity groups with members resolved through current names/aliases.
+    Members that no longer match an entity come back under `unresolved`
+    (kept in the file — an undo can bring their entity back)."""
+    index = STATE["entity_index"]
+    out = []
+    for g in entities.load_groups():
+        resolved, unresolved = set(), set()
+        for m in g["members"]:
+            canon = companion.resolve_entity(index, m)
+            (resolved if canon else unresolved).add(canon or m)
+        out.append({
+            "name": g["name"],
+            "parent": g["parent"],
+            "members": sorted(resolved, key=str.lower),
+            "unresolved": sorted(unresolved, key=str.lower),
+        })
+    return {"groups": out}
+
+
+@app.post("/api/groups")
+def create_group(body: GroupIn):
+    name = body.name.strip()
+    if not name:
+        return JSONResponse({"error": "empty group name"}, status_code=400)
+    groups = entities.load_groups()
+    if entities.find_group(groups, name):
+        return JSONResponse({"error": f"group '{name}' already exists"}, status_code=400)
+    parent = body.parent.strip()
+    if parent and not entities.find_group(groups, parent):
+        return JSONResponse({"error": f"parent group '{parent}' not found"}, status_code=404)
+    before = _groups_snapshot()
+    groups.append({"name": name, "parent": parent, "members": []})
+    entities.save_groups(groups)
+    _record_groups(f"create group {name}", before)
+    _rebuild()
+    return {"ok": True, "group": name}
+
+
+@app.post("/api/groups/member")
+def group_member(body: GroupMemberIn):
+    """Add an entity to a group (creating the group if it's new) or,
+    with remove=true, drop a member — including dangling unresolved ones."""
+    groups = entities.load_groups()
+    group = entities.find_group(groups, body.group)
+
+    if body.remove:
+        if not group:
+            return JSONResponse({"error": f"group '{body.group}' not found"}, status_code=404)
+        raw = body.entity.strip().lower()
+        canon = companion.resolve_entity(STATE["entity_index"], body.entity)
+        keep = [
+            m for m in group["members"]
+            if m.lower() != raw
+            and companion.resolve_entity(STATE["entity_index"], m) != (canon or object())
+        ]
+        if len(keep) == len(group["members"]):
+            return JSONResponse({"error": f"'{body.entity}' is not in {group['name']}"}, status_code=404)
+        before = _groups_snapshot()
+        group["members"] = keep
+        entities.save_groups(groups)
+        _record_groups(f"remove {body.entity} from group {group['name']}", before)
+        _rebuild()
+        return {"ok": True}
+
+    canon = companion.resolve_entity(STATE["entity_index"], body.entity)
+    if not canon:
+        return JSONResponse({"error": f"entity '{body.entity}' not found"}, status_code=404)
+    before = _groups_snapshot()
+    created = False
+    if not group:
+        group = {"name": body.group.strip(), "parent": "", "members": []}
+        if not group["name"]:
+            return JSONResponse({"error": "empty group name"}, status_code=400)
+        groups.append(group)
+        created = True
+    if any(m.lower() == canon.lower() for m in group["members"]):
+        return {"ok": True, "group": group["name"], "member": canon}  # already there
+    group["members"] = sorted(group["members"] + [canon], key=str.lower)
+    entities.save_groups(groups)
+    desc = f"add {canon} to group {group['name']}"
+    if created:
+        desc += " (new group)"
+    _record_groups(desc, before)
+    _rebuild()
+    return {"ok": True, "group": group["name"], "member": canon}
+
+
+@app.post("/api/groups/edit")
+def edit_group(body: GroupEditIn):
+    """Rename / reparent / delete a group. Deleting promotes children to
+    the deleted group's parent; renaming rewrites children's pointers."""
+    groups = entities.load_groups()
+    group = entities.find_group(groups, body.name)
+    if not group:
+        return JSONResponse({"error": f"group '{body.name}' not found"}, status_code=404)
+
+    before = _groups_snapshot()
+    actions = []
+
+    if body.delete:
+        for child in groups:
+            if child["parent"].lower() == group["name"].lower():
+                child["parent"] = group["parent"]
+        groups.remove(group)
+        entities.save_groups(groups)
+        _record_groups(f"delete group {group['name']}", before)
+        _rebuild()
+        return {"ok": True}
+
+    rename = body.rename.strip()
+    if rename and rename != group["name"]:
+        clash = entities.find_group(groups, rename)
+        if clash and clash is not group:
+            return JSONResponse({"error": f"group '{rename}' already exists"}, status_code=400)
+        old = group["name"]
+        for child in groups:
+            if child["parent"].lower() == old.lower():
+                child["parent"] = rename
+        group["name"] = rename
+        actions.append(f"rename group {old} to {rename}")
+
+    if body.parent is not None:
+        parent = body.parent.strip()
+        if parent:
+            if not entities.find_group(groups, parent):
+                return JSONResponse({"error": f"parent group '{parent}' not found"}, status_code=404)
+            if parent.lower() == group["name"].lower() or \
+                    entities.group_would_cycle(groups, group["name"], parent):
+                return JSONResponse({"error": "that would make a loop"}, status_code=400)
+        if parent.lower() != group["parent"].lower():
+            group["parent"] = parent
+            actions.append(f"move group {group['name']} under {parent or 'root'}")
+
+    if not actions:
+        return {"ok": True}  # nothing changed
+    entities.save_groups(groups)
+    _record_groups("; ".join(actions), before)
+    _rebuild()
+    return {"ok": True, "group": group["name"]}
 
 
 @app.post("/api/summaries/refresh")

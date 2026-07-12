@@ -294,9 +294,14 @@ def session_list(collection) -> dict:
         }
         for a in archives
     ]
+    # per-day entries of one conversation list as a single item spanning
+    # its date range, like an archived session does
+    by_title: dict[str, list[str]] = {}
+    for d, t in conv_keys:
+        by_title.setdefault(t, []).append(d)
     items += [
-        {"kind": "import", "date": d, "title": t, "start": d, "end": d}
-        for d, t in conv_keys
+        {"kind": "import", "title": t, "start": min(ds), "end": max(ds)}
+        for t, ds in by_title.items()
     ]
     items.sort(key=lambda i: i["end"], reverse=True)
 
