@@ -38,6 +38,7 @@ MODEL = "claude-opus-4-8"
 ENTITY_DIR = Path(__file__).parent / "entity_graph"
 RAW_DIR = ENTITY_DIR / "raw"
 CURATION_FILE = ENTITY_DIR / "curation.json"
+GROUPS_FILE = ENTITY_DIR / "groups.json"
 SEGMENT_CHARS = 45_000  # long conversations are split, not truncated
 AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 
@@ -316,6 +317,72 @@ def curation_key(kind: str, name: str) -> str:
     return f"{kind}:{name.lower()}"
 
 
+# ---------------------------------------------------------------------------
+# GROUPS (user-made collections of entities, for viewing and associating)
+# ---------------------------------------------------------------------------
+# groups.json: [{"name": str, "parent": str ("" = root), "members": [names]}]
+# Members are entity display names, resolved through aliases at read time —
+# so merges and renames (which keep the old name as an alias) never break a
+# membership, and a deleted entity's membership sits dormant until an undo
+# brings the entity back.
+
+def load_groups() -> list[dict]:
+    if GROUPS_FILE.exists():
+        return json.loads(GROUPS_FILE.read_text(encoding="utf-8"))
+    return []
+
+
+def save_groups(groups: list[dict]):
+    ENTITY_DIR.mkdir(parents=True, exist_ok=True)
+    GROUPS_FILE.write_text(
+        json.dumps(groups, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def find_group(groups: list[dict], name: str) -> dict | None:
+    lname = name.strip().lower()
+    return next((g for g in groups if g["name"].lower() == lname), None)
+
+
+def group_path(groups: list[dict], name: str) -> str:
+    """Breadcrumb display name: 'Landmarks › Gardens'."""
+    chain, seen = [], set()
+    current = find_group(groups, name)
+    while current and current["name"].lower() not in seen:
+        seen.add(current["name"].lower())
+        chain.append(current["name"])
+        current = find_group(groups, current["parent"]) if current["parent"] else None
+    return " › ".join(reversed(chain)) or name
+
+
+def group_would_cycle(groups: list[dict], name: str, parent: str) -> bool:
+    """Would setting `name`'s parent to `parent` create a loop?"""
+    lname = name.strip().lower()
+    seen = set()
+    current = find_group(groups, parent)
+    while current:
+        if current["name"].lower() == lname:
+            return True
+        if current["name"].lower() in seen:
+            return True  # pre-existing corruption; refuse to extend it
+        seen.add(current["name"].lower())
+        current = find_group(groups, current["parent"]) if current["parent"] else None
+    return False
+
+
+def group_descendants(groups: list[dict], name: str) -> set[str]:
+    """Lowercase names of the group plus all transitive children."""
+    result = {name.strip().lower()}
+    changed = True
+    while changed:
+        changed = False
+        for g in groups:
+            if g["parent"].lower() in result and g["name"].lower() not in result:
+                result.add(g["name"].lower())
+                changed = True
+    return result
+
+
 def _parse_target(value: str, default_kind: str) -> tuple[str, str]:
     """A merge/correct target may be 'Name' or 'kind:Name'."""
     if ":" in value:
@@ -429,6 +496,20 @@ def build_entity_docs(records: list[dict]) -> dict:
     for ent in merged.values():
         ent["aliases"] = {a for a in ent["aliases"] if a.lower() != ent["name"].lower()}
 
+    # group memberships, resolved through names + aliases
+    groups = load_groups()
+    name_lookup = {}  # lowercase name/alias -> canonical display name
+    for ent in merged.values():
+        name_lookup[ent["name"].lower()] = ent["name"]
+        for a in ent["aliases"]:
+            name_lookup.setdefault(a.lower(), ent["name"])
+    entity_groups: dict[str, list[str]] = {}  # canonical name -> [group names]
+    for g in groups:
+        for member in g["members"]:
+            canon = name_lookup.get(member.lower())
+            if canon and g["name"] not in entity_groups.get(canon, []):
+                entity_groups.setdefault(canon, []).append(g["name"])
+
     attr_labels = {"person": "relationship", "project": "status", "place": "type"}
     index = {}
 
@@ -456,6 +537,11 @@ def build_entity_docs(records: list[dict]) -> dict:
         ]
         if ent["aliases"]:
             lines.append(f"aliases: {', '.join(sorted(ent['aliases']))}")
+        gnames = sorted(entity_groups.get(ent["name"], []), key=str.lower)
+        if gnames:
+            lines.append(
+                f"groups: {', '.join(group_path(groups, g) for g in gnames)}"
+            )
         lines += ["---", ""]
         for date, title, observations in ent["timeline"]:
             lines.append(f"### {date} — {title}")
@@ -469,6 +555,7 @@ def build_entity_docs(records: list[dict]) -> dict:
             "path": str(path.relative_to(ENTITY_DIR)),
             "mentions": len(ent["timeline"]),
             "aliases": sorted(ent["aliases"]),
+            "groups": gnames,
             "reviewed": curation_key(kind, ent["name"]) in {
                 r.lower() for r in curation["reviewed"]
             },
@@ -506,7 +593,8 @@ def _save_history(history: dict):
 
 
 def record_change(description: str, kind: str, before, after, filename: str = ""):
-    """kind: 'curation' (before/after are curation dicts) or 'raw' (file text)."""
+    """kind: 'curation' (before/after are curation dicts), 'groups'
+    (before/after are the groups list), or 'raw' (file text)."""
     history = _load_history()
     history["undo"].append({
         "description": description, "kind": kind,
@@ -520,6 +608,8 @@ def _apply_snapshot(entry: dict, direction: str):
     payload = entry[direction]
     if entry["kind"] == "curation":
         save_curation(payload)
+    elif entry["kind"] == "groups":
+        save_groups(payload)
     else:  # raw file content
         (RAW_DIR / Path(entry["file"]).name).write_text(payload, encoding="utf-8")
 

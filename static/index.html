@@ -33,6 +33,17 @@
     }
   }
   * { box-sizing: border-box; margin: 0; }
+
+  /* scrollbars — dark, low-contrast, matching the lamp palette */
+  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border); border-radius: 999px;
+    border: 2px solid var(--bg); background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--accent-dim); }
+  ::-webkit-scrollbar-corner { background: transparent; }
   body {
     background: var(--bg); color: var(--text);
     font: 17px/1.65 'Old Standard TT', Georgia, 'Times New Roman', serif;
@@ -155,6 +166,41 @@
   }
   #entity-list .ent-row:hover .ent-keep { visibility: visible; }
   #entity-list .ent-keep.on { visibility: visible; color: var(--accent); border-color: var(--accent-dim); }
+  #group-header {
+    font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--accent-dim); margin: 1rem 0 .3rem;
+    display: flex; align-items: center; gap: .4rem;
+  }
+  #group-newform { display: flex; gap: .3rem; margin: .2rem 0 .4rem; }
+  #group-newform input { flex: 1; min-width: 0; padding: .25rem .5rem; font-size: .85rem; }
+  .grp-row { display: flex; align-items: center; gap: .3rem; }
+  .grp-row .grp-btn {
+    flex: 1; text-align: left; background: none; border: none; color: var(--text);
+    font: .95rem 'CMU Sans Demi Condensed', system-ui, sans-serif; padding: .25rem .4rem;
+    cursor: pointer; border-radius: 6px;
+  }
+  .grp-row .grp-btn:hover { background: var(--bg-raised); }
+  .grp-row.on .grp-btn { color: var(--accent); }
+  .grp-row .n { color: var(--text-dim); font-size: .75rem; }
+  .grp-row .grp-edit {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 6px; font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    padding: .1rem .45rem; cursor: pointer; visibility: hidden;
+  }
+  .grp-row:hover .grp-edit { visibility: visible; }
+  .grp-row .grp-edit.on { visibility: visible; color: var(--accent); }
+  .grp-editor {
+    padding: .3rem 0 .6rem .9rem; display: flex; flex-direction: column; gap: .4rem;
+    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim);
+  }
+  .grp-editor .chips { display: flex; flex-wrap: wrap; gap: .25rem; }
+  .grp-editor .grp-ops { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+  .grp-editor input { padding: .2rem .5rem; font-size: .8rem; }
+  .grp-editor select {
+    background: var(--bg-input); color: var(--text-dim); border: 1px solid var(--border);
+    border-radius: 6px; padding: .15rem .4rem; font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+  }
+  .kw-chip.dim, .chip.dim { opacity: .45; font-style: italic; }
   #entity-detail { flex: 1; overflow-y: auto; padding: 1.5rem; }
   #entity-doc { font-size: .95rem; margin-top: 1rem; }
   #entity-meta { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
@@ -351,6 +397,23 @@
   .session-item.open .dates::before { content: "● "; }
   #session-view { flex: 1; overflow-y: auto; padding: 1.5rem; }
   #session-view-inner { max-width: 46rem; margin: 0 auto; }
+  #session-toc {
+    width: 11rem; border-left: 1px solid var(--border); overflow-y: auto;
+    padding: 1rem .8rem; flex-shrink: 0;
+  }
+  #session-toc:empty { display: none; }
+  #session-toc .toc-head {
+    font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent-dim); margin-bottom: .4rem;
+  }
+  #session-toc .toc-date, #session-toc .toc-sub {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    cursor: pointer; border-radius: 6px; padding: .18rem .4rem;
+    font: .82rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text);
+  }
+  #session-toc .toc-sub { padding-left: 1.2rem; font-size: .72rem; color: var(--text-dim); }
+  #session-toc .toc-date:hover, #session-toc .toc-sub:hover { background: var(--bg-input); color: var(--accent); }
+  @media (max-width: 900px) { #session-toc { display: none; } }
   .session-head { display: flex; align-items: baseline; gap: .8rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
   .session-head h2 { font-style: italic; font-weight: normal; font-size: 1.05rem; color: var(--accent); }
   .session-head .dates { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
@@ -508,6 +571,7 @@
           <div id="session-body"></div>
         </div>
       </div>
+      <div id="session-toc"></div>
     </div>
   </section>
 
@@ -733,6 +797,16 @@
           <button class="quiet" data-suggest="project">projects</button>
           <button class="quiet" data-suggest="place">places</button>
         </div>
+        <div id="group-browser">
+          <div id="group-header">groups
+            <button class="quiet" id="group-new-btn" title="create a group">+ new</button>
+          </div>
+          <div id="group-newform" style="display:none">
+            <input type="text" id="group-new-name" placeholder="group name…">
+            <button class="quiet" id="group-new-save">create</button>
+          </div>
+          <div id="group-list"></div>
+        </div>
         <div id="entity-groups"></div>
       </div>
       <div id="entity-detail">
@@ -758,12 +832,19 @@
           <input type="text" id="alias-new" placeholder="add alias…" style="width:9rem">
           <button class="quiet" id="alias-add-btn">add</button>
         </div>
+        <div class="ent-actions" id="group-row" style="display:none">
+          <span class="alias-label">groups:</span>
+          <span id="group-chips"></span>
+          <input type="text" id="group-add-input" list="group-names" placeholder="add to group…" style="width:9rem">
+          <button class="quiet" id="group-add-btn">add</button>
+        </div>
         <div id="entity-doc"></div>
       </div>
     </div>
   </section>
 </main>
 <datalist id="entity-names"></datalist>
+<datalist id="group-names"></datalist>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -1187,6 +1268,13 @@ async function loadHistory() {
   await showSession(sessionSel);
 }
 
+// history dates display in the same M/D/YY style as the chat titles;
+// replaces the ISO date inside a string, keeping any time part
+function fmtDate(s) {
+  return (s || '').replace(/(\d{4})-(\d{2})-(\d{2})/,
+    (_, y, mo, d) => `${+mo}/${+d}/${y.slice(2)}`);
+}
+
 function renderSessionList() {
   const el = $('session-list-items');
   el.innerHTML = '';
@@ -1208,15 +1296,19 @@ function renderSessionList() {
      `open · ${cur.message_count} message${cur.message_count === 1 ? '' : 's'}`,
      true);
   for (const s of sessionIndex.sessions) {
-    const key = s.kind === 'archive' ? 'a:' + s.id : 'c:' + JSON.stringify([s.date, s.title]);
-    mk(key, s.title || '(untitled)', s.start === s.end ? s.start : `${s.start} → ${s.end}`, false);
+    const key = s.kind === 'archive'
+      ? 'a:' + s.id
+      : 'c:' + JSON.stringify([s.title, s.start, s.end]);
+    mk(key, s.title || '(untitled)',
+       s.start === s.end ? fmtDate(s.start) : `${fmtDate(s.start)} → ${fmtDate(s.end)}`, false);
   }
 }
 
-function addSessionPart(container, label, text) {
+function addSessionPart(container, label, text, date) {
   const l = document.createElement('div');
   l.className = 'session-part-label';
   l.textContent = label;
+  if (date) { l.dataset.tocDate = date; l.dataset.tocKind = 'entry'; }
   const t = document.createElement('div');
   t.className = 'session-part';
   t.textContent = text;
@@ -1226,38 +1318,100 @@ function addSessionPart(container, label, text) {
 // a part with both sides (backfilled from the Claude export) renders as
 // an interleaved chat; otherwise the flat user-side text
 function renderSessionPart(container, p) {
-  const label = `${p.date} — ${p.title}`;
+  const label = `${fmtDate(p.date)} — ${p.title}`;
+  if (p.summary) addPartSummary(container, p);
   if (p.messages) {
     const l = document.createElement('div');
     l.className = 'session-part-label';
     l.textContent = label;
+    l.dataset.tocDate = p.date;
+    l.dataset.tocKind = 'entry';
     container.appendChild(l);
     addSessionBraid(container, p.messages);
   } else {
-    addSessionPart(container, label, p.text);
+    addSessionPart(container, label, p.text, p.date);
   }
 }
 
-function addSessionBraid(container, msgs) {
+function addPartSummary(container, p) {
+  const s = document.createElement('div');
+  s.className = 'cat-summary';
+  s.textContent = `${fmtDate(p.date)} — ${p.summary}`;
+  s.dataset.tocDate = p.date;
+  s.dataset.tocKind = 'summary';
+  container.appendChild(s);
+}
+
+function addSessionBraid(container, msgs, daySummaries) {
+  let lastDay = null;
   for (const m of msgs) {
+    const day = (m.ts || '').slice(0, 10);
+    if (day && day !== lastDay && daySummaries && daySummaries[day]) {
+      addPartSummary(container, daySummaries[day]);
+      delete daySummaries[day];
+    }
     const d = document.createElement('div');
     d.className = 'msg ' + (m.role === 'you' ? 'you' : 'companion');
     d.textContent = m.text;
     if (m.dream) d.title = 'dream entry — lives in the dream realm';
+    if (day && day !== lastDay) {
+      d.dataset.tocDate = day;
+      d.dataset.tocKind = 'entry';
+      lastDay = day;
+    }
     container.appendChild(d);
+  }
+}
+
+// right-hand jump nav: one link per day, with summary/entry sub-links
+// when a day has both
+function buildToc() {
+  const toc = $('session-toc');
+  toc.innerHTML = '';
+  const els = $('session-body').querySelectorAll('[data-toc-date]');
+  if (!els.length) return;
+  const days = [], byDate = {};
+  for (const el of els) {
+    const d = el.dataset.tocDate;
+    if (!byDate[d]) { byDate[d] = {date: d}; days.push(byDate[d]); }
+    if (!byDate[d][el.dataset.tocKind]) byDate[d][el.dataset.tocKind] = el;
+  }
+  const head = document.createElement('div');
+  head.className = 'toc-head';
+  head.textContent = 'jump to';
+  toc.appendChild(head);
+  const go = el => el.scrollIntoView({behavior: 'smooth', block: 'start'});
+  for (const d of days) {
+    const b = document.createElement('button');
+    b.className = 'toc-date';
+    b.textContent = fmtDate(d.date);
+    b.onclick = () => go(d.summary || d.entry);
+    toc.appendChild(b);
+    if (d.summary && d.entry) {
+      const mk = (label, el) => {
+        const s = document.createElement('button');
+        s.className = 'toc-sub';
+        s.textContent = label;
+        s.onclick = () => go(el);
+        toc.appendChild(s);
+      };
+      mk('summary', d.summary);
+      mk('entry', d.entry);
+    }
   }
 }
 
 async function showSession(key) {
   const body = $('session-body');
   body.textContent = 'loading…';
+  $('session-toc').innerHTML = '';
   $('session-close-btn').style.display = 'none';
 
   if (key === 'current') {
     const r = await (await fetch('/api/sessions/current')).json();
     if (sessionSel !== 'current') return;
     $('session-title').textContent = r.parts.length ? r.parts[0].title : 'current chat';
-    $('session-dates').textContent = 'open since ' + r.started;
+    $('session-dates').textContent = 'open since ' + fmtDate(r.started);
     body.innerHTML = '';
     for (const p of r.parts) renderSessionPart(body, p);
     addSessionBraid(body, r.messages);
@@ -1272,32 +1426,38 @@ async function showSession(key) {
     if (sessionSel !== key) return;
     if (r.error) { body.textContent = r.error; return; }
     $('session-title').textContent = r.title;
-    $('session-dates').textContent = `${r.started} → closed ${r.closed}`;
+    $('session-dates').textContent = `${fmtDate(r.started)} → closed ${fmtDate(r.closed)}`;
     body.innerHTML = '';
     for (const p of r.parts) {
       if (p.text || p.messages) renderSessionPart(body, p);
     }
-    addSessionBraid(body, r.messages);
+    // the closing entries' content lives in the braid below; each day's
+    // summary slots in right above that day's messages
+    const daySummaries = {};
+    for (const p of r.parts) {
+      if (!p.text && !p.messages && p.summary) daySummaries[p.date] = p;
+    }
+    addSessionBraid(body, r.messages, daySummaries);
+    // any summary whose day never appears in the braid still shows
+    for (const d of Object.keys(daySummaries).sort()) {
+      addPartSummary(body, daySummaries[d]);
+    }
 
   } else {
-    const [date, title] = JSON.parse(key.slice(2));
+    const [title, start, end] = JSON.parse(key.slice(2));
     const r = await (await fetch(
-      `/api/entry?date=${encodeURIComponent(date)}&title=${encodeURIComponent(title)}`
+      `/api/sessions/conversation?title=${encodeURIComponent(title)}` +
+      `&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
     )).json();
     if (sessionSel !== key) return;
     if (r.error) { body.textContent = r.error; return; }
     $('session-title').textContent = r.title || '(untitled)';
-    $('session-dates').textContent = r.date;
+    $('session-dates').textContent = r.start === r.end
+      ? fmtDate(r.start) : `${fmtDate(r.start)} → ${fmtDate(r.end)}`;
     body.innerHTML = '';
-    if (r.summary) {
-      const s = document.createElement('div');
-      s.className = 'cat-summary';
-      s.textContent = r.summary;
-      body.appendChild(s);
-    }
-    if (r.messages) addSessionBraid(body, r.messages);
-    else addSessionPart(body, 'your side of this chat (imported)', r.text);
+    for (const p of r.parts) renderSessionPart(body, p);
   }
+  buildToc();
 }
 
 $('session-close-btn').onclick = closeSession;
@@ -1312,11 +1472,12 @@ async function loadEntities() {
     o.value = name;
     dl.appendChild(o);
   }
+  await loadGroups();
   renderEntityList();
   refreshStatus();
 }
 
-const filters = {unreviewed: false, single: false};
+const filters = {unreviewed: false, single: false, group: null};
 let sortAlpha = false;
 $('flt-unreviewed').onclick = () => {
   filters.unreviewed = !filters.unreviewed;
@@ -1336,12 +1497,14 @@ $('sort-az').onclick = () => {
 
 function renderEntityList() {
   const filter = $('search').value.trim().toLowerCase();
+  const activeGroupSet = filters.group ? groupSetDeep(filters.group) : null;
   const groups = {person: [], project: [], place: []};
   for (const [name, info] of Object.entries(entities)) {
     const hay = (name + ' ' + (info.aliases || []).join(' ')).toLowerCase();
     if (filter && !hay.includes(filter)) continue;
     if (filters.unreviewed && info.reviewed) continue;
     if (filters.single && info.mentions !== 1) continue;
+    if (activeGroupSet && !(info.groups || []).some(g => activeGroupSet.has(g.toLowerCase()))) continue;
     groups[info.type].push([name, info.mentions, info.reviewed]);
   }
   const wrap = $('entity-groups');
@@ -1384,6 +1547,240 @@ function renderEntityList() {
   }
 }
 $('search').oninput = renderEntityList;
+
+// ---- entity groups (viewing & associating; nestable via parent) ----
+let groupsData = [];
+let expandedGroup = null;
+
+async function loadGroups() {
+  groupsData = (await (await fetch('/api/groups')).json()).groups || [];
+  const dl = $('group-names');
+  dl.innerHTML = '';
+  const sorted = [...groupsData].sort((a, b) =>
+    a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  for (const g of sorted) {
+    const o = document.createElement('option');
+    o.value = g.name;
+    dl.appendChild(o);
+  }
+  if (filters.group && !groupsData.some(g => g.name === filters.group)) filters.group = null;
+  if (expandedGroup && !groupsData.some(g => g.name === expandedGroup)) expandedGroup = null;
+  renderGroupBrowser();
+}
+
+function groupSetDeep(name) {
+  // lowercase names of the group + all nested child groups
+  const active = new Set([name.toLowerCase()]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const g of groupsData) {
+      if (g.parent && active.has(g.parent.toLowerCase()) && !active.has(g.name.toLowerCase())) {
+        active.add(g.name.toLowerCase());
+        changed = true;
+      }
+    }
+  }
+  return active;
+}
+
+function groupPathLabel(name) {
+  const chain = [], seen = new Set();
+  let cur = groupsData.find(g => g.name.toLowerCase() === name.toLowerCase());
+  while (cur && !seen.has(cur.name.toLowerCase())) {
+    seen.add(cur.name.toLowerCase());
+    chain.unshift(cur.name);
+    const parent = cur.parent;
+    cur = parent ? groupsData.find(g => g.name.toLowerCase() === parent.toLowerCase()) : null;
+  }
+  return chain.join(' › ') || name;
+}
+
+function renderGroupBrowser() {
+  const list = $('group-list');
+  list.innerHTML = '';
+  const names = new Set(groupsData.map(g => g.name.toLowerCase()));
+  const sortG = arr => arr.sort((a, b) =>
+    a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  // orphaned parents render as roots so nothing disappears
+  const roots = groupsData.filter(g => !g.parent || !names.has(g.parent.toLowerCase()));
+  const childrenOf = name =>
+    groupsData.filter(g => g.parent.toLowerCase() === name.toLowerCase());
+
+  const renderOne = (g, depth) => {
+    const row = document.createElement('div');
+    row.className = 'grp-row' + (filters.group === g.name ? ' on' : '');
+    row.style.paddingLeft = (depth * 0.9) + 'rem';
+
+    const deep = groupSetDeep(g.name);
+    const memberSet = new Set();
+    for (const gg of groupsData) {
+      if (deep.has(gg.name.toLowerCase())) {
+        for (const m of gg.members) memberSet.add(m.toLowerCase());
+      }
+    }
+
+    const btn = document.createElement('button');
+    btn.className = 'grp-btn';
+    btn.innerHTML = `${g.name} <span class="n">${memberSet.size}</span>`;
+    btn.title = 'show only entities in this group';
+    btn.onclick = () => {
+      filters.group = filters.group === g.name ? null : g.name;
+      renderGroupBrowser();
+      renderEntityList();
+    };
+    row.appendChild(btn);
+
+    const edit = document.createElement('button');
+    edit.className = 'grp-edit' + (expandedGroup === g.name ? ' on' : '');
+    edit.textContent = '✎';
+    edit.title = 'edit this group';
+    edit.onclick = () => {
+      expandedGroup = expandedGroup === g.name ? null : g.name;
+      renderGroupBrowser();
+    };
+    row.appendChild(edit);
+    list.appendChild(row);
+
+    if (expandedGroup === g.name) list.appendChild(groupEditor(g));
+    for (const child of sortG(childrenOf(g.name))) renderOne(child, depth + 1);
+  };
+  for (const g of sortG(roots)) renderOne(g, 0);
+}
+
+function groupEditor(g) {
+  const ed = document.createElement('div');
+  ed.className = 'grp-editor';
+
+  const chips = document.createElement('div');
+  chips.className = 'chips';
+  const mkChip = (m, dim) => {
+    const c = document.createElement('span');
+    c.className = 'kw-chip member' + (dim ? ' dim' : '');
+    const t = document.createElement('span');
+    t.textContent = m;
+    if (dim) t.title = 'no longer matches an entity';
+    else {
+      t.style.cursor = 'pointer';
+      t.title = 'open entity';
+      t.onclick = () => showEntity(m);
+    }
+    c.appendChild(t);
+    const x = document.createElement('button');
+    x.textContent = '×';
+    x.title = 'remove from group';
+    x.onclick = async () => {
+      if (await api('/api/groups/member', {group: g.name, entity: m, remove: true})) await loadEntities();
+    };
+    c.appendChild(x);
+    chips.appendChild(c);
+  };
+  for (const m of g.members) mkChip(m, false);
+  for (const m of g.unresolved) mkChip(m, true);
+  if (!g.members.length && !g.unresolved.length) chips.textContent = 'no members yet';
+  ed.appendChild(chips);
+
+  const addRow = document.createElement('div');
+  addRow.className = 'grp-ops';
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.setAttribute('list', 'entity-names');
+  inp.placeholder = 'add entity…';
+  const addB = document.createElement('button');
+  addB.className = 'quiet';
+  addB.textContent = 'add';
+  const doAdd = async () => {
+    const v = inp.value.trim();
+    if (!v) return;
+    if (await api('/api/groups/member', {group: g.name, entity: v})) await loadEntities();
+  };
+  addB.onclick = doAdd;
+  inp.onkeydown = e => { if (e.key === 'Enter') doAdd(); };
+  addRow.appendChild(inp);
+  addRow.appendChild(addB);
+  ed.appendChild(addRow);
+
+  const ops = document.createElement('div');
+  ops.className = 'grp-ops';
+
+  const ren = document.createElement('button');
+  ren.className = 'quiet';
+  ren.textContent = 'rename';
+  ren.onclick = async () => {
+    const v = prompt('Rename group:', g.name);
+    if (!v || v.trim() === g.name) return;
+    if (await api('/api/groups/edit', {name: g.name, rename: v.trim()})) {
+      if (filters.group === g.name) filters.group = v.trim();
+      if (expandedGroup === g.name) expandedGroup = v.trim();
+      await loadEntities();
+    }
+  };
+  ops.appendChild(ren);
+
+  const sel = document.createElement('select');
+  sel.title = 'nest this group under another';
+  const own = groupSetDeep(g.name);
+  const optRoot = document.createElement('option');
+  optRoot.value = '';
+  optRoot.textContent = '(no parent)';
+  sel.appendChild(optRoot);
+  for (const other of groupsData) {
+    if (own.has(other.name.toLowerCase())) continue;
+    const o = document.createElement('option');
+    o.value = other.name;
+    o.textContent = 'under ' + other.name;
+    if (g.parent.toLowerCase() === other.name.toLowerCase()) o.selected = true;
+    sel.appendChild(o);
+  }
+  sel.onchange = async () => {
+    if (await api('/api/groups/edit', {name: g.name, parent: sel.value})) await loadEntities();
+  };
+  ops.appendChild(sel);
+
+  const del = document.createElement('button');
+  del.className = 'quiet';
+  del.textContent = 'delete';
+  del.onclick = async () => {
+    if (!confirm(`Delete group "${g.name}"?\n(entities are not affected; nested groups move up a level)`)) return;
+    if (await api('/api/groups/edit', {name: g.name, delete: true})) {
+      if (filters.group === g.name) filters.group = null;
+      expandedGroup = null;
+      await loadEntities();
+    }
+  };
+  ops.appendChild(del);
+  ed.appendChild(ops);
+  return ed;
+}
+
+$('group-new-btn').onclick = () => {
+  const f = $('group-newform');
+  const opening = f.style.display === 'none';
+  f.style.display = opening ? 'flex' : 'none';
+  if (opening) $('group-new-name').focus();
+};
+async function createGroup() {
+  const v = $('group-new-name').value.trim();
+  if (!v) return;
+  if (await api('/api/groups', {name: v})) {
+    $('group-new-name').value = '';
+    $('group-newform').style.display = 'none';
+    await loadEntities();
+  }
+}
+$('group-new-save').onclick = createGroup;
+$('group-new-name').onkeydown = e => { if (e.key === 'Enter') createGroup(); };
+
+async function addSelectedToGroup() {
+  const v = $('group-add-input').value.trim();
+  if (!v || !selected) return;
+  if (await api('/api/groups/member', {group: v, entity: selected})) {
+    $('group-add-input').value = '';
+    await reloadEntity(selected);
+  }
+}
+$('group-add-btn').onclick = addSelectedToGroup;
+$('group-add-input').onkeydown = e => { if (e.key === 'Enter') addSelectedToGroup(); };
 
 // ---- local duplicate finder ----
 $('find-dups').onclick = async () => {
@@ -1457,6 +1854,25 @@ async function showEntity(name) {
     chips.appendChild(c);
   }
 
+  // groups this entity belongs to
+  $('group-row').style.display = 'flex';
+  $('group-add-input').value = '';
+  const gchips = $('group-chips');
+  gchips.innerHTML = '';
+  for (const g of (info.groups || [])) {
+    const c = document.createElement('span');
+    c.className = 'chip';
+    c.textContent = groupPathLabel(g) + ' ';
+    const x = document.createElement('button');
+    x.textContent = '×';
+    x.title = 'remove from this group';
+    x.onclick = async () => {
+      if (await api('/api/groups/member', {group: g, entity: r.name, remove: true})) await reloadEntity(r.name);
+    };
+    c.appendChild(x);
+    gchips.appendChild(c);
+  }
+
   // observations grouped by date, each editable
   const docEl = $('entity-doc');
   docEl.innerHTML = '';
@@ -1514,6 +1930,7 @@ async function reloadEntity(name) {
     $('entity-doc').innerHTML = '';
     $('entity-actions').style.display = 'none';
     $('alias-row').style.display = 'none';
+    $('group-row').style.display = 'none';
   }
 }
 
@@ -1524,6 +1941,7 @@ function clearDetail(msg) {
   $('entity-doc').innerHTML = '';
   $('entity-actions').style.display = 'none';
   $('alias-row').style.display = 'none';
+  $('group-row').style.display = 'none';
   loadEntities();
 }
 

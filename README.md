@@ -69,10 +69,10 @@ RAG Journal imports your Claude conversation exports and builds a searchable, co
 ### Start the server
 From the project root:
 ```bash
-.venv\Scripts\python.exe server.py
+ .venv\Scripts\python.exe server.py 
 ```
 
-The journal opens at **http://127.0.0.1:8144**. Static UI reloads on every browser refresh; Python changes need a server restart.
+The journal opens at **http://127.0..venv\Scripts\python.exe server.py0.1:8144**. Static UI reloads on every browser refresh; Python changes need a server restart.
 
 ### Notes
 - **API costs** — browsing and searching are free (local embeddings, no API calls). Chat, writes, reflection, extraction, and tagging call Claude.
