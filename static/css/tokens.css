@@ -1,0 +1,24 @@
+  @font-face {
+    font-family: 'CMU Sans Demi Condensed';
+    src: url('/static/fonts/cmu-sans-demicondensed.ttf') format('truetype');
+    font-weight: 400 600;
+    font-display: swap;
+  }
+  :root {
+    --bg: #211d19;          /* warm charcoal, not pitch black */
+    --bg-raised: #2a2521;
+    --bg-input: #322c27;
+    --text: #e8e0d5;
+    --text-dim: #a99f92;
+    --accent: #d99e5b;      /* lamp amber */
+    --accent-dim: #8a6a44;
+    --border: #3d362f;
+    --you: #c9b99f;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #faf7f2; --bg-raised: #ffffff; --bg-input: #f1ece4;
+      --text: #38322b; --text-dim: #8c8378; --accent: #b5732f;
+      --accent-dim: #d9b183; --border: #e4dcd0; --you: #6b5d49;
+    }
+  }

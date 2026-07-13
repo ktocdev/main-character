@@ -1,0 +1,11 @@
+// Cross-module mutable state. ES-module import bindings are read-only,
+// so anything a module REASSIGNS from outside its own file lives on
+// this object; `filters` is only ever property-mutated, so it exports
+// directly and call sites stay unchanged.
+export const state = {
+  entities: {},          // entity index (entities.js owns; triage reads)
+  selected: null,        // selected entity name (entities.js owns; groups reads)
+  activeTab: 'write',    // main.js owns; write + triage read
+  sessionSel: 'current', // history selection; write's closeSession resets it
+};
+export const filters = {unreviewed: false, single: false, group: null};

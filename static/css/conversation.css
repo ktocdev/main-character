@@ -1,0 +1,59 @@
+  /* Conversation */
+  .msg { margin-bottom: 1.4rem; white-space: pre-wrap; }
+  .msg.you { color: var(--you); }
+  .msg.you::before { content: "you"; }
+  .msg.companion::before { content: "companion"; }
+  .msg::before {
+    display: block; font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent-dim); margin-bottom: .25rem;
+  }
+  .composer {
+    display: flex; gap: .6rem; padding: 1rem 1.5rem 1.25rem;
+    max-width: 46rem; margin: 0 auto; width: 100%;
+  }
+  textarea, input[type=text] {
+    background: var(--bg-input); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: .7rem .9rem; font: inherit; width: 100%;
+    resize: none; outline: none;
+  }
+  textarea:focus, input[type=text]:focus { border-color: var(--accent-dim); }
+  button.send {
+    background: var(--accent); color: var(--bg); border: none; border-radius: 10px;
+    padding: 0 1.2rem; font: .95rem 'CMU Sans Demi Condensed', system-ui, sans-serif; cursor: pointer; flex-shrink: 0;
+  }
+  button.send:disabled { opacity: .45; cursor: default; }
+  button.quiet {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 8px; padding: .3rem .7rem; font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; cursor: pointer;
+  }
+
+  /* Write + chat logs */
+  #entities-pane h2 { font-weight: normal; font-style: italic; font-size: 1.05rem; color: var(--text-dim); margin-bottom: 1rem; }
+  #write-log, #chat-log { flex: 1; overflow-y: auto; padding: 1.5rem; max-width: 46rem; margin: 0 auto; width: 100%; }
+  .write-composer { flex-direction: column; gap: .5rem; }
+  #entry-text { min-height: 4.5rem; max-height: 40vh; overflow-y: auto; }
+  .write-controls { display: flex; align-items: center; gap: .6rem; }
+  .saved-note { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--accent-dim); margin-left: 1rem; flex: 1; }
+  #write-actions { position: relative; margin-left: auto; }
+  #write-actions summary {
+    list-style: none; cursor: pointer; color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: .2rem .7rem; font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+  }
+  #write-actions summary::-webkit-details-marker { display: none; }
+  #write-actions[open] summary { background: var(--bg-input); }
+  #write-actions .menu {
+    position: absolute; bottom: 2.2rem; right: 0; background: var(--bg-raised);
+    border: 1px solid var(--border); border-radius: 10px; padding: .5rem;
+    box-shadow: 0 6px 24px rgba(0,0,0,.35); white-space: nowrap;
+    display: flex; flex-direction: column; gap: .4rem;
+  }
+  #write-actions .menu button { text-align: left; }
+  /* lamp-warm thinking pulse */
+  @keyframes lamp-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+  .msg.thinking::after {
+    content: "· · ·"; color: var(--accent); letter-spacing: .15em;
+    text-shadow: 0 0 10px var(--accent-dim);
+    animation: lamp-pulse 1.6s ease-in-out infinite;
+  }
+
