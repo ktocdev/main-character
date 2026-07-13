@@ -1,0 +1,22 @@
+  /* Dreams */
+  #dreams { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
+  #dream-header { display: flex; align-items: center; gap: 1rem; margin-bottom: .6rem; }
+  #dream-status { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
+  #dream-weather { font-style: italic; color: var(--accent); font-size: .9rem; margin-bottom: 1.2rem; }
+  .dream-card {
+    border: 1px solid var(--border); border-left: 3px solid var(--accent-dim);
+    border-radius: 10px; background: var(--bg-raised);
+    padding: 1rem 1.2rem; margin-bottom: 1rem;
+  }
+  .dream-card h3 {
+    font-size: .9rem; font-weight: 600; color: var(--text-dim);
+    font-family: 'CMU Sans Demi Condensed', system-ui, sans-serif; display: flex; align-items: center; gap: .4rem;
+  }
+  .dream-tone {
+    background: var(--bg-input); border-radius: 999px; padding: .05rem .6rem;
+    font: .72rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--accent);
+  }
+  .dream-card p { margin: .45rem 0 0; font-size: .95rem; }
+  .dream-cast { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin-top: .4rem; }
+  .dream-read { color: var(--text-dim); font-style: italic; font-size: .9rem; }
+

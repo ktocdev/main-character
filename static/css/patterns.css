@@ -1,0 +1,19 @@
+  /* Patterns */
+  #patterns { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
+  #pat-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
+  #pat-status { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
+  .pattern {
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--bg-raised); padding: 1rem 1.2rem; margin-bottom: 1rem;
+  }
+  .pattern h3 {
+    font-size: 1.05rem; font-weight: 600; color: var(--accent);
+    display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
+  }
+  .pat-kind { font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); font-weight: normal; }
+  .pat-dismiss { margin-left: auto; }
+  .pattern p { margin: .4rem 0; font-size: .95rem; }
+  .pat-trigger { color: var(--text-dim); font-style: italic; font-size: .88rem; }
+  .pat-instances { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin-top: .5rem; }
+  .pat-instances div { padding: .12rem 0; }
+
