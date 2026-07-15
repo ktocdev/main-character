@@ -98,6 +98,7 @@ export function init() {
   $('entry-send').onclick = async () => {
     const text = $('entry-text').value.trim();
     if (!text) return;
+    clearComposer();            // shrink the box back to default size right away
     composerBusy(true);
     $('entry-saved').textContent = 'saving…';
     addMsg('you', text);
@@ -106,9 +107,12 @@ export function init() {
       const res = await streamInto(el, '/api/entry', {text});
       if (res.ok) {
         $('entry-saved').textContent = 'entry saved — becomes journal memory when you close the chat';
-        clearComposer();
         refreshStatus();
       } else {
+        // save failed — put the draft back so nothing is lost
+        $('entry-text').value = text;
+        localStorage.setItem('rag_draft', text);
+        autosizeEntry();
         $('entry-saved').textContent = 'save failed — your draft is untouched';
       }
     } finally { composerBusy(false); $('entry-text').focus(); }

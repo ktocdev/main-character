@@ -18,6 +18,8 @@ RAG Journal imports your Claude conversation exports and builds a searchable, co
 - **Curation** — merge/rename/retype entities by hand; the user reviews all changes before saving
 - **Entity profiles** — living docs (1-3 paragraphs) per entity, auto-regenerated weekly as context grows
 - **Observations** — timestamped, tagged, browseable by entity with date facets
+- **Groups** — hand-made, nestable groupings of entities (e.g. "claude skills"); batch-select entities and file them all at once; a group can *roll up* so its members collapse out of the flat list and reveal inline when you click the group title
+- **Triage queue** — keyboard-driven review of extracted entities (keep / merge / correct / rename / alias / retype / delete), 50-deep undo across sessions
 
 ### Context + summaries
 - **Entry summaries** — 2-3 sentence distillations of each entry, cached incrementally
@@ -46,11 +48,14 @@ RAG Journal imports your Claude conversation exports and builds a searchable, co
 
 ### Web UI
 - **Write tab** — the one conversation surface: journal entries ("save entry", markdown-backed immediately) and questions ("send") share the open chat; the companion's replies stream in between; everything persists on the server across refreshes and restarts; entries commit to journal memory when the chat closes; dream checkbox available
-- **Entities tab** — browse all people/projects/places with profiles, observations, and edit options
+- **Chat tab** — a throwaway "look something up" conversation with the companion; never stored as journal data
+- **Search tab** — search the whole journal by meaning (semantic similarity) or exact text
+- **Entities tab** — browse all people/projects/places with profiles, observations, groups, and edit options
 - **Categories tab** — browse entries by category; see domain summaries; tag new entries; propose and manage organic/custom categories
 - **Patterns tab** — view the pattern library with confidence, dated instances, and reasoning; dismiss individual patterns
 - **Dreams tab** — browse all extracted dreams with narrative, cast, tones, and your interpretation; extract dreams from history
 - **History tab** — lands on the open chat (the conversation it continues + every entry, reply, and follow-up in one braid); past chats in a sidebar, one open at a time; "summarize & start new chat" closes the session
+- **Triage tab** — keyboard-driven queue for reviewing extracted entities (keep / merge / correct / rename / alias / retype / delete / skip), with undo
 - **Help tab** — documentation of the system and your involvement
 
 ## What's planned
@@ -69,16 +74,17 @@ RAG Journal imports your Claude conversation exports and builds a searchable, co
 ### Start the server
 From the project root:
 ```bash
- .venv\Scripts\python.exe server.py 
+.venv\Scripts\python.exe server.py
 ```
 
-The journal opens at **http://127.0..venv\Scripts\python.exe server.py0.1:8144**. Static UI reloads on every browser refresh; Python changes need a server restart.
+The journal opens at **http://127.0.0.1:8144**. Static UI reloads on every browser refresh; Python changes need a server restart.
 
 ### Notes
 - **API costs** — browsing and searching are free (local embeddings, no API calls). Chat, writes, reflection, extraction, and tagging call Claude.
 - **Data storage** — everything lives locally:
   - `chroma/` — vector store (ChromaDB)
   - `journal/` — markdown backups of entries and dreams
+  - `entity_graph/` — extracted entities, profiles, aliases, groups, and curation history
   - `categories/`, `patterns/`, `dreams/`, `sessions/` — personal data (gitignored)
 - **Stopping** — `Ctrl+C` in the terminal running `server.py`
 - **Port stuck** — if you can't restart: `Get-NetTCPConnection -LocalPort 8144 -State Listen | Stop-Process -Force`

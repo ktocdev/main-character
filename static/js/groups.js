@@ -4,7 +4,9 @@ import { loadEntities, renderEntityList, showEntity, reloadEntity } from './enti
 
 // ---- entity groups (viewing & associating; nestable via parent) ----
 let groupsData = [];
-let expandedGroup = null;
+let expandedGroup = null;   // which group's editor is open
+let openRollup = null;      // which rolled-up group is expanded to show its members
+let openGroup = null;       // which group's detail page is shown in the right pane
 
 export async function loadGroups() {
   groupsData = (await (await fetch('/api/groups')).json()).groups || [];
@@ -19,7 +21,43 @@ export async function loadGroups() {
   }
   if (filters.group && !groupsData.some(g => g.name === filters.group)) filters.group = null;
   if (expandedGroup && !groupsData.some(g => g.name === expandedGroup)) expandedGroup = null;
+  if (openRollup && !groupsData.some(g => g.name === openRollup)) openRollup = null;
+  if (openGroup && !groupsData.some(g => g.name === openGroup)) openGroup = null;
   renderGroupBrowser();
+}
+
+// canonical (lowercased) names of every entity that sits in a rolled-up
+// group — entities.js hides these from the flat list until the group is opened
+export function rolledUpMemberSet() {
+  const hidden = new Set();
+  for (const g of groupsData) {
+    if (!g.rollup) continue;
+    const deep = groupSetDeep(g.name);
+    for (const gg of groupsData) {
+      if (deep.has(gg.name.toLowerCase())) {
+        for (const m of gg.members) hidden.add(m.toLowerCase());
+      }
+    }
+  }
+  return hidden;
+}
+
+// deep member display names of a group (its own + nested children's),
+// split into resolved (clickable) and unresolved (dormant, dimmed)
+function deepMembers(name) {
+  const deep = groupSetDeep(name);
+  const resolved = new Map(), unresolved = new Map();
+  for (const gg of groupsData) {
+    if (!deep.has(gg.name.toLowerCase())) continue;
+    for (const m of gg.members) resolved.set(m.toLowerCase(), m);
+    for (const m of (gg.unresolved || [])) unresolved.set(m.toLowerCase(), m);
+  }
+  for (const k of resolved.keys()) unresolved.delete(k);
+  const byName = (a, b) => a.toLowerCase().localeCompare(b.toLowerCase());
+  return {
+    resolved: [...resolved.values()].sort(byName),
+    unresolved: [...unresolved.values()].sort(byName),
+  };
 }
 
 export function groupSetDeep(name) {
@@ -62,8 +100,12 @@ function renderGroupBrowser() {
     groupsData.filter(g => g.parent.toLowerCase() === name.toLowerCase());
 
   const renderOne = (g, depth) => {
+    const rolled = !!g.rollup;
+    const isOpen = openRollup === g.name;
     const row = document.createElement('div');
-    row.className = 'grp-row' + (filters.group === g.name ? ' on' : '');
+    row.className = 'grp-row'
+      + ((openGroup === g.name || filters.group === g.name) ? ' on' : '')
+      + (rolled ? ' rolled' : '');
     row.style.paddingLeft = (depth * 0.9) + 'rem';
 
     const deep = groupSetDeep(g.name);
@@ -74,15 +116,24 @@ function renderGroupBrowser() {
       }
     }
 
+    if (rolled) {
+      // the caret is a quick inline peek; the title opens the full page
+      const caret = document.createElement('span');
+      caret.className = 'grp-caret';
+      caret.textContent = isOpen ? '▾' : '▸';
+      caret.title = isOpen ? 'hide members here' : 'peek at members here';
+      caret.onclick = () => {
+        openRollup = isOpen ? null : g.name;
+        renderGroupBrowser();
+      };
+      row.appendChild(caret);
+    }
+
     const btn = document.createElement('button');
     btn.className = 'grp-btn';
     btn.innerHTML = `${g.name} <span class="n">${memberSet.size}</span>`;
-    btn.title = 'show only entities in this group';
-    btn.onclick = () => {
-      filters.group = filters.group === g.name ? null : g.name;
-      renderGroupBrowser();
-      renderEntityList();
-    };
+    btn.title = 'open this group — list its entities on the right';
+    btn.onclick = () => showGroup(g.name);
     row.appendChild(btn);
 
     const edit = document.createElement('button');
@@ -97,9 +148,158 @@ function renderGroupBrowser() {
     list.appendChild(row);
 
     if (expandedGroup === g.name) list.appendChild(groupEditor(g));
+    if (rolled && isOpen) list.appendChild(rolledMembers(g));
     for (const child of sortG(childrenOf(g.name))) renderOne(child, depth + 1);
   };
   for (const g of sortG(roots)) renderOne(g, 0);
+}
+
+// clicking a group in the sidebar opens its page in the right pane: the entities
+// it holds (clickable), any subgroups (drill down), and dormant members (dimmed)
+export function showGroup(name) {
+  const g = groupsData.find(x => x.name.toLowerCase() === name.toLowerCase());
+  if (!g) return;
+  openGroup = g.name;
+  state.selected = null;
+  renderGroupBrowser();   // move the row highlight to this group
+  renderEntityList();     // drop any entity-row highlight
+
+  // this pane is shared with the entity view — hide its entity-only controls
+  $('suggest-panel').style.display = 'none';
+  $('entity-actions').style.display = 'none';
+  $('alias-row').style.display = 'none';
+  $('group-row').style.display = 'none';
+
+  const byName = (a, b) => a.toLowerCase().localeCompare(b.toLowerCase());
+  const kids = groupsData
+    .filter(x => x.parent && x.parent.toLowerCase() === g.name.toLowerCase())
+    .sort((a, b) => byName(a.name, b.name));
+  const members = [...g.members].sort(byName);
+  const dormant = [...(g.unresolved || [])].sort(byName);
+
+  $('entity-name').textContent = groupPathLabel(g.name);
+  const bits = [`${members.length} entit${members.length === 1 ? 'y' : 'ies'}`];
+  if (kids.length) bits.push(`${kids.length} subgroup${kids.length === 1 ? '' : 's'}`);
+  $('entity-meta').textContent = 'group · ' + bits.join(' · ');
+
+  const doc = $('entity-doc');
+  doc.innerHTML = '';
+  const page = document.createElement('div');
+  page.className = 'group-page';
+
+  // preserve the old behavior — narrowing the flat left list to this group
+  const ops = document.createElement('div');
+  ops.className = 'gp-ops';
+  const filtering = filters.group === g.name;
+  const flt = document.createElement('button');
+  flt.className = 'quiet' + (filtering ? ' on chip-toggle' : '');
+  flt.textContent = filtering ? 'clear list filter' : 'show only these in the list';
+  flt.title = 'narrow the left-hand entity list to this group’s members';
+  flt.onclick = () => {
+    filters.group = filtering ? null : g.name;
+    renderEntityList();
+    showGroup(g.name);    // re-render to flip the button + row highlight
+  };
+  ops.appendChild(flt);
+  page.appendChild(ops);
+
+  const section = label => {
+    const s = document.createElement('div');
+    s.className = 'gp-section';
+    s.textContent = label;
+    page.appendChild(s);
+  };
+  const grid = () => {
+    const gd = document.createElement('div');
+    gd.className = 'gp-grid';
+    page.appendChild(gd);
+    return gd;
+  };
+
+  if (kids.length) {
+    section('subgroups');
+    const gd = grid();
+    for (const k of kids) {
+      const b = document.createElement('button');
+      b.className = 'gp-sub';
+      b.innerHTML = `${k.name} <span class="n">${k.members.length}</span>`;
+      b.title = 'open this subgroup';
+      b.onclick = () => showGroup(k.name);
+      gd.appendChild(b);
+    }
+  }
+
+  section(`entities (${members.length})`);
+  if (members.length) {
+    const gd = grid();
+    for (const m of members) {
+      const b = document.createElement('button');
+      b.className = 'gp-ent';
+      b.textContent = m;
+      b.title = 'open entity';
+      b.onclick = () => showEntity(m);
+      gd.appendChild(b);
+    }
+  } else {
+    const e = document.createElement('div');
+    e.className = 'gp-empty';
+    e.textContent = 'no entities in this group yet';
+    page.appendChild(e);
+  }
+
+  if (dormant.length) {
+    section('dormant');
+    const gd = grid();
+    for (const m of dormant) {
+      const s = document.createElement('span');
+      s.className = 'gp-ent dim';
+      s.textContent = m;
+      s.title = 'this name no longer matches an entity';
+      gd.appendChild(s);
+    }
+  }
+
+  doc.appendChild(page);
+}
+
+// entities.js calls this when an entity is opened, so the group page's row
+// highlight clears (the right pane now shows the entity, not the group)
+export function clearGroupSelection() {
+  if (openGroup !== null) {
+    openGroup = null;
+    renderGroupBrowser();
+  }
+}
+
+// inline member list shown under a rolled-up group when it's expanded —
+// its entities live here instead of cluttering the flat person/project list
+function rolledMembers(g) {
+  const box = document.createElement('div');
+  box.className = 'grp-members';
+  const { resolved, unresolved } = deepMembers(g.name);
+  if (!resolved.length && !unresolved.length) {
+    const e = document.createElement('div');
+    e.className = 'empty';
+    e.textContent = 'no members yet';
+    box.appendChild(e);
+    return box;
+  }
+  for (const m of resolved) {
+    const b = document.createElement('button');
+    b.className = 'gm';
+    b.textContent = m;
+    b.title = 'open entity';
+    b.onclick = () => showEntity(m);
+    box.appendChild(b);
+  }
+  for (const m of unresolved) {
+    const b = document.createElement('span');
+    b.className = 'gm dim';
+    b.textContent = m;
+    b.title = 'no longer matches an entity';
+    box.appendChild(b);
+  }
+  return box;
 }
 
 function groupEditor(g) {
@@ -156,6 +356,21 @@ function groupEditor(g) {
 
   const ops = document.createElement('div');
   ops.className = 'grp-ops';
+
+  const roll = document.createElement('button');
+  roll.className = 'quiet' + (g.rollup ? ' on chip-toggle' : '');
+  roll.textContent = g.rollup ? 'unroll' : 'roll up';
+  roll.title = g.rollup
+    ? 'show this group’s members in the main list again'
+    : 'hide this group’s members from the main list; click the group title to reveal them';
+  roll.onclick = async () => {
+    if (await api('/api/groups/edit', {name: g.name, rollup: !g.rollup})) {
+      if (!g.rollup) openRollup = null;  // will re-collapse; nothing to keep open
+      await loadGroups();
+      renderEntityList();
+    }
+  };
+  ops.appendChild(roll);
 
   const ren = document.createElement('button');
   ren.className = 'quiet';

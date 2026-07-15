@@ -1,6 +1,6 @@
 import { $, api, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
-import { loadGroups, groupSetDeep, groupPathLabel } from './groups.js';
+import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection } from './groups.js';
 
 // ---- entities ----
 export async function loadEntities() {
@@ -18,10 +18,20 @@ export async function loadEntities() {
 }
 
 let sortAlpha = false;
+let selectMode = false;         // checkboxes for batch add-to-group
+const picked = new Set();       // entity names checked for the next batch
+
+function updateBatchCount() {
+  $('batch-count').textContent = `${picked.size} selected`;
+}
 
 export function renderEntityList() {
   const filter = $('search').value.trim().toLowerCase();
   const activeGroupSet = filters.group ? groupSetDeep(filters.group) : null;
+  // rolled-up groups collapse their members out of the flat list — but only in
+  // the plain view; an active search, group filter, or select mode reveals them
+  const hideSet = (!filter && !activeGroupSet && !selectMode) ? rolledUpMemberSet() : null;
+  if (selectMode) for (const n of [...picked]) if (!state.entities[n]) picked.delete(n);
   const groups = {person: [], project: [], place: []};
   for (const [name, info] of Object.entries(state.entities)) {
     const hay = (name + ' ' + (info.aliases || []).join(' ')).toLowerCase();
@@ -29,11 +39,14 @@ export function renderEntityList() {
     if (filters.unreviewed && info.reviewed) continue;
     if (filters.single && info.mentions !== 1) continue;
     if (activeGroupSet && !(info.groups || []).some(g => activeGroupSet.has(g.toLowerCase()))) continue;
+    if (hideSet && hideSet.has(name.toLowerCase())) continue;
     groups[info.type].push([name, info.mentions, info.reviewed]);
   }
   const wrap = $('entity-groups');
   wrap.innerHTML = '';
+  const typeFilter = filters.types.size ? filters.types : null;
   for (const kind of ['person', 'project', 'place']) {
+    if (typeFilter && !typeFilter.has(kind)) continue;
     const items = groups[kind].sort(sortAlpha
       ? (a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase())
       : (a, b) => b[1] - a[1]);
@@ -45,6 +58,20 @@ export function renderEntityList() {
     for (const [name, mentions, reviewed] of items) {
       const row = document.createElement('div');
       row.className = 'ent-row' + (name === state.selected ? ' sel' : '');
+
+      if (selectMode) {
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'ent-check';
+        cb.checked = picked.has(name);
+        cb.title = 'select for “add to group”';
+        cb.onclick = e => e.stopPropagation();
+        cb.onchange = () => {
+          if (cb.checked) picked.add(name); else picked.delete(name);
+          updateBatchCount();
+        };
+        row.appendChild(cb);
+      }
 
       const b = document.createElement('button');
       b.className = 'ent';
@@ -69,6 +96,23 @@ export function renderEntityList() {
       wrap.appendChild(row);
     }
   }
+  if (selectMode) updateBatchCount();
+}
+
+// ---- batch add to group ----
+async function batchAdd() {
+  const group = $('batch-group').value.trim();
+  if (!group) { $('batch-group').focus(); return; }
+  if (!picked.size) return;
+  const r = await api('/api/groups/members', {group, entities: [...picked]});
+  if (!r) return;
+  picked.clear();
+  $('batch-group').value = '';
+  await loadEntities();  // refreshes memberships + group counts, re-renders list
+  const bits = [`added ${r.added.length} to ${r.group}${r.created ? ' (new group)' : ''}`];
+  if (r.skipped.length) bits.push(`${r.skipped.length} already in`);
+  if (r.unresolved.length) bits.push(`${r.unresolved.length} not found`);
+  $('batch-count').textContent = bits.join(' · ');
 }
 // ---- local duplicate finder ----
 async function findDups() {
@@ -103,6 +147,7 @@ async function findDups() {
 
 export async function showEntity(name) {
   state.selected = name;
+  clearGroupSelection();   // right pane now shows an entity, not a group
   renderEntityList();
   const r = await (await fetch('/api/entities/observations?name=' + encodeURIComponent(name))).json();
   if (r.error) { alert(r.error); return; }
@@ -257,6 +302,17 @@ export function init() {
     $('sort-az').classList.toggle('on', sortAlpha);
     renderEntityList();
   };
+  $('flt-select').onclick = () => {
+    selectMode = !selectMode;
+    $('flt-select').classList.toggle('on', selectMode);
+    $('batch-bar').style.display = selectMode ? 'flex' : 'none';
+    if (!selectMode) picked.clear();
+    updateBatchCount();
+    renderEntityList();
+  };
+  $('batch-add').onclick = batchAdd;
+  $('batch-group').onkeydown = e => { if (e.key === 'Enter') batchAdd(); };
+  $('batch-clear').onclick = () => { picked.clear(); updateBatchCount(); renderEntityList(); };
   $('search').oninput = renderEntityList;
   $('find-dups').onclick = findDups;
 
@@ -314,34 +370,47 @@ export function init() {
   refreshHistoryButtons();
   setInterval(refreshHistoryButtons, 15000);
 
-  // ---- merge suggestions ----
-  document.querySelectorAll('[data-suggest]').forEach(b => b.onclick = async () => {
-    const kind = b.dataset.suggest;
-    const panel = $('suggest-panel');
-    panel.style.display = 'block';
-    panel.textContent = `asking claude for ${kind} merge suggestions…`;
-    const r = await api('/api/entities/suggest', {kind});
-    if (!r) { panel.style.display = 'none'; return; }
-    panel.innerHTML = '';
-    if (!r.groups.length) { panel.textContent = 'no confident suggestions — looks clean.'; return; }
-    for (const g of r.groups) {
-      const div = document.createElement('div');
-      div.className = 'sg';
-      div.innerHTML = `<strong>${g.members.join(', ')}</strong> → ${g.canonical}<div class="r">${g.reason}</div>`;
-      const ok = document.createElement('button');
-      ok.className = 'quiet'; ok.textContent = 'apply';
-      ok.onclick = async () => {
-        for (const m of g.members) await api('/api/entities/merge', {source: m, target: g.canonical});
-        div.remove();
-        loadEntities();
-      };
-      const no = document.createElement('button');
-      no.className = 'quiet'; no.textContent = 'dismiss';
-      no.onclick = () => div.remove();
-      div.appendChild(ok);
-      div.appendChild(document.createTextNode(' '));
-      div.appendChild(no);
-      panel.appendChild(div);
-    }
+  // ---- type filter chips ----
+  document.querySelectorAll('#type-chips [data-type]').forEach(b => b.onclick = () => {
+    const kind = b.dataset.type;
+    if (filters.types.has(kind)) filters.types.delete(kind); else filters.types.add(kind);
+    b.classList.toggle('on', filters.types.has(kind));
+    renderEntityList();
   });
+
+  // ---- merge suggestions (ask claude, by type) ----
+  $('suggest-kind').onchange = e => {
+    const kind = e.target.value;
+    e.target.value = '';               // reset to the placeholder for next time
+    if (kind) askSuggest(kind);
+  };
+}
+
+async function askSuggest(kind) {
+  const panel = $('suggest-panel');
+  panel.style.display = 'block';
+  panel.textContent = `asking claude for ${kind} merge suggestions…`;
+  const r = await api('/api/entities/suggest', {kind});
+  if (!r) { panel.style.display = 'none'; return; }
+  panel.innerHTML = '';
+  if (!r.groups.length) { panel.textContent = 'no confident suggestions — looks clean.'; return; }
+  for (const g of r.groups) {
+    const div = document.createElement('div');
+    div.className = 'sg';
+    div.innerHTML = `<strong>${g.members.join(', ')}</strong> → ${g.canonical}<div class="r">${g.reason}</div>`;
+    const ok = document.createElement('button');
+    ok.className = 'quiet'; ok.textContent = 'apply';
+    ok.onclick = async () => {
+      for (const m of g.members) await api('/api/entities/merge', {source: m, target: g.canonical});
+      div.remove();
+      loadEntities();
+    };
+    const no = document.createElement('button');
+    no.className = 'quiet'; no.textContent = 'dismiss';
+    no.onclick = () => div.remove();
+    div.appendChild(ok);
+    div.appendChild(document.createTextNode(' '));
+    div.appendChild(no);
+    panel.appendChild(div);
+  }
 }

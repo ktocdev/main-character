@@ -609,6 +609,16 @@ def _apply_snapshot(entry: dict, direction: str):
     if entry["kind"] == "curation":
         save_curation(payload)
     elif entry["kind"] == "groups":
+        # rollup is a view preference, not journal data — carry the live flags
+        # across so undo/redo of membership/nesting never toggles a group's
+        # collapsed state (copy first so the stored snapshot stays untouched)
+        live = {g["name"].lower(): g.get("rollup", False) for g in load_groups()}
+        payload = json.loads(json.dumps(payload))
+        for g in payload:
+            if live.get(g["name"].lower()):
+                g["rollup"] = True
+            else:
+                g.pop("rollup", None)
         save_groups(payload)
     else:  # raw file content
         (RAW_DIR / Path(entry["file"]).name).write_text(payload, encoding="utf-8")
