@@ -1,6 +1,6 @@
 import { $, api, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
-import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet } from './groups.js';
+import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection } from './groups.js';
 
 // ---- entities ----
 export async function loadEntities() {
@@ -147,6 +147,7 @@ async function findDups() {
 
 export async function showEntity(name) {
   state.selected = name;
+  clearGroupSelection();   // right pane now shows an entity, not a group
   renderEntityList();
   const r = await (await fetch('/api/entities/observations?name=' + encodeURIComponent(name))).json();
   if (r.error) { alert(r.error); return; }

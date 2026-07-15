@@ -6,6 +6,7 @@ import { loadEntities, renderEntityList, showEntity, reloadEntity } from './enti
 let groupsData = [];
 let expandedGroup = null;   // which group's editor is open
 let openRollup = null;      // which rolled-up group is expanded to show its members
+let openGroup = null;       // which group's detail page is shown in the right pane
 
 export async function loadGroups() {
   groupsData = (await (await fetch('/api/groups')).json()).groups || [];
@@ -21,6 +22,7 @@ export async function loadGroups() {
   if (filters.group && !groupsData.some(g => g.name === filters.group)) filters.group = null;
   if (expandedGroup && !groupsData.some(g => g.name === expandedGroup)) expandedGroup = null;
   if (openRollup && !groupsData.some(g => g.name === openRollup)) openRollup = null;
+  if (openGroup && !groupsData.some(g => g.name === openGroup)) openGroup = null;
   renderGroupBrowser();
 }
 
@@ -101,7 +103,8 @@ function renderGroupBrowser() {
     const rolled = !!g.rollup;
     const isOpen = openRollup === g.name;
     const row = document.createElement('div');
-    row.className = 'grp-row' + (filters.group === g.name ? ' on' : '')
+    row.className = 'grp-row'
+      + ((openGroup === g.name || filters.group === g.name) ? ' on' : '')
       + (rolled ? ' rolled' : '');
     row.style.paddingLeft = (depth * 0.9) + 'rem';
 
@@ -114,29 +117,23 @@ function renderGroupBrowser() {
     }
 
     if (rolled) {
+      // the caret is a quick inline peek; the title opens the full page
       const caret = document.createElement('span');
       caret.className = 'grp-caret';
       caret.textContent = isOpen ? '▾' : '▸';
+      caret.title = isOpen ? 'hide members here' : 'peek at members here';
+      caret.onclick = () => {
+        openRollup = isOpen ? null : g.name;
+        renderGroupBrowser();
+      };
       row.appendChild(caret);
     }
 
     const btn = document.createElement('button');
     btn.className = 'grp-btn';
     btn.innerHTML = `${g.name} <span class="n">${memberSet.size}</span>`;
-    // rolled-up groups collapse their members out of the flat list, so the
-    // title toggles an inline reveal instead of filtering the main list
-    btn.title = rolled ? 'show / hide this group’s members'
-                       : 'show only entities in this group';
-    btn.onclick = () => {
-      if (rolled) {
-        openRollup = isOpen ? null : g.name;
-        renderGroupBrowser();
-      } else {
-        filters.group = filters.group === g.name ? null : g.name;
-        renderGroupBrowser();
-        renderEntityList();
-      }
-    };
+    btn.title = 'open this group — list its entities on the right';
+    btn.onclick = () => showGroup(g.name);
     row.appendChild(btn);
 
     const edit = document.createElement('button');
@@ -155,6 +152,123 @@ function renderGroupBrowser() {
     for (const child of sortG(childrenOf(g.name))) renderOne(child, depth + 1);
   };
   for (const g of sortG(roots)) renderOne(g, 0);
+}
+
+// clicking a group in the sidebar opens its page in the right pane: the entities
+// it holds (clickable), any subgroups (drill down), and dormant members (dimmed)
+export function showGroup(name) {
+  const g = groupsData.find(x => x.name.toLowerCase() === name.toLowerCase());
+  if (!g) return;
+  openGroup = g.name;
+  state.selected = null;
+  renderGroupBrowser();   // move the row highlight to this group
+  renderEntityList();     // drop any entity-row highlight
+
+  // this pane is shared with the entity view — hide its entity-only controls
+  $('suggest-panel').style.display = 'none';
+  $('entity-actions').style.display = 'none';
+  $('alias-row').style.display = 'none';
+  $('group-row').style.display = 'none';
+
+  const byName = (a, b) => a.toLowerCase().localeCompare(b.toLowerCase());
+  const kids = groupsData
+    .filter(x => x.parent && x.parent.toLowerCase() === g.name.toLowerCase())
+    .sort((a, b) => byName(a.name, b.name));
+  const members = [...g.members].sort(byName);
+  const dormant = [...(g.unresolved || [])].sort(byName);
+
+  $('entity-name').textContent = groupPathLabel(g.name);
+  const bits = [`${members.length} entit${members.length === 1 ? 'y' : 'ies'}`];
+  if (kids.length) bits.push(`${kids.length} subgroup${kids.length === 1 ? '' : 's'}`);
+  $('entity-meta').textContent = 'group · ' + bits.join(' · ');
+
+  const doc = $('entity-doc');
+  doc.innerHTML = '';
+  const page = document.createElement('div');
+  page.className = 'group-page';
+
+  // preserve the old behavior — narrowing the flat left list to this group
+  const ops = document.createElement('div');
+  ops.className = 'gp-ops';
+  const filtering = filters.group === g.name;
+  const flt = document.createElement('button');
+  flt.className = 'quiet' + (filtering ? ' on chip-toggle' : '');
+  flt.textContent = filtering ? 'clear list filter' : 'show only these in the list';
+  flt.title = 'narrow the left-hand entity list to this group’s members';
+  flt.onclick = () => {
+    filters.group = filtering ? null : g.name;
+    renderEntityList();
+    showGroup(g.name);    // re-render to flip the button + row highlight
+  };
+  ops.appendChild(flt);
+  page.appendChild(ops);
+
+  const section = label => {
+    const s = document.createElement('div');
+    s.className = 'gp-section';
+    s.textContent = label;
+    page.appendChild(s);
+  };
+  const grid = () => {
+    const gd = document.createElement('div');
+    gd.className = 'gp-grid';
+    page.appendChild(gd);
+    return gd;
+  };
+
+  if (kids.length) {
+    section('subgroups');
+    const gd = grid();
+    for (const k of kids) {
+      const b = document.createElement('button');
+      b.className = 'gp-sub';
+      b.innerHTML = `${k.name} <span class="n">${k.members.length}</span>`;
+      b.title = 'open this subgroup';
+      b.onclick = () => showGroup(k.name);
+      gd.appendChild(b);
+    }
+  }
+
+  section(`entities (${members.length})`);
+  if (members.length) {
+    const gd = grid();
+    for (const m of members) {
+      const b = document.createElement('button');
+      b.className = 'gp-ent';
+      b.textContent = m;
+      b.title = 'open entity';
+      b.onclick = () => showEntity(m);
+      gd.appendChild(b);
+    }
+  } else {
+    const e = document.createElement('div');
+    e.className = 'gp-empty';
+    e.textContent = 'no entities in this group yet';
+    page.appendChild(e);
+  }
+
+  if (dormant.length) {
+    section('dormant');
+    const gd = grid();
+    for (const m of dormant) {
+      const s = document.createElement('span');
+      s.className = 'gp-ent dim';
+      s.textContent = m;
+      s.title = 'this name no longer matches an entity';
+      gd.appendChild(s);
+    }
+  }
+
+  doc.appendChild(page);
+}
+
+// entities.js calls this when an entity is opened, so the group page's row
+// highlight clears (the right pane now shows the entity, not the group)
+export function clearGroupSelection() {
+  if (openGroup !== null) {
+    openGroup = null;
+    renderGroupBrowser();
+  }
 }
 
 // inline member list shown under a rolled-up group when it's expanded —

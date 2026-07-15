@@ -118,6 +118,25 @@
   .grp-members .gm:hover { background: var(--bg-raised); color: var(--text); }
   .grp-members .gm.dim { opacity: .45; font-style: italic; cursor: default; }
   .grp-members .empty { color: var(--text-dim); font-size: .8rem; padding: .15rem .4rem; }
+  /* group detail page (right pane, opened by clicking a group in the sidebar) */
+  .group-page { font-size: .9rem; }
+  .gp-ops { display: flex; gap: .5rem; margin: .2rem 0 1rem; flex-wrap: wrap; }
+  .gp-section {
+    font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--accent-dim); margin: 1.2rem 0 .5rem;
+  }
+  .gp-grid { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .gp-ent, .gp-sub {
+    text-align: left; background: var(--bg-input); border: 1px solid var(--border);
+    color: var(--text); font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    padding: .3rem .7rem; border-radius: 999px; cursor: pointer;
+  }
+  .gp-ent:hover, .gp-sub:hover { border-color: var(--accent-dim); color: var(--accent); }
+  .gp-sub .n, .gp-ent .n { color: var(--text-dim); font-size: .8rem; margin-left: .15rem; }
+  .gp-ent.dim { opacity: .5; font-style: italic; cursor: default; }
+  .gp-ent.dim:hover { border-color: var(--border); color: var(--text); }
+  .gp-empty { color: var(--text-dim); font-style: italic; padding: .2rem 0; }
+  .grp-caret { cursor: pointer; }
   .rev-check { color: var(--accent-dim); font-size: .75rem; margin-left: .25rem; }
   .thinking { color: var(--text-dim); font-style: italic; }
 
