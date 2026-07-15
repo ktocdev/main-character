@@ -1,6 +1,6 @@
 import { $, api, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
-import { loadGroups, groupSetDeep, groupPathLabel } from './groups.js';
+import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet } from './groups.js';
 
 // ---- entities ----
 export async function loadEntities() {
@@ -18,10 +18,20 @@ export async function loadEntities() {
 }
 
 let sortAlpha = false;
+let selectMode = false;         // checkboxes for batch add-to-group
+const picked = new Set();       // entity names checked for the next batch
+
+function updateBatchCount() {
+  $('batch-count').textContent = `${picked.size} selected`;
+}
 
 export function renderEntityList() {
   const filter = $('search').value.trim().toLowerCase();
   const activeGroupSet = filters.group ? groupSetDeep(filters.group) : null;
+  // rolled-up groups collapse their members out of the flat list — but only in
+  // the plain view; an active search, group filter, or select mode reveals them
+  const hideSet = (!filter && !activeGroupSet && !selectMode) ? rolledUpMemberSet() : null;
+  if (selectMode) for (const n of [...picked]) if (!state.entities[n]) picked.delete(n);
   const groups = {person: [], project: [], place: []};
   for (const [name, info] of Object.entries(state.entities)) {
     const hay = (name + ' ' + (info.aliases || []).join(' ')).toLowerCase();
@@ -29,6 +39,7 @@ export function renderEntityList() {
     if (filters.unreviewed && info.reviewed) continue;
     if (filters.single && info.mentions !== 1) continue;
     if (activeGroupSet && !(info.groups || []).some(g => activeGroupSet.has(g.toLowerCase()))) continue;
+    if (hideSet && hideSet.has(name.toLowerCase())) continue;
     groups[info.type].push([name, info.mentions, info.reviewed]);
   }
   const wrap = $('entity-groups');
@@ -45,6 +56,20 @@ export function renderEntityList() {
     for (const [name, mentions, reviewed] of items) {
       const row = document.createElement('div');
       row.className = 'ent-row' + (name === state.selected ? ' sel' : '');
+
+      if (selectMode) {
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'ent-check';
+        cb.checked = picked.has(name);
+        cb.title = 'select for “add to group”';
+        cb.onclick = e => e.stopPropagation();
+        cb.onchange = () => {
+          if (cb.checked) picked.add(name); else picked.delete(name);
+          updateBatchCount();
+        };
+        row.appendChild(cb);
+      }
 
       const b = document.createElement('button');
       b.className = 'ent';
@@ -69,6 +94,23 @@ export function renderEntityList() {
       wrap.appendChild(row);
     }
   }
+  if (selectMode) updateBatchCount();
+}
+
+// ---- batch add to group ----
+async function batchAdd() {
+  const group = $('batch-group').value.trim();
+  if (!group) { $('batch-group').focus(); return; }
+  if (!picked.size) return;
+  const r = await api('/api/groups/members', {group, entities: [...picked]});
+  if (!r) return;
+  picked.clear();
+  $('batch-group').value = '';
+  await loadEntities();  // refreshes memberships + group counts, re-renders list
+  const bits = [`added ${r.added.length} to ${r.group}${r.created ? ' (new group)' : ''}`];
+  if (r.skipped.length) bits.push(`${r.skipped.length} already in`);
+  if (r.unresolved.length) bits.push(`${r.unresolved.length} not found`);
+  $('batch-count').textContent = bits.join(' · ');
 }
 // ---- local duplicate finder ----
 async function findDups() {
@@ -257,6 +299,17 @@ export function init() {
     $('sort-az').classList.toggle('on', sortAlpha);
     renderEntityList();
   };
+  $('flt-select').onclick = () => {
+    selectMode = !selectMode;
+    $('flt-select').classList.toggle('on', selectMode);
+    $('batch-bar').style.display = selectMode ? 'flex' : 'none';
+    if (!selectMode) picked.clear();
+    updateBatchCount();
+    renderEntityList();
+  };
+  $('batch-add').onclick = batchAdd;
+  $('batch-group').onkeydown = e => { if (e.key === 'Enter') batchAdd(); };
+  $('batch-clear').onclick = () => { picked.clear(); updateBatchCount(); renderEntityList(); };
   $('search').oninput = renderEntityList;
   $('find-dups').onclick = findDups;
 

@@ -124,11 +124,18 @@ class GroupMemberIn(BaseModel):
     remove: bool = False
 
 
+class GroupMembersIn(BaseModel):
+    group: str
+    entities: list[str]
+    parent: str = ""
+
+
 class GroupEditIn(BaseModel):
     name: str
     rename: str = ""
     parent: str | None = None  # None = unchanged, "" = make root
     delete: bool = False
+    rollup: bool | None = None  # None = unchanged; collapse members out of the flat list
 
 
 class CategoryTagIn(BaseModel):
@@ -622,6 +629,7 @@ def list_groups():
         out.append({
             "name": g["name"],
             "parent": g["parent"],
+            "rollup": bool(g.get("rollup")),
             "members": sorted(resolved, key=str.lower),
             "unresolved": sorted(unresolved, key=str.lower),
         })
@@ -696,6 +704,53 @@ def group_member(body: GroupMemberIn):
     return {"ok": True, "group": group["name"], "member": canon}
 
 
+@app.post("/api/groups/members")
+def group_members(body: GroupMembersIn):
+    """Batch-add several entities to a group at once, creating the group if
+    it's new. One save, one history record — so a single undo reverts the
+    whole batch. Names that don't resolve to an entity are reported back."""
+    name = body.group.strip()
+    if not name:
+        return JSONResponse({"error": "empty group name"}, status_code=400)
+    groups = entities.load_groups()
+    group = entities.find_group(groups, name)
+    before = _groups_snapshot()
+    created = False
+    if not group:
+        parent = body.parent.strip()
+        if parent and not entities.find_group(groups, parent):
+            return JSONResponse({"error": f"parent group '{parent}' not found"}, status_code=404)
+        group = {"name": name, "parent": parent, "members": []}
+        groups.append(group)
+        created = True
+
+    have = {m.lower() for m in group["members"]}
+    added, skipped, unresolved = [], [], []
+    for raw in body.entities:
+        canon = companion.resolve_entity(STATE["entity_index"], raw)
+        if not canon:
+            unresolved.append(raw)
+        elif canon.lower() in have:
+            skipped.append(canon)
+        else:
+            group["members"].append(canon)
+            have.add(canon.lower())
+            added.append(canon)
+
+    if not added and not created:
+        return {"ok": True, "group": group["name"], "added": [],
+                "skipped": skipped, "unresolved": unresolved, "created": False}
+    group["members"] = sorted(group["members"], key=str.lower)
+    entities.save_groups(groups)
+    desc = f"add {len(added)} to group {group['name']}"
+    if created:
+        desc += " (new group)"
+    _record_groups(desc, before)
+    _rebuild()
+    return {"ok": True, "group": group["name"], "added": added,
+            "skipped": skipped, "unresolved": unresolved, "created": created}
+
+
 @app.post("/api/groups/edit")
 def edit_group(body: GroupEditIn):
     """Rename / reparent / delete a group. Deleting promotes children to
@@ -704,6 +759,14 @@ def edit_group(body: GroupEditIn):
     group = entities.find_group(groups, body.name)
     if not group:
         return JSONResponse({"error": f"group '{body.name}' not found"}, status_code=404)
+
+    # roll-up is a view preference (collapse this group's members out of the
+    # flat sidebar list), not journal data — save it directly, no undo entry.
+    if body.rollup is not None and not body.delete \
+            and not body.rename.strip() and body.parent is None:
+        group["rollup"] = bool(body.rollup)
+        entities.save_groups(groups)
+        return {"ok": True, "group": group["name"], "rollup": group["rollup"]}
 
     before = _groups_snapshot()
     actions = []

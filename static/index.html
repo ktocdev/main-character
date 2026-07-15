@@ -359,6 +359,13 @@
           <button class="quiet chip-toggle" id="flt-unreviewed">unreviewed</button>
           <button class="quiet chip-toggle" id="flt-single">1 mention</button>
           <button class="quiet chip-toggle" id="sort-az" title="sort each group A–Z instead of by most mentions">A–Z</button>
+          <button class="quiet chip-toggle" id="flt-select" title="check entities to add several to a group at once">select</button>
+        </div>
+        <div id="batch-bar" style="display:none">
+          <span id="batch-count">0 selected</span>
+          <input type="text" id="batch-group" list="group-names" placeholder="group name…">
+          <button class="quiet" id="batch-add" title="add all checked entities to this group (new group if the name doesn't exist)">add to group</button>
+          <button class="quiet" id="batch-clear" title="uncheck everything">clear</button>
         </div>
         <div id="suggest-btns">
           <button class="quiet" id="find-dups">find duplicates (free)</button>

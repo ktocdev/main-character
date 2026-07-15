@@ -4,7 +4,8 @@ import { loadEntities, renderEntityList, showEntity, reloadEntity } from './enti
 
 // ---- entity groups (viewing & associating; nestable via parent) ----
 let groupsData = [];
-let expandedGroup = null;
+let expandedGroup = null;   // which group's editor is open
+let openRollup = null;      // which rolled-up group is expanded to show its members
 
 export async function loadGroups() {
   groupsData = (await (await fetch('/api/groups')).json()).groups || [];
@@ -19,7 +20,42 @@ export async function loadGroups() {
   }
   if (filters.group && !groupsData.some(g => g.name === filters.group)) filters.group = null;
   if (expandedGroup && !groupsData.some(g => g.name === expandedGroup)) expandedGroup = null;
+  if (openRollup && !groupsData.some(g => g.name === openRollup)) openRollup = null;
   renderGroupBrowser();
+}
+
+// canonical (lowercased) names of every entity that sits in a rolled-up
+// group — entities.js hides these from the flat list until the group is opened
+export function rolledUpMemberSet() {
+  const hidden = new Set();
+  for (const g of groupsData) {
+    if (!g.rollup) continue;
+    const deep = groupSetDeep(g.name);
+    for (const gg of groupsData) {
+      if (deep.has(gg.name.toLowerCase())) {
+        for (const m of gg.members) hidden.add(m.toLowerCase());
+      }
+    }
+  }
+  return hidden;
+}
+
+// deep member display names of a group (its own + nested children's),
+// split into resolved (clickable) and unresolved (dormant, dimmed)
+function deepMembers(name) {
+  const deep = groupSetDeep(name);
+  const resolved = new Map(), unresolved = new Map();
+  for (const gg of groupsData) {
+    if (!deep.has(gg.name.toLowerCase())) continue;
+    for (const m of gg.members) resolved.set(m.toLowerCase(), m);
+    for (const m of (gg.unresolved || [])) unresolved.set(m.toLowerCase(), m);
+  }
+  for (const k of resolved.keys()) unresolved.delete(k);
+  const byName = (a, b) => a.toLowerCase().localeCompare(b.toLowerCase());
+  return {
+    resolved: [...resolved.values()].sort(byName),
+    unresolved: [...unresolved.values()].sort(byName),
+  };
 }
 
 export function groupSetDeep(name) {
@@ -62,8 +98,11 @@ function renderGroupBrowser() {
     groupsData.filter(g => g.parent.toLowerCase() === name.toLowerCase());
 
   const renderOne = (g, depth) => {
+    const rolled = !!g.rollup;
+    const isOpen = openRollup === g.name;
     const row = document.createElement('div');
-    row.className = 'grp-row' + (filters.group === g.name ? ' on' : '');
+    row.className = 'grp-row' + (filters.group === g.name ? ' on' : '')
+      + (rolled ? ' rolled' : '');
     row.style.paddingLeft = (depth * 0.9) + 'rem';
 
     const deep = groupSetDeep(g.name);
@@ -74,14 +113,29 @@ function renderGroupBrowser() {
       }
     }
 
+    if (rolled) {
+      const caret = document.createElement('span');
+      caret.className = 'grp-caret';
+      caret.textContent = isOpen ? '▾' : '▸';
+      row.appendChild(caret);
+    }
+
     const btn = document.createElement('button');
     btn.className = 'grp-btn';
     btn.innerHTML = `${g.name} <span class="n">${memberSet.size}</span>`;
-    btn.title = 'show only entities in this group';
+    // rolled-up groups collapse their members out of the flat list, so the
+    // title toggles an inline reveal instead of filtering the main list
+    btn.title = rolled ? 'show / hide this group’s members'
+                       : 'show only entities in this group';
     btn.onclick = () => {
-      filters.group = filters.group === g.name ? null : g.name;
-      renderGroupBrowser();
-      renderEntityList();
+      if (rolled) {
+        openRollup = isOpen ? null : g.name;
+        renderGroupBrowser();
+      } else {
+        filters.group = filters.group === g.name ? null : g.name;
+        renderGroupBrowser();
+        renderEntityList();
+      }
     };
     row.appendChild(btn);
 
@@ -97,9 +151,41 @@ function renderGroupBrowser() {
     list.appendChild(row);
 
     if (expandedGroup === g.name) list.appendChild(groupEditor(g));
+    if (rolled && isOpen) list.appendChild(rolledMembers(g));
     for (const child of sortG(childrenOf(g.name))) renderOne(child, depth + 1);
   };
   for (const g of sortG(roots)) renderOne(g, 0);
+}
+
+// inline member list shown under a rolled-up group when it's expanded —
+// its entities live here instead of cluttering the flat person/project list
+function rolledMembers(g) {
+  const box = document.createElement('div');
+  box.className = 'grp-members';
+  const { resolved, unresolved } = deepMembers(g.name);
+  if (!resolved.length && !unresolved.length) {
+    const e = document.createElement('div');
+    e.className = 'empty';
+    e.textContent = 'no members yet';
+    box.appendChild(e);
+    return box;
+  }
+  for (const m of resolved) {
+    const b = document.createElement('button');
+    b.className = 'gm';
+    b.textContent = m;
+    b.title = 'open entity';
+    b.onclick = () => showEntity(m);
+    box.appendChild(b);
+  }
+  for (const m of unresolved) {
+    const b = document.createElement('span');
+    b.className = 'gm dim';
+    b.textContent = m;
+    b.title = 'no longer matches an entity';
+    box.appendChild(b);
+  }
+  return box;
 }
 
 function groupEditor(g) {
@@ -156,6 +242,21 @@ function groupEditor(g) {
 
   const ops = document.createElement('div');
   ops.className = 'grp-ops';
+
+  const roll = document.createElement('button');
+  roll.className = 'quiet' + (g.rollup ? ' on chip-toggle' : '');
+  roll.textContent = g.rollup ? 'unroll' : 'roll up';
+  roll.title = g.rollup
+    ? 'show this group’s members in the main list again'
+    : 'hide this group’s members from the main list; click the group title to reveal them';
+  roll.onclick = async () => {
+    if (await api('/api/groups/edit', {name: g.name, rollup: !g.rollup})) {
+      if (!g.rollup) openRollup = null;  // will re-collapse; nothing to keep open
+      await loadGroups();
+      renderEntityList();
+    }
+  };
+  ops.appendChild(roll);
 
   const ren = document.createElement('button');
   ren.className = 'quiet';
