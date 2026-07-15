@@ -39,6 +39,18 @@ STATIC_DIR = Path(__file__).parent / "static"
 app = FastAPI(title="RAG Journal")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+
+@app.middleware("http")
+async def revalidate_static(request, call_next):
+    # StaticFiles sends ETag/Last-Modified but no Cache-Control, so browsers
+    # heuristically reuse cached JS/CSS on a soft reload — which serves stale
+    # UI after an edit. "no-cache" forces a revalidation every load; unchanged
+    # files still come back as a fast 304, changed files always come through.
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 STATE = {
     "client": None,
     "collection": None,

@@ -8,4 +8,4 @@ export const state = {
   activeTab: 'write',    // main.js owns; write + triage read
   sessionSel: 'current', // history selection; write's closeSession resets it
 };
-export const filters = {unreviewed: false, single: false, group: null};
+export const filters = {unreviewed: false, single: false, group: null, types: new Set()};

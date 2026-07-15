@@ -355,6 +355,11 @@
           <button class="quiet" id="redo-btn" title="redo">↻ redo</button>
         </div>
         <input type="text" id="search" placeholder="filter…">
+        <div id="type-chips">
+          <button class="quiet chip-toggle" data-type="person" title="show only people">people</button>
+          <button class="quiet chip-toggle" data-type="project" title="show only projects">projects</button>
+          <button class="quiet chip-toggle" data-type="place" title="show only places">places</button>
+        </div>
         <div id="filter-chips">
           <button class="quiet chip-toggle" id="flt-unreviewed">unreviewed</button>
           <button class="quiet chip-toggle" id="flt-single">1 mention</button>
@@ -369,9 +374,12 @@
         </div>
         <div id="suggest-btns">
           <button class="quiet" id="find-dups">find duplicates (free)</button>
-          <button class="quiet" data-suggest="person">ask claude: people</button>
-          <button class="quiet" data-suggest="project">projects</button>
-          <button class="quiet" data-suggest="place">places</button>
+          <select class="quiet" id="suggest-kind" title="ask claude to suggest merges for a type (uses the API)">
+            <option value="">ask claude…</option>
+            <option value="person">people</option>
+            <option value="project">projects</option>
+            <option value="place">places</option>
+          </select>
         </div>
         <div id="group-browser">
           <div id="group-header">groups

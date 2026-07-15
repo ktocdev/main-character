@@ -5,6 +5,7 @@
     font-display: swap;
   }
   :root {
+    color-scheme: light dark;  /* native controls (select popups, checkboxes, scrollbars) follow the theme */
     --bg: #211d19;          /* warm charcoal, not pitch black */
     --bg-raised: #2a2521;
     --bg-input: #322c27;

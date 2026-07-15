@@ -84,7 +84,13 @@
   .sg .r { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin: .2rem 0 .4rem; }
   #search { margin-bottom: .5rem; font-size: .9rem; padding: .4rem .7rem; }
   #curation-tools { display: flex; gap: .4rem; margin-bottom: .5rem; }
-  #suggest-btns { display: flex; gap: .4rem; margin-bottom: .6rem; flex-wrap: wrap; }
+  #suggest-btns { display: flex; gap: .4rem; margin-bottom: .6rem; flex-wrap: wrap; align-items: center; }
+  #suggest-kind {
+    background: var(--bg-input); color: var(--text-dim); border: 1px solid var(--border);
+    border-radius: 8px; padding: .3rem .5rem; cursor: pointer;
+    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+  }
+  #type-chips { display: flex; gap: .4rem; margin-bottom: .4rem; flex-wrap: wrap; }
   #filter-chips { display: flex; gap: .4rem; margin-bottom: .5rem; flex-wrap: wrap; }
   .chip-toggle.on { background: var(--accent-dim); color: var(--bg); border-color: var(--accent-dim); }
   #batch-bar {

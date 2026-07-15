@@ -44,7 +44,9 @@ export function renderEntityList() {
   }
   const wrap = $('entity-groups');
   wrap.innerHTML = '';
+  const typeFilter = filters.types.size ? filters.types : null;
   for (const kind of ['person', 'project', 'place']) {
+    if (typeFilter && !typeFilter.has(kind)) continue;
     const items = groups[kind].sort(sortAlpha
       ? (a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase())
       : (a, b) => b[1] - a[1]);
@@ -367,34 +369,47 @@ export function init() {
   refreshHistoryButtons();
   setInterval(refreshHistoryButtons, 15000);
 
-  // ---- merge suggestions ----
-  document.querySelectorAll('[data-suggest]').forEach(b => b.onclick = async () => {
-    const kind = b.dataset.suggest;
-    const panel = $('suggest-panel');
-    panel.style.display = 'block';
-    panel.textContent = `asking claude for ${kind} merge suggestions…`;
-    const r = await api('/api/entities/suggest', {kind});
-    if (!r) { panel.style.display = 'none'; return; }
-    panel.innerHTML = '';
-    if (!r.groups.length) { panel.textContent = 'no confident suggestions — looks clean.'; return; }
-    for (const g of r.groups) {
-      const div = document.createElement('div');
-      div.className = 'sg';
-      div.innerHTML = `<strong>${g.members.join(', ')}</strong> → ${g.canonical}<div class="r">${g.reason}</div>`;
-      const ok = document.createElement('button');
-      ok.className = 'quiet'; ok.textContent = 'apply';
-      ok.onclick = async () => {
-        for (const m of g.members) await api('/api/entities/merge', {source: m, target: g.canonical});
-        div.remove();
-        loadEntities();
-      };
-      const no = document.createElement('button');
-      no.className = 'quiet'; no.textContent = 'dismiss';
-      no.onclick = () => div.remove();
-      div.appendChild(ok);
-      div.appendChild(document.createTextNode(' '));
-      div.appendChild(no);
-      panel.appendChild(div);
-    }
+  // ---- type filter chips ----
+  document.querySelectorAll('#type-chips [data-type]').forEach(b => b.onclick = () => {
+    const kind = b.dataset.type;
+    if (filters.types.has(kind)) filters.types.delete(kind); else filters.types.add(kind);
+    b.classList.toggle('on', filters.types.has(kind));
+    renderEntityList();
   });
+
+  // ---- merge suggestions (ask claude, by type) ----
+  $('suggest-kind').onchange = e => {
+    const kind = e.target.value;
+    e.target.value = '';               // reset to the placeholder for next time
+    if (kind) askSuggest(kind);
+  };
+}
+
+async function askSuggest(kind) {
+  const panel = $('suggest-panel');
+  panel.style.display = 'block';
+  panel.textContent = `asking claude for ${kind} merge suggestions…`;
+  const r = await api('/api/entities/suggest', {kind});
+  if (!r) { panel.style.display = 'none'; return; }
+  panel.innerHTML = '';
+  if (!r.groups.length) { panel.textContent = 'no confident suggestions — looks clean.'; return; }
+  for (const g of r.groups) {
+    const div = document.createElement('div');
+    div.className = 'sg';
+    div.innerHTML = `<strong>${g.members.join(', ')}</strong> → ${g.canonical}<div class="r">${g.reason}</div>`;
+    const ok = document.createElement('button');
+    ok.className = 'quiet'; ok.textContent = 'apply';
+    ok.onclick = async () => {
+      for (const m of g.members) await api('/api/entities/merge', {source: m, target: g.canonical});
+      div.remove();
+      loadEntities();
+    };
+    const no = document.createElement('button');
+    no.className = 'quiet'; no.textContent = 'dismiss';
+    no.onclick = () => div.remove();
+    div.appendChild(ok);
+    div.appendChild(document.createTextNode(' '));
+    div.appendChild(no);
+    panel.appendChild(div);
+  }
 }
