@@ -208,8 +208,8 @@ def reset_lookup():
 def _after_close_refresh():
     """Full memory pipeline after a chat closes: the closed chat is now a
     journal entry. Tag it, extract its entities, refresh arcs + domain
-    docs + entry summaries + snapshot, scan it for dreams, re-sync
-    embeddings. Everything is incremental — cached work is skipped."""
+    docs + entry summaries, scan it for dreams, re-sync embeddings.
+    Everything is incremental — cached work is skipped."""
     import dreams
     import summarizer
     try:
@@ -219,6 +219,17 @@ def _after_close_refresh():
         dreams.extract(quiet=True)
     except Exception as e:
         print(f"  post-close refresh failed: {e}")
+
+
+def _after_close_seed(archive_key: str):
+    """Integrate-at-close: fold the just-archived braid into the live seed
+    and write the candidate for download/review. Never touches the seed."""
+    import seed
+    try:
+        path = seed.generate_candidate(archive_key)
+        print(f"  seed candidate -> {path.name}")
+    except Exception as e:
+        print(f"  seed candidate failed: {e}")
 
 
 @app.post("/api/entry")
@@ -369,6 +380,7 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     STATE["messages"] = []
+    background_tasks.add_task(_after_close_seed, result["key"])
     background_tasks.add_task(_after_close_refresh)
     return {"ok": True, **result}
 
@@ -377,6 +389,39 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
 def reset_conversation():
     STATE["messages"] = []
     return {"ok": True}
+
+
+class SeedUploadIn(BaseModel):
+    text: str
+
+
+@app.get("/api/seed")
+def seed_status():
+    """The seed ritual's state: live seed + pending candidate."""
+    import seed
+    return seed.status()
+
+
+@app.get("/api/seed/download")
+def seed_download(which: str = "current"):
+    """Download the live seed (or the post-close candidate) for editing."""
+    import seed
+    path = seed.CANDIDATE_FILE if which == "candidate" else seed.SEED_FILE
+    if not path.exists():
+        return JSONResponse({"error": f"no {which} seed yet"}, status_code=404)
+    return FileResponse(path, media_type="text/markdown", filename=path.name)
+
+
+@app.post("/api/seed/upload")
+def seed_upload(body: SeedUploadIn):
+    """The upload point: the edited file becomes the live seed (the prior
+    seed is backed up; the pending candidate is cleared)."""
+    import seed
+    try:
+        info = seed.save_seed(body.text)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return {"ok": True, **info}
 
 
 @app.get("/api/entities")

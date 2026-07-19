@@ -53,8 +53,8 @@ DREAM_WORDS = re.compile(
 )
 
 # Persona translated from persona-spec.md. Retrieval now delivers the full
-# stack: recency + snapshot, semantic chunks, zoomed-out summaries, entity
-# docs, and the pattern library (Layer 4).
+# stack: the co-edited seed summary + recency, semantic chunks, zoomed-out
+# summaries, entity docs, and the pattern library (Layer 4).
 SYSTEM_PROMPT = """\
 You are a journal companion — a structured witness to one person's life. \
 You are not a therapist, not a cheerleader, not an assistant. You are closer \
@@ -71,6 +71,12 @@ Voice and tone:
 - Match the user's register. Funny when they're funny, grounded when they're \
 spiraling, brief when they're brief. Never be more formal or more emotional \
 than the moment calls for.
+- Aim where the entry lives. On a mostly-light or mixed day, lead with what \
+was good or funny and let the reply resolve there. Don't build the reply \
+around the one correctable thing, and never close on a warning or correction \
+unless the entry is genuinely heavy — the last line is where the reply lands.
+- A mistake they've already named is handled. Don't re-explain why it was a \
+mistake — a wry nod at most, then treat it as the story they told it as.
 - Be direct, not precious. "I say this with love — you know exactly what \
 you're doing right now" beats "have you considered how this might make you \
 feel?"
@@ -155,10 +161,21 @@ def match_entities(text: str, entity_index: dict) -> list[str]:
     return [name for _, name in hits[:N_ENTITY_DOCS]]
 
 
-def load_status_snapshot() -> str:
-    """Layer 1: the always-current life summary (empty if not generated)."""
-    path = SUMMARY_DIR / "status_snapshot.md"
-    return path.read_text(encoding="utf-8")[:SUMMARY_CHARS] if path.exists() else ""
+# Framing for the seed summary system block. The seed replaced the auto
+# status_snapshot as Layer 1 (see docs/discovery/companion-seed-summary-plan.md).
+SEED_PREAMBLE = (
+    "The rolling life summary below is co-written and edited by the user "
+    "themself — a document you and they maintain together across chats. "
+    "Treat it as ground truth for who they are, where life stands, and the "
+    "interpretive lens you two have built. Its warmth is the lens you read "
+    "entries through, not a license to inflate your replies."
+)
+
+
+def load_seed() -> str:
+    """Layer 1: the co-edited rolling life summary (empty if none yet)."""
+    from seed import load_seed as _load
+    return _load()
 
 
 def load_latest_arc() -> str:
@@ -225,9 +242,15 @@ def build_context_block(question: str, collection, entity_index: dict,
 
     lines = [f"<current_time>{now}</current_time>", ""]
 
-    snapshot = load_status_snapshot()
-    if snapshot:
-        lines += ["<status_snapshot>", snapshot, "</status_snapshot>", ""]
+    # the dream-weather one-liner used to ride on the status snapshot;
+    # with the seed as Layer 1 it's injected directly (still content-free)
+    try:
+        from dreams import dream_weather
+        weather = dream_weather()
+    except Exception:
+        weather = ""
+    if weather:
+        lines += [weather, ""]
     arc = load_latest_arc()
     if arc:
         lines += ["<current_week_arc>", arc, "</current_week_arc>", ""]
@@ -350,16 +373,24 @@ def _stream_turn(client, collection, entity_index: dict, messages: list,
         "content": f"<journal_context>\n{context}\n</journal_context>\n\n{display_question}",
     })
 
+    # the seed rides in the system prompt (not the per-turn context block):
+    # it's large and stable between uploads, so it stays out of the growing
+    # message history and shares the persona's cache breakpoint
+    system = [{"type": "text", "text": SYSTEM_PROMPT}]
+    seed = load_seed()
+    if seed:
+        system.append({
+            "type": "text",
+            "text": f"{SEED_PREAMBLE}\n\n<seed_summary>\n{seed}\n</seed_summary>",
+        })
+    system[-1]["cache_control"] = {"type": "ephemeral"}
+
     reply_parts = []
     with client.messages.stream(
         model=MODEL,
         max_tokens=MAX_TOKENS,
         thinking={"type": "adaptive"},
-        system=[{
-            "type": "text",
-            "text": SYSTEM_PROMPT,
-            "cache_control": {"type": "ephemeral"},
-        }],
+        system=system,
         messages=messages,
     ) as stream:
         for text in stream.text_stream:

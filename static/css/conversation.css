@@ -49,6 +49,16 @@
     display: flex; flex-direction: column; gap: .4rem;
   }
   #write-actions .menu button { text-align: left; }
+  /* the seed ritual: candidate waiting between close and upload */
+  #seed-banner {
+    display: flex; align-items: center; gap: .6rem;
+    max-width: 46rem; margin: 0 auto .25rem; width: 100%;
+    padding: .5rem 1.5rem; color: var(--accent-dim);
+    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+  }
+  #seed-banner[hidden] { display: none; }
+  #seed-banner span { flex: 1; }
+
   /* lamp-warm thinking pulse */
   @keyframes lamp-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
   .msg.thinking::after {
