@@ -13,9 +13,10 @@ companion's Layer 1 context:
                           domains whose entry set changed are regenerated
   Entry summaries       — 2-3 sentences per entry (key events, emotional
                           state, decisions), cached in summaries/entries/
-  Status snapshot       — summaries/status_snapshot.md, a compact
-                          "what's going on in this person's life right now"
-                          built from the recent arcs + the latest raw entries
+  Status snapshot       — summaries/status_snapshot.md; retired from the
+                          pipeline (the co-edited seed summary is Layer 1
+                          now — see seed.py); regenerate manually with
+                          `python summarizer.py snapshot` if ever needed
   Summary embeddings    — every layer above plus the entity docs mirrored
                           into the journal_summaries collection (local
                           embeddings, free) so retrieval can match at any
@@ -466,16 +467,18 @@ def append_dream_weather():
 
 
 def build(force: bool = False, quiet: bool = False) -> dict:
+    # the status snapshot is retired from the pipeline — the co-edited seed
+    # summary is Layer 1 now (build_snapshot stays for manual fallback:
+    # python summarizer.py snapshot)
     n = build_arcs(force=force, quiet=quiet)
     d = build_domains(force=force, quiet=quiet)
     e = build_entry_summaries(force=force, quiet=quiet)
-    build_snapshot(quiet=quiet)
     embedded = sync_summary_embeddings(quiet=quiet)
     arcs_total = len(list(ARC_DIR.glob("*.md")))
     domains_total = len(list(DOMAIN_DIR.glob("*.md"))) if DOMAIN_DIR.exists() else 0
     print(f"\n  Summaries: {arcs_total} weekly arcs ({n} regenerated) + "
           f"{domains_total} domains ({d} regenerated) + "
-          f"{e} entry summaries regenerated + status snapshot; "
+          f"{e} entry summaries regenerated; "
           f"{embedded} docs in the summary index")
     return {"arcs": arcs_total, "regenerated": n,
             "domains": domains_total, "domains_regenerated": d,
@@ -485,5 +488,7 @@ def build(force: bool = False, quiet: bool = False) -> dict:
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "build":
         build(force="--force" in sys.argv)
+    elif len(sys.argv) > 1 and sys.argv[1] == "snapshot":
+        build_snapshot()
     else:
         print(__doc__)

@@ -38,6 +38,11 @@
 <main>
   <section class="tab active" id="tab-write">
     <div id="write-log"></div>
+    <div id="seed-banner" hidden>
+      <span>your seed summary candidate is ready — download it, read it fully, edit, then upload it so this chat opens with it</span>
+      <button class="quiet" id="seed-banner-download">download</button>
+      <button class="quiet" id="seed-banner-upload">upload edited seed</button>
+    </div>
     <div class="composer write-composer">
       <textarea id="entry-text" rows="3" placeholder="write freely…"></textarea>
       <div class="write-controls">
@@ -49,7 +54,11 @@
           <summary title="chat actions">⋯</summary>
           <div class="menu">
             <button class="quiet" id="reset" title="the summarize point — your side of this chat becomes a journal entry, memory updates in the background, a fresh chat opens">summarize &amp; close chat</button>
-            <button class="quiet" id="refresh-summaries" title="regenerate the weekly arcs, domain docs + status snapshot — a manual fallback; closing a chat does this automatically">refresh memory</button>
+            <button class="quiet" id="refresh-summaries" title="regenerate the weekly arcs + domain docs — a manual fallback; closing a chat does this automatically">refresh memory</button>
+            <button class="quiet" id="seed-download" title="download the live seed summary — the co-edited life summary that opens every chat" hidden>download seed</button>
+            <button class="quiet" id="seed-candidate" title="download the integrated candidate written when a chat closes — read it fully, edit, then upload" hidden>download close candidate</button>
+            <button class="quiet" id="seed-upload-btn" title="upload your edited seed summary — it becomes the live seed for every new turn (the old one is backed up)">upload seed</button>
+            <input type="file" id="seed-upload-file" accept=".md,.txt,text/markdown,text/plain" hidden>
           </div>
         </details>
       </div>
@@ -292,8 +301,11 @@
       <div class="help-step">
         <h3><span class="step-n">5</span> ongoing habit</h3>
         <p>Memory now updates at the <em>summarize point</em> — closing a chat tags it, extracts
-        its entities, refreshes the week's arc, its summary, the domain documents, and the status
-        snapshot, and scans it for dreams, all in the background. <em>detect patterns</em> in the
+        its entities, refreshes the week's arc, its summary, and the domain documents, scans it
+        for dreams, and integrates the chat into a <em>seed summary candidate</em> — the rolling
+        co-edited life summary. Download the candidate from the ⋯ menu on the write tab, read it
+        fully, edit it, and upload it back: the uploaded file is the seed every chat opens with,
+        and nothing automatic ever overwrites it. <em>detect patterns</em> in the
         patterns tab still re-reads everything for new recurring shapes when you ask. Closed chats
         create new entities that arrive <em>unreviewed</em>, so an occasional minute in triage keeps
         the graph clean forever. You never redo work — reviewed marks persist, and category fixes
