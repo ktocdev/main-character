@@ -409,7 +409,10 @@ def seed_download(which: str = "current"):
     path = seed.CANDIDATE_FILE if which == "candidate" else seed.SEED_FILE
     if not path.exists():
         return JSONResponse({"error": f"no {which} seed yet"}, status_code=404)
-    return FileResponse(path, media_type="text/markdown", filename=path.name)
+    return FileResponse(
+        path, media_type="text/markdown", filename=path.name,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.post("/api/seed/upload")
