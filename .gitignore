@@ -27,3 +27,6 @@ import_list.txt
 # Local run artifacts
 *.log
 backups/
+
+# Security audit records — local only
+docs/releasing/archive/security-audit-*.md
