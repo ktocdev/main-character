@@ -62,7 +62,7 @@ RAG Journal imports your Claude conversation exports and builds a searchable, co
 
 - **Phase 0: Short-message handling** — adapt the write flow for phone-sized bursts (deferred; pending design discussion)
 - **Dream layer v2** — scene-level chunking, parallel dream-entity graph, emergent symbol detection, interpretation patterns, cross-realm correlations, weekly dream digest
-- **Phase 4: Vue 3 + Prism Components UI** — rebuild the web UI with design system; the user to lead design (deferred; next when she's ready)
+- **Phase 4: Vue 3 UI rebuild** — rebuild the web UI on the app's own bespoke design tokens; the user to lead design (deferred; next when they're ready)
 - **Life Spectrum** — color-mapped timeline visualization of journal embeddings over time
 
 ## How to run locally
@@ -70,6 +70,15 @@ RAG Journal imports your Claude conversation exports and builds a searchable, co
 ### Prerequisites
 - Python 3.12+ (or use the `.venv` with `uv`)
 - `ANTHROPIC_API_KEY` in `.env` (for chat, writes, and all Claude operations)
+
+### Install
+```bash
+pip install -r requirements.lock
+```
+Pulls in ChromaDB's transitive tree (onnxruntime, tokenizers, and friends for
+local embeddings) — the install is large and takes a while. `requirements.txt`
+documents the same deps unpinned, for reference; install from the lock file
+for a reproducible set of versions.
 
 ### Start the server
 From the project root:
@@ -79,11 +88,17 @@ From the project root:
 
 The journal opens at **http://127.0.0.1:8144**. Static UI reloads on every browser refresh; Python changes need a server restart.
 
+### Look around without an API key (mock mode)
+
+Set `MC_MOCK=1` in `.env` and start the server as above. No key is needed — the Anthropic SDK is never constructed, so no network call is possible. Replies, entity extraction, tagging, summaries, patterns, and dreams all come from `mock_fixtures/` (real Claude output captured from a curated seed corpus), with per-call delays that match how the real thing feels, so loading states are actually visible.
+
+Mock mode swaps the model, not the storage: everything you write still lands in the real `journal_entries/`, `chroma_data/`, and `entity_graph/`. There's no reset button — clearing out is the same job it is in real mode.
+
 ### Notes
 - **API costs** — browsing and searching are free (local embeddings, no API calls). Chat, writes, reflection, extraction, and tagging call Claude.
 - **Data storage** — everything lives locally:
-  - `chroma/` — vector store (ChromaDB)
-  - `journal/` — markdown backups of entries and dreams
+  - `chroma_data/` — vector store (ChromaDB)
+  - `journal_entries/` — markdown backups of entries and dreams
   - `entity_graph/` — extracted entities, profiles, aliases, groups, and curation history
   - `categories/`, `patterns/`, `dreams/`, `sessions/` — personal data (gitignored)
 - **Stopping** — `Ctrl+C` in the terminal running `server.py`
@@ -98,8 +113,8 @@ The journal opens at **http://127.0.0.1:8144**. Static UI reloads on every brows
 
 ## Architecture
 
-See [docs/discovery/rag-journal-roadmap.md](docs/discovery/rag-journal-roadmap.md) for the full roadmap and design rationale. See `docs/discovery/companion-persona.md` for how the companion is prompted.
+See [docs/discovery/rag-journal-roadmap.md](docs/discovery/rag-journal-roadmap.md) for the full roadmap and design rationale. See `docs/discovery/persona-spec.md` for how the companion is prompted.
 
 ## Status
 
-Backend is feature-complete for Phases 0–3. The next major work is Phase 4 (UI redesign with Vue + Prism). See the roadmap for what's shipped vs. deferred.
+Backend is feature-complete for Phases 0–3. The next major work is Phase 4 (UI redesign with Vue). See the roadmap for what's shipped vs. deferred.

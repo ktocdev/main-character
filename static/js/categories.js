@@ -1,4 +1,4 @@
-import { $, api } from './core.js';
+import { $, api, esc } from './core.js';
 
 // ---- categories ----
 let catIndex = null, catSelected = null, organicState = {proposals: [], custom: []};
@@ -47,7 +47,7 @@ function renderProposals() {
     const d = document.createElement('div');
     d.className = 'cat-proposal';
     const head = document.createElement('div');
-    head.innerHTML = `<b>${p.name}</b> <span class="prop-meta">${p.confidence} confidence · ${p.weeks} weeks</span>`;
+    head.innerHTML = `<b>${esc(p.name)}</b> <span class="prop-meta">${esc(p.confidence)} confidence · ${p.weeks} weeks</span>`;
     d.appendChild(head);
     const mem = document.createElement('div');
     mem.className = 'prop-members';

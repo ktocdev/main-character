@@ -32,3 +32,16 @@
   .tab { flex: 1; display: none; flex-direction: column; overflow: hidden; }
   .tab.active { display: flex; }
 
+
+  /* Mock-mode banner — hidden unless /api/status reports mock:true, so the
+     markup can live in index.html unconditionally. Sits above the header
+     inside the body flex column, pushing the app down rather than
+     overlaying it, so it can't be scrolled out of sight or covered. */
+  #mock-banner { display: none; }
+  body.mock-mode #mock-banner {
+    display: block; text-align: center;
+    padding: .4rem 1rem;
+    background: var(--accent-dim, #6b5b3e); color: var(--bg);
+    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    letter-spacing: .02em;
+  }

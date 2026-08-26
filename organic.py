@@ -15,7 +15,7 @@ routes in:
   User-defined        — a category seeded by hand: a name plus optional
                         trigger keywords and/or member entities.
 
-the user answers every proposal with confirm, dismiss, or "not now" (defer
+The user answers every proposal with confirm, dismiss, or "not now" (defer
 without killing — the proposal re-surfaces when the cluster gains a new
 member). Confirmed and user-defined categories live in
 categories/custom.json and tag entries automatically: an entry gets the
@@ -34,27 +34,22 @@ Layout (gitignored — personal data):
 
 import hashlib
 import json
-import os
 import re
 import sys
 from collections import defaultdict
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-import anthropic
 
+from config import AUTHOR, CATEGORY_DIR, MC_PROCESSING_MODEL as MODEL, get_client, processing_thinking_kwargs
 from entities import RAW_DIR, apply_curation, get_conversations, load_curation
 from entities import conversation_cache_key
 from summarizer import week_key
 
-MODEL = "claude-opus-4-8"
-CATEGORY_DIR = Path(__file__).parent / "categories"
 ORGANIC_FILE = CATEGORY_DIR / "organic.json"
 CUSTOM_FILE = CATEGORY_DIR / "custom.json"
-AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 
 CONTEXT_WEIGHT = 0.7        # what happened at/around the entity
 NAME_WEIGHT = 0.3           # what the entity is called
@@ -276,10 +271,11 @@ def scan(quiet: bool = False) -> dict:
             sample = by_key[m]["text"][:200]
             lines.append(f"- {m} ({by_key[m]['kind']}): {sample}")
         blocks.append("\n".join(lines))
-    client = anthropic.Anthropic()
+    client = get_client()
     response = client.messages.create(
         model=MODEL,
         max_tokens=4000,
+        **processing_thinking_kwargs(),
         output_config={"format": {"type": "json_schema", "schema": NAMING_SCHEMA}},
         messages=[{
             "role": "user",
@@ -332,7 +328,7 @@ def scan(quiet: bool = False) -> dict:
 
 
 def respond(proposal_id: str, action: str) -> dict:
-    """the user's answer to a proposal: confirm | dismiss | not_now."""
+    """The user's answer to a proposal: confirm | dismiss | not_now."""
     if action not in ("confirm", "dismiss", "not_now"):
         raise ValueError(f"unknown action '{action}'")
     data = load_organic()

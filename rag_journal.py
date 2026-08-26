@@ -7,29 +7,15 @@ Provides the shared pieces the rest of the system builds on:
     extract_metadata() — pull people, topics, mood, key_events from entry text
     query_journal()    — semantic search over everything imported
 
-Configuration (all optional, via .env or environment):
+Configuration (all optional, via .env or environment) lives in config.py:
     RAG_JOURNAL_DIR    — markdown backup directory (default: ./journal_entries)
     RAG_CHROMA_DIR     — vector store directory (default: ./chroma_data)
 """
 
-import os
 import re
 from datetime import datetime, timezone
-from pathlib import Path
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-
-# ---------------------------------------------------------------------------
-# PATHS
-# ---------------------------------------------------------------------------
-
-_PROJECT_ROOT = Path(__file__).parent
-
-JOURNAL_DIR = Path(os.getenv("RAG_JOURNAL_DIR", _PROJECT_ROOT / "journal_entries"))
-CHROMA_DIR = Path(os.getenv("RAG_CHROMA_DIR", _PROJECT_ROOT / "chroma_data"))
+from config import CHROMA_DIR, JOURNAL_DIR
 
 COLLECTION_NAME = "journal_entries"
 

@@ -1,7 +1,10 @@
 # Environment
 .env
+.env.*
+!.env.example
 venv/
 .venv/
+*.key
 
 # Python
 __pycache__/
@@ -30,3 +33,12 @@ backups/
 
 # Security audit records — local only
 docs/releasing/archive/security-audit-*.md
+
+# Local-only working docs (removed from history in the Pre-Phase filter)
+docs/discovery/companion-tuning-ideas.md
+docs/discovery/companion-seed-summary-plan.md
+
+# Later-phase artifacts (pre-emptive — Phase 0.5 item 5)
+publish.toml
+public_site/
+export/

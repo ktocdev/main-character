@@ -42,6 +42,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from config import MOCK_MODE
 from rag_journal import get_collection, local_day, JOURNAL_DIR
 from bulk_import import (
     load_conversations,
@@ -89,7 +90,7 @@ def preflight():
             sys.exit(f"  ABORT: dev server is running on port {SERVER_PORT} — stop it first.")
     if not EXPORT_PATH.exists():
         sys.exit(f"  ABORT: {EXPORT_PATH} not found.")
-    if not os.getenv("ANTHROPIC_API_KEY"):
+    if not MOCK_MODE and not os.getenv("ANTHROPIC_API_KEY"):
         sys.exit("  ABORT: ANTHROPIC_API_KEY is not set (pipeline stages need it).")
 
 

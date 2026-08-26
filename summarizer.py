@@ -29,7 +29,6 @@ Usage:
 
 import hashlib
 import json
-import os
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -38,18 +37,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import anthropic
 
+from config import AUTHOR, ENTITY_DIR, MC_PROCESSING_MODEL as MODEL, SUMMARY_DIR, get_client, processing_thinking_kwargs
 from entities import get_conversations, conversation_cache_key
 
-MODEL = "claude-opus-4-8"
-SUMMARY_DIR = Path(__file__).parent / "summaries"
 ARC_DIR = SUMMARY_DIR / "arcs"
 DOMAIN_DIR = SUMMARY_DIR / "domains"
 ENTRY_DIR = SUMMARY_DIR / "entries"
-ENTITY_DIR = Path(__file__).parent / "entity_graph"
 SNAPSHOT_FILE = SUMMARY_DIR / "status_snapshot.md"
-AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 ARC_INPUT_CHARS = 60_000
 SNAPSHOT_RECENT_ARCS = 4
 DOMAIN_INPUT_CHARS = 100_000   # newest entries kept in full, oldest dropped first
@@ -157,6 +152,7 @@ def _arc_text(client, key: str, convs: list[dict]) -> str:
     response = client.messages.create(
         model=MODEL,
         max_tokens=2000,
+        **processing_thinking_kwargs(),
         messages=[{
             "role": "user",
             "content": ARC_PROMPT.format(
@@ -171,7 +167,7 @@ def _arc_text(client, key: str, convs: list[dict]) -> str:
 
 def build_arcs(force: bool = False, quiet: bool = False) -> int:
     """Generate/refresh weekly arcs. Returns how many were (re)generated."""
-    client = anthropic.Anthropic()
+    client = get_client()
     ARC_DIR.mkdir(parents=True, exist_ok=True)
     weeks = group_by_week(get_conversations())
     regenerated = 0
@@ -211,7 +207,7 @@ def build_domains(force: bool = False, quiet: bool = False) -> int:
     import categories as cats
 
     index = cats.load_index()
-    client = anthropic.Anthropic()
+    client = get_client()
     DOMAIN_DIR.mkdir(parents=True, exist_ok=True)
 
     by_key = {conversation_cache_key(c): c for c in get_conversations()}
@@ -259,6 +255,7 @@ def build_domains(force: bool = False, quiet: bool = False) -> int:
             response = client.messages.create(
                 model=MODEL,
                 max_tokens=2000,
+                **processing_thinking_kwargs(),
                 messages=[{
                     "role": "user",
                     "content": DOMAIN_PROMPT.format(
@@ -288,7 +285,7 @@ def build_domains(force: bool = False, quiet: bool = False) -> int:
 def build_entry_summaries(force: bool = False, quiet: bool = False) -> int:
     """Generate/refresh the 2-3 sentence summary of each entry, cached in
     summaries/entries/{key}.json. Returns how many were (re)generated."""
-    client = anthropic.Anthropic()
+    client = get_client()
     ENTRY_DIR.mkdir(parents=True, exist_ok=True)
     regenerated = 0
 
@@ -309,6 +306,7 @@ def build_entry_summaries(force: bool = False, quiet: bool = False) -> int:
             response = client.messages.create(
                 model=MODEL,
                 max_tokens=400,
+                **processing_thinking_kwargs(),
                 messages=[{
                     "role": "user",
                     "content": ENTRY_PROMPT.format(
@@ -409,7 +407,7 @@ def load_domain_doc(name: str) -> str | None:
 
 
 def build_snapshot(quiet: bool = False):
-    client = anthropic.Anthropic()
+    client = get_client()
     arc_files = sorted(ARC_DIR.glob("*.md"))[-SNAPSHOT_RECENT_ARCS:]
     if not arc_files:
         print("  no arcs yet — run build first")
@@ -424,6 +422,7 @@ def build_snapshot(quiet: bool = False):
     response = client.messages.create(
         model=MODEL,
         max_tokens=2000,
+        **processing_thinking_kwargs(),
         messages=[{
             "role": "user",
             "content": SNAPSHOT_PROMPT.format(

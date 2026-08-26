@@ -1,4 +1,4 @@
-import { $, api } from './core.js';
+import { $, api, esc } from './core.js';
 import { state, filters } from './state.js';
 import { loadEntities, renderEntityList, showEntity, reloadEntity } from './entities.js';
 
@@ -131,7 +131,7 @@ function renderGroupBrowser() {
 
     const btn = document.createElement('button');
     btn.className = 'grp-btn';
-    btn.innerHTML = `${g.name} <span class="n">${memberSet.size}</span>`;
+    btn.innerHTML = `${esc(g.name)} <span class="n">${memberSet.size}</span>`;
     btn.title = 'open this group — list its entities on the right';
     btn.onclick = () => showGroup(g.name);
     row.appendChild(btn);
@@ -222,7 +222,7 @@ export function showGroup(name) {
     for (const k of kids) {
       const b = document.createElement('button');
       b.className = 'gp-sub';
-      b.innerHTML = `${k.name} <span class="n">${k.members.length}</span>`;
+      b.innerHTML = `${esc(k.name)} <span class="n">${k.members.length}</span>`;
       b.title = 'open this subgroup';
       b.onclick = () => showGroup(k.name);
       gd.appendChild(b);

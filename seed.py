@@ -25,7 +25,6 @@ Usage:
 """
 
 import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -34,20 +33,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import anthropic
 
-MODEL = "claude-opus-4-8"
+from config import AUTHOR, MC_PROCESSING_MODEL as MODEL, SUMMARY_DIR, get_client, processing_thinking_kwargs
+
 MAX_TOKENS = 32_000
-SUMMARY_DIR = Path(__file__).parent / "summaries"
 SEED_FILE = SUMMARY_DIR / "seed_summary.md"
 CANDIDATE_FILE = SUMMARY_DIR / "seed_summary.candidate.md"
 BACKUP_DIR = SUMMARY_DIR / "seed_backups"
-AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 BRAID_MAX_CHARS = 300_000  # newest kept if a braid somehow exceeds this
 
 INTEGRATE_PROMPT = """\
 You maintain {author}'s rolling life summary — the one document a \
-companion reads to know who she is and where things stand. Below is the \
+companion reads to know who they are and where things stand. Below is the \
 current summary and the latest chat (both sides). Produce an updated \
 summary that integrates them: fold in what's new, carry open threads \
 forward, update or close threads that changed, and drop only what's truly \
@@ -55,11 +52,11 @@ resolved. Preserve the section structure and the voice of the current \
 summary. Update the "Updated" date line to {today}. Output only the \
 updated summary document, nothing else.
 
-Voice: tell it as her story — she's the complex, flawed, rooted-for main \
-character; honest about mistakes, always on her side. Name patterns and \
-land resolved threads on grounded hope tied to what actually happened — \
-never empty uplift. Anchor to dates; use her words and people's names as \
-she does.
+Voice: tell it as their story — {author} is the complex, flawed, \
+rooted-for main character; honest about mistakes, always on their side. \
+Name patterns and land resolved threads on grounded hope tied to what \
+actually happened — never empty uplift. Anchor to dates; use their words \
+and people's names as they do.
 
 <current_summary>
 {previous}
@@ -158,10 +155,11 @@ def archive_braid_text(archive: dict) -> str:
 
 
 def _call(prompt: str) -> str:
-    client = anthropic.Anthropic()
+    client = get_client()
     parts = []
     with client.messages.stream(
         model=MODEL, max_tokens=MAX_TOKENS,
+        **processing_thinking_kwargs(),
         messages=[{"role": "user", "content": prompt}],
     ) as stream:
         for text in stream.text_stream:

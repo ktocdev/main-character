@@ -34,9 +34,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from config import SESSION_DIR
 from rag_journal import JOURNAL_DIR, extract_metadata
 
-SESSION_DIR = Path(__file__).parent / "sessions"
 ARCHIVE_DIR = SESSION_DIR / "archive"
 BRAID_DIR = SESSION_DIR / "braids"
 CURRENT_FILE = SESSION_DIR / "current.json"
@@ -320,10 +320,11 @@ def _generate_title(client, text: str) -> str:
     if client is None:
         return ""
     try:
-        from companion import MODEL
+        from config import MC_PROCESSING_MODEL, processing_thinking_kwargs
         response = client.messages.create(
-            model=MODEL,
+            model=MC_PROCESSING_MODEL,
             max_tokens=30,
+            **processing_thinking_kwargs(),
             messages=[{"role": "user", "content": TITLE_PROMPT + text[:6000]}],
         )
         title = next((b.text for b in response.content if b.type == "text"), "")

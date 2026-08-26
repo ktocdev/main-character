@@ -21,28 +21,23 @@ import json
 import re
 import sys
 from datetime import datetime
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-import anthropic
 
+from config import (
+    ENTITY_DIR, EXCERPT_CHARS, MAX_TOKENS, MC_COMPANION_MODEL as MODEL,
+    N_RECENT, N_SEMANTIC, SUMMARY_DIR, companion_effort_kwargs, get_client,
+)
 from rag_journal import (
     JOURNAL_DIR, extract_metadata, get_collection, get_summary_collection,
     query_journal,
 )
 
-MODEL = "claude-opus-4-6"
-MAX_TOKENS = 8000
-N_SEMANTIC = 6      # semantically similar chunks per question
-N_RECENT = 3        # most recent chunks always included
-EXCERPT_CHARS = 2000
-ENTITY_DIR = Path(__file__).parent / "entity_graph"
 N_ENTITY_DOCS = 3       # max entity docs loaded per message
 ENTITY_DOC_CHARS = 4000
-SUMMARY_DIR = Path(__file__).parent / "summaries"
 SUMMARY_CHARS = 3500
 N_SUMMARY_HITS = 3      # zoomed-out documents (entry/arc/domain/entity) per question
 SUMMARY_HIT_CHARS = 1500
@@ -392,6 +387,7 @@ def _stream_turn(client, collection, entity_index: dict, messages: list,
         thinking={"type": "adaptive"},
         system=system,
         messages=messages,
+        **companion_effort_kwargs(),
     ) as stream:
         for text in stream.text_stream:
             reply_parts.append(text)
@@ -602,7 +598,7 @@ def manage_mode(entity_index: dict) -> dict:
 
 
 def main():
-    client = anthropic.Anthropic()
+    client = get_client()
     collection = get_collection()
     entity_index = load_entity_index()
     count = collection.count()
