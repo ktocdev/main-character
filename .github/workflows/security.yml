@@ -2,6 +2,13 @@ name: security
 
 on: [push, pull_request]
 
+# gitleaks-action lists a PR's commits to scan only what the PR adds, which
+# needs pull-requests:read — the default GITHUB_TOKEN doesn't grant it, and
+# the action fails with a 403 rather than degrading to a full-history scan.
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   gitleaks:
     runs-on: ubuntu-latest
