@@ -31,13 +31,9 @@ import_list.txt
 *.log
 backups/
 
-# Security audit records — local only
-docs/releasing/archive/security-audit-*.md
-
-# Local-only working docs — real journal content and third-party names
-# throughout, kept as local reference, never tracked (Phase 1.5 items 1/1b)
-docs/discovery/
-docs/build/
+# All dev docs are local-only — real journal content, third-party names,
+# and the security audit throughout; none of it ships (Phase 1.5 items 1/4/5)
+docs/
 
 # Later-phase artifacts (pre-emptive — Phase 0.5 item 5)
 publish.toml
