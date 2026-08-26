@@ -34,9 +34,10 @@ backups/
 # Security audit records — local only
 docs/releasing/archive/security-audit-*.md
 
-# Local-only working docs (removed from history in the Pre-Phase filter)
-docs/discovery/companion-tuning-ideas.md
-docs/discovery/companion-seed-summary-plan.md
+# Local-only working docs — real journal content and third-party names
+# throughout, kept as local reference, never tracked (Phase 1.5 items 1/1b)
+docs/discovery/
+docs/build/
 
 # Later-phase artifacts (pre-emptive — Phase 0.5 item 5)
 publish.toml

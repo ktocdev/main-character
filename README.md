@@ -113,7 +113,7 @@ Mock mode swaps the model, not the storage: everything you write still lands in 
 
 ## Architecture
 
-See [docs/discovery/rag-journal-roadmap.md](docs/discovery/rag-journal-roadmap.md) for the full roadmap and design rationale. See `docs/discovery/persona-spec.md` for how the companion is prompted.
+Design rationale and the companion's persona spec live in local-only dev notes (`docs/discovery/`, gitignored — not part of this repo).
 
 ## Status
 
