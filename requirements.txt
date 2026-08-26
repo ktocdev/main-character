@@ -5,4 +5,4 @@ python-dotenv>=1.0     # .env config
 
 # Web UI
 fastapi>=0.115         # local web server (server.py)
-uvicorn>=0.30          # ASGI runner
+uvicorn>=0.52.4          # ASGI runner
