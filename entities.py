@@ -115,7 +115,7 @@ are about the author, not an entity. Never include the AI companion.
 - Never include celebrities or public figures, even if discussed at length. \
 Only people the author actually knows or encounters.
 - Use the shortest natural name the author uses ("Pip", "Mom", "Orbit \
-Nuxt"). No descriptive parentheticals, no slashes, no combined names — if \
+Web"). No descriptive parentheticals, no slashes, no combined names — if \
 two things are mentioned, they are two entities.
 {known_block}- Capture EVERY concrete mention as its own observation — one per distinct \
 fact or event, however minor or recurring (a pet making a mess counts, every \
