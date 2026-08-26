@@ -39,3 +39,6 @@ docs/
 publish.toml
 public_site/
 export/
+
+# Leak-detection name list — sensitive in itself, never tracked (Phase 0 item 12)
+third-party-names.txt
