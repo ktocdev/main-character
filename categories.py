@@ -7,7 +7,7 @@ categories. Tags are cached per conversation, written into the vector
 store's chunk metadata (so retrieval can filter by domain later), and
 indexed for the web UI's categories tab.
 
-the user's manual tag fixes live in categories/overrides.json and re-apply
+The user's manual tag fixes live in categories/overrides.json and re-apply
 on every rebuild — same philosophy as entity curation.
 
 Usage:
@@ -22,7 +22,6 @@ Layout (all gitignored — this is personal data):
 """
 
 import json
-import os
 import re
 import sys
 from collections import defaultdict
@@ -32,17 +31,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import anthropic
 
+from config import AUTHOR, CATEGORY_DIR, MC_PROCESSING_MODEL as MODEL, get_client, processing_thinking_kwargs
 from entities import get_conversations, conversation_cache_key, _segments
 from rag_journal import get_collection
 
-MODEL = "claude-opus-4-8"
-CATEGORY_DIR = Path(__file__).parent / "categories"
 RAW_DIR = CATEGORY_DIR / "raw"
 OVERRIDES_FILE = CATEGORY_DIR / "overrides.json"
 INDEX_FILE = CATEGORY_DIR / "index.json"
-AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 
 # The built-in categories from persona-spec.md §5. Organic/emergent
 # categories are a later roadmap item and deliberately not handled here.
@@ -118,6 +114,7 @@ def tag_conversation(client, conv: dict) -> dict:
         response = client.messages.create(
             model=MODEL,
             max_tokens=2000,
+            **processing_thinking_kwargs(),
             output_config={"format": {"type": "json_schema", "schema": TAG_SCHEMA}},
             messages=[{
                 "role": "user",
@@ -140,7 +137,7 @@ def tag_conversation(client, conv: dict) -> dict:
 def run_tagging(force: bool = False, quiet: bool = False) -> int:
     """Tag every conversation, using the per-conversation cache. Returns
     how many were newly tagged (API calls made)."""
-    client = anthropic.Anthropic()
+    client = get_client()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
     conversations = get_conversations()

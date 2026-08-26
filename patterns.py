@@ -23,24 +23,19 @@ Layout (gitignored — personal data):
 
 import hashlib
 import json
-import os
 import sys
 from datetime import datetime
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-import anthropic
 
+from config import AUTHOR, MC_PROCESSING_MODEL as MODEL, PATTERN_DIR, get_client, processing_thinking_kwargs
 from summarizer import ARC_DIR, DOMAIN_DIR, _strip_hash_comment
 
-MODEL = "claude-opus-4-8"
-PATTERN_DIR = Path(__file__).parent / "patterns"
 LIBRARY_FILE = PATTERN_DIR / "library.json"
 DISMISSED_FILE = PATTERN_DIR / "dismissed.json"
-AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 INPUT_CHARS = 120_000
 CONTEXT_CHARS = 4_500   # cap on the Layer 4 block injected per companion turn
 
@@ -187,10 +182,11 @@ def build(force: bool = False, quiet: bool = False) -> dict:
             print(f"  pattern library current ({len(library['patterns'])} patterns)")
         return library
 
-    client = anthropic.Anthropic()
+    client = get_client()
     response = client.messages.create(
         model=MODEL,
         max_tokens=8000,
+        **processing_thinking_kwargs(),
         output_config={"format": {"type": "json_schema", "schema": PATTERN_SCHEMA}},
         messages=[{
             "role": "user",

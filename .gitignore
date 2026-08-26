@@ -1,7 +1,10 @@
 # Environment
 .env
+.env.*
+!.env.example
 venv/
 .venv/
+*.key
 
 # Python
 __pycache__/
@@ -28,5 +31,14 @@ import_list.txt
 *.log
 backups/
 
-# Security audit records — local only
-docs/releasing/archive/security-audit-*.md
+# All dev docs are local-only — real journal content, third-party names,
+# and the security audit throughout; none of it ships (Phase 1.5 items 1/4/5)
+docs/
+
+# Later-phase artifacts (pre-emptive — Phase 0.5 item 5)
+publish.toml
+public_site/
+export/
+
+# Leak-detection name list — sensitive in itself, never tracked (Phase 0 item 12)
+third-party-names.txt

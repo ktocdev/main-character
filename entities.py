@@ -20,7 +20,6 @@ Layout (all gitignored — this is personal data):
 """
 
 import json
-import os
 import re
 import sys
 from collections import defaultdict
@@ -30,17 +29,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import anthropic
 
+from config import AUTHOR, ENTITY_DIR, MC_PROCESSING_MODEL as MODEL, get_client, processing_thinking_kwargs
 from rag_journal import get_collection
 
-MODEL = "claude-opus-4-8"
-ENTITY_DIR = Path(__file__).parent / "entity_graph"
 RAW_DIR = ENTITY_DIR / "raw"
 CURATION_FILE = ENTITY_DIR / "curation.json"
 GROUPS_FILE = ENTITY_DIR / "groups.json"
 SEGMENT_CHARS = 45_000  # long conversations are split, not truncated
-AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 
 EXTRACTION_SCHEMA = {
     "type": "object",
@@ -119,7 +115,7 @@ are about the author, not an entity. Never include the AI companion.
 - Never include celebrities or public figures, even if discussed at length. \
 Only people the author actually knows or encounters.
 - Use the shortest natural name the author uses ("Pip", "Mom", "Orbit \
-Nuxt"). No descriptive parentheticals, no slashes, no combined names — if \
+Web"). No descriptive parentheticals, no slashes, no combined names — if \
 two things are mentioned, they are two entities.
 {known_block}- Capture EVERY concrete mention as its own observation — one per distinct \
 fact or event, however minor or recurring (a pet making a mess counts, every \
@@ -221,6 +217,7 @@ def extract_conversation(client, conv: dict, known_people: list[str] | None = No
         response = client.messages.create(
             model=MODEL,
             max_tokens=16000,
+            **processing_thinking_kwargs(),
             output_config={"format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}},
             messages=[{"role": "user", "content": prompt}],
         )
@@ -239,7 +236,7 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
     results in entity_graph/raw/ so re-runs don't re-call the API.
     Returns a list of {date, title, entities} records.
     """
-    client = anthropic.Anthropic()
+    client = get_client()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
     conversations = get_conversations()
@@ -433,6 +430,11 @@ def apply_curation(curation: dict, kind: str, name: str):
 # ---------------------------------------------------------------------------
 
 def slugify(name: str) -> str:
+    # Invariant: any place a model-produced string (entity name, category
+    # name, ...) becomes part of a filesystem path goes through this. It's
+    # the only thing standing between a crafted journal entry and path
+    # traversal, since entity names originate in model output over
+    # imported/pasted text, not from a fixed set the app controls.
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     return slug or "unnamed"
 
@@ -944,10 +946,11 @@ def suggest_merges(kind: str) -> list[dict]:
     if len(listing) < 2:
         return []
 
-    client = anthropic.Anthropic()
+    client = get_client()
     response = client.messages.create(
         model=MODEL,
         max_tokens=8000,
+        **processing_thinking_kwargs(),
         output_config={"format": {"type": "json_schema", "schema": SUGGEST_SCHEMA}},
         messages=[{
             "role": "user",

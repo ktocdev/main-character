@@ -1,4 +1,4 @@
-import { $, api, refreshStatus } from './core.js';
+import { $, api, esc, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
 import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection } from './groups.js';
 
@@ -75,7 +75,7 @@ export function renderEntityList() {
 
       const b = document.createElement('button');
       b.className = 'ent';
-      b.innerHTML = `${name} <span class="n">${mentions}</span>`;
+      b.innerHTML = `${esc(name)} <span class="n">${mentions}</span>`;
       b.onclick = () => showEntity(name);
       row.appendChild(b);
 
@@ -125,8 +125,8 @@ async function findDups() {
   for (const p of r.pairs) {
     const row = document.createElement('div');
     row.className = 'dup-row';
-    row.innerHTML = `<strong>${p.a}</strong> (${p.a_mentions}) ↔ <strong>${p.b}</strong> (${p.b_mentions})
-      <span class="why">${p.kind} · ${p.basis} ${p.score}</span>`;
+    row.innerHTML = `<strong>${esc(p.a)}</strong> (${p.a_mentions}) ↔ <strong>${esc(p.b)}</strong> (${p.b_mentions})
+      <span class="why">${esc(p.kind)} · ${esc(p.basis)} ${p.score}</span>`;
     const mk = (label, fn) => {
       const b = document.createElement('button');
       b.className = 'quiet'; b.textContent = label; b.onclick = fn;
@@ -397,7 +397,7 @@ async function askSuggest(kind) {
   for (const g of r.groups) {
     const div = document.createElement('div');
     div.className = 'sg';
-    div.innerHTML = `<strong>${g.members.join(', ')}</strong> → ${g.canonical}<div class="r">${g.reason}</div>`;
+    div.innerHTML = `<strong>${g.members.map(esc).join(', ')}</strong> → ${esc(g.canonical)}<div class="r">${esc(g.reason)}</div>`;
     const ok = document.createElement('button');
     ok.className = 'quiet'; ok.textContent = 'apply';
     ok.onclick = async () => {

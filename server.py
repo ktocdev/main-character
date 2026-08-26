@@ -3,8 +3,8 @@ RAG Journal — local web UI.
 
 A lightweight FastAPI server wrapping the companion (chat + write) and the
 entity graph (browse + curate). Single user, local only. This is the
-"initial functional UI" from roadmap Phase 4 — the Vue/Prism Components
-version replaces the frontend later; the API layer carries over.
+"initial functional UI" from roadmap Phase 4 — the Vue rebuild replaces
+the frontend later; the API layer carries over.
 
 Usage:
     .venv\\Scripts\\python.exe server.py
@@ -19,9 +19,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import anthropic
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -30,14 +30,28 @@ import categories
 import companion
 import entities
 import sessions
+from config import HOST, PORT, MOCK_MODE, get_client
 from rag_journal import get_collection
 
-HOST = "127.0.0.1"
-PORT = 8144
 STATIC_DIR = Path(__file__).parent / "static"
 
 app = FastAPI(title="RAG Journal")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# Local-only, no-auth is a deliberate design choice — it only holds if the
+# server refuses requests that aren't actually local. Without this, DNS
+# rebinding (an attacker hostname resolved to 127.0.0.1) makes every request
+# same-origin, defeating the browser's own CORS protection. The Origin check
+# also doubles as the CSRF mitigation for the destructive POST routes.
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost"])
+
+
+@app.middleware("http")
+async def same_origin_only(request, call_next):
+    origin = request.headers.get("origin")
+    if origin and origin not in (f"http://{HOST}:{PORT}", f"http://localhost:{PORT}"):
+        return JSONResponse({"error": "cross-origin request refused"}, status_code=403)
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -62,7 +76,7 @@ STATE = {
 
 @app.on_event("startup")
 def startup():
-    STATE["client"] = anthropic.Anthropic()
+    STATE["client"] = get_client()
     STATE["collection"] = get_collection()
     STATE["entity_index"] = companion.load_entity_index()
     # the open session survives restarts — rebuild the conversation from it
@@ -171,6 +185,9 @@ def status():
         "entries": STATE["collection"].count(),
         "entities": len(STATE["entity_index"]),
         "conversation_turns": len(STATE["messages"]) // 2,
+        # drives the UI banner — a canned reply must never be mistaken for
+        # a real one
+        "mock": MOCK_MODE,
     }
 
 

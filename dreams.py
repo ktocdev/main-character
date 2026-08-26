@@ -39,27 +39,21 @@ Layout (gitignored — personal data):
 
 import hashlib
 import json
-import os
 import re
 import sys
 from collections import Counter, defaultdict
 from datetime import date as date_type, datetime, timedelta
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-import anthropic
 
+from config import AUTHOR, CHROMA_DIR, DREAM_DIR, JOURNAL_DIR, MC_PROCESSING_MODEL as MODEL, get_client, processing_thinking_kwargs
 from entities import get_conversations, conversation_cache_key, known_people_hint
-from rag_journal import CHROMA_DIR, JOURNAL_DIR
 
-MODEL = "claude-opus-4-8"
-DREAM_DIR = Path(__file__).parent / "dreams"
 RAW_DIR = DREAM_DIR / "raw"
 INDEX_FILE = DREAM_DIR / "index.json"
-AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 DREAM_HINT = re.compile(r"\b(dream|dreams|dreamt|dreamed|nightmare|nightmares)\b", re.I)
 INPUT_CHARS = 45_000
 WEATHER_DAYS = 14
@@ -121,6 +115,7 @@ def _extract(client, text: str, date: str, title: str,
     response = client.messages.create(
         model=MODEL,
         max_tokens=4000,
+        **processing_thinking_kwargs(),
         output_config={"format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}},
         messages=[{
             "role": "user",
@@ -144,7 +139,7 @@ def _extract(client, text: str, date: str, title: str,
 def run_extraction(force: bool = False, quiet: bool = False) -> int:
     """Scan every conversation that mentions dreams; cache per conversation.
     Returns how many sources were newly extracted."""
-    client = anthropic.Anthropic()
+    client = get_client()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     new = 0
     candidates = [c for c in get_conversations() if DREAM_HINT.search(c["text"])]
@@ -216,7 +211,7 @@ def store_dream_entry(text: str) -> str:
 def ingest_dream_entry(text: str, entry_id: str):
     """Background follow-up to store_dream_entry: extract the dream(s),
     rebuild the index, refresh weather on the snapshot."""
-    client = anthropic.Anthropic()
+    client = get_client()
     now = datetime.now()
     date = now.strftime("%Y-%m-%d")
     RAW_DIR.mkdir(parents=True, exist_ok=True)
@@ -344,7 +339,7 @@ if __name__ == "__main__":
             if d["people"] or d["places"]:
                 print(f"  cast: {', '.join(d['people'] + d['places'])}")
             if d["interpretation"]:
-                print(f"  her read: {d['interpretation']}")
+                print(f"  {AUTHOR}'s read: {d['interpretation']}")
     elif len(sys.argv) > 1 and sys.argv[1] == "weather":
         print(dream_weather() or "  no recent dreams")
     else:
