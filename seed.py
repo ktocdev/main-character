@@ -254,7 +254,7 @@ def generate_candidate(archive_key: str) -> Path:
     if archive is None:
         raise ValueError(f"archive '{archive_key}' not found")
     braid = archive_braid_text(archive)
-    previous = load_seed()
+    previous = load_seed().strip()   # a whitespace-only file is not a seed
     # no seed yet means this is the author's first close — write one
     updated = integrate(previous, braid) if previous else create_first(braid)
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)

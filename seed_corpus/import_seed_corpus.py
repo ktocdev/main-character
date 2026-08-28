@@ -19,7 +19,12 @@ Usage:
 
 --wipe clears journal_entries collection, journal_dreams collection,
 journal_entries/ dir, and entity_graph/ before importing (the clean-
-slate path for capture_fixtures.py).
+slate path for capture_fixtures.py). Because it deletes outright, it
+refuses to run unless the data dirs point somewhere under seed_corpus/ —
+use `bash seed_corpus/run_capture.sh --wipe`, which sets them for you.
+
+A plain install is allowed against a real, empty journal, but refuses
+the moment it finds session archives or a seed it didn't ship.
 """
 
 import argparse
@@ -33,7 +38,7 @@ sys.path.insert(0, str(ROOT))
 
 from bulk_import import import_entry, entry_chunk_id, chunk_entry
 from config import ENTITY_DIR, CATEGORY_DIR, PATTERN_DIR, DREAM_DIR
-from config import SESSION_DIR, SUMMARY_DIR
+from config import SESSION_DIR, SUMMARY_DIR, CHROMA_DIR
 from rag_journal import get_collection, JOURNAL_DIR
 
 
@@ -57,7 +62,6 @@ def parse_entry(path: Path) -> dict:
 def wipe():
     print("wiping local data stores...")
     import chromadb
-    from config import CHROMA_DIR
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
     for name in ["journal_entries", "journal_dreams", "journal_summaries"]:
         try:
@@ -102,7 +106,7 @@ def import_dream(entry: dict):
     return entry_id
 
 
-def install_sessions(dry_run: bool):
+def session_files() -> list[tuple[Path, Path]]:
     """The seed loop's own history, produced by build_sessions.py: three
     closed sessions with both-sided braids, the live seed those closes
     generated, the seed it replaced, and the candidate still awaiting
@@ -117,9 +121,16 @@ def install_sessions(dry_run: bool):
     for src_dir, dst_dir in pairs:
         for src in sorted(src_dir.glob("*")):
             files.append((src, dst_dir / src.name))
+    return files
 
-    # Never clobber a real journal. Anything already here that we didn't
-    # ship means these stores belong to an actual author, not a demo.
+
+def refuse_if_real_journal(files: list[tuple[Path, Path]]):
+    """Never clobber a real journal. Anything already in these stores that
+    we didn't ship means they belong to an actual author, not a demo.
+
+    Runs before anything is wiped or written, not after — this is the only
+    thing standing between --wipe and someone's entries."""
+    here = Path(__file__).parent
     ours = {src.name for src, _ in files}
     intruders = [p.name for d in (SESSION_DIR / "archive",
                                   SUMMARY_DIR / "seed_backups")
@@ -136,6 +147,27 @@ def install_sessions(dry_run: bool):
             "  the seed corpus is for a fresh install — move or back up "
             "that data first.")
 
+
+def refuse_if_unsandboxed():
+    """--wipe is the capture path, and capture always runs against a
+    throwaway dir under seed_corpus/ (see run_capture.sh). Installing into
+    a real fresh journal is fine; *wiping* one never is, so the destructive
+    flag is the one that demands a sandbox.
+
+    The plain-install path is guarded by refuse_if_real_journal instead —
+    that one has to stay usable against a genuine empty install."""
+    corpus = Path(__file__).resolve().parent
+    for d in (JOURNAL_DIR, CHROMA_DIR, ENTITY_DIR,
+              CATEGORY_DIR, PATTERN_DIR, DREAM_DIR):
+        if corpus not in Path(d).resolve().parents:
+            sys.exit(
+                f"\nrefusing to --wipe: {d} is outside {corpus}\n"
+                "  --wipe deletes entries, collections and the entity graph "
+                "outright.\n  point the data dirs at a scratch dir first — "
+                "bash seed_corpus/run_capture.sh does this for you.")
+
+
+def install_sessions(files: list[tuple[Path, Path]], dry_run: bool):
     print()
     for src, dst in files:
         if not src.exists():
@@ -160,6 +192,14 @@ def main():
     files = sorted(entries_dir.glob("*.md"))
     if not files:
         sys.exit(f"no .md files in {entries_dir}")
+
+    # Both guards run before the first destructive or writing call. They
+    # used to sit inside install_sessions(), i.e. after --wipe had already
+    # deleted the entries they were meant to protect.
+    to_install = session_files()
+    refuse_if_real_journal(to_install)
+    if args.wipe:
+        refuse_if_unsandboxed()
 
     if args.wipe and not args.dry_run:
         wipe()
@@ -187,7 +227,7 @@ def main():
             eid = import_dream(e)
             print(f"  {e['date']}  {eid}  DREAM  {e['title'][:50]}")
 
-    install_sessions(args.dry_run)
+    install_sessions(to_install, args.dry_run)
 
     print(f"\ndone. {'(dry run, nothing written)' if args.dry_run else ''}")
     if not args.dry_run:

@@ -415,7 +415,7 @@ def main():
     entity_index = companion.load_entity_index()
 
     for spec in SESSIONS:
-        if only and spec["n"] != only:
+        if only is not None and spec["n"] != only:
             continue
         run_session(spec, entries, collection, client, entity_index,
                     sessions, seed, companion, live, resume, until)
