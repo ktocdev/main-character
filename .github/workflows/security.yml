@@ -20,6 +20,40 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# The smoke-test job (mock-mode boot + /api/status) and the leak-grep job
-# (Phase 0 item 12) join this workflow in Phase 3 item 6, once mock mode
-# (Phase 1) exists for the server to boot against.
+  # Phase 0 item 12. Runs the pattern pass only — the name pass needs
+  # third-party-names.txt, which is gitignored because the list is itself
+  # sensitive, so CI cannot see it. That half stays a local pre-push gate;
+  # see the header of scripts/check_leaks.sh.
+  leak-grep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check_leaks.sh
+
+  # Phase 3 item 6: the check that keeps "clone it and it works" true.
+  # Deliberately a *fresh* checkout with no .env and no data dirs — that
+  # is the state a stranger following the README's mock-mode quickstart
+  # is in, and the state that was never actually tested before.
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      # From the lock, not requirements.txt — the README tells cloners to
+      # install this way, so this is also the check that the lock resolves.
+      # pytest is pinned here rather than added to the lock: the lock is
+      # the runtime set a cloner installs, and Dependabot is scoped to it.
+      - run: |
+          pip install -r requirements.lock
+          pip install pytest==8.3.4
+
+      # -u because the pipeline's progress output is block-buffered when
+      # stdout is a pipe; without it a failing run logs nothing useful.
+      - run: python -u -m pytest tests/ -q
+        env:
+          MC_MOCK: '1'
