@@ -44,7 +44,9 @@ public_site/
 export/
 
 # Leak-detection name list — sensitive in itself, never tracked (Phase 0 item 12)
-third-party-names.txt
+# Glob, not the bare name: a hand-made .bak copy of the list is just as
+# sensitive as the list, and gitignore has no trailing comments.
+third-party-names.txt*
 
 # Seed corpus scratch dirs — working state, not deliverables.
 # build/ is where the corpus is chatted through the real companion;
