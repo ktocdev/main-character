@@ -33,6 +33,10 @@ from mock_client import FIXTURE_DIR, _call_key
 
 MAX_PER_KEY = 12  # enough variety for deterministic selection to feel varied
 
+# The seed corpus's fictional author. Fixtures are full of this name by
+# design; the leak check must not confuse it for the real one.
+SEED_AUTHOR = "Jordan"
+
 # Frames to look past when deriving a call key, so a recorded response is
 # filed under the pipeline function that made it, not under this harness.
 SKIP = frozenset({"mock_client", "capture_fixtures"})
@@ -183,11 +187,37 @@ LEAK_PATTERNS = [
 ]
 
 
+def _identity_patterns() -> list[tuple[str, str]]:
+    """The real author's name, which the generic patterns above can't know.
+    This is the likeliest leak of all: capture with the data dirs pointed
+    at the corpus but `RAG_AUTHOR_NAME` left alone, and every summary comes
+    back written about the real person.
+
+    Read from .env rather than the environment, because capture runs with
+    RAG_AUTHOR_NAME overridden to the corpus author — trusting the live
+    value would check for the fictional name and miss the real one.
+
+    Deliberately not third-party-names.txt: it holds generic words like
+    "Mom" that the fiction uses legitimately, and hundreds of false hits
+    would only teach people to ignore this check."""
+    names = set()
+    env = Path(__file__).parent / ".env"
+    if env.exists():
+        for line in env.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("RAG_AUTHOR_NAME="):
+                names.add(line.split("=", 1)[1].strip().strip('"\''))
+    from config import AUTHOR
+    names.add(AUTHOR)
+    names -= {"", SEED_AUTHOR, "the journal author"}
+    return [(rf"\b{re.escape(n)}\b", "real author name") for n in sorted(names)]
+
+
 def check() -> int:
     findings = []
+    patterns = LEAK_PATTERNS + _identity_patterns()
     for path in sorted(FIXTURE_DIR.glob("*.json")):
         text = path.read_text(encoding="utf-8")
-        for pattern, label in LEAK_PATTERNS:
+        for pattern, label in patterns:
             for match in re.finditer(pattern, text):
                 line = text.count("\n", 0, match.start()) + 1
                 findings.append(f"{path.name}:{line}  {label}: {match.group()}")

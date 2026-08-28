@@ -42,6 +42,13 @@ CANDIDATE_FILE = SUMMARY_DIR / "seed_summary.candidate.md"
 BACKUP_DIR = SUMMARY_DIR / "seed_backups"
 BRAID_MAX_CHARS = 300_000  # newest kept if a braid somehow exceeds this
 
+VOICE = """\
+Voice: tell it as their story — {author} is the complex, flawed, \
+rooted-for main character; honest about mistakes, always on their side. \
+Name patterns and land resolved threads on grounded hope tied to what \
+actually happened — never empty uplift. Anchor to dates; use their words \
+and people's names as they do."""
+
 INTEGRATE_PROMPT = """\
 You maintain {author}'s rolling life summary — the one document a \
 companion reads to know who they are and where things stand. Below is the \
@@ -52,15 +59,59 @@ resolved. Preserve the section structure and the voice of the current \
 summary. Update the "Updated" date line to {today}. Output only the \
 updated summary document, nothing else.
 
-Voice: tell it as their story — {author} is the complex, flawed, \
-rooted-for main character; honest about mistakes, always on their side. \
-Name patterns and land resolved threads on grounded hope tied to what \
-actually happened — never empty uplift. Anchor to dates; use their words \
-and people's names as they do.
+""" + VOICE + """
 
 <current_summary>
 {previous}
 </current_summary>
+
+<latest_chat>
+{chat_braid}
+</latest_chat>"""
+
+# The first seed has no previous structure to preserve, and every later
+# integrate inherits whatever shape this produces — so this is the one
+# prompt that spells the skeleton out.
+FIRST_PROMPT = """\
+You are writing the FIRST version of {author}'s rolling life summary — \
+the one document a companion reads to know who they are and where things \
+stand. There is no previous summary; build it from the chat below (both \
+sides), which is everything known so far.
+
+Use these sections, in this order, keeping only the ones the material \
+actually supports:
+
+# {author}'s Journal Summary
+**Updated {today}**
+
+## Current Status
+Who they are and where life stands right now — the orienting paragraph.
+
+## <life domain>
+One section per domain with real material (work, a project, a \
+relationship, health). Give the dominant thread a dated spine, oldest \
+first, so later updates can extend it instead of rewriting it.
+
+## People
+One bullet per recurring person: who they are and what they mean.
+
+## Self-Knowledge: Patterns & Truths
+### Named this period — what became visible in these entries
+### Carried forward — open threads still live
+### Core truths — what holds across time
+
+## Dreams
+Only if any were recorded.
+
+## Upcoming & To-Do
+Commitments made and decisions still open.
+
+Every later update inherits this structure, so keep it clean and leave \
+out any section you have nothing real to put in. Write only what the chat \
+supports — no invented history. Output only the summary document, nothing \
+else.
+
+""" + VOICE + """
 
 <latest_chat>
 {chat_braid}
@@ -178,6 +229,15 @@ def integrate(previous_summary_text: str, chat_braid_text: str) -> str:
     ))
 
 
+def create_first(chat_braid_text: str) -> str:
+    """The first seed, built from a closed chat alone. Nobody arrives with
+    a summary already written — they write, then summarize when ready."""
+    return _call(FIRST_PROMPT.format(
+        author=AUTHOR, today=datetime.now().strftime("%B %d, %Y"),
+        chat_braid=chat_braid_text,
+    ))
+
+
 def consolidate(summary_text: str) -> str:
     """Compress the rolling summary when it has grown too long."""
     return _call(CONSOLIDATE_PROMPT.format(
@@ -193,10 +253,10 @@ def generate_candidate(archive_key: str) -> Path:
     archive = sessions.load_archive(archive_key)
     if archive is None:
         raise ValueError(f"archive '{archive_key}' not found")
+    braid = archive_braid_text(archive)
     previous = load_seed()
-    if not previous:
-        raise ValueError("no live seed yet — bootstrap one first (python seed.py)")
-    updated = integrate(previous, archive_braid_text(archive))
+    # no seed yet means this is the author's first close — write one
+    updated = integrate(previous, braid) if previous else create_first(braid)
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
     CANDIDATE_FILE.write_text(updated + "\n", encoding="utf-8")
     return CANDIDATE_FILE
