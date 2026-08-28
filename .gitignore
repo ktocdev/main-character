@@ -11,14 +11,17 @@ __pycache__/
 *.pyc
 
 # Data (local-only)
-chroma_data/
-journal_entries/
-entity_graph/
-summaries/
-categories/
-patterns/
-dreams/
-sessions/
+# Anchored to the repo root on purpose. Unanchored, these match at any
+# depth and silently swallow seed_corpus/journal_entries/, /summaries/
+# and /sessions/ — the corpus that is supposed to ship.
+/chroma_data/
+/journal_entries/
+/entity_graph/
+/summaries/
+/categories/
+/patterns/
+/dreams/
+/sessions/
 conversations.json
 *.export.json
 import_list.txt
@@ -42,3 +45,11 @@ export/
 
 # Leak-detection name list — sensitive in itself, never tracked (Phase 0 item 12)
 third-party-names.txt
+
+# Seed corpus scratch dirs — working state, not deliverables.
+# build/ is where the corpus is chatted through the real companion;
+# install/ is the throwaway data dir fixtures are captured from.
+# The artifacts worth keeping are promoted to seed_corpus/sessions/
+# and seed_corpus/summaries/.
+seed_corpus/build/
+seed_corpus/install/
