@@ -24,12 +24,12 @@ RAG Journal imports your Claude conversation exports and builds a searchable, co
 ### Context + summaries
 - **Entry summaries** — 2-3 sentence distillations of each entry, cached incrementally
 - **Weekly arcs** — short narratives of what happened each week, stitched from entry summaries
-- **Domain summaries** — ~500-word living docs per category (work, dating, health, etc.), synthesized from arc context
+- **Domain summaries** — ~500-word living docs per category (work, relationships, health, etc.), synthesized from arc context
 - **Status snapshot** — one-paragraph status of life right now, updated with every new entry
 - **Dream weather** — one-line tone signal from recent dreams, appended to the snapshot
 
 ### Category system
-- **Automatic tagging** — Claude tags new entries with built-in categories (work, dating, health, emotional, etc.)
+- **Automatic tagging** — Claude tags new entries with built-in categories (work, relationships, health, emotional, etc.)
 - **Organic categories** — place/project entities are clustered by composite embedding (70% context, 30% name); Claude names the clusters; the user confirms/dismisses/defers them
 - **Custom categories** — hand-seeded with trigger keywords; entries are auto-tagged by member mention or keyword match
 - **Parent rollup** — categories can roll up to a parent (Gardens → Landmarks)

@@ -24,6 +24,12 @@ cd "$(git rev-parse --show-toplevel)" || exit 2
 
 SELF="scripts/check_leaks.sh"
 NAME_LIST="third-party-names.txt"
+# The generator's docstring has to name the collisions it deliberately
+# leaves in the list (real people whose names are also common words), so
+# it trips the name pass on its own documentation -- the same failure the
+# `sk-ant-` pattern below is written to avoid. Exempt from the name pass
+# only; it is still searched for secret-shaped strings.
+NAME_SELF="scripts/gen_name_list.py"
 
 # `sk-ant-` needs the key body, not just the prefix — .env.example ships
 # `# ANTHROPIC_API_KEY=sk-ant-...` as a placeholder, and a check that
@@ -62,7 +68,9 @@ if [ ! -f "$NAME_LIST" ]; then
 else
     names=$(grep -E '^[A-Z]' "$NAME_LIST" | grep -v '^[[:space:]]*$')
     count=$(printf '%s\n' "$names" | grep -c . )
-    if hits=$(printf '%s\0' "${FILES[@]}" \
+    mapfile -d '' -t NAME_FILES < <(printf '%s\0' "${FILES[@]}" \
+                                    | grep -zv "^${NAME_SELF}$")
+    if hits=$(printf '%s\0' "${NAME_FILES[@]}" \
               | xargs -0 grep -Inwf <(printf '%s\n' "$names")); then
         echo
         echo "LEAKS FOUND — real names:"
