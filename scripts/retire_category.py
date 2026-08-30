@@ -57,6 +57,12 @@ def main():
     args = parser.parse_args()
     name = args.name.strip()
 
+    # this name is unlink()ed as summaries/domains/<name>.md below, so it
+    # has to be a bare filename component — the same guard summarizer's
+    # load_domain_doc() applies on the read side.
+    if not name or name != Path(name).name or name in (".", ".."):
+        sys.exit(f"'{name}' is not a plain category name.")
+
     if name in cats.CATEGORIES:
         sys.exit(f"'{name}' is still a built-in category — nothing to retire.")
 

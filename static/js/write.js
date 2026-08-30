@@ -86,6 +86,10 @@ let entryStamp = null;
 
 function pad(n) { return String(n).padStart(2, '0'); }
 
+// The server's wall clock, not the browser's — the two differ when
+// MC_TIMEZONE names a zone this machine isn't in. See refreshStatus.
+function serverNow() { return new Date(Date.now() + (state.clockSkewMs || 0)); }
+
 function stampString(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} `
        + `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -101,20 +105,27 @@ function renderStamp() {
     hour: 'numeric', minute: '2-digit',
   });
   $('entry-stamp-text').textContent = `Started ${when}`;
+  $('entry-stamp-text').title = state.tz
+    ? `when this entry was written — ${state.tz}`
+    : 'when this entry was written';
 }
 
 function startStamp() {
   if (entryStamp) return;          // the first keystroke wins, not the last
-  entryStamp = new Date();
+  entryStamp = serverNow();
   renderStamp();
 }
 
 export function clearStamp() { entryStamp = null; renderStamp(); }
 
 function initStamp() {
-  $('entry-text').addEventListener('focus', startStamp);
+  // 'input', not 'focus': the send handler refocuses the box in its
+  // finally block, and on 'focus' that fired startStamp again the instant
+  // after clearStamp() — so the stamp bar never hid, and an entry begun
+  // hours later carried the previous save's time instead of its own.
+  $('entry-text').addEventListener('input', startStamp);
   $('entry-stamp-edit').onclick = () => {
-    const d = entryStamp || new Date();
+    const d = entryStamp || serverNow();
     $('entry-date').value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     $('entry-time').value = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     $('entry-stamp-text').hidden = true;

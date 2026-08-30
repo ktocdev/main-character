@@ -35,7 +35,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from config import AUTHOR, MC_PROCESSING_MODEL as MODEL, SUMMARY_DIR, get_client, processing_thinking_kwargs
+from config import (AUTHOR, MC_PROCESSING_MODEL as MODEL, SUMMARY_DIR,
+                    get_client, now_local, processing_thinking_kwargs)
 
 MAX_TOKENS = 32_000
 SEED_FILE = SUMMARY_DIR / "seed_summary.md"
@@ -145,7 +146,7 @@ def _retire_candidate() -> None:
     if not CANDIDATE_FILE.exists():
         return
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    stamp = now_local().strftime("%Y-%m-%d_%H%M%S")
     (BACKUP_DIR / f"seed_summary.candidate.{stamp}.md").write_text(
         CANDIDATE_FILE.read_text(encoding="utf-8"), encoding="utf-8"
     )
@@ -155,14 +156,14 @@ def _retire_candidate() -> None:
 def save_seed(text: str) -> dict:
     """The upload point: the edited file becomes the live seed. The prior
     seed is backed up first; the pending candidate (now superseded) is
-    cleared."""
+    retired into the backups alongside it — see _retire_candidate."""
     text = text.strip()
     if len(text) < 200:
         raise ValueError("that file looks empty — not replacing the seed with it")
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
     if SEED_FILE.exists():
         BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        stamp = now_local().strftime("%Y-%m-%d_%H%M%S")
         (BACKUP_DIR / f"seed_summary.{stamp}.md").write_text(
             SEED_FILE.read_text(encoding="utf-8"), encoding="utf-8"
         )
@@ -246,7 +247,6 @@ def integrate(previous_summary_text: str, chat_braid_text: str,
 
 
 def _today() -> str:
-    from config import now_local
     return now_local().strftime("%B %d, %Y")
 
 

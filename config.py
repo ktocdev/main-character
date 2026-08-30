@@ -159,9 +159,17 @@ def now_local() -> datetime:
 
 
 def zone_name() -> str:
-    """IANA name when configured, else whatever the server's zone calls
-    itself — stored next to each stamp."""
-    return TIMEZONE or (now_local().tzname() or "")
+    """The zone the stamps are actually in — the configured IANA name only
+    when it resolved, else whatever the server's own zone calls itself.
+
+    Not simply `TIMEZONE`: this rides alongside every stored stamp and is
+    what /api/status reports, so it must never name a zone the clock isn't
+    using. zoneinfo ships no database of its own on Windows, so _zone()
+    falls back silently there unless `tzdata` is installed."""
+    zone = _zone()
+    if TIMEZONE and getattr(zone, "key", None) == TIMEZONE:
+        return TIMEZONE
+    return now_local().tzname() or ""
 
 
 def stamp(when: datetime | None = None) -> str:

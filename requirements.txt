@@ -2,6 +2,8 @@
 chromadb>=0.5          # local vector store (bundles all-MiniLM-L6-v2 embeddings)
 anthropic>=0.40        # Claude API — companion + metadata extraction
 python-dotenv>=1.0     # .env config
+tzdata>=2024.1         # IANA zone database — zoneinfo ships none on
+                       # Windows, so MC_TIMEZONE is a silent no-op without it
 
 # Web UI
 fastapi>=0.115         # local web server (server.py)

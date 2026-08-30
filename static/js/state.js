@@ -8,5 +8,7 @@ export const state = {
   activeTab: 'write',    // main.js owns; write + triage read
   sessionSel: 'current', // history selection; write's closeSession resets it
   dateStyle: 'long',     // MC_DATE_FORMAT, via /api/status; write renders stamps with it
+  clockSkewMs: 0,        // server clock − browser clock, via /api/status; write stamps against it
+  tz: '',                // the server's zone name; shown on the entry stamp
 };
 export const filters = {unreviewed: false, single: false, group: null, types: new Set()};
