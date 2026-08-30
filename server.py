@@ -31,6 +31,7 @@ import companion
 import entities
 import sessions
 from config import HOST, PORT, MOCK_MODE, get_client
+from config import DATE_FORMAT, parse_stamp, now_local, stamp as _now_stamp, zone_name
 from rag_journal import get_collection
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -90,6 +91,10 @@ class ChatIn(BaseModel):
 class EntryIn(BaseModel):
     text: str
     dream: bool = False  # user-flagged; dreams go to the dream realm
+    # when the entry was written, "YYYY-MM-DD HH:MM". The client stamps it
+    # on focus and the user may edit it before saving; absent or malformed
+    # falls back to now, so an older client keeps working.
+    ts: str | None = None
 
 
 class MergeIn(BaseModel):
@@ -188,6 +193,12 @@ def status():
         # drives the UI banner — a canned reply must never be mistaken for
         # a real one
         "mock": MOCK_MODE,
+        # the server owns the clock; the client stamps against this
+        "now": _now_stamp(),
+        "tz": zone_name(),
+        # a strftime format can't be handed to JS — send the one bit the
+        # client actually branches on
+        "date_style": "short" if "%B" not in DATE_FORMAT else "long",
     }
 
 
@@ -199,7 +210,8 @@ def chat(body: ChatIn):
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["messages"], body.message,
         )
-        sessions.append_message("companion", STATE["messages"][-1]["content"])
+        sessions.append_message("companion", STATE["messages"][-1]["content"],
+                                when=when)
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
 
 
@@ -255,22 +267,26 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
     if not text:
         return JSONResponse({"error": "empty entry"}, status_code=400)
 
+    when = parse_stamp(body.ts) if body.ts else None
+
     if body.dream:
         import dreams
-        entry_id = dreams.store_dream_entry(text)
-        sessions.append_message("you", text, dream=True, collection=STATE["collection"])
+        entry_id = dreams.store_dream_entry(text, when=when)
+        sessions.append_message("you", text, dream=True,
+                                collection=STATE["collection"], when=when)
         entry_message = (
             "The following is a dream I just had — I'm flagging it as a "
             "dream, not a waking event. Respond to it as my companion: "
             "receive it, don't decode it with generic symbolism.\n\n" + text
         )
-        background_tasks.add_task(dreams.ingest_dream_entry, text, entry_id)
+        background_tasks.add_task(dreams.ingest_dream_entry, text, entry_id, when)
     else:
         # the entry joins the open session; it becomes journal memory
         # when the chat is closed (the summarize point)
         entry_id = "current-chat"
-        sessions.append_message("you", text, collection=STATE["collection"])
-        sessions.backup_entry_text(text)
+        sessions.append_message("you", text, collection=STATE["collection"],
+                                when=when)
+        sessions.backup_entry_text(text, when=when)
         entry_message = (
             "The following is a new journal entry I just wrote — not a question. "
             "Respond to it as my companion.\n\n" + text
@@ -281,7 +297,8 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["messages"], entry_message, include_dreams=body.dream,
         )
-        sessions.append_message("companion", STATE["messages"][-1]["content"])
+        sessions.append_message("companion", STATE["messages"][-1]["content"],
+                                when=when)
     return StreamingResponse(
         gen(),
         media_type="text/plain; charset=utf-8",

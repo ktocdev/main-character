@@ -45,6 +45,15 @@
       <button class="quiet" id="seed-banner-upload">upload edited seed</button>
     </div>
     <div class="composer write-composer">
+      <div id="entry-stamp" hidden>
+        <span id="entry-stamp-text" title="when this entry was written"></span>
+        <button class="quiet" id="entry-stamp-edit">change</button>
+        <span id="entry-stamp-fields" hidden>
+          <input type="date" id="entry-date">
+          <input type="time" id="entry-time">
+          <button class="quiet" id="entry-stamp-done">done</button>
+        </span>
+      </div>
       <textarea id="entry-text" rows="3" placeholder="write freely…"></textarea>
       <div class="write-controls">
         <button class="send" id="entry-send" title="save as a journal entry (markdown backup now, journal memory at close)">save entry</button>
@@ -55,9 +64,7 @@
           <summary title="chat actions">⋯</summary>
           <div class="menu">
             <button class="quiet" id="reset" title="the summarize point — your side of this chat becomes a journal entry, memory updates in the background, a fresh chat opens">summarize &amp; close chat</button>
-            <button class="quiet" id="refresh-summaries" title="regenerate the weekly arcs + domain docs — a manual fallback; closing a chat does this automatically">refresh memory</button>
-            <button class="quiet" id="seed-download" title="download the live seed summary — the co-edited life summary that opens every chat" hidden>download seed</button>
-            <button class="quiet" id="seed-candidate" title="download the integrated candidate written when a chat closes — read it fully, edit, then upload" hidden>download close candidate</button>
+            <button class="quiet" id="seed-download" title="download the live seed summary — the co-edited life summary that opens every chat" hidden>download current seed</button>
             <button class="quiet" id="seed-upload-btn" title="upload your edited seed summary — it becomes the live seed for every new turn (the old one is backed up)">upload seed</button>
             <input type="file" id="seed-upload-file" accept=".md,.txt,text/markdown,text/plain" hidden>
           </div>
@@ -146,6 +153,8 @@
             <span class="dates" id="session-dates"></span>
             <button class="quiet" id="session-close-btn" style="display:none"
               title="the summarize point — your side of this chat becomes a journal entry and a fresh chat opens">summarize &amp; start new chat</button>
+            <button class="quiet" id="refresh-summaries"
+              title="regenerate the weekly arcs + domain docs — a manual fallback; closing a chat does this automatically">refresh memory</button>
           </div>
           <div id="session-body"></div>
         </div>
@@ -304,7 +313,7 @@
         <p>Memory now updates at the <em>summarize point</em> — closing a chat tags it, extracts
         its entities, refreshes the week's arc, its summary, and the domain documents, scans it
         for dreams, and integrates the chat into a <em>seed summary candidate</em> — the rolling
-        co-edited life summary. Download the candidate from the ⋯ menu on the write tab, read it
+        co-edited life summary. A banner on the write tab announces it: download the candidate there, read it
         fully, edit it, and upload it back: the uploaded file is the seed every chat opens with,
         and nothing automatic ever overwrites it. <em>detect patterns</em> in the
         patterns tab still re-reads everything for new recurring shapes when you ask. Closed chats

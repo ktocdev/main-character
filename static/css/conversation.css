@@ -33,6 +33,20 @@
   .write-composer { flex-direction: column; gap: .5rem; }
   #entry-text { min-height: 4.5rem; max-height: 40vh; overflow-y: auto; }
   .write-controls { display: flex; align-items: center; gap: .6rem; }
+  /* the entry's timestamp, above the box — quiet until you need it */
+  #entry-stamp {
+    display: flex; align-items: center; gap: .5rem;
+    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    color: var(--accent-dim);
+  }
+  #entry-stamp input[type=date], #entry-stamp input[type=time] {
+    background: var(--bg-input); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: .15rem .35rem; font: inherit;
+  }
+  #entry-stamp-fields { display: inline-flex; align-items: center; gap: .4rem; }
+  /* an explicit display beats the hidden attribute — say it back */
+  #entry-stamp[hidden], #entry-stamp-fields[hidden] { display: none; }
   .saved-note { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--accent-dim); margin-left: 1rem; flex: 1; }
   #write-actions { position: relative; margin-left: auto; }
   #write-actions summary {

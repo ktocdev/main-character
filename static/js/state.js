@@ -7,5 +7,6 @@ export const state = {
   selected: null,        // selected entity name (entities.js owns; groups reads)
   activeTab: 'write',    // main.js owns; write + triage read
   sessionSel: 'current', // history selection; write's closeSession resets it
+  dateStyle: 'long',     // MC_DATE_FORMAT, via /api/status; write renders stamps with it
 };
 export const filters = {unreviewed: false, single: false, group: null, types: new Set()};
