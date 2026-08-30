@@ -45,7 +45,12 @@ echo "leak check: ${#FILES[@]} tracked file(s)"
 
 FOUND=0
 
-if hits=$(printf '%s\0' "${FILES[@]}" | xargs -0 grep -IinE -- "$PATTERNS"); then
+# The output is what decides, never the exit status: xargs returns 123
+# when *any* of its batches exits non-zero, and a batch with no match is
+# exactly that. Branching on the status drops the real findings from the
+# other batches and prints "clean" — a leak check that fails open.
+hits=$(printf '%s\0' "${FILES[@]}" | xargs -0 grep -IinE -- "$PATTERNS")
+if [ -n "$hits" ]; then
     echo
     echo "LEAKS FOUND — secret-shaped strings:"
     printf '%s\n' "$hits" | sed 's/^/  /'
@@ -68,10 +73,22 @@ if [ ! -f "$NAME_LIST" ]; then
 else
     names=$(grep -E '^[A-Z]' "$NAME_LIST" | grep -v '^[[:space:]]*$')
     count=$(printf '%s\n' "$names" | grep -c . )
+fi
+
+# A list with no capitalized entries would hand `grep -f` a lone blank
+# line, which matches every line of every file — the pass has to report
+# that it has no names, not report the whole codebase as a leak.
+if [ -z "${names:-}" ]; then
+    if [ -f "$NAME_LIST" ]; then
+        echo "name pass: skipped ($NAME_LIST has no capitalized entries)"
+    fi
+else
     mapfile -d '' -t NAME_FILES < <(printf '%s\0' "${FILES[@]}" \
                                     | grep -zv "^${NAME_SELF}$")
-    if hits=$(printf '%s\0' "${NAME_FILES[@]}" \
-              | xargs -0 grep -Inwf <(printf '%s\n' "$names")); then
+    # the same xargs-status trap as the pattern pass above
+    hits=$(printf '%s\0' "${NAME_FILES[@]}" \
+           | xargs -0 grep -Inwf <(printf '%s\n' "$names"))
+    if [ -n "$hits" ]; then
         echo
         echo "LEAKS FOUND — real names:"
         printf '%s\n' "$hits" | sed 's/^/  /'

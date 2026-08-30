@@ -210,8 +210,10 @@ def chat(body: ChatIn):
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["messages"], body.message,
         )
-        sessions.append_message("companion", STATE["messages"][-1]["content"],
-                                when=when)
+        # no `when` here on purpose: a chat turn carries no user-supplied
+        # stamp — only a write-mode entry can be backdated — so the reply
+        # is stamped at the moment it was actually generated.
+        sessions.append_message("companion", STATE["messages"][-1]["content"])
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
 
 
