@@ -6,6 +6,7 @@ its _Realm: dream_ marker, then populates:
   - chroma_data/  (journal_entries + journal_dreams collections)
   - journal_entries/  (markdown backups)
   - sessions/archive/  (the three closed sessions, both-sided braids)
+  - sessions/current.json  (the empty session the last close opened)
   - summaries/  (the live seed, its backup, the pending candidate)
 
 The session archives and seed summaries are not written here — they are
@@ -28,6 +29,7 @@ the moment it finds session archives or a seed it didn't ship.
 """
 
 import argparse
+import json
 import re
 import shutil
 import sys
@@ -110,13 +112,24 @@ def session_files() -> list[tuple[Path, Path]]:
     """The seed loop's own history, produced by build_sessions.py: three
     closed sessions with both-sided braids, the live seed those closes
     generated, the seed it replaced, and the candidate still awaiting
-    review. Copied as-is — none of it is regenerated at import."""
+    review. Copied as-is — none of it is regenerated at import.
+
+    current.json ships too, and has to. Without it the first run falls into
+    load_current's first-run path, which builds a base from the newest
+    imported conversation — a session that looks like it continues 9/14
+    rather than one the 9/14 close just opened. That contradicts the pending
+    candidate sitting next to it: a real close ends with save_current(_fresh())
+    and an empty base. Shipping the file makes the demo state the corpus's
+    own, instead of whatever the first person to launch it happened to
+    generate."""
     here = Path(__file__).parent
     pairs = [(here / "sessions" / "archive", SESSION_DIR / "archive"),
              (here / "summaries" / "seed_backups",
               SUMMARY_DIR / "seed_backups")]
     files = [(here / "summaries" / n, SUMMARY_DIR / n)
              for n in ("seed_summary.md", "seed_summary.candidate.md")]
+    files.append((here / "sessions" / "current.json",
+                  SESSION_DIR / "current.json"))
 
     for src_dir, dst_dir in pairs:
         for src in sorted(src_dir.glob("*")):
@@ -139,6 +152,18 @@ def refuse_if_real_journal(files: list[tuple[Path, Path]]):
     if live.exists() and live.read_text(encoding="utf-8") != \
             (here / "summaries" / "seed_summary.md").read_text(encoding="utf-8"):
         intruders.append(live.name)
+    # the open session is installed now, so it can also be overwritten. Only
+    # unsaved turns make it precious — a base-only or empty session is what
+    # any first run invents, and replacing that is the point.
+    open_session = SESSION_DIR / "current.json"
+    if open_session.exists():
+        try:
+            live_msgs = json.loads(
+                open_session.read_text(encoding="utf-8")).get("messages") or []
+        except (ValueError, OSError):
+            live_msgs = ["unreadable"]   # can't vouch for it: treat as theirs
+        if live_msgs:
+            intruders.append(open_session.name)
     if intruders:
         sys.exit(
             f"\nrefusing to install: {SUMMARY_DIR.parent} already holds a "

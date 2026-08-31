@@ -1,6 +1,6 @@
 import { $ } from './core.js';
 import { state } from './state.js';
-import { closeSession } from './write.js';
+import { closeSession, hasNewMaterial } from './write.js';
 
 // ---- history (sessions) ----
 // The landing view is the open chat: the conversation it continues, the
@@ -50,32 +50,35 @@ function renderSessionList() {
   }
 }
 
-function addSessionPart(container, label, text, date) {
+function addSessionPart(container, label, text, date, carried) {
   const l = document.createElement('div');
-  l.className = 'session-part-label';
+  l.className = carried ? 'session-part-label carried' : 'session-part-label';
   l.textContent = label;
   if (date) { l.dataset.tocDate = date; l.dataset.tocKind = 'entry'; }
   const t = document.createElement('div');
-  t.className = 'session-part';
+  t.className = carried ? 'session-part carried' : 'session-part';
   t.textContent = text;
   container.append(l, t);
 }
 
 // a part with both sides (backfilled from the Claude export) renders as
 // an interleaved chat; otherwise the flat user-side text
-export function renderSessionPart(container, p) {
+// `carried` marks a part the open session merely continues — the closed
+// chat it opened with, not something written into it. Only the current-session
+// views pass it; an archive renders its own parts as itself.
+export function renderSessionPart(container, p, carried) {
   const label = `${fmtDate(p.date)} — ${p.title}`;
   if (p.summary) addPartSummary(container, p);
   if (p.messages) {
     const l = document.createElement('div');
-    l.className = 'session-part-label';
+    l.className = carried ? 'session-part-label carried' : 'session-part-label';
     l.textContent = label;
     l.dataset.tocDate = p.date;
     l.dataset.tocKind = 'entry';
     container.appendChild(l);
     addSessionBraid(container, p.messages);
   } else {
-    addSessionPart(container, label, p.text, p.date);
+    addSessionPart(container, label, p.text, p.date, carried);
   }
 }
 
@@ -159,11 +162,13 @@ async function showSession(key) {
     $('session-title').textContent = r.parts.length ? r.parts[0].title : 'current chat';
     $('session-dates').textContent = 'open since ' + fmtDate(r.started);
     body.innerHTML = '';
-    for (const p of r.parts) renderSessionPart(body, p);
+    for (const p of r.parts) renderSessionPart(body, p, true);
     addSessionBraid(body, r.messages);
     if (!r.parts.length && !r.messages.length) {
       body.textContent = 'nothing here yet — chat or write to begin.';
-    } else {
+    } else if (hasNewMaterial(r.messages)) {
+      // the server refuses a close with nothing new in it, so only offer one
+      // when there is — a carried-forward part is not new material
       $('session-close-btn').style.display = 'inline-block';
     }
 
