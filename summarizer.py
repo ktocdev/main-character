@@ -8,7 +8,7 @@ companion's Layer 1 context:
                           summaries/arcs/{YYYY-Www}.md; only weeks whose
                           entries changed are regenerated
   Domain summaries      — one living document per category (work, health,
-                          dating, …) in summaries/domains/{name}.md, built
+                          relationships, …) in summaries/domains/{name}.md, built
                           from the entries tagged with that category; only
                           domains whose entry set changed are regenerated
   Entry summaries       — 2-3 sentences per entry (key events, emotional

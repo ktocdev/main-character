@@ -37,7 +37,6 @@ async function refreshSeedMenu() {
   const s = await seedState();
   if (!s) return;
   $('seed-download').hidden = !s.exists;
-  $('seed-candidate').hidden = !s.candidate_exists;
   $('seed-banner').hidden = !s.candidate_exists;
 }
 // after a close, the candidate integrates in the background — watch for it
@@ -79,9 +78,76 @@ export async function loadWriteLog() {
   } catch (e) { }
 }
 
+// The entry's own timestamp. Stamped when the user starts writing, not
+// when they hit save — a long entry belongs to the moment it was begun.
+// Editable, so a missed day can be written up later and still land on the
+// day it happened; close_session groups by this.
+let entryStamp = null;
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+// The server's wall clock, not the browser's — the two differ when
+// MC_TIMEZONE names a zone this machine isn't in. See refreshStatus.
+function serverNow() { return new Date(Date.now() + (state.clockSkewMs || 0)); }
+
+function stampString(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} `
+       + `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderStamp() {
+  if (!entryStamp) { $('entry-stamp').hidden = true; return; }
+  $('entry-stamp').hidden = false;
+  const long = state.dateStyle !== 'short';
+  const when = entryStamp.toLocaleString(undefined, {
+    month: long ? 'long' : 'numeric', day: 'numeric',
+    year: long ? 'numeric' : '2-digit',
+    hour: 'numeric', minute: '2-digit',
+  });
+  $('entry-stamp-text').textContent = `Started ${when}`;
+  $('entry-stamp-text').title = state.tz
+    ? `when this entry was written — ${state.tz}`
+    : 'when this entry was written';
+}
+
+function startStamp() {
+  if (entryStamp) return;          // the first keystroke wins, not the last
+  entryStamp = serverNow();
+  renderStamp();
+}
+
+export function clearStamp() { entryStamp = null; renderStamp(); }
+
+function initStamp() {
+  // 'input', not 'focus': the send handler refocuses the box in its
+  // finally block, and on 'focus' that fired startStamp again the instant
+  // after clearStamp() — so the stamp bar never hid, and an entry begun
+  // hours later carried the previous save's time instead of its own.
+  $('entry-text').addEventListener('input', startStamp);
+  $('entry-stamp-edit').onclick = () => {
+    const d = entryStamp || serverNow();
+    $('entry-date').value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    $('entry-time').value = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    $('entry-stamp-text').hidden = true;
+    $('entry-stamp-edit').hidden = true;
+    $('entry-stamp-fields').hidden = false;
+  };
+  $('entry-stamp-done').onclick = () => {
+    const [y, m, day] = ($('entry-date').value || '').split('-').map(Number);
+    const [hh, mm] = ($('entry-time').value || '').split(':').map(Number);
+    if (y && m && day) entryStamp = new Date(y, m - 1, day, hh || 0, mm || 0);
+    $('entry-stamp-fields').hidden = true;
+    $('entry-stamp-text').hidden = false;
+    $('entry-stamp-edit').hidden = false;
+    renderStamp();
+  };
+}
+
 export function init() {
   $('entry-text').value = localStorage.getItem('rag_draft') || '';
   autosizeEntry();
+  initStamp();
+  if ($('entry-text').value) startStamp();   // a restored draft is already begun
   $('entry-text').addEventListener('input', () => {
     localStorage.setItem('rag_draft', $('entry-text').value);
     autosizeEntry();
@@ -111,7 +177,6 @@ export function init() {
     if ($('write-actions').open) refreshSeedMenu();
   });
   $('seed-download').onclick = () => { window.location = '/api/seed/download?which=current'; };
-  $('seed-candidate').onclick = () => { window.location = '/api/seed/download?which=candidate'; };
   $('seed-banner-download').onclick = () => { window.location = '/api/seed/download?which=candidate'; };
   $('seed-upload-btn').onclick = () => $('seed-upload-file').click();
   $('seed-banner-upload').onclick = () => $('seed-upload-file').click();
@@ -147,8 +212,10 @@ export function init() {
     addMsg('you', text);
     const el = addMsg('companion thinking', '');
     try {
-      const res = await streamInto(el, '/api/entry', {text});
+      const res = await streamInto(el, '/api/entry',
+        {text, ts: entryStamp ? stampString(entryStamp) : null});
       if (res.ok) {
+        clearStamp();   // the next entry gets its own
         $('entry-saved').textContent = 'entry saved — becomes journal memory when you close the chat';
         refreshStatus();
       } else {

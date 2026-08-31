@@ -44,7 +44,7 @@ INDEX_FILE = CATEGORY_DIR / "index.json"
 # categories are a later roadmap item and deliberately not handled here.
 CATEGORIES = {
     "work": "job, career, coworkers, job searching, professional projects and stress",
-    "dating": "dates, romantic interest, relationships, breakups, exes in a romantic context",
+    "relationships": "romantic life — dates, crushes, a partner or spouse, milestones and conflicts in a romance, breakups, exes; not friendships (social) or relatives (family)",
     "health": "physical or mental health, injuries, illness, sleep, medication, exercise, doctors",
     "creative": "art, music, singing, drawing, writing, coding side projects, creative hobbies",
     "social": "friends, outings, parties, bars, shows, events, plans with people",
@@ -130,6 +130,13 @@ def tag_conversation(client, conv: dict) -> dict:
         # results are ordered most-central first; cap as a backstop against
         # over-tagging (a tag on everything is a tag on nothing)
         for item in json.loads(raw).get("categories", [])[:6]:
+            # TAG_SCHEMA's enum already constrains this on a real call, but
+            # mock mode replays recorded text without a schema — a fixture
+            # captured before a category was renamed would otherwise inject
+            # a name that isn't in CATEGORIES, and build_index() silently
+            # drops it from counts rather than erroring.
+            if item["name"] not in CATEGORIES:
+                continue
             tags.setdefault(item["name"], item["evidence"])
     return tags
 

@@ -34,7 +34,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from config import SESSION_DIR
+from config import SESSION_DIR, now_local, stamp as _fmt_stamp, zone_name
 from rag_journal import JOURNAL_DIR, extract_metadata
 
 ARCHIVE_DIR = SESSION_DIR / "archive"
@@ -47,8 +47,12 @@ TITLE_PROMPT = (
 )
 
 
-def _stamp() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M")
+def _stamp(when: datetime | None = None) -> str:
+    """Wall-clock in the configured zone. `when` lets a caller supply the
+    moment the entry was actually written — the user can backdate a missed
+    day, and close_session groups by ts[:10], so this is what decides which
+    day an entry lands on."""
+    return _fmt_stamp(when)
 
 
 def _fresh(base: list[dict] | None = None) -> dict:
@@ -100,21 +104,22 @@ def save_current(cur: dict):
     )
 
 
-def append_message(role: str, text: str, dream: bool = False, collection=None):
+def append_message(role: str, text: str, dream: bool = False, collection=None,
+                   when: datetime | None = None):
     """Record one turn of the open session ('you' or 'companion')."""
     cur = load_current(collection)
-    msg = {"role": role, "text": text, "ts": _stamp()}
+    msg = {"role": role, "text": text, "ts": _stamp(when), "tz": zone_name()}
     if dream:
         msg["dream"] = True
     cur["messages"].append(msg)
     save_current(cur)
 
 
-def backup_entry_text(text: str):
+def backup_entry_text(text: str, when: datetime | None = None):
     """Immediate markdown backup of a write-mode entry. The live copy is
     sessions/current.json; this file is the belt-and-suspenders copy so a
     new entry never has a single point of failure before the chat closes."""
-    now = datetime.now()
+    now = when or now_local()
     date = now.strftime("%Y-%m-%d")
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
     path = JOURNAL_DIR / f"{date}_{now.strftime('%H%M')}_entry.md"
@@ -333,7 +338,16 @@ def _generate_title(client, text: str) -> str:
         return ""
 
 
-def close_session(collection, client=None, title_hint: str = "") -> dict:
+def _last_written(msgs: list[dict]) -> datetime | None:
+    """The newest message stamp, so a close inherits the session's own
+    dates instead of the moment the button was pressed."""
+    from config import parse_stamp
+    stamps = sorted(m.get("ts", "") for m in msgs if m.get("ts"))
+    return parse_stamp(stamps[-1]) if stamps else None
+
+
+def close_session(collection, client=None, title_hint: str = "",
+                  when: datetime | None = None) -> dict:
     """The summarize point. The user's side of the open session becomes
     a journal entry in the same shape as an imported conversation; the
     full braid is archived; a fresh empty session opens.
@@ -349,7 +363,10 @@ def close_session(collection, client=None, title_hint: str = "") -> dict:
     if not user_msgs:
         raise ValueError("nothing new in this chat yet — write or chat first")
 
-    now = datetime.now()
+    # The close is dated by the last thing written, not by the wall clock:
+    # a chat closed the morning after a late entry belongs with that entry,
+    # and a backdated session must not archive under today.
+    now = when or _last_written(user_msgs) or now_local()
     date = now.strftime("%Y-%m-%d")
     new_text = "\n\n".join(m["text"] for m in user_msgs)
     base = cur.get("base") or []

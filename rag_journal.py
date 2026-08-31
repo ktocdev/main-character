@@ -144,9 +144,11 @@ _TOPIC_KEYWORDS = {
         "work", "job", "boss", "meeting", "coworker", "deadline", "project",
         "interview", "career", "office", "client", "laid off", "promotion",
     ],
-    "dating": [
+    "relationships": [
         "date", "dating", "crush", "boyfriend", "girlfriend", "relationship",
-        "ex", "broke up", "breakup", "texted him", "texted her", "app",
+        "partner", "spouse", "wife", "husband", "married", "marriage",
+        "engaged", "anniversary", "divorce",
+        "ex", "broke up", "breakup", "texted him", "texted her",
     ],
     "health": [
         "doctor", "sick", "injury", "injured", "pain", "knee", "sleep",

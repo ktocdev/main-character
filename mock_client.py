@@ -28,6 +28,7 @@ import hashlib
 import inspect
 import json
 import random
+import re
 import time
 from pathlib import Path
 
@@ -106,15 +107,61 @@ def _fixtures(key: str) -> list:
     return _fixture_cache[key]
 
 
+def _names(value: object, out: set) -> set:
+    """Short string values from a parsed response — entity names, labels,
+    titles. Long ones are prose (a `reason`, a summary) and say nothing
+    about which call this response answered."""
+    if isinstance(value, str):
+        if 2 < len(value) <= 40:
+            out.add(value.lower())
+    elif isinstance(value, dict):
+        for v in value.values():
+            _names(v, out)
+    elif isinstance(value, list):
+        for v in value:
+            _names(v, out)
+    return out
+
+
+def _grounding(response: str, prompt: str) -> float | None:
+    """For a structured response, the share of its names the prompt also
+    mentions. None for prose, which carries no such handle.
+
+    Hashing alone picks from the bucket at random, which breaks when one
+    key covers several shapes of call: `entities.suggest_merges` is filed
+    under a single key for all three entity kinds, so a "places" request
+    could answer with the person merge and propose folding Mika into
+    Mikayla under Places."""
+    try:
+        parsed = json.loads(response)
+    except ValueError:
+        return None
+    names = _names(parsed, set())
+    if not names:
+        return None
+    low = prompt.lower()
+    return sum(1 for n in names if n in low) / len(names)
+
+
 def _pick(key: str, prompt: str) -> str | None:
     """One captured response, chosen by prompt hash so it's stable across
-    runs. Returns None when nothing has been captured for this call type."""
+    runs. Structured responses are narrowed to those the prompt actually
+    grounds first; prose is left to the hash alone, which is what keeps
+    replies varied. Returns None when nothing was captured for this call."""
     responses = _fixtures(key)
     if not responses:
         return None
+    texts = [r if isinstance(r, str) else json.dumps(r) for r in responses]
+
+    scores = [_grounding(t, prompt) for t in texts]
+    if any(s is not None for s in scores):
+        best = max(s for s in scores if s is not None)
+        if best > 0:  # nothing grounded means no signal — keep them all
+            texts = [t for t, s in zip(texts, scores)
+                     if s is not None and s >= best * 0.9]
+
     digest = hashlib.sha256(prompt.encode("utf-8")).digest()
-    chosen = responses[int.from_bytes(digest[:4], "big") % len(responses)]
-    return chosen if isinstance(chosen, str) else json.dumps(chosen)
+    return texts[int.from_bytes(digest[:4], "big") % len(texts)]
 
 
 # ---------------------------------------------------------------------------

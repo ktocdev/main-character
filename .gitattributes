@@ -1,0 +1,2 @@
+# Shell scripts run on Linux in CI; CRLF would break the interpreter.
+*.sh text eol=lf

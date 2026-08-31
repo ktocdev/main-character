@@ -13,6 +13,7 @@ Settings UI read from — one place to update when a new model ships.
 """
 
 import os
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -124,6 +125,66 @@ MAX_TOKENS = int(os.getenv("MC_MAX_TOKENS", "8000"))  # companion reply budget
 
 MOCK_MODE = os.getenv("MC_MOCK", "0").strip() == "1"
 AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
+
+
+# ---------------------------------------------------------------------------
+# TIME
+# ---------------------------------------------------------------------------
+# The server knows the real time; the model never should. Everything that
+# needs "now" comes through now_local() so a single clock feeds writes,
+# session closes and the seed's Updated line.
+#
+# Stored wall-clock stays LOCAL, not UTC: a journal entry belongs to the
+# day it was lived, and `date` / `ts[:10]` are what close_session groups
+# days by and what every window and sort reads. The zone rides alongside
+# so a local stamp stays interpretable.
+
+TIMEZONE = os.getenv("MC_TIMEZONE", "").strip()
+DATE_FORMAT = os.getenv("MC_DATE_FORMAT", "%B %d, %Y").strip()
+
+
+def _zone():
+    if TIMEZONE:
+        try:
+            from zoneinfo import ZoneInfo
+            return ZoneInfo(TIMEZONE)
+        except Exception:
+            pass  # bad zone name shouldn't stop the app booting
+    return datetime.now().astimezone().tzinfo
+
+
+def now_local() -> datetime:
+    """Current time in the configured zone, timezone-aware."""
+    return datetime.now(_zone())
+
+
+def zone_name() -> str:
+    """The zone the stamps are actually in — the configured IANA name only
+    when it resolved, else whatever the server's own zone calls itself.
+
+    Not simply `TIMEZONE`: this rides alongside every stored stamp and is
+    what /api/status reports, so it must never name a zone the clock isn't
+    using. zoneinfo ships no database of its own on Windows, so _zone()
+    falls back silently there unless `tzdata` is installed."""
+    zone = _zone()
+    if TIMEZONE and getattr(zone, "key", None) == TIMEZONE:
+        return TIMEZONE
+    return now_local().tzname() or ""
+
+
+def stamp(when: datetime | None = None) -> str:
+    """The `YYYY-MM-DD HH:MM` form used by session messages."""
+    return (when or now_local()).strftime("%Y-%m-%d %H:%M")
+
+
+def parse_stamp(text: str) -> datetime | None:
+    """A client-supplied stamp, or None if it isn't one. Naive on purpose —
+    it's wall-clock in the configured zone, same as what stamp() emits."""
+    try:
+        return datetime.strptime(text.strip()[:16], "%Y-%m-%d %H:%M").replace(
+            tzinfo=_zone())
+    except (ValueError, AttributeError):
+        return None
 
 
 # ---------------------------------------------------------------------------

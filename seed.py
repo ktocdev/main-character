@@ -11,7 +11,8 @@ uploaded file is canonical — nothing auto-generated ever overwrites it.
   summaries/seed_summary.md            the live seed (author-owned)
   summaries/seed_summary.candidate.md  the post-close integrate output,
                                        awaiting review/edit/upload
-  summaries/seed_backups/              prior seeds, kept on every upload
+  summaries/seed_backups/              prior seeds and superseded
+                                       candidates — nothing is deleted
 
 Usage:
     python seed.py bootstrap <previous.md> <archive.json>
@@ -34,7 +35,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from config import AUTHOR, MC_PROCESSING_MODEL as MODEL, SUMMARY_DIR, get_client, processing_thinking_kwargs
+from config import (AUTHOR, MC_PROCESSING_MODEL as MODEL, SUMMARY_DIR,
+                    get_client, now_local, processing_thinking_kwargs)
 
 MAX_TOKENS = 32_000
 SEED_FILE = SUMMARY_DIR / "seed_summary.md"
@@ -136,23 +138,37 @@ def load_seed() -> str:
     return SEED_FILE.read_text(encoding="utf-8") if SEED_FILE.exists() else ""
 
 
+def _retire_candidate() -> None:
+    """Move a pending candidate into the backups instead of dropping it.
+    Both callers legitimately supersede it — an upload completes the
+    ritual, a second close writes a fresher one — but neither can tell
+    whether the author ever read it, so nothing is deleted outright."""
+    if not CANDIDATE_FILE.exists():
+        return
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = now_local().strftime("%Y-%m-%d_%H%M%S")
+    (BACKUP_DIR / f"seed_summary.candidate.{stamp}.md").write_text(
+        CANDIDATE_FILE.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    CANDIDATE_FILE.unlink()
+
+
 def save_seed(text: str) -> dict:
     """The upload point: the edited file becomes the live seed. The prior
     seed is backed up first; the pending candidate (now superseded) is
-    cleared."""
+    retired into the backups alongside it — see _retire_candidate."""
     text = text.strip()
     if len(text) < 200:
         raise ValueError("that file looks empty — not replacing the seed with it")
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
     if SEED_FILE.exists():
         BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        stamp = now_local().strftime("%Y-%m-%d_%H%M%S")
         (BACKUP_DIR / f"seed_summary.{stamp}.md").write_text(
             SEED_FILE.read_text(encoding="utf-8"), encoding="utf-8"
         )
     SEED_FILE.write_text(text + "\n", encoding="utf-8")
-    if CANDIDATE_FILE.exists():
-        CANDIDATE_FILE.unlink()
+    _retire_candidate()
     return {"chars": len(text)}
 
 
@@ -221,19 +237,24 @@ def _call(prompt: str) -> str:
     return "".join(parts).strip()
 
 
-def integrate(previous_summary_text: str, chat_braid_text: str) -> str:
+def integrate(previous_summary_text: str, chat_braid_text: str,
+              today: str = "") -> str:
     """Fold one chat (both sides) into the rolling summary."""
     return _call(INTEGRATE_PROMPT.format(
-        author=AUTHOR, today=datetime.now().strftime("%B %d, %Y"),
+        author=AUTHOR, today=today or _today(),
         previous=previous_summary_text, chat_braid=chat_braid_text,
     ))
 
 
-def create_first(chat_braid_text: str) -> str:
+def _today() -> str:
+    return now_local().strftime("%B %d, %Y")
+
+
+def create_first(chat_braid_text: str, today: str = "") -> str:
     """The first seed, built from a closed chat alone. Nobody arrives with
     a summary already written — they write, then summarize when ready."""
     return _call(FIRST_PROMPT.format(
-        author=AUTHOR, today=datetime.now().strftime("%B %d, %Y"),
+        author=AUTHOR, today=today or _today(),
         chat_braid=chat_braid_text,
     ))
 
@@ -241,7 +262,7 @@ def create_first(chat_braid_text: str) -> str:
 def consolidate(summary_text: str) -> str:
     """Compress the rolling summary when it has grown too long."""
     return _call(CONSOLIDATE_PROMPT.format(
-        author=AUTHOR, today=datetime.now().strftime("%B %d, %Y"),
+        author=AUTHOR, today=_today(),
         previous=summary_text,
     ))
 
@@ -255,9 +276,17 @@ def generate_candidate(archive_key: str) -> Path:
         raise ValueError(f"archive '{archive_key}' not found")
     braid = archive_braid_text(archive)
     previous = load_seed().strip()   # a whitespace-only file is not a seed
+    # dated by the close it summarizes, not by when this ran — a backdated
+    # or replayed session must not stamp the seed with today
+    closed = archive.get("closed", "")
+    from config import parse_stamp
+    when = parse_stamp(closed)
+    today = when.strftime("%B %d, %Y") if when else ""
     # no seed yet means this is the author's first close — write one
-    updated = integrate(previous, braid) if previous else create_first(braid)
+    updated = (integrate(previous, braid, today) if previous
+               else create_first(braid, today))
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
+    _retire_candidate()   # superseded by a fresher close, not lost
     CANDIDATE_FILE.write_text(updated + "\n", encoding="utf-8")
     return CANDIDATE_FILE
 

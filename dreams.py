@@ -183,10 +183,11 @@ def get_dream_collection():
     )
 
 
-def store_dream_entry(text: str) -> str:
+def store_dream_entry(text: str, when=None) -> str:
     """Store a user-flagged dream entry: dream collection + markdown
     backup. Never touches the waking collection or its pipelines."""
-    now = datetime.now()
+    from config import now_local
+    now = when or now_local()
     date = now.strftime("%Y-%m-%d")
     time_of_day = now.strftime("%H:%M")
     entry_id = f"dreamentry_{date}_{hashlib.md5(text[:200].encode()).hexdigest()[:8]}"
@@ -208,11 +209,14 @@ def store_dream_entry(text: str) -> str:
     return entry_id
 
 
-def ingest_dream_entry(text: str, entry_id: str):
+def ingest_dream_entry(text: str, entry_id: str, when=None):
     """Background follow-up to store_dream_entry: extract the dream(s),
-    rebuild the index, refresh weather on the snapshot."""
+    rebuild the index, refresh weather on the snapshot. `when` must match
+    what store_dream_entry used, or the extraction files under a different
+    day than the entry it came from."""
+    from config import now_local
     client = get_client()
-    now = datetime.now()
+    now = when or now_local()
     date = now.strftime("%Y-%m-%d")
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     try:
