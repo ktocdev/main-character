@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="/static/css/dreams.css">
 <link rel="stylesheet" href="/static/css/history.css">
 <link rel="stylesheet" href="/static/css/help.css">
+<link rel="stylesheet" href="/static/css/settings.css">
 </head>
 <body>
 <div id="mock-banner">mock mode — replies are canned, not from Claude. No API calls are being made.</div>
@@ -34,6 +35,7 @@
     <button data-tab="history">history</button>
     <button data-tab="triage">triage</button>
     <button data-tab="help">help</button>
+    <button data-tab="settings">settings</button>
   </nav>
 </header>
 <main>
@@ -199,6 +201,21 @@
         <button class="quiet" data-tkey="u" title="undo (u) — undo the last change (50 deep, works across sessions)">undo</button>
       </div>
       <div id="triage-toast"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-settings">
+    <div id="settings">
+      <h2>Settings</h2>
+      <p id="settings-intro">These are the values in your <code>.env</code> file.
+        Saving rewrites that file and leaves everything else in it alone — the
+        journal reads it once at startup, so a change applies the next time you
+        start it.</p>
+      <div id="settings-body"></div>
+      <div id="settings-actions">
+        <button class="send" id="settings-save" disabled>save</button>
+        <span id="settings-note" class="set-note"></span>
+      </div>
     </div>
   </section>
 

@@ -12,6 +12,7 @@ Usage:
 """
 
 import json
+import os
 import re
 from pathlib import Path
 
@@ -31,7 +32,7 @@ import companion
 import entities
 import sessions
 from config import HOST, PORT, MOCK_MODE, get_client
-from config import DATE_FORMAT, parse_stamp, now_local, stamp as _now_stamp, zone_name
+from config import DATE_FORMAT, date_style, parse_stamp, now_local, stamp as _now_stamp, zone_name
 from rag_journal import get_collection
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -197,8 +198,9 @@ def status():
         "now": _now_stamp(),
         "tz": zone_name(),
         # a strftime format can't be handed to JS — send the one bit the
-        # client actually branches on
-        "date_style": "short" if "%B" not in DATE_FORMAT else "long",
+        # client actually branches on. config owns the mapping so the
+        # Settings picker and this route can't disagree about a format.
+        "date_style": date_style(),
     }
 
 
@@ -420,6 +422,164 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     background_tasks.add_task(_after_close_refresh)
     return {"ok": True, **result}
 
+
+
+# ---------------------------------------------------------------------------
+# SETTINGS
+# ---------------------------------------------------------------------------
+# A UI over .env, not a second store. Everything here edits the same file a
+# cloner would otherwise hand-edit, and the app reads it once at import — so
+# a save takes effect on the next start, which is why the responses carry
+# `restart_required` rather than pretending the change is live.
+
+# The only keys a settings save may touch. This is a whitelist, not a filter
+# on obviously-bad names: without it the route is an arbitrary-environment
+# write, and the single most valuable thing to write is ANTHROPIC_BASE_URL —
+# point that at a host you control and every subsequent call ships the user's
+# key and their journal to you. Allowing the key itself to be *written* is
+# what makes rotation work; the whitelist is what stops BASE_URL riding along
+# beside it.
+SETTINGS_KEYS = {
+    "MC_DATE_FORMAT", "MC_TIMEZONE", "MC_LANGUAGE",
+    "MC_COMPANION_MODEL", "MC_COMPANION_EFFORT", "MC_PROCESSING_MODEL",
+    "MC_MAX_SESSION_TOKENS", "MC_MAX_MONTHLY_SPEND",
+    "ANTHROPIC_API_KEY",
+}
+
+# Written, never read back. GET returns whether one is set, never the value
+# and never a masked suffix — a suffix is enough to confirm a guess.
+WRITE_ONLY_KEYS = {"ANTHROPIC_API_KEY"}
+
+
+def _available_timezones() -> list[str]:
+    """Zones this machine can actually resolve, sorted.
+
+    Read from the installed database rather than a curated list so the picker
+    can only offer zones that will work. When it comes back nearly empty the
+    tz database is missing (zoneinfo ships none on Windows — that is what
+    `tzdata` in requirements.txt is for), and an honest short list beats a
+    long one where most entries silently fall back to the server's own zone.
+    """
+    try:
+        from zoneinfo import available_timezones
+        return sorted(available_timezones())
+    except Exception:
+        return []
+
+
+@app.get("/api/settings")
+def get_settings():
+    """Current settings, plus the option lists the pickers derive from."""
+    import config
+    from env_file import read_env
+    stored = read_env()
+    zones = _available_timezones()
+    # Two different truths, and the UI needs both. `values` is what the file
+    # says, so a save is visibly persisted; `active` is what this process
+    # loaded at import and is still running on. They differ exactly between a
+    # save and the next restart, and that gap is what the UI must show --
+    # reporting only `active` made a successful save look like a no-op.
+    active = {
+        "MC_DATE_FORMAT": config.DATE_FORMAT,
+        "MC_TIMEZONE": config.TIMEZONE,
+        "MC_LANGUAGE": config.LANGUAGE,
+    }
+    return {
+        "values": {k: stored.get(k, v) for k, v in active.items()},
+        "active": active,
+        "options": {
+            "date_formats": [
+                {"value": f, "style": s,
+                 "example": now_local().strftime(f)}
+                for f, s in config.DATE_FORMATS.items()
+            ],
+            "timezones": zones,
+            "languages": [{"value": v, "label": l}
+                          for v, l in config.LANGUAGES.items()],
+        },
+        # what the clock is actually doing, which is not always what
+        # MC_TIMEZONE says — see config.zone_name
+        "resolved_timezone": zone_name(),
+        "tz_database": bool(zones),
+        "api_key_set": bool(stored.get("ANTHROPIC_API_KEY")
+                            or os.getenv("ANTHROPIC_API_KEY")),
+    }
+
+
+class SettingsIn(BaseModel):
+    values: dict[str, str] = {}
+
+
+def _validate_settings(values: dict) -> dict[str, str]:
+    """Whitelist, then check each value against what actually works.
+
+    Rejecting the whole save on one bad field is deliberate: a partial write
+    would leave the file in a state the user never chose and the UI never
+    showed them.
+    """
+    import config
+    unknown = sorted(set(values) - SETTINGS_KEYS)
+    if unknown:
+        raise ValueError(f"not a setting: {', '.join(unknown)}")
+
+    clean: dict[str, str] = {}
+    for key, raw in values.items():
+        value = ("" if raw is None else str(raw)).strip()
+
+        if key == "MC_DATE_FORMAT" and value and value not in config.DATE_FORMATS:
+            raise ValueError(f"unknown date format: {value}")
+        if key == "MC_TIMEZONE" and value:
+            zones = _available_timezones()
+            if zones and value not in zones:
+                raise ValueError(f"unknown time zone: {value}")
+            if not zones:
+                raise ValueError(
+                    "no time zone database is installed, so a zone cannot be "
+                    "set — install `tzdata` (it is in requirements.txt)")
+        if key == "MC_LANGUAGE" and value and value not in config.LANGUAGES:
+            raise ValueError(f"unsupported language: {value}")
+        if key == "MC_COMPANION_MODEL" and value                 and value not in config.MODEL_EFFORT_LEVELS:
+            raise ValueError(f"unknown model: {value}")
+        if key == "MC_PROCESSING_MODEL" and value                 and value not in config.MODEL_EFFORT_LEVELS:
+            raise ValueError(f"unknown model: {value}")
+        if key == "MC_COMPANION_EFFORT" and value:
+            model = (values.get("MC_COMPANION_MODEL")
+                     or config.MC_COMPANION_MODEL).strip()
+            allowed = config.MODEL_EFFORT_LEVELS.get(model, [])
+            if value not in allowed:
+                raise ValueError(
+                    f"{model} does not take effort '{value}'"
+                    + (f" (try: {', '.join(allowed)})" if allowed else ""))
+        if key in ("MC_MAX_SESSION_TOKENS", "MC_MAX_MONTHLY_SPEND") and value:
+            try:
+                if float(value) < 0:
+                    raise ValueError
+            except ValueError:
+                raise ValueError(f"{key} must be a positive number or blank")
+        if key == "ANTHROPIC_API_KEY" and not value:
+            # clearing it would lock the app out of every call, and the UI
+            # has no way to show what was lost
+            raise ValueError("an API key can be replaced, but not cleared here")
+
+        clean[key] = value
+    return clean
+
+
+@app.post("/api/settings")
+def save_settings(body: SettingsIn):
+    """Write the whitelisted keys to .env, preserving everything else."""
+    from env_file import update_env
+    try:
+        clean = _validate_settings(body.values or {})
+        update_env(clean)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return {
+        "ok": True,
+        # never echo a write-only value back, not even the one just received
+        "saved": sorted(k for k in clean if k not in WRITE_ONLY_KEYS),
+        "restart_required": True,
+    }
 
 @app.post("/api/reset")
 def reset_conversation():

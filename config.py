@@ -142,6 +142,28 @@ AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 TIMEZONE = os.getenv("MC_TIMEZONE", "").strip()
 DATE_FORMAT = os.getenv("MC_DATE_FORMAT", "%B %d, %Y").strip()
 
+# The date styles the Settings picker offers. Storage is ISO regardless —
+# these only decide how a stamp is *displayed*, so the set is deliberately
+# small: a free-text strftime box would let someone save a format that
+# renders every date as an empty string with no way back but a file edit.
+DATE_FORMATS = {
+    "%B %d, %Y": "long",     # August 25, 2026
+    "%m/%d/%y": "short",     # 08/25/26
+}
+
+# Reserved for Phase 10. The slot exists now so that shipping a second
+# language is a config change rather than a Settings rebuild; until then
+# this is the only accepted value.
+LANGUAGE = os.getenv("MC_LANGUAGE", "en").strip() or "en"
+LANGUAGES = {"en": "English"}
+
+
+def date_style(fmt: str = None) -> str:
+    """'long' or 'short' for the given format — what the browser needs to
+    render a stamp the same way the server would. Unknown formats read as
+    long, matching what /api/status did before the styles were named."""
+    return DATE_FORMATS.get((fmt if fmt is not None else DATE_FORMAT), "long")
+
 
 def _zone():
     if TIMEZONE:
