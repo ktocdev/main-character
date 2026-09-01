@@ -1,4 +1,4 @@
-import { $ } from './core.js';
+import { $, fmtDate } from './core.js';
 
 // ---- search ----
 // Exhaustive, local, free: every matching journal moment. "meaning" ranks
@@ -92,7 +92,7 @@ function renderSearchResults(q) {
     const d = document.createElement('div');
     d.className = 'search-hit';
     const h = document.createElement('h3');
-    h.textContent = `${hit.date} — ${hit.title || '(untitled)'}`;
+    h.textContent = `${fmtDate(hit.date)} — ${hit.title || '(untitled)'}`;
     h.title = 'show the full entry';
     if (hit.hits > 1) {
       const n = document.createElement('span');

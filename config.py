@@ -142,6 +142,38 @@ AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 TIMEZONE = os.getenv("MC_TIMEZONE", "").strip()
 DATE_FORMAT = os.getenv("MC_DATE_FORMAT", "%B %d, %Y").strip()
 
+# The date styles the Settings picker offers. Storage is ISO regardless —
+# these only decide how a stamp is *displayed*, so the set is deliberately
+# small: a free-text strftime box would let someone save a format that
+# renders every date as an empty string with no way back but a file edit.
+DATE_FORMATS = {
+    "%B %d, %Y": "long",     # August 25, 2026
+    "%m/%d/%y": "short",     # 08/25/26
+}
+
+# Reserved for Phase 10. The slot exists now so that shipping a second
+# language is a config change rather than a Settings rebuild; until then
+# this is the only accepted value.
+LANGUAGE = os.getenv("MC_LANGUAGE", "en").strip() or "en"
+LANGUAGES = {"en": "English"}
+
+
+def date_style(fmt: str = None) -> str:
+    """'long' or 'short' for the given format — what the browser needs to
+    render a stamp the same way the server would.
+
+    A format outside DATE_FORMATS can still be hand-set in .env, and the
+    Settings picker will not have offered it. Those fall back to the rule
+    /api/status used before the styles were named — a month name means long —
+    rather than reading as long unconditionally, which would render a custom
+    numeric format like %m/%d/%Y as "August 25, 2026" in the browser while
+    every server-side stamp stayed numeric.
+    """
+    fmt = fmt if fmt is not None else DATE_FORMAT
+    if fmt in DATE_FORMATS:
+        return DATE_FORMATS[fmt]
+    return "long" if "%B" in fmt else "short"
+
 
 def _zone():
     if TIMEZONE:

@@ -1,4 +1,4 @@
-import { $, api, esc } from './core.js';
+import { $, api, esc, fmtDate } from './core.js';
 
 // ---- categories ----
 let catIndex = null, catSelected = null, organicState = {proposals: [], custom: []};
@@ -225,7 +225,7 @@ function renderCatEntries() {
     const row = document.createElement('div');
     row.className = 'cat-entry';
     const h = document.createElement('h3');
-    h.textContent = `${c.date} — ${c.title}`;
+    h.textContent = `${fmtDate(c.date)} — ${c.title}`;
     h.title = 'show full entry';
     h.onclick = () => toggleEntryText(row, c);
     row.appendChild(h);

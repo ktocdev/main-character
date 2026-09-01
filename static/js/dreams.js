@@ -1,4 +1,4 @@
-import { $, api } from './core.js';
+import { $, api, fmtDate } from './core.js';
 
 // ---- dreams ----
 export async function loadDreams() {
@@ -16,7 +16,7 @@ function renderDreams(r) {
     const card = document.createElement('div');
     card.className = 'dream-card';
     const h = document.createElement('h3');
-    h.textContent = d.date;
+    h.textContent = fmtDate(d.date);
     for (const t of d.tones) {
       const chip = document.createElement('span');
       chip.className = 'dream-tone';

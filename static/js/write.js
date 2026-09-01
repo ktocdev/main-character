@@ -17,8 +17,27 @@ function clearComposer() {
   localStorage.removeItem('rag_draft');
   autosizeEntry();
 }
+// The one rule that decides whether a close is possible, mirrored from the
+// server (sessions.close_session: "nothing new in this chat yet"). A
+// carried-forward base part is context, not new material — only messages
+// count, and dreams are excluded here exactly as close_session excludes them.
+export function hasNewMaterial(messages) {
+  return (messages || []).some(m => m.role === 'you' && !m.dream);
+}
+
 export async function closeSession() {
-  if (!confirm('Close this chat?\n\nYour side of it becomes a journal entry — tagging, entities, summaries, dream extraction, and the seed summary candidate run in the background. A fresh chat starts empty.')) return;
+  // A pending candidate is retired, not carried: generate_candidate folds the
+  // new archive into the *live* seed, so an unuploaded candidate's integration
+  // is backed up and then skipped in the seed's lineage. Say so before the
+  // close — the only moment the author can still act on it.
+  const s = await seedState();
+  const pending = (s && s.candidate_exists)
+    ? '\n\nA seed summary candidate from your last close is still pending. '
+      + 'Closing now retires it to summaries/seed_backups and builds the next '
+      + 'one from the live seed instead — what it integrated is kept as a file '
+      + 'but drops out of the seed. Download and upload it first to keep it.\n'
+    : '';
+  if (!confirm('Close this chat?' + pending + '\n\nYour side of it becomes a journal entry — tagging, entities, summaries, dream extraction, and the seed summary candidate run in the background. A fresh chat starts empty.')) return;
   const r = await api('/api/sessions/close', {});
   if (!r) return;
   $('write-log').innerHTML = '';
@@ -72,8 +91,8 @@ export async function loadWriteLog() {
       localStorage.removeItem('rag_chat');
     }
     const r = await (await fetch('/api/sessions/current')).json();
-    for (const p of r.parts) renderSessionPart(el, p);
-    addSessionBraid(el, r.messages);
+    for (const p of r.parts) renderSessionPart(el, p, true);
+    addSessionBraid(el, r.messages, null, true);
     el.scrollTop = el.scrollHeight;
   } catch (e) { }
 }
@@ -173,8 +192,19 @@ export function init() {
 
   $('reset').onclick = () => { $('write-actions').removeAttribute('open'); closeSession(); };
 
-  $('write-actions').addEventListener('toggle', () => {
-    if ($('write-actions').open) refreshSeedMenu();
+  const resetTitle = $('reset').title;
+  $('write-actions').addEventListener('toggle', async () => {
+    if (!$('write-actions').open) return;
+    refreshSeedMenu();
+    // don't offer a close the server will refuse — see hasNewMaterial
+    let fresh = true;
+    try {
+      const r = await (await fetch('/api/sessions/current')).json();
+      fresh = hasNewMaterial(r.messages);
+    } catch (e) { }   // can't tell: leave the action available
+    $('reset').disabled = !fresh;
+    $('reset').title = fresh ? resetTitle
+      : 'nothing new in this chat yet — write or chat first';
   });
   $('seed-download').onclick = () => { window.location = '/api/seed/download?which=current'; };
   $('seed-banner-download').onclick = () => { window.location = '/api/seed/download?which=candidate'; };

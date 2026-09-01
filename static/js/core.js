@@ -5,6 +5,34 @@ export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
 // ---- status ----
 import { state } from './state.js';
 
+// ---- dates ----
+// One renderer for every surface in the app. The Settings date format
+// (MC_DATE_FORMAT, carried to the browser by /api/status) decides the style,
+// so history, the write log, search, dreams, categories, patterns and the
+// entity view can never drift into showing the same day three ways.
+// Storage is untouched by any of this -- stamps are always ISO on disk.
+export function fmtDay(y, mo, d) {
+  return state.dateStyle === 'short'
+    ? `${+mo}/${+d}/${y.slice(2)}`
+    : new Date(+y, +mo - 1, +d).toLocaleDateString('en-US',
+        {month: 'long', day: 'numeric', year: 'numeric'});
+}
+
+// 24-hour as the app stores it -> 12-hour as the journal reads it
+export function fmtTime(hh, mi) {
+  return `${(+hh % 12) || 12}:${mi}${+hh < 12 ? 'am' : 'pm'}`;
+}
+
+// Render a stored stamp for display: the ISO date becomes the configured
+// style, and a time part following it becomes 12-hour. Anything else in the
+// string is left alone, so this is safe on labels that only contain a date.
+export function fmtDate(s) {
+  return String(s ?? '')
+    .replace(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/g,
+      (_, y, mo, d, hh, mi) => `${fmtDay(y, mo, d)} · ${fmtTime(hh, mi)}`)
+    .replace(/(\d{4})-(\d{2})-(\d{2})/g, (_, y, mo, d) => fmtDay(y, mo, d));
+}
+
 export async function refreshStatus() {
   const s = await (await fetch('/api/status')).json();
   $('status').textContent = `${s.entries} entries · ${s.entities} entities`;

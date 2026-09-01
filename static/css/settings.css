@@ -1,0 +1,46 @@
+  /* Settings */
+  /* the .tab section is a clipped flex column (base.css) — the pane inside
+     it is what pads, centers and scrolls, same as #help and #patterns */
+  #settings { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
+  #settings h2 {
+    font-style: italic; font-weight: normal; font-size: 1.05rem;
+    color: var(--accent); margin-bottom: .3rem;
+  }
+  #settings-intro { color: var(--text-dim); font-size: .85rem; margin-bottom: 1.8rem; }
+
+  .set-group { margin-bottom: 2.2rem; }
+  .set-group h3 {
+    font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent-dim); font-weight: normal;
+    margin-bottom: 1rem; padding-bottom: .4rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .set-row { margin-bottom: 1.5rem; }
+  .set-row label {
+    display: block; margin-bottom: .35rem;
+    color: var(--text); font-size: .95rem;
+  }
+  .set-control select, .set-control input {
+    background: var(--bg-input); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: .45rem .6rem; font-size: .9rem; font-family: inherit;
+    min-width: 22rem; max-width: 100%;
+  }
+  .set-control select:focus, .set-control input:focus {
+    outline: none; border-color: var(--accent-dim);
+  }
+  .set-control select:disabled, .set-control input:disabled {
+    opacity: .55; cursor: not-allowed;
+  }
+  .set-help {
+    color: var(--text-dim); font-size: .8rem;
+    margin-top: .4rem; max-width: 34rem; line-height: 1.5;
+  }
+  .set-warn { color: var(--accent); font-size: .8rem; margin-top: .4rem; max-width: 34rem; }
+
+  #settings-actions { display: flex; align-items: center; gap: 1rem; }
+  .set-note { font-size: .85rem; color: var(--text-dim); }
+  .set-note.ok { color: var(--accent); }
+  .set-note.error { color: #c96a5a; }

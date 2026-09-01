@@ -10,6 +10,7 @@ import * as groups from './groups.js';
 import * as triage from './triage.js';
 import * as categories from './categories.js';
 import * as patterns from './patterns.js';
+import * as settings from './settings.js';
 
 // ---- tabs ----
 // Categories came back with Phase 3 (entries split by date, 2026-07-11).
@@ -34,6 +35,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () =>
   if (state.activeTab === 'dreams') dreams.loadDreams();
   if (state.activeTab === 'history') history.loadHistory();
   if (state.activeTab === 'triage') triage.startTriage();
+  if (state.activeTab === 'settings') settings.loadSettings();
 });
 
 // feature wiring, in original document order
@@ -47,6 +49,11 @@ groups.init();
 triage.init();
 categories.init();
 patterns.init();
+settings.init();
 
+// Status carries the date style the write log stamps its entries with, so it
+// has to land before the log renders -- otherwise the first paint uses the
+// default and the dates quietly disagree with Settings. A status hiccup must
+// not cost the author their session view, hence the catch.
+await refreshStatus().catch(() => {});
 write.loadWriteLog();  // restore the open session on page load
-refreshStatus();

@@ -1,4 +1,4 @@
-import { $, api } from './core.js';
+import { $, api, fmtDate } from './core.js';
 import { state } from './state.js';
 import { loadEntities } from './entities.js';
 
@@ -53,7 +53,7 @@ async function renderTriage() {
       lastDate = o.date;
       const d = document.createElement('div');
       d.className = 'obs-date';
-      d.textContent = o.date;
+      d.textContent = fmtDate(o.date);
       obsEl.appendChild(d);
     }
     const p = document.createElement('div');

@@ -12,7 +12,13 @@ Usage:
 """
 
 import json
+import os
 import re
+import socket
+import subprocess
+import sys
+import threading
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -31,7 +37,7 @@ import companion
 import entities
 import sessions
 from config import HOST, PORT, MOCK_MODE, get_client
-from config import DATE_FORMAT, parse_stamp, now_local, stamp as _now_stamp, zone_name
+from config import DATE_FORMAT, date_style, parse_stamp, now_local, stamp as _now_stamp, zone_name
 from rag_journal import get_collection
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -184,9 +190,20 @@ def home():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+# Which process is answering. The restart poll cannot use "the server
+# responded" as proof the new one is up: uvicorn keeps serving while it
+# drains, so the first poll is routinely answered by the process on its way
+# out, and the page then reloads into a closing socket. The client waits for
+# this value to change instead. PID alone would do on a single machine, but
+# it can be reused -- the start time is what makes it unambiguous.
+INSTANCE_ID = f"{os.getpid()}-{time.time_ns()}"
+
+
 @app.get("/api/status")
 def status():
     return {
+        # see INSTANCE_ID: the restart poll watches this, not the status code
+        "instance": INSTANCE_ID,
         "entries": STATE["collection"].count(),
         "entities": len(STATE["entity_index"]),
         "conversation_turns": len(STATE["messages"]) // 2,
@@ -197,8 +214,9 @@ def status():
         "now": _now_stamp(),
         "tz": zone_name(),
         # a strftime format can't be handed to JS — send the one bit the
-        # client actually branches on
-        "date_style": "short" if "%B" not in DATE_FORMAT else "long",
+        # client actually branches on. config owns the mapping so the
+        # Settings picker and this route can't disagree about a format.
+        "date_style": date_style(),
     }
 
 
@@ -271,6 +289,9 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
 
     when = parse_stamp(body.ts) if body.ts else None
 
+    # what the reply stream owes back if it dies before its background tasks
+    releases = []
+
     if body.dream:
         import dreams
         entry_id = dreams.store_dream_entry(text, when=when)
@@ -281,7 +302,8 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
             "dream, not a waking event. Respond to it as my companion: "
             "receive it, don't decode it with generic symbolism.\n\n" + text
         )
-        background_tasks.add_task(dreams.ingest_dream_entry, text, entry_id, when)
+        releases.append(
+            _tracked(background_tasks, dreams.ingest_dream_entry, text, entry_id, when))
     else:
         # the entry joins the open session; it becomes journal memory
         # when the chat is closed (the summarize point)
@@ -295,12 +317,19 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
         )
 
     def gen():
-        yield from companion.stream_reply(
-            STATE["client"], STATE["collection"], STATE["entity_index"],
-            STATE["messages"], entry_message, include_dreams=body.dream,
-        )
-        sessions.append_message("companion", STATE["messages"][-1]["content"],
-                                when=when)
+        try:
+            yield from companion.stream_reply(
+                STATE["client"], STATE["collection"], STATE["entity_index"],
+                STATE["messages"], entry_message, include_dreams=body.dream,
+            )
+            sessions.append_message("companion", STATE["messages"][-1]["content"],
+                                    when=when)
+        except BaseException:
+            # the response ends here, so its background tasks never run --
+            # hand back what they were counted for (see _tracked)
+            for release in releases:
+                release()
+            raise
     return StreamingResponse(
         gen(),
         media_type="text/plain; charset=utf-8",
@@ -416,10 +445,265 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     STATE["messages"] = []
-    background_tasks.add_task(_after_close_seed, result["key"])
-    background_tasks.add_task(_after_close_refresh)
+    _tracked(background_tasks, _after_close_seed, result["key"])
+    _tracked(background_tasks, _after_close_refresh)
     return {"ok": True, **result}
 
+
+
+# ---------------------------------------------------------------------------
+# SETTINGS
+# ---------------------------------------------------------------------------
+# A UI over .env, not a second store. Everything here edits the same file a
+# cloner would otherwise hand-edit, and the app reads it once at import — so
+# a save takes effect on the next start, which is why the responses carry
+# `restart_required` rather than pretending the change is live.
+
+# The only keys a settings save may touch. This is a whitelist, not a filter
+# on obviously-bad names: without it the route is an arbitrary-environment
+# write, and the single most valuable thing to write is ANTHROPIC_BASE_URL —
+# point that at a host you control and every subsequent call ships the user's
+# key and their journal to you. Allowing the key itself to be *written* is
+# what makes rotation work; the whitelist is what stops BASE_URL riding along
+# beside it.
+SETTINGS_KEYS = {
+    "MC_DATE_FORMAT", "MC_TIMEZONE", "MC_LANGUAGE",
+    "MC_COMPANION_MODEL", "MC_COMPANION_EFFORT", "MC_PROCESSING_MODEL",
+    "MC_MAX_SESSION_TOKENS", "MC_MAX_MONTHLY_SPEND",
+    "ANTHROPIC_API_KEY",
+}
+
+# Written, never read back. GET returns whether one is set, never the value
+# and never a masked suffix — a suffix is enough to confirm a guess.
+WRITE_ONLY_KEYS = {"ANTHROPIC_API_KEY"}
+
+
+def _available_timezones() -> list[str]:
+    """Zones this machine can actually resolve, sorted.
+
+    Read from the installed database rather than a curated list so the picker
+    can only offer zones that will work. When it comes back nearly empty the
+    tz database is missing (zoneinfo ships none on Windows — that is what
+    `tzdata` in requirements.txt is for), and an honest short list beats a
+    long one where most entries silently fall back to the server's own zone.
+    """
+    try:
+        from zoneinfo import available_timezones
+        return sorted(available_timezones())
+    except Exception:
+        return []
+
+
+@app.get("/api/settings")
+def get_settings():
+    """Current settings, plus the option lists the pickers derive from."""
+    import config
+    from env_file import read_env
+    stored = read_env()
+    zones = _available_timezones()
+    # Two different truths, and the UI needs both. `values` is what the file
+    # says, so a save is visibly persisted; `active` is what this process
+    # loaded at import and is still running on. They differ exactly between a
+    # save and the next restart, and that gap is what the UI must show --
+    # reporting only `active` made a successful save look like a no-op.
+    active = {
+        "MC_DATE_FORMAT": config.DATE_FORMAT,
+        "MC_TIMEZONE": config.TIMEZONE,
+        "MC_LANGUAGE": config.LANGUAGE,
+    }
+    return {
+        "values": {k: stored.get(k, v) for k, v in active.items()},
+        "active": active,
+        "options": {
+            "date_formats": [
+                {"value": f, "style": s,
+                 "example": now_local().strftime(f)}
+                for f, s in config.DATE_FORMATS.items()
+            ],
+            "timezones": zones,
+            "languages": [{"value": v, "label": l}
+                          for v, l in config.LANGUAGES.items()],
+        },
+        # what the clock is actually doing, which is not always what
+        # MC_TIMEZONE says — see config.zone_name
+        "resolved_timezone": zone_name(),
+        "tz_database": bool(zones),
+        "api_key_set": bool(stored.get("ANTHROPIC_API_KEY")
+                            or os.getenv("ANTHROPIC_API_KEY")),
+    }
+
+
+class SettingsIn(BaseModel):
+    values: dict[str, str] = {}
+
+
+def _validate_settings(values: dict) -> dict[str, str]:
+    """Whitelist, then check each value against what actually works.
+
+    Rejecting the whole save on one bad field is deliberate: a partial write
+    would leave the file in a state the user never chose and the UI never
+    showed them.
+    """
+    import config
+    from env_file import read_env
+    unknown = sorted(set(values) - SETTINGS_KEYS)
+    if unknown:
+        raise ValueError(f"not a setting: {', '.join(unknown)}")
+
+    clean: dict[str, str] = {}
+    for key, raw in values.items():
+        value = ("" if raw is None else str(raw)).strip()
+
+        if key == "MC_DATE_FORMAT" and value and value not in config.DATE_FORMATS:
+            raise ValueError(f"unknown date format: {value}")
+        if key == "MC_TIMEZONE" and value:
+            zones = _available_timezones()
+            if zones and value not in zones:
+                raise ValueError(f"unknown time zone: {value}")
+            if not zones:
+                raise ValueError(
+                    "no time zone database is installed, so a zone cannot be "
+                    "set — install `tzdata` (it is in requirements.txt)")
+        if key == "MC_LANGUAGE" and value and value not in config.LANGUAGES:
+            raise ValueError(f"unsupported language: {value}")
+        if key == "MC_COMPANION_MODEL" and value                 and value not in config.MODEL_EFFORT_LEVELS:
+            raise ValueError(f"unknown model: {value}")
+        if key == "MC_PROCESSING_MODEL" and value                 and value not in config.MODEL_EFFORT_LEVELS:
+            raise ValueError(f"unknown model: {value}")
+        if key == "MC_COMPANION_EFFORT" and value:
+            # the model this effort will actually run under: the one in
+            # this save if it carries one, else what .env holds. config's
+            # constant is frozen at import, so after a model change that
+            # hasn't been restarted into yet it names the *old* model -- and
+            # would judge the effort against a model nothing will use. GET
+            # already reads `values` from the file for the same reason.
+            model = str(values.get("MC_COMPANION_MODEL")
+                        or read_env().get("MC_COMPANION_MODEL")
+                        or config.MC_COMPANION_MODEL).strip()
+            allowed = config.MODEL_EFFORT_LEVELS.get(model, [])
+            if value not in allowed:
+                raise ValueError(
+                    f"{model} does not take effort '{value}'"
+                    + (f" (try: {', '.join(allowed)})" if allowed else ""))
+        if key in ("MC_MAX_SESSION_TOKENS", "MC_MAX_MONTHLY_SPEND") and value:
+            try:
+                if float(value) < 0:
+                    raise ValueError
+            except ValueError:
+                raise ValueError(f"{key} must be a positive number or blank")
+        if key == "ANTHROPIC_API_KEY" and not value:
+            # clearing it would lock the app out of every call, and the UI
+            # has no way to show what was lost
+            raise ValueError("an API key can be replaced, but not cleared here")
+
+        clean[key] = value
+    return clean
+
+
+@app.post("/api/settings")
+def save_settings(body: SettingsIn):
+    """Write the whitelisted keys to .env, preserving everything else."""
+    from env_file import update_env
+    try:
+        clean = _validate_settings(body.values or {})
+        update_env(clean)
+        # .env is authoritative for these on the way back up -- see RESTART
+        RESTART["keys"].update(clean)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return {
+        "ok": True,
+        # never echo a write-only value back, not even the one just received
+        "saved": sorted(k for k in clean if k not in WRITE_ONLY_KEYS),
+        "restart_required": True,
+    }
+
+
+# ---------------------------------------------------------------------------
+# RESTART
+# ---------------------------------------------------------------------------
+# A setting is only half a change until the process starts again, because
+# config.py reads its values at import and ~10 modules bind those constants
+# by name at import too (capture_fixtures.CLIENT_MODULES documents the same
+# hazard for get_client). Re-reading config in place would leave every one
+# of those stale, so the honest move is to actually start over -- and to do
+# it for the author rather than sending them to a terminal.
+#
+# Two things make this safe rather than merely convenient:
+#
+#   - Background work is refused, never interrupted. Tagging, entities,
+#     summaries, dream ingest and seed candidates run as BackgroundTasks
+#     *after* the response and cost real API calls; restarting mid-pipeline
+#     would throw that away with nothing to show for it. A restart waits.
+#   - The re-exec drops the keys that were just saved. os.execve keeps the
+#     environment and load_dotenv() does not override what is already set,
+#     so the new process would otherwise inherit the *old* values from this
+#     process's own dotenv load and the restart would look like a no-op --
+#     the same failure the settings UI already had once.
+
+RESTART = {"requested": False, "keys": set()}
+SERVER = {"instance": None}
+_BUSY = {"count": 0}
+_BUSY_LOCK = threading.Lock()
+
+
+def _tracked(background_tasks: BackgroundTasks, fn, *args):
+    """Schedule background work and count it while it runs, so a restart can
+    tell whether it would be interrupting the memory pipeline.
+
+    Returns an idempotent release callable. The task calls it for you when it
+    finishes, but a caller whose response might never reach its background
+    tasks -- a StreamingResponse whose generator raises, or whose reader
+    disconnects -- has to call it itself: Starlette runs the tasks only after
+    a clean stream, so an unreleased count would sit there forever and make
+    /api/restart answer 409 for the life of the process.
+    """
+    held = {"yes": True}
+
+    def release():
+        with _BUSY_LOCK:
+            if held["yes"]:
+                held["yes"] = False
+                _BUSY["count"] -= 1
+
+    def run():
+        try:
+            fn(*args)
+        finally:
+            release()
+
+    with _BUSY_LOCK:
+        _BUSY["count"] += 1
+    background_tasks.add_task(run)
+    return release
+
+
+@app.post("/api/restart")
+def restart_server():
+    """Exit and come back, so a saved setting takes effect. The client polls
+    /api/status until it answers again, then reloads the page."""
+    with _BUSY_LOCK:
+        busy = _BUSY["count"]
+    if busy:
+        return JSONResponse(
+            {"error": "the memory pipeline is still running -- tagging, "
+                      "summaries and seed work would be lost. Try again in "
+                      "a moment."},
+            status_code=409)
+
+    srv = SERVER["instance"]
+    if srv is None:
+        # started by something other than this file's __main__ (a test, or an
+        # external uvicorn). Nothing here can re-exec, and claiming a restart
+        # that never happens is worse than refusing one.
+        return JSONResponse(
+            {"error": "this server cannot restart itself -- restart it the "
+                      "way you started it"},
+            status_code=501)
+
+    RESTART["requested"] = True
+    srv.should_exit = True      # uvicorn drains, run() returns, __main__ execs
+    return {"ok": True, "restarting": True}
 
 @app.post("/api/reset")
 def reset_conversation():
@@ -1225,4 +1509,44 @@ def delete_entity(body: NameIn):
 
 if __name__ == "__main__":
     print(f"\n  RAG Journal -> http://{HOST}:{PORT}\n")
-    uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
+    # uvicorn.run() builds this itself and keeps it private; building it
+    # here is what gives /api/restart something to set should_exit on.
+    SERVER["instance"] = uvicorn.Server(
+        uvicorn.Config(app, host=HOST, port=PORT, log_level="warning"))
+    SERVER["instance"].run()
+
+    if RESTART["requested"]:
+        # drop the just-saved keys so load_dotenv() sets them from the file
+        # instead of the new process inheriting this one's stale values
+        env = {k: v for k, v in os.environ.items() if k not in RESTART["keys"]}
+        print("  restarting to apply settings...", flush=True)
+
+        # run() has returned, but the listening socket is not always released
+        # by the time the replacement tries to bind. Wait for it rather than
+        # hand the author a dead port and a stack trace.
+        for _ in range(50):
+            probe = socket.socket()
+            # Exactly the options the replacement's own bind will use, or
+            # this probe answers a different question than the one asked.
+            # uvicorn sets SO_REUSEADDR on POSIX (so a socket in TIME_WAIT is
+            # no obstacle) and not on Windows -- where SO_REUSEADDR means
+            # "bind even though someone is still listening", which would make
+            # this loop succeed on the first try and wait for nothing.
+            if os.name != "nt":
+                probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                probe.bind((HOST, PORT))
+                probe.close()
+                break
+            except OSError:
+                probe.close()
+                time.sleep(0.1)
+
+        # NOT os.execve: Windows has no real exec, and the emulation segfaults
+        # coming out of uvicorn's asyncio shutdown. Spawning a fresh process
+        # and exiting is predictable on both platforms. Handles are inherited
+        # on purpose, so the new process keeps printing wherever the old one
+        # was -- usually a terminal the author is watching.
+        subprocess.Popen(
+            [sys.executable, os.path.abspath(__file__), *sys.argv[1:]],
+            env=env, cwd=str(Path(__file__).parent))

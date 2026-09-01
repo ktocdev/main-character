@@ -1,6 +1,6 @@
-import { $ } from './core.js';
+import { $, fmtDate } from './core.js';
 import { state } from './state.js';
-import { closeSession } from './write.js';
+import { closeSession, hasNewMaterial } from './write.js';
 
 // ---- history (sessions) ----
 // The landing view is the open chat: the conversation it continues, the
@@ -12,13 +12,6 @@ export async function loadHistory() {
   sessionIndex = await (await fetch('/api/sessions')).json();
   renderSessionList();
   await showSession(state.sessionSel);
-}
-
-// history dates display in the same M/D/YY style as the chat titles;
-// replaces the ISO date inside a string, keeping any time part
-function fmtDate(s) {
-  return (s || '').replace(/(\d{4})-(\d{2})-(\d{2})/,
-    (_, y, mo, d) => `${+mo}/${+d}/${y.slice(2)}`);
 }
 
 function renderSessionList() {
@@ -50,32 +43,35 @@ function renderSessionList() {
   }
 }
 
-function addSessionPart(container, label, text, date) {
+function addSessionPart(container, label, text, date, carried) {
   const l = document.createElement('div');
-  l.className = 'session-part-label';
+  l.className = carried ? 'session-part-label carried' : 'session-part-label';
   l.textContent = label;
   if (date) { l.dataset.tocDate = date; l.dataset.tocKind = 'entry'; }
   const t = document.createElement('div');
-  t.className = 'session-part';
+  t.className = carried ? 'session-part carried' : 'session-part';
   t.textContent = text;
   container.append(l, t);
 }
 
 // a part with both sides (backfilled from the Claude export) renders as
 // an interleaved chat; otherwise the flat user-side text
-export function renderSessionPart(container, p) {
+// `carried` marks a part the open session merely continues — the closed
+// chat it opened with, not something written into it. Only the current-session
+// views pass it; an archive renders its own parts as itself.
+export function renderSessionPart(container, p, carried) {
   const label = `${fmtDate(p.date)} — ${p.title}`;
   if (p.summary) addPartSummary(container, p);
   if (p.messages) {
     const l = document.createElement('div');
-    l.className = 'session-part-label';
+    l.className = carried ? 'session-part-label carried' : 'session-part-label';
     l.textContent = label;
     l.dataset.tocDate = p.date;
     l.dataset.tocKind = 'entry';
     container.appendChild(l);
     addSessionBraid(container, p.messages);
   } else {
-    addSessionPart(container, label, p.text, p.date);
+    addSessionPart(container, label, p.text, p.date, carried);
   }
 }
 
@@ -88,7 +84,10 @@ function addPartSummary(container, p) {
   container.appendChild(s);
 }
 
-export function addSessionBraid(container, msgs, daySummaries) {
+// `withStamps` dates the author's own messages. Only the write screen asks
+// for it: the archive views already carry a date per part and a day TOC, so
+// a stamp on every entry there would be the third telling of the same thing.
+export function addSessionBraid(container, msgs, daySummaries, withStamps) {
   let lastDay = null;
   for (const m of msgs) {
     const day = (m.ts || '').slice(0, 10);
@@ -99,6 +98,12 @@ export function addSessionBraid(container, msgs, daySummaries) {
     const d = document.createElement('div');
     d.className = 'msg ' + (m.role === 'you' ? 'you' : 'companion');
     d.textContent = m.text;
+    // read by .msg.you[data-stamp]::before, so the date sits on the existing
+    // label row rather than adding one of its own
+    if (withStamps && m.role === 'you') {
+      const stamp = fmtDate(m.ts);
+      if (stamp) d.dataset.stamp = stamp;
+    }
     if (m.dream) d.title = 'dream entry — lives in the dream realm';
     if (day && day !== lastDay) {
       d.dataset.tocDate = day;
@@ -159,11 +164,13 @@ async function showSession(key) {
     $('session-title').textContent = r.parts.length ? r.parts[0].title : 'current chat';
     $('session-dates').textContent = 'open since ' + fmtDate(r.started);
     body.innerHTML = '';
-    for (const p of r.parts) renderSessionPart(body, p);
+    for (const p of r.parts) renderSessionPart(body, p, true);
     addSessionBraid(body, r.messages);
     if (!r.parts.length && !r.messages.length) {
       body.textContent = 'nothing here yet — chat or write to begin.';
-    } else {
+    } else if (hasNewMaterial(r.messages)) {
+      // the server refuses a close with nothing new in it, so only offer one
+      // when there is — a carried-forward part is not new material
       $('session-close-btn').style.display = 'inline-block';
     }
 
