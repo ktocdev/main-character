@@ -39,9 +39,10 @@ export async function refreshStatus() {
   // Mock mode is indistinguishable from real once a reply is on screen, so
   // the banner stays up for the whole session rather than appearing per-call.
   document.body.classList.toggle('mock-mode', !!s.mock);
-  // Both can be up at once, and they are not the same warning: one says the
-  // replies are canned, the other says the entries are not yours. Confusing
-  // the second for the first is how a real entry gets written into a demo.
+  // The seed instance is also mock mode, but only one bar shows: the seed
+  // wording says both things, and the CSS stands the mock bar down. The
+  // warning that has to survive is "these entries are not yours" -- canned
+  // replies cost nothing to forget.
   document.body.classList.toggle('seed-instance', !!s.seed_instance);
   if (s.date_style) state.dateStyle = s.date_style;
   // The server owns the clock and reads stamps back in *its* zone

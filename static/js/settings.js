@@ -636,7 +636,7 @@ const inSeed = () => document.body.classList.contains('seed-instance');
 // settings render, because the status that decides it arrives asynchronously.
 function syncSeedButton() {
   const btn = $('settings-seed');
-  if (btn) btn.textContent = inSeed() ? 'return to my journal' : 'load seed corpus';
+  if (btn) btn.textContent = inSeed() ? 'return to my journal' : 'load demo journal';
 }
 
 // The demo corpus is a separate journal with its own data dirs, not a mode of
@@ -653,9 +653,9 @@ async function loadSeed() {
     btn.disabled = false;
     return;
   }
-  if (!confirm('Restart on the seed corpus?\n\nIt is a different journal '
-      + 'with its own entries, entities and summaries \u2014 nothing you do '
-      + 'there touches yours. Any restart brings you back.')) return;
+  if (!confirm('Restart on the demo journal?\n\nIt has its own entries, '
+      + 'entities and summaries \u2014 nothing you do there touches yours. '
+      + 'Any restart brings you back.')) return;
   btn.disabled = true;
   await restartServer(note, false, 'seed');
   btn.disabled = false;

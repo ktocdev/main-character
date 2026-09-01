@@ -214,9 +214,9 @@ def status():
         # a real one
         "mock": MOCK_MODE,
         # ...and a demo journal must never be mistaken for the author's own.
-        # Both banners can be up at once: the seed instance is also mock, and
-        # "these replies are canned" and "these entries are not yours" are
-        # different warnings with different consequences.
+        # The seed instance is also mock, so the UI shows one bar for both:
+        # its wording covers the canned replies, and the fact that has to
+        # land is that the entries belong to someone else.
         "seed_instance": SEED_INSTANCE,
         # the server owns the clock; the client stamps against this
         "now": _now_stamp(),
@@ -912,10 +912,10 @@ def restart_server(body: RestartIn | None = None):
                             status_code=400)
     if into == "seed" and not (SEED_ROOT / "chroma_data").exists():
         # Refusing beats booting an empty demo: an author who asked for the
-        # seed corpus and got a blank journal has no way to tell that from a
+        # demo journal and got a blank one has no way to tell that from a
         # broken one.
         return JSONResponse(
-            {"error": "the seed corpus is not installed. Run "
+            {"error": "the demo journal is not installed. Run "
                       "`bash seed_corpus/run_capture.sh --wipe` to build it, "
                       "then try again."},
             status_code=409)
@@ -1779,7 +1779,7 @@ if __name__ == "__main__":
 
     if RESTART["requested"]:
         env = restart_env()
-        print("  restarting into the seed corpus..." if RESTART["into"] == "seed"
+        print("  restarting into the demo journal..." if RESTART["into"] == "seed"
               else "  restarting to apply settings...", flush=True)
 
         # run() has returned, but the listening socket is not always released

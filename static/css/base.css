@@ -71,3 +71,13 @@
     font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
     letter-spacing: .02em;
   }
+  /* One bar, not two. The seed instance is always mock mode, so both rules
+     would otherwise fire and stack -- and two warnings say less than one: a
+     reader working out which of them applies is reading neither. The seed
+     wording carries the canned-replies fact, so the mock bar stands down.
+
+     This has to come *after* the rule it overrides. Both selectors are one
+     id + one class + one type, so specificity is a tie and source order is
+     the only thing deciding it. Moving it up will silently bring the second
+     banner back. */
+  body.seed-instance #mock-banner { display: none; }

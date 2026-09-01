@@ -46,18 +46,50 @@ SEED_DIR = ROOT / "seed_corpus" / "journal_entries"
 
 
 def seed_entries() -> list[tuple[str, str]]:
-    """(date, title) for every entry the corpus ships, from its filenames --
-    the same shape the journal stores them under."""
+    """(date, title) for every entry the corpus ships -- both spellings.
+
+    A title reaches the stores twice, and not the same way each time. The
+    file on disk carries a sanitised name (`2026-09-09_Lenas referral.md`),
+    because an apostrophe is not something to put in a path; the metadata
+    Chroma and the derived stores are keyed by is the `# heading` inside the
+    file (`Lena's referral`). Reading only the filename finds the markdown
+    and silently misses every chunk, observation block and summary behind it
+    -- which is what happened the first time this ran, and left four entries
+    visible in History with no file under them.
+
+    So both spellings come back for every entry and callers match the set. A
+    spelling that matches nothing costs one lookup that finds no rows.
+    """
     out = []
     for path in sorted(SEED_DIR.glob("*.md")):
         stem = path.stem
-        out.append((stem[:10], stem[11:]))
+        date, from_name = stem[:10], stem[11:]
+        out.append((date, from_name))
+        first = path.read_text(encoding="utf-8", errors="ignore").split(
+            "\n", 1)[0]
+        if first.startswith("#"):
+            heading = first.lstrip("#").strip()
+            if heading and heading != from_name:
+                out.append((date, heading))
     return out
 
 
 def key_of(date: str, title: str) -> str:
-    """The `<date>_<Title-dashed>` key the derived stores are filed under."""
-    return f"{date}_{title.replace(' ', '-')}"
+    """The `<date>_<Title-dashed>` key the derived stores are filed under.
+
+    Deliberately a copy of `entities.conversation_cache_key()` rather than an
+    import: this script has to run against a journal written by an older
+    build, and a key rule that changes underneath it would quietly stop
+    matching instead of failing. If that function ever changes, this one is
+    meant to keep describing what is *on disk*.
+
+    The parts that are easy to get wrong -- and did get this wrong once --
+    are that every non-alphanumeric becomes a dash (so an apostrophe does
+    too: `Lena's referral` files as `Lena-s-referral`), and that the result
+    is cut at 40 characters.
+    """
+    safe = re.sub(r"[^a-zA-Z0-9-]+", "-", title)[:40].strip("-")
+    return f"{date}_{safe}"
 
 
 class Plan:
@@ -280,7 +312,8 @@ def main() -> int:
     if not keys:
         print(f"no seed entries found under {SEED_DIR}")
         return 1
-    print(f"seed corpus: {len(keys)} entries\n")
+    files = len(list(SEED_DIR.glob("*.md")))
+    print(f"seed corpus: {files} entries, {len(keys)} title spellings\n")
 
     plan = build_plan(keys)
     report(plan)
