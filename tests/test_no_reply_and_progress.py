@@ -117,3 +117,27 @@ def test_finish_flips_done_for_the_client_to_stop_polling():
     server._close_finish()
     p = server.close_progress()
     assert p["done"] and not p["active"]
+
+
+# ---- discard: the mock-only reset ----
+
+def test_discard_empties_the_open_chat_without_closing_it(client):
+    """A scratch chat can be thrown away with no journal entry and no
+    pipeline -- the session file is left empty rather than archived."""
+    client.post("/api/entry", json={"text": "just poking at it", "no_reply": True})
+    assert roles() == ["you"]
+    r = client.post("/api/sessions/discard", json={})
+    assert r.status_code == 200 and r.json()["ok"] is True
+    # a fresh session with no turns -- not an archived one
+    assert messages() == []
+
+
+def test_discard_is_refused_off_mock(client, monkeypatch):
+    """On a real journal an unsaved chat vanishing is data loss, so the route
+    refuses and leaves the session untouched."""
+    import config
+    monkeypatch.setattr(config, "MOCK_MODE", False)
+    client.post("/api/entry", json={"text": "keep me", "no_reply": True})
+    r = client.post("/api/sessions/discard", json={})
+    assert r.status_code == 403
+    assert roles() == ["you"]  # nothing was thrown away

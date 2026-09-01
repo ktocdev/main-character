@@ -92,6 +92,10 @@
     display: flex; flex-direction: column; gap: .4rem;
   }
   #write-actions .menu button { text-align: left; }
+  /* discard is a mock-only reset; gated by the same body class the mock
+     banner uses, so it never shows on a real journal (server refuses it too). */
+  #discard { display: none; color: var(--text-dim); }
+  body.mock-mode #discard { display: block; }
   /* the seed ritual: candidate waiting between close and upload */
   #seed-banner {
     display: flex; align-items: center; gap: .6rem;

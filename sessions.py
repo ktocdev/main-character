@@ -104,6 +104,17 @@ def save_current(cur: dict):
     )
 
 
+def discard_current(collection=None) -> None:
+    """Throw the open chat away without closing it: no journal entry, no
+    archive, no memory pipeline. The next chat opens on the same carried-
+    forward context a fresh session always does, so this is a reset, not a
+    delete of anything already committed. A testing affordance -- the route
+    that calls it refuses outside mock mode, where an unsaved chat vanishing
+    with no entry would be data loss rather than a convenience."""
+    base = _initial_base(collection) if collection is not None else []
+    save_current(_fresh(base=base))
+
+
 def append_message(role: str, text: str, dream: bool = False, collection=None,
                    when: datetime | None = None):
     """Record one turn of the open session ('you' or 'companion')."""

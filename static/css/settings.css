@@ -38,7 +38,29 @@
     color: var(--text-dim); font-size: .8rem;
     margin-top: .4rem; max-width: 34rem; line-height: 1.5;
   }
+  /* A group's lead paragraph (direct child of .set-group, e.g. Data) needs the
+     same separation below it that .set-row carries, or the first row hugs the
+     intro while every later row sits 1.5rem clear -- the gap above "Export"
+     that read as too tight. Row-level help lives inside .set-row and is
+     untouched by the child combinator. */
+  .set-group > .set-help { margin-bottom: 1.5rem; }
   .set-warn { color: var(--accent); font-size: .8rem; margin-top: .4rem; max-width: 34rem; }
+
+  /* Appearance: a segmented light/dark/auto switch. Client-only (localStorage),
+     so unlike the .env rows it takes effect with no save and no restart. */
+  #theme-toggle {
+    display: inline-flex; border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden;
+  }
+  #theme-toggle button {
+    background: none; border: none; border-right: 1px solid var(--border);
+    color: var(--text-dim); cursor: pointer;
+    font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    padding: .4rem 1rem;
+  }
+  #theme-toggle button:last-child { border-right: none; }
+  #theme-toggle button:hover:not(.active) { color: var(--text); }
+  #theme-toggle button.active { background: var(--bg-input); color: var(--accent); }
 
   /* The one figure in the section that is a number rather than a setting.
      Bigger than the notes around it, and no colour of its own -- a running

@@ -18,6 +18,15 @@
 <link rel="stylesheet" href="/static/css/history.css">
 <link rel="stylesheet" href="/static/css/help.css">
 <link rel="stylesheet" href="/static/css/settings.css">
+<script>
+  // Apply a pinned theme before first paint, so a choice that differs from the
+  // OS setting doesn't flash the wrong palette for the moment before the app's
+  // modules load. No pin (or "auto") leaves prefers-color-scheme in charge.
+  try {
+    var _t = localStorage.getItem('rag_theme');
+    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+  } catch (e) {}
+</script>
 </head>
 <body>
 <div id="mock-banner">mock mode — replies are canned, not from Claude. No API calls are being made.</div>
@@ -75,6 +84,7 @@
           <summary title="chat actions">⋯</summary>
           <div class="menu">
             <button class="quiet" id="reset" title="the summarize point — your side of this chat becomes a journal entry, memory updates in the background, a fresh chat opens">summarize &amp; close chat</button>
+            <button class="quiet" id="discard" title="throw this chat away — no journal entry, no memory update. testing affordance, shown only on a mock journal">discard this chat</button>
             <button class="quiet" id="seed-download" title="download the live seed summary — the co-edited life summary that opens every chat" hidden>download current seed</button>
             <button class="quiet" id="seed-upload-btn" title="upload your edited seed summary — it becomes the live seed for every new turn (the old one is backed up)">upload seed</button>
             <input type="file" id="seed-upload-file" accept=".md,.txt,text/markdown,text/plain" hidden>
@@ -216,6 +226,18 @@
   <section class="tab" id="tab-settings">
     <div id="settings">
       <h2>Settings</h2>
+      <div class="set-group" id="appearance">
+        <h3>Appearance</h3>
+        <div class="set-row">
+          <label>Theme</label>
+          <div id="theme-toggle" role="group" aria-label="theme">
+            <button type="button" data-theme-choice="auto" title="follow this device's light/dark setting">Auto</button>
+            <button type="button" data-theme-choice="light">Light</button>
+            <button type="button" data-theme-choice="dark">Dark</button>
+          </div>
+          <p class="set-help">Saved in this browser and applied instantly — it is not part of your <code>.env</code> and is not shared with other devices. Auto follows the device.</p>
+        </div>
+      </div>
       <p id="settings-intro">These are the values in your <code>.env</code> file.
         Saving rewrites that file and leaves everything else in it alone. The
         journal reads its configuration once at startup, so saving restarts it

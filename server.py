@@ -625,6 +625,33 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     return {"ok": True, **result}
 
 
+@app.post("/api/sessions/discard")
+def discard_session():
+    """Throw the open chat away without closing it -- mock only.
+
+    Closing writes the user's side as a journal entry and runs the whole
+    memory pipeline over it; on a mock journal that is only being poked at,
+    every scratch close quietly fills the corpus with test entries. This
+    resets to an empty chat instead: no entry, no archive, no pipeline. It is
+    refused on a real journal, where an unsaved chat disappearing with nothing
+    kept is data loss, not a reset -- there, `close` is how you clear the box.
+
+    The in-memory reset mirrors close_session exactly (messages emptied, the
+    session meter zeroed) minus the parts that persist the chat.
+    """
+    import config
+    if not config.MOCK_MODE:
+        return JSONResponse(
+            {"error": "Discarding a chat is a mock-mode testing affordance. "
+                      "On a real journal, close the chat to keep it as an "
+                      "entry -- nothing here throws your writing away."},
+            status_code=403)
+    sessions.discard_current(STATE["collection"])
+    STATE["messages"] = []
+    metering.reset()
+    return {"ok": True}
+
+
 @app.get("/api/sessions/close/progress")
 def close_progress():
     """Which stage of the post-close memory pipeline is running (item 1).

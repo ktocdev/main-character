@@ -4,6 +4,11 @@
     font-weight: 400 600;
     font-display: swap;
   }
+  /* Dark is the default palette. The light palette below applies either when
+     the OS asks for light *and* the reader hasn't pinned dark, or when the
+     Appearance setting pins light outright (data-theme on <html>, set from
+     localStorage by the inline head script and settings.js). An explicit pin
+     always beats the OS; "Auto" clears the attribute and hands it back. */
   :root {
     color-scheme: light dark;  /* native controls (select popups, checkboxes, scrollbars) follow the theme */
     --bg: #211d19;          /* warm charcoal, not pitch black */
@@ -17,9 +22,16 @@
     --you: #c9b99f;
   }
   @media (prefers-color-scheme: light) {
-    :root {
+    :root:not([data-theme="dark"]) {
       --bg: #faf7f2; --bg-raised: #ffffff; --bg-input: #f1ece4;
       --text: #38322b; --text-dim: #8c8378; --accent: #b5732f;
       --accent-dim: #d9b183; --border: #e4dcd0; --you: #6b5d49;
     }
   }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #faf7f2; --bg-raised: #ffffff; --bg-input: #f1ece4;
+    --text: #38322b; --text-dim: #8c8378; --accent: #b5732f;
+    --accent-dim: #d9b183; --border: #e4dcd0; --you: #6b5d49;
+  }
+  :root[data-theme="dark"] { color-scheme: dark; }

@@ -757,10 +757,49 @@ function wireData() {
            .join(', ') + '.');
 }
 
+// ---- appearance (client-only theme) ----
+// A per-browser display preference, not a .env value: it takes effect with no
+// save and no restart, and does not travel to another device. The inline head
+// script applies a pinned choice before first paint to avoid a flash; this
+// keeps the control in sync and writes the choice. "auto" clears the pin and
+// lets prefers-color-scheme decide. Reads/writes are wrapped because storage
+// can throw (private mode) -- a theme switch must never take the panel down.
+const THEME_KEY = 'rag_theme';
+function applyTheme(choice) {
+  const root = document.documentElement;
+  if (choice === 'light' || choice === 'dark') root.dataset.theme = choice;
+  else delete root.dataset.theme;
+}
+function markTheme(choice) {
+  document.querySelectorAll('#theme-toggle button').forEach(b =>
+    b.classList.toggle('active', b.dataset.themeChoice === choice));
+}
+function themeInit() {
+  const group = $('theme-toggle');
+  if (!group) return;
+  let stored;
+  try { stored = localStorage.getItem(THEME_KEY); } catch (e) {}
+  const current = (stored === 'light' || stored === 'dark') ? stored : 'auto';
+  applyTheme(current);
+  markTheme(current);
+  group.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-theme-choice]');
+    if (!btn) return;
+    const choice = btn.dataset.themeChoice;
+    try {
+      if (choice === 'auto') localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, choice);
+    } catch (e) {}
+    applyTheme(choice);
+    markTheme(choice);
+  });
+}
+
 export function init() {
   $('settings-save').onclick = save;
   $('settings-restart').onclick = restartNow;
   $('settings-seed').onclick = loadSeed;
+  themeInit();
   syncSeedButton();
   // `toggle` fires after the popover is in the layer, so it has a width to
   // measure by then; `beforetoggle` would measure zero.
