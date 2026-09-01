@@ -13,6 +13,7 @@ later refactor "simplifies" away.
 import json
 import sys
 import textwrap
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -425,6 +426,63 @@ def test_the_count_is_given_back_when_a_stream_dies(env, client, monkeypatch):
     with pytest.raises(RuntimeError):
         client.post("/api/lookup", json={"message": "when did I last write?"})
     assert server._BUSY["count"] == before
+
+
+# ---- the seed instance ----
+#
+# `server.RESTART` is module-global and these set it, so every test here
+# restores it through monkeypatch rather than by hand: leaving `requested`
+# True leaks a pending restart into whatever runs next, which is how the
+# first draft of these tests failed only when the suite ran in order.
+
+def test_the_seed_destination_lives_only_in_the_child_environment(
+        env, client, monkeypatch, tmp_path):
+    """Nothing about the seed instance is written to .env. That is the whole
+    mechanism for getting back out: the destination dies with the process, so
+    any later restart lands on real data."""
+    (tmp_path / "chroma_data").mkdir()
+    monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
+    # not object(): this one gets all the way to `srv.should_exit = True`,
+    # which a bare object cannot carry
+    monkeypatch.setitem(server.SERVER, "instance", SimpleNamespace())
+    monkeypatch.setitem(server.RESTART, "requested", False)
+    monkeypatch.setitem(server.RESTART, "into", "journal")
+
+    r = client.post("/api/restart", json={"into": "seed"})
+    assert r.status_code == 200 and r.json()["into"] == "seed"
+    assert "MC_SEED_INSTANCE" not in env_file.read_env()
+
+    child = server.restart_env()
+    assert child["MC_SEED_INSTANCE"] == "1"
+    assert child["RAG_JOURNAL_DIR"].endswith("journal_entries")
+
+
+def test_a_plain_restart_always_leaves_the_seed_instance(env, monkeypatch):
+    """The way home is any restart at all. The keys are dropped
+    unconditionally and only put back when the seed is asked for by name, so a
+    demo is one restart deep and cannot be wandered into permanently."""
+    monkeypatch.setitem(server.os.environ, "MC_SEED_INSTANCE", "1")
+    monkeypatch.setitem(server.os.environ, "RAG_JOURNAL_DIR",
+                        "seed_corpus/install/journal_entries")
+    monkeypatch.setitem(server.RESTART, "into", "journal")
+
+    child = server.restart_env()
+    assert "MC_SEED_INSTANCE" not in child
+    assert "RAG_JOURNAL_DIR" not in child
+
+
+def test_an_uninstalled_seed_corpus_is_refused_not_booted_empty(
+        env, client, monkeypatch, tmp_path):
+    """An author who asked for the corpus and got a blank journal has no way
+    to tell that from a broken one."""
+    monkeypatch.setattr(server, "SEED_ROOT", tmp_path)   # nothing installed
+    monkeypatch.setitem(server.SERVER, "instance", object())
+    monkeypatch.setitem(server.RESTART, "requested", False)
+
+    r = client.post("/api/restart", json={"into": "seed"})
+    assert r.status_code == 409
+    assert "not installed" in r.json()["error"]
+    assert not server.RESTART["requested"]
 
 
 def test_status_identifies_which_process_answered(env, client):

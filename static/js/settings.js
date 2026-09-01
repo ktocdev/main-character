@@ -407,6 +407,7 @@ export async function loadSettings() {
 
   $('settings-save').disabled = false;
   $('settings-note').textContent = '';
+  syncSeedButton();
 }
 
 // A save is only half a change: the process read .env at import. Rather than
@@ -425,13 +426,16 @@ async function instanceId() {
   }
 }
 
-async function restartServer(note, saved = true) {
+async function restartServer(note, saved = true, into = 'journal') {
   note.className = 'set-note';
   note.textContent = 'restarting to apply…';
   const before = await instanceId();
   let r;
   try {
-    r = await (await fetch('/api/restart', {method: 'POST'})).json();
+    r = await (await fetch('/api/restart', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({into}),
+    })).json();
   } catch (e) {
     r = {error: 'could not reach the server.'};
   }
@@ -623,9 +627,45 @@ function placeHelp() {
   help.style.top = Math.max(HELP_EDGE, top) + 'px';
 }
 
+// Which journal is loaded is a fact about the running process, and
+// refreshStatus() has already put it on the body. Asking again through a
+// second payload would give this pane a way to disagree with the banner.
+const inSeed = () => document.body.classList.contains('seed-instance');
+
+// The one button whose *label* is the state. Called on load and after every
+// settings render, because the status that decides it arrives asynchronously.
+function syncSeedButton() {
+  const btn = $('settings-seed');
+  if (btn) btn.textContent = inSeed() ? 'return to my journal' : 'load seed corpus';
+}
+
+// The demo corpus is a separate journal with its own data dirs, not a mode of
+// this one -- so getting there is a restart, same as any other setting read at
+// import. Nothing is written to .env, which is what makes the next restart the
+// way back: the destination lives in the child process's environment and dies
+// with it.
+async function loadSeed() {
+  const btn = $('settings-seed');
+  const note = $('settings-note');
+  if (inSeed()) {
+    btn.disabled = true;
+    await restartServer(note, false, 'journal');
+    btn.disabled = false;
+    return;
+  }
+  if (!confirm('Restart on the seed corpus?\n\nIt is a different journal '
+      + 'with its own entries, entities and summaries \u2014 nothing you do '
+      + 'there touches yours. Any restart brings you back.')) return;
+  btn.disabled = true;
+  await restartServer(note, false, 'seed');
+  btn.disabled = false;
+}
+
 export function init() {
   $('settings-save').onclick = save;
   $('settings-restart').onclick = restartNow;
+  $('settings-seed').onclick = loadSeed;
+  syncSeedButton();
   // `toggle` fires after the popover is in the layer, so it has a width to
   // measure by then; `beforetoggle` would measure zero.
   const help = $('settings-restart-help');

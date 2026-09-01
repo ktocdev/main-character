@@ -213,6 +213,11 @@ def status():
         # drives the UI banner — a canned reply must never be mistaken for
         # a real one
         "mock": MOCK_MODE,
+        # ...and a demo journal must never be mistaken for the author's own.
+        # Both banners can be up at once: the seed instance is also mock, and
+        # "these replies are canned" and "these entries are not yours" are
+        # different warnings with different consequences.
+        "seed_instance": SEED_INSTANCE,
         # the server owns the clock; the client stamps against this
         "now": _now_stamp(),
         "tz": zone_name(),
@@ -789,7 +794,41 @@ def save_settings(body: SettingsIn):
 #     process's own dotenv load and the restart would look like a no-op --
 #     the same failure the settings UI already had once.
 
-RESTART = {"requested": False, "keys": set()}
+# ---------------------------------------------------------------------------
+# THE SEED INSTANCE
+# ---------------------------------------------------------------------------
+# The demo corpus is a different journal, not a mode of this one. It used to
+# be reachable only by `seed_corpus/run_demo.sh`, which meant the only way to
+# look at it was a terminal -- and the only way to *have* it was to write it
+# into the real journal, where retrieval and entity extraction could not tell
+# invented people from lived ones. This is the same environment that script
+# sets, reachable from Settings, and pointed at its own data dirs.
+#
+# It is deliberately one-shot: `restart_env()` drops these keys on every
+# restart and only puts them back when the seed is asked for by name, so the
+# way out is any restart at all. A demo you can wander into and not out of is
+# how someone ends up writing a real entry into a sandbox.
+
+SEED_ROOT = Path(__file__).parent / "seed_corpus" / "install"
+SEED_ENV = {
+    "MC_SEED_INSTANCE": "1",
+    # Canned replies and a stand-in author: the corpus exists to be looked at
+    # without a key and without spending anything.
+    "MC_MOCK": "1",
+    "RAG_AUTHOR_NAME": "Jordan",
+    "RAG_JOURNAL_DIR": str(SEED_ROOT / "journal_entries"),
+    "RAG_CHROMA_DIR": str(SEED_ROOT / "chroma_data"),
+    "MC_ENTITY_DIR": str(SEED_ROOT / "entity_graph"),
+    "MC_SUMMARY_DIR": str(SEED_ROOT / "summaries"),
+    "MC_CATEGORY_DIR": str(SEED_ROOT / "categories"),
+    "MC_PATTERN_DIR": str(SEED_ROOT / "patterns"),
+    "MC_DREAM_DIR": str(SEED_ROOT / "dreams"),
+    "MC_SESSION_DIR": str(SEED_ROOT / "sessions"),
+}
+
+SEED_INSTANCE = os.getenv("MC_SEED_INSTANCE", "").strip() == "1"
+
+RESTART = {"requested": False, "keys": set(), "into": "journal"}
 SERVER = {"instance": None}
 _BUSY = {"count": 0}
 _BUSY_LOCK = threading.Lock()
@@ -852,10 +891,35 @@ def _metered_stream(chunks):
             _BUSY["count"] -= 1
 
 
+class RestartIn(BaseModel):
+    # "journal" or "seed". Absent means journal, so every existing caller --
+    # and every restart that is just a restart -- lands back on real data.
+    into: str = "journal"
+
+
 @app.post("/api/restart")
-def restart_server():
+def restart_server(body: RestartIn | None = None):
     """Exit and come back, so a saved setting takes effect. The client polls
-    /api/status until it answers again, then reloads the page."""
+    /api/status until it answers again, then reloads the page.
+
+    `into: "seed"` comes back on the demo corpus instead. Nothing is written
+    to .env for it: the destination lives in the child process's environment
+    and only there, which is what makes the next restart a way out.
+    """
+    into = (body.into if body else "journal").strip().lower()
+    if into not in ("journal", "seed"):
+        return JSONResponse({"error": f"no such journal: {into}"},
+                            status_code=400)
+    if into == "seed" and not (SEED_ROOT / "chroma_data").exists():
+        # Refusing beats booting an empty demo: an author who asked for the
+        # seed corpus and got a blank journal has no way to tell that from a
+        # broken one.
+        return JSONResponse(
+            {"error": "the seed corpus is not installed. Run "
+                      "`bash seed_corpus/run_capture.sh --wipe` to build it, "
+                      "then try again."},
+            status_code=409)
+
     with _BUSY_LOCK:
         busy = _BUSY["count"]
     if busy:
@@ -877,8 +941,31 @@ def restart_server():
             status_code=501)
 
     RESTART["requested"] = True
+    RESTART["into"] = into
     srv.should_exit = True      # uvicorn drains, run() returns, __main__ execs
-    return {"ok": True, "restarting": True}
+    return {"ok": True, "restarting": True, "into": into}
+
+def restart_env() -> dict:
+    """The environment the replacement process starts with.
+
+    Two subtractions, one addition:
+
+      - the keys a save just wrote, because `load_dotenv()` does not override
+        what is already set and the child would inherit this process's stale
+        values instead of reading the file it just changed;
+      - every `SEED_ENV` key, *always*, so a seed instance is one restart deep
+        and any restart is the way home. This also means a journal started
+        from a shell that exported these by hand (`run_demo.sh`) restarts onto
+        real data -- which is the same rule stated from the other side, and
+        the reason the button exists rather than a second script;
+      - then `SEED_ENV` back, only when the seed was asked for by name.
+    """
+    dropped = RESTART["keys"] | set(SEED_ENV)
+    env = {k: v for k, v in os.environ.items() if k not in dropped}
+    if RESTART["into"] == "seed":
+        env.update(SEED_ENV)
+    return env
+
 
 @app.post("/api/reset")
 def reset_conversation():
@@ -1691,10 +1778,9 @@ if __name__ == "__main__":
     SERVER["instance"].run()
 
     if RESTART["requested"]:
-        # drop the just-saved keys so load_dotenv() sets them from the file
-        # instead of the new process inheriting this one's stale values
-        env = {k: v for k, v in os.environ.items() if k not in RESTART["keys"]}
-        print("  restarting to apply settings...", flush=True)
+        env = restart_env()
+        print("  restarting into the seed corpus..." if RESTART["into"] == "seed"
+              else "  restarting to apply settings...", flush=True)
 
         # run() has returned, but the listening socket is not always released
         # by the time the replacement tries to bind. Wait for it rather than

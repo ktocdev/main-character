@@ -53,7 +53,17 @@
      markup can live in index.html unconditionally. Sits above the header
      inside the body flex column, pushing the app down rather than
      overlaying it, so it can't be scrolled out of sight or covered. */
-  #mock-banner { display: none; }
+  #mock-banner, #seed-banner-bar { display: none; }
+  /* Louder than the mock banner on purpose. Canned replies are a detail you
+     can forget without consequence; writing into someone else's journal is
+     not. */
+  body.seed-instance #seed-banner-bar {
+    display: block; text-align: center;
+    padding: .4rem 1rem;
+    background: var(--accent); color: var(--bg);
+    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    letter-spacing: .02em;
+  }
   body.mock-mode #mock-banner {
     display: block; text-align: center;
     padding: .4rem 1rem;
