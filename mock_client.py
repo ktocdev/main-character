@@ -61,14 +61,17 @@ DEFAULT_DELAY = 1.0
 STREAM_CHUNK_DELAY = 0.035
 
 
-def _call_key(skip: frozenset = frozenset({"mock_client"})) -> str:
+def _call_key(skip: frozenset = frozenset({"mock_client", "metering"})) -> str:
     """`module.function` of the first frame outside the plumbing — the
     natural identity of a call type, and stable without threading a marker
     kwarg through 14 call sites (which the real SDK would reject).
 
     `skip` exists so `capture_fixtures.py` can wrap the real client and
     still derive the same keys, rather than recording everything under
-    its own frame."""
+    its own frame. `metering` is in the default set for the same reason:
+    `config.get_client()` wraps the mock client too, and its frame would
+    otherwise be the first one found -- filing every call under
+    `metering.create`, which no fixture and no `DELAYS` entry matches."""
     for frame in inspect.stack()[1:]:
         module = Path(frame.filename).stem
         if module not in skip:

@@ -81,6 +81,31 @@ export async function loadSettings() {
         + 'another later is a configuration change, not a rebuild.')}
     </section>
     <section class="set-group">
+      <h3>Models &amp; cost</h3>
+      <details id="set-models">
+        <summary>Which models this journal uses, and what they cost</summary>
+        <div class="set-disclosure-body">
+          ${fieldRow('set-companion-model', 'Companion model',
+            'The voice you write to. This is the one place model quality is '
+            + 'felt directly, so it is worth spending more here than anywhere '
+            + 'else.')}
+          ${fieldRow('set-companion-effort', 'Companion effort',
+            'How hard the companion thinks before answering. Higher is slower '
+            + 'and costs more. The choices come from the model above &mdash; '
+            + 'not every model offers the same ones.')}
+          ${fieldRow('set-processing-model', 'Processing model',
+            'Everything that happens in the background: tagging, entities, '
+            + 'summaries, arcs, patterns, dreams. It runs in bulk and is where '
+            + 'most of the spend goes, so it is the useful place to trade down.')}
+          <div class="set-row" id="set-caps-control"></div>
+          <div class="set-row">
+            <label>Session cost</label>
+            <div class="set-control" id="set-cost-control"></div>
+          </div>
+        </div>
+      </details>
+    </section>
+    <section class="set-group">
       <h3>API key</h3>
       <div class="set-row">
         <label for="set-key">Anthropic API key</label>
@@ -147,6 +172,148 @@ export async function loadSettings() {
   markPending('set-lang-control', 'MC_LANGUAGE',
     a => (o.languages.find(l => l.value === a) || {}).label || a);
 
+  // ---- models ----
+  // Both pickers offer the same lineup: nothing is restricted by bucket. The
+  // difference between the two is the guidance beside them, not the options
+  // inside them.
+  //
+  // A server running an older build serves a payload with no `models` in it.
+  // Unguarded that is a TypeError on the first `o.models.find`, which takes
+  // out every control built after it -- both pickers and the spend note --
+  // and leaves the section looking empty rather than broken. An empty
+  // settings pane that throws in the console is a bug report nobody can
+  // write, so name the cause instead.
+  if (!Array.isArray(o.models) || !o.models.length) {
+    const stale = document.createElement('p');
+    stale.className = 'set-warn';
+    stale.textContent = 'The server has not been restarted since these '
+      + 'settings were added, so it cannot say which models it offers. '
+      + 'Restart it and reload this page.';
+    $('set-companion-model-control').appendChild(stale);
+  } else {
+    const modelName = m => (o.models.find(x => x.value === m) || {}).label || m;
+    const priceOf = m => {
+      const pr = (o.models.find(x => x.value === m) || {}).price;
+      return pr ? '$' + pr.in + ' / $' + pr.out + ' per Mtok' : 'price unlisted';
+    };
+    function modelSelect(id, current) {
+      const sel = document.createElement('select');
+      sel.id = id;
+      for (const m of o.models) {
+        const opt = new Option(m.label + ' \u2014 ' + priceOf(m.value), m.value);
+        opt.selected = m.value === current;
+        sel.add(opt);
+      }
+      $(id + '-control').appendChild(sel);
+      lockUnshowable(sel, id + '-control', current || '',
+        'the model ' + (current || ''));
+      return sel;
+    }
+
+    const cModel = modelSelect('set-companion-model', v.MC_COMPANION_MODEL);
+    markPending('set-companion-model-control', 'MC_COMPANION_MODEL', modelName);
+
+    // The companion is the one surface where dropping a tier is felt in the
+    // writing itself, so say so at the moment it is chosen. The processing
+    // picker gets no equivalent: trading down there is the intended lever.
+    const voiceWarn = document.createElement('p');
+    voiceWarn.className = 'set-warn';
+    $('set-companion-model-control').appendChild(voiceWarn);
+    const showVoiceWarning = () => {
+      voiceWarn.textContent = /opus/.test(cModel.value) ? ''
+        : modelName(cModel.value) + ' costs less, but the companion\'s replies '
+          + 'are what you actually read. Opus reads best as the voice.';
+    };
+
+    // Effort levels belong to the model, so this list is rebuilt whenever the
+    // model changes rather than filtered at save time. A model with no levels
+    // at all (Haiku 4.5 takes no effort parameter) disables the control, which
+    // also drops it from the save -- see save()'s `disabled` check.
+    const effort = document.createElement('select');
+    effort.id = 'set-companion-effort';
+    const effortNote = document.createElement('p');
+    effortNote.className = 'set-warn';
+    $('set-companion-effort-control').append(effort, effortNote);
+
+    function fillEfforts(keep) {
+      // A model .env names but this list can't show locks the model picker
+      // (see lockUnshowable), and its effort levels are just as unknowable:
+      // filling the list from whichever option happened to be selected first
+      // would offer levels belonging to a different model, silently rewrite
+      // the author's stored effort to one of them, and get the whole save
+      // 400'd -- date format and all -- when the server validated it against
+      // the model actually in .env. So the effort is locked with the model.
+      if (cModel.dataset.locked) {
+        effort.textContent = '';
+        effort.disabled = true;
+        effortNote.textContent = '.env sets the companion model to one this '
+          + "list can't show, so its effort levels aren't known here either. "
+          + 'Edit .env to change either.';
+        return;
+      }
+      const levels = (o.models.find(m => m.value === cModel.value) || {}).efforts || [];
+      effort.textContent = '';
+      for (const level of levels) effort.add(new Option(level, level));
+      effort.disabled = !levels.length;
+      effortNote.textContent = levels.length ? ''
+        : modelName(cModel.value) + ' takes no effort setting, so it is left off '
+          + 'the call entirely rather than sent and rejected.';
+      // Keep the author's level across a model change when the new model still
+      // offers it; otherwise fall back to that model's top level, which is
+      // nearer the original intent than the list's first entry.
+      if (levels.includes(keep)) effort.value = keep;
+      else if (levels.length) effort.value = levels[levels.length - 1];
+    }
+    fillEfforts(v.MC_COMPANION_EFFORT);
+    showVoiceWarning();
+    cModel.onchange = () => { fillEfforts(effort.value); showVoiceWarning(); };
+    markPending('set-companion-effort-control', 'MC_COMPANION_EFFORT', a => a);
+
+    modelSelect('set-processing-model', v.MC_PROCESSING_MODEL);
+    markPending('set-processing-model-control', 'MC_PROCESSING_MODEL', modelName);
+  }
+
+  // ---- spend caps ----
+  // There is no cap control here, because there is no cap: nothing reads
+  // these values before a call yet. An input would let someone set a ceiling
+  // and believe it protected them, and even a read-only "no limit" row is
+  // just a setting that does nothing taking up space.
+  //
+  // The exception is a value that is already in .env -- hand-added, or saved
+  // through the API, which whitelists both keys. That author has every reason
+  // to think their cap is working, and this is the only place that can tell
+  // them otherwise. So: say what is true always, and name the stale values
+  // only when they exist.
+  // Re-read on every open rather than once: the figure moves while the
+  // pane is shut, and a stale number here is worse than a slow one.
+  const models = $('set-models');
+  if (models) models.addEventListener('toggle', () => {
+    if (models.open) renderCost();
+  });
+
+  const caps = $('set-caps-control');
+  if (!s.spend_caps_enforced) {
+    const note = document.createElement('p');
+    note.className = 'set-help';
+    note.textContent = 'Nothing limits what this journal can spend. Until '
+      + 'spend caps are built, the backstop that does not depend on this app '
+      + 'being correct is a spend limit on your Anthropic Console account.';
+    caps.appendChild(note);
+
+    const set = [['MC_MAX_SESSION_TOKENS', 'tokens per session'],
+                 ['MC_MAX_MONTHLY_SPEND', 'dollars per month']]
+      .filter(([key]) => v[key]);
+    if (set.length) {
+      const warn = document.createElement('p');
+      warn.className = 'set-warn';
+      warn.textContent = 'Your .env already sets '
+        + set.map(([key, label]) => v[key] + ' ' + label).join(' and ')
+        + ' \u2014 stored, but not read by anything yet. It will start '
+        + 'applying when caps are enforced; it is not protecting you now.';
+      caps.appendChild(warn);
+    }
+  }
+
   $('settings-save').disabled = false;
   $('settings-note').textContent = '';
 }
@@ -197,6 +364,65 @@ async function restartServer(note) {
     + 'start it again the way you normally do.';
 }
 
+// ---- session cost ----
+// Fetched when Models & Cost is opened, not polled. The figure only moves
+// when a call the author just triggered comes back, so there is nothing to
+// subscribe to -- and a number that ticks on its own in a settings pane
+// invites watching it, which is the opposite of the point.
+export function costLine(c) {
+  const dollars = c.total.dollars;
+  // Below a cent, a rounded figure reads as free. Say "under $0.01" instead:
+  // the honest statement is that it is small, not that it is nothing.
+  const money = dollars === 0 ? '$0.00'
+    : dollars < 0.01 ? 'under $0.01'
+    : '$' + dollars.toFixed(2);
+  return money + ' \u00b7 ' + c.total.tokens.toLocaleString() + ' tokens \u00b7 '
+    + c.total.calls + (c.total.calls === 1 ? ' call' : ' calls');
+}
+
+async function renderCost() {
+  const box = $('set-cost-control');
+  if (!box) return;
+  box.textContent = 'reading…';
+  let c;
+  try {
+    const r = await fetch('/api/cost');
+    if (!r.ok) throw new Error('the server did not return a cost');
+    c = await r.json();
+  } catch (e) {
+    // A cost view that fails should say so. Showing $0.00 on a failed fetch
+    // would be a lie in the one direction that matters.
+    box.textContent = '';
+    const err = document.createElement('p');
+    err.className = 'set-warn';
+    err.textContent = 'Could not read the session cost \u2014 ' + (e.message || e);
+    box.appendChild(err);
+    return;
+  }
+
+  box.textContent = '';
+  const total = document.createElement('p');
+  total.className = 'set-cost-total';
+  total.textContent = costLine(c);
+  box.appendChild(total);
+
+  const split = document.createElement('p');
+  split.className = 'set-help';
+  const part = (name, b) => c.labels[c.models[name]] + ' \u2014 $'
+    + b.dollars.toFixed(2) + ' over ' + b.calls
+    + (b.calls === 1 ? ' call' : ' calls');
+  split.textContent = 'Companion: ' + part('companion', c.companion)
+    + '. Background: ' + part('processing', c.processing) + '.';
+  box.appendChild(split);
+
+  const note = document.createElement('p');
+  note.className = 'set-help';
+  note.textContent = 'Since this journal last started, cleared when you close '
+    + 'a session. Estimated from list prices for the models above, not from '
+    + 'your account \u2014 treat it as a comparison between choices, not a bill.';
+  box.appendChild(note);
+}
+
 async function save() {
   if (!loaded) return;
   const btn = $('settings-save');
@@ -211,10 +437,16 @@ async function save() {
     ['MC_DATE_FORMAT', 'set-date'],
     ['MC_TIMEZONE', 'set-tz'],
     ['MC_LANGUAGE', 'set-lang'],
+    ['MC_COMPANION_MODEL', 'set-companion-model'],
+    ['MC_COMPANION_EFFORT', 'set-companion-effort'],
+    ['MC_PROCESSING_MODEL', 'set-processing-model'],
   ];
   for (const [key, id] of pairs) {
     const el = $(id);
-    if (el.disabled || el.dataset.locked) continue;
+    // A control the render declined to build (see the models guard above) has
+    // no value to save -- and reading .disabled off null would take save() down
+    // with it, so a stale payload would cost you the date format too.
+    if (!el || el.disabled || el.dataset.locked) continue;
     if (el.value !== (loaded.values[key] || '')) values[key] = el.value;
   }
   const key = $('set-key').value.trim();

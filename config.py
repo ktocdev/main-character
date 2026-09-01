@@ -49,6 +49,35 @@ MODEL_EFFORT_LEVELS = {
     "claude-haiku-4-5": [],
 }
 
+# Model -> the name a person recognizes. The API ids are what get written
+# to .env; these are what the pickers show.
+MODEL_LABELS = {
+    "claude-opus-4-6": "Opus 4.6",
+    "claude-opus-4-7": "Opus 4.7",
+    "claude-opus-4-8": "Opus 4.8",
+    "claude-opus-5": "Opus 5",
+    "claude-sonnet-5": "Sonnet 5",
+    "claude-haiku-4-5": "Haiku 4.5",
+}
+
+# Model -> USD list price per million tokens, input and output.
+#
+# These started as labels beside the Settings pickers, so a cloner could see
+# what a choice costs relative to the others. `metering.py` now computes every
+# dollar figure the app shows from them, so a wrong row here is a wrong number
+# on screen rather than a wrong label -- but still nothing *bills* or refuses a
+# call against them; that is Phase 2 item 10. Anthropic's pricing page is the
+# authority: check these against it when adding a model, and treat a figure
+# here as an estimate that goes stale, never as a quote.
+MODEL_PRICES = {
+    "claude-opus-4-6": {"in": 5.0, "out": 25.0},
+    "claude-opus-4-7": {"in": 5.0, "out": 25.0},
+    "claude-opus-4-8": {"in": 5.0, "out": 25.0},
+    "claude-opus-5": {"in": 5.0, "out": 25.0},
+    "claude-sonnet-5": {"in": 3.0, "out": 15.0},
+    "claude-haiku-4-5": {"in": 1.0, "out": 5.0},
+}
+
 # Model -> whether the `thinking` parameter is supported at all. Where
 # it's supported, Opus 4.6/4.7/4.8 default to *off* when the parameter is
 # omitted; Sonnet 5 and Opus 5 default to *adaptive* when omitted. Haiku
@@ -233,11 +262,23 @@ def get_client():
     app boot with no `ANTHROPIC_API_KEY` at all, since the SDK raises on
     construction when the key is missing.
 
-    Phase 2 item 10 puts the spend-cap check here, in front of the
-    returned client, so the ceiling can't be bypassed by a call site.
+    The returned client is wrapped by `metering.py`, which counts what each
+    call cost on the way back. Wrapping here rather than at the call sites is
+    the same argument as mock mode: one swap instead of fourteen, and a new
+    call site is metered by default rather than by remembering to.
+
+    Mock mode is metered too. The counts are fictional, but the plumbing that
+    carries them is the same plumbing -- a cost view that only works against
+    the real API is one nobody can develop against.
+
+    Phase 2 item 10 puts the spend-cap check here, in front of the returned
+    client, so the ceiling can't be bypassed by a call site. It needs a check
+    *before* the call, which is why it is a separate piece of work from the
+    counting: metering only ever learns what a call cost after it is spent.
     """
+    import metering
     if MOCK_MODE:
         from mock_client import MockClient
-        return MockClient()
+        return metering.wrap(MockClient())
     import anthropic
-    return anthropic.Anthropic()
+    return metering.wrap(anthropic.Anthropic())

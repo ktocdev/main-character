@@ -35,6 +35,7 @@ from pydantic import BaseModel
 import categories
 import companion
 import entities
+import metering
 import sessions
 from config import HOST, PORT, MOCK_MODE, get_client
 from config import DATE_FORMAT, date_style, parse_stamp, now_local, stamp as _now_stamp, zone_name
@@ -445,10 +446,53 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     STATE["messages"] = []
+    # First, before the pipeline is queued. The pipeline is arguably the
+    # closing session's cost -- it happened because of those entries -- but
+    # billing it there means resetting after it finishes, and the accumulator
+    # is one process-global counter: everything the *new* session spends while
+    # the pipeline runs would be zeroed along with it, and until then
+    # `/api/cost` would show the closed session's figure labelled "this
+    # session". Attribution is a display nicety; losing spend the user just
+    # incurred is a wrong number. So the new session starts at zero now and
+    # wears the pipeline's processing cost.
+    metering.reset()
     _tracked(background_tasks, _after_close_seed, result["key"])
     _tracked(background_tasks, _after_close_refresh)
     return {"ok": True, **result}
 
+
+
+# ---------------------------------------------------------------------------
+# COST
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/cost")
+def cost():
+    """What the open session has spent so far.
+
+    Read on demand -- both cost views are collapsed by default (Phase 2 item
+    8), so this is fetched when one is opened rather than polled. There is
+    nothing to subscribe to: the number only moves when a call the user just
+    triggered comes back.
+
+    `estimated` is not decoration. These are list prices from a hand-kept
+    table, computed from token counts, and the UI has to be able to say so
+    rather than presenting a figure that looks like a statement.
+    """
+    import config
+    totals = metering.totals()
+    return {
+        **totals,
+        "models": {
+            "companion": config.MC_COMPANION_MODEL,
+            "processing": config.MC_PROCESSING_MODEL,
+        },
+        "labels": {m: config.MODEL_LABELS.get(m, m)
+                   for m in (config.MC_COMPANION_MODEL,
+                             config.MC_PROCESSING_MODEL)},
+        "estimated": True,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -510,9 +554,18 @@ def get_settings():
         "MC_DATE_FORMAT": config.DATE_FORMAT,
         "MC_TIMEZONE": config.TIMEZONE,
         "MC_LANGUAGE": config.LANGUAGE,
+        "MC_COMPANION_MODEL": config.MC_COMPANION_MODEL,
+        "MC_COMPANION_EFFORT": config.MC_COMPANION_EFFORT,
+        "MC_PROCESSING_MODEL": config.MC_PROCESSING_MODEL,
     }
+    # Deliberately not in `active`: nothing in the process reads the spend
+    # caps yet (Phase 2 item 10 is what will enforce them), so there is no
+    # running value for the file to disagree with. Reporting one would let
+    # the UI claim a cap is in effect when nothing checks it.
+    caps = {k: stored.get(k, "")
+            for k in ("MC_MAX_SESSION_TOKENS", "MC_MAX_MONTHLY_SPEND")}
     return {
-        "values": {k: stored.get(k, v) for k, v in active.items()},
+        "values": {**{k: stored.get(k, v) for k, v in active.items()}, **caps},
         "active": active,
         "options": {
             "date_formats": [
@@ -523,7 +576,22 @@ def get_settings():
             "timezones": zones,
             "languages": [{"value": v, "label": l}
                           for v, l in config.LANGUAGES.items()],
+            # One lineup, both pickers -- nothing is restricted by bucket.
+            # `efforts` travels with each model so the effort picker can
+            # repopulate from the selection without a second round trip, and
+            # an empty list is meaningful: that model takes no effort at all.
+            "models": [
+                {"value": m,
+                 "label": config.MODEL_LABELS.get(m, m),
+                 "efforts": efforts,
+                 "price": config.MODEL_PRICES.get(m),
+                 "thinking": config.MODEL_THINKING_SUPPORT.get(m, True)}
+                for m, efforts in config.MODEL_EFFORT_LEVELS.items()
+            ],
         },
+        # The caps are configurable before anything reads them, so the UI has
+        # to be able to say so rather than implying protection it hasn't got.
+        "spend_caps_enforced": False,
         # what the clock is actually doing, which is not always what
         # MC_TIMEZONE says — see config.zone_name
         "resolved_timezone": zone_name(),
