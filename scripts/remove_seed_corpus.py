@@ -141,12 +141,12 @@ def build_plan(keys: list[tuple[str, str]]) -> Plan:
     # Entity profiles: one heading per observed entry.
     for profile in Path(config.ENTITY_DIR).rglob("*.md"):
         text = profile.read_text(encoding="utf-8", errors="ignore")
-        hits = [h for h in observation_headings(text)
-                if (h[0], h[1]) in key_set]
+        headings = observation_headings(text)
+        hits = [h for h in headings if h in key_set]
         if not hits:
             continue
         plan.blocks[profile] = hits
-        if len(hits) == len(observation_headings(text)):
+        if len(hits) == len(headings):
             plan.profiles.append(profile)
 
     cat_index = Path(config.CATEGORY_DIR) / "index.json"

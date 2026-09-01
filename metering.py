@@ -154,22 +154,39 @@ class _MeteredStream:
     sites do call it, and `__exit__` asks as a fallback for one that does
     not -- otherwise a whole companion turn would go uncounted."""
 
-    def __init__(self, inner, bucket: str, model: str):
+    def __init__(self, inner, bucket: str, model: str, holds_lock: bool = False):
         self._inner = inner
         self._bucket, self._model = bucket, model
         self._entered = None
         self._recorded = False
+        # Only `stream()` below passes True: it is the only caller that took
+        # caps.acquire() before constructing this, and only that acquire has
+        # a release to give back. Tests build this class directly to exercise
+        # the context-manager/recording behavior in isolation, with no lock
+        # held to mismanage.
+        self._lock_released = not holds_lock
 
     def __enter__(self):
         self._entered = self._inner.__enter__()
         return self
 
+    def _release_lock(self):
+        # Exactly once: caps.acquire() happened once in stream(), and this is
+        # its matching release, whichever exit path gets here first.
+        if not self._lock_released:
+            self._lock_released = True
+            import caps
+            caps.release()
+
     def __exit__(self, *exc):
-        # Only chase a final message on a clean exit: mid-exception the
-        # stream may be unusable, and a metering call that raised here would
-        # replace the real error with a confusing one.
-        if exc[0] is None:
-            self._finish()
+        try:
+            # Only chase a final message on a clean exit: mid-exception the
+            # stream may be unusable, and a metering call that raised here
+            # would replace the real error with a confusing one.
+            if exc[0] is None:
+                self._finish()
+        finally:
+            self._release_lock()
         return self._inner.__exit__(*exc)
 
     def _finish(self):
@@ -201,20 +218,33 @@ class _MeteredMessages:
 
     def create(self, **kwargs):
         import caps
-        caps.check()
-        # The bucket is read before the call, while the caller's frame is
-        # still on the stack -- after it returns, it still is, but reading it
-        # first keeps the two paths (create and stream) identical.
-        bucket = _bucket(self._skip)
-        response = self._inner.create(**kwargs)
-        record(bucket, kwargs.get("model", ""), getattr(response, "usage", None))
-        return response
+        caps.acquire()
+        try:
+            caps.check()
+            # The bucket is read before the call, while the caller's frame is
+            # still on the stack -- after it returns, it still is, but reading
+            # it first keeps the two paths (create and stream) identical.
+            bucket = _bucket(self._skip)
+            response = self._inner.create(**kwargs)
+            record(bucket, kwargs.get("model", ""), getattr(response, "usage", None))
+            return response
+        finally:
+            caps.release()
 
     def stream(self, **kwargs):
         import caps
-        caps.check()
+        caps.acquire()
+        try:
+            caps.check()
+        except BaseException:
+            caps.release()
+            raise
+        # The lock passes to the returned _MeteredStream, which releases it
+        # when the `with` block it is used in exits -- not here, since the
+        # real cost of a stream is only known once it has been read.
         return _MeteredStream(self._inner.stream(**kwargs),
-                              _bucket(self._skip), kwargs.get("model", ""))
+                              _bucket(self._skip), kwargs.get("model", ""),
+                              holds_lock=True)
 
     def __getattr__(self, name):
         return getattr(self._inner, name)

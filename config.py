@@ -205,7 +205,9 @@ SPEND_FILE = Path(os.getenv("MC_SPEND_FILE", _PROJECT_ROOT / "spend_ledger.json"
 # is the point: silently truncating a journal entry loses writing the author
 # believes was saved, which is worse than the paste that prompted it. Sized so
 # that no entry anyone types can reach it and no accidental paste of a whole
-# document can get through -- roughly 25k tokens.
+# document can get through -- roughly 25k tokens. Same convention as the
+# spend caps above: blank uses the default, 0 turns it off -- server.py's
+# _too_long() is where that 0 is read as "no ceiling" rather than as one.
 MAX_INPUT_CHARS = int(_positive("MC_MAX_INPUT_CHARS", 100_000))
 
 # ---------------------------------------------------------------------------

@@ -248,7 +248,11 @@ def _too_long(text: str):
     Refusing beats truncating: an entry silently cut in half is writing the
     author believes is saved and will not read again until it matters.
     """
-    if len(text) <= config.MAX_INPUT_CHARS:
+    # 0 turns the limit off, same convention as the spend caps: a blank means
+    # "use the default above", but an explicit 0 has to be reachable as "no
+    # ceiling at all", or MC_MAX_INPUT_CHARS=0 -- read that way everywhere
+    # else in this file -- would instead reject every non-empty submission.
+    if not config.MAX_INPUT_CHARS or len(text) <= config.MAX_INPUT_CHARS:
         return None
     return JSONResponse(
         {"error": f"that is {len(text):,} characters, past the "
@@ -414,7 +418,10 @@ def dream_index():
 def extract_dreams(body: CategoryBuildIn):
     """Scan the journal for dreams (cached per conversation; incremental)."""
     import dreams
-    dreams.extract(force=body.force, quiet=True)
+    try:
+        dreams.extract(force=body.force, quiet=True)
+    except caps.CapExceeded as exc:
+        return _refused(exc)
     index = dreams.load_index()
     return {**index, "weather": dreams.dream_weather()}
 
@@ -755,6 +762,14 @@ def _validate_settings(values: dict) -> dict[str, str]:
 def save_settings(body: SettingsIn):
     """Write the whitelisted keys to .env, preserving everything else."""
     from env_file import update_env
+    if SEED_INSTANCE:
+        # .env is one file shared by both instances -- a save made while
+        # looking at the demo corpus would land in the real journal's
+        # config, not a sandboxed copy of it. Restarting back is the only
+        # place a save can honestly go.
+        return JSONResponse(
+            {"error": "settings can't be changed from the demo journal -- "
+                      "restart back to yours first."}, status_code=409)
     try:
         clean = _validate_settings(body.values or {})
         update_env(clean)
@@ -910,10 +925,13 @@ def restart_server(body: RestartIn | None = None):
     if into not in ("journal", "seed"):
         return JSONResponse({"error": f"no such journal: {into}"},
                             status_code=400)
-    if into == "seed" and not (SEED_ROOT / "chroma_data").exists():
-        # Refusing beats booting an empty demo: an author who asked for the
-        # demo journal and got a blank one has no way to tell that from a
-        # broken one.
+    if into == "seed" and not (SEED_ROOT / "chroma_data" / "chroma.sqlite3").exists():
+        # Checked for the database file, not just the directory: an
+        # interrupted or half-run capture can leave an empty chroma_data/
+        # behind, and Path.exists() on the bare directory would call that
+        # "installed". Refusing beats booting an empty demo: an author who
+        # asked for the demo journal and got a blank one has no way to tell
+        # that from a broken one.
         return JSONResponse(
             {"error": "the demo journal is not installed. Run "
                       "`bash seed_corpus/run_capture.sh --wipe` to build it, "
@@ -1217,7 +1235,10 @@ def redo_change():
 def suggest(body: KindIn):
     if body.kind not in entities.KINDS:
         return JSONResponse({"error": f"kind must be one of {entities.KINDS}"}, status_code=400)
-    return {"groups": entities.suggest_merges(body.kind)}
+    try:
+        return {"groups": entities.suggest_merges(body.kind)}
+    except caps.CapExceeded as exc:
+        return _refused(exc)
 
 
 @app.post("/api/entities/reviewed")
@@ -1461,8 +1482,11 @@ def refresh_summaries():
     arcs, domain documents, and the status snapshot (all incremental).
     Tagging runs first so fresh entries land in their domain docs."""
     import summarizer
-    cat = categories.build(quiet=True)
-    result = summarizer.build(quiet=True)
+    try:
+        cat = categories.build(quiet=True)
+        result = summarizer.build(quiet=True)
+    except caps.CapExceeded as exc:
+        return _refused(exc)
     return {"ok": True, **result, "categories_tagged": cat["new"]}
 
 
@@ -1718,7 +1742,10 @@ def category_index():
 @app.post("/api/categories/build")
 def build_categories(body: CategoryBuildIn):
     """Tag untagged conversations with Claude (incremental unless force)."""
-    return {"ok": True, **categories.build(force=body.force, quiet=True)}
+    try:
+        return {"ok": True, **categories.build(force=body.force, quiet=True)}
+    except caps.CapExceeded as exc:
+        return _refused(exc)
 
 
 @app.post("/api/categories/tag")
@@ -1728,6 +1755,8 @@ def set_category_tag(body: CategoryTagIn):
         return categories.set_tag(body.key, body.name, body.present)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
+    except caps.CapExceeded as exc:
+        return _refused(exc)
 
 
 @app.get("/api/entry")

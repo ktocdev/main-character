@@ -47,6 +47,23 @@ import config
 
 _LOCK = threading.Lock()
 
+# The single call-gate. `check()` alone only reads a snapshot -- two calls
+# racing between their own check and their own metering.record() can both
+# read `used < limit` and both proceed, so together they cross a line only
+# one of them was actually clear to cross. Holding this from `check()`
+# through the matching record (or release() on failure) makes the calls this
+# module guards line up one at a time, which is what "the call that crosses
+# the line completes; the next one is refused" already assumed.
+_CALL_LOCK = threading.Lock()
+
+
+def acquire() -> None:
+    _CALL_LOCK.acquire()
+
+
+def release() -> None:
+    _CALL_LOCK.release()
+
 
 class CapExceeded(RuntimeError):
     """A call was refused because a ceiling was already reached.

@@ -441,6 +441,7 @@ def test_the_seed_destination_lives_only_in_the_child_environment(
     mechanism for getting back out: the destination dies with the process, so
     any later restart lands on real data."""
     (tmp_path / "chroma_data").mkdir()
+    (tmp_path / "chroma_data" / "chroma.sqlite3").touch()
     monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
     # not object(): this one gets all the way to `srv.should_exit = True`,
     # which a bare object cannot carry
@@ -476,6 +477,23 @@ def test_an_uninstalled_seed_corpus_is_refused_not_booted_empty(
     """An author who asked for the corpus and got a blank journal has no way
     to tell that from a broken one."""
     monkeypatch.setattr(server, "SEED_ROOT", tmp_path)   # nothing installed
+    monkeypatch.setitem(server.SERVER, "instance", object())
+    monkeypatch.setitem(server.RESTART, "requested", False)
+
+    r = client.post("/api/restart", json={"into": "seed"})
+    assert r.status_code == 409
+    assert "not installed" in r.json()["error"]
+    assert not server.RESTART["requested"]
+
+
+def test_a_partially_built_seed_corpus_is_refused_too(
+        env, client, monkeypatch, tmp_path):
+    """An interrupted `run_capture.sh --wipe` can leave chroma_data/ created
+    but empty. The directory existing is not the same as the corpus being
+    installed, and booting into it would be exactly the blank-journal
+    failure the 409 above exists to prevent."""
+    (tmp_path / "chroma_data").mkdir()   # no chroma.sqlite3 inside
+    monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
     monkeypatch.setitem(server.SERVER, "instance", object())
     monkeypatch.setitem(server.RESTART, "requested", False)
 

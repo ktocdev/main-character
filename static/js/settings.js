@@ -87,14 +87,21 @@ function capField(id, key, values, live, fmt) {
   // The process read its ceilings at import, same as every other setting.
   // Comparing the file against what is actually in force is the only way to
   // tell a saved cap from a live one -- and a saved-but-not-live cap is
-  // precisely the state someone believes they are protected in.
+  // precisely the state someone believes they are protected in. Blank is a
+  // value here, not an absence of one -- it means "the default" -- so it has
+  // to be compared as that default rather than skipped, or clearing a
+  // non-default cap back to blank would drop the warning at exactly the
+  // moment the process is still enforcing the old figure.
   const stored = (values[key] || '').trim();
-  if (stored && live && Number(stored) !== Number(live.limit)) {
-    const p = document.createElement('p');
-    p.className = 'set-warn';
-    p.textContent = 'Saved. This journal is still stopping at '
-      + (live.limit ? fmt(live.limit) : 'nothing') + ' until you restart it.';
-    box.parentElement.appendChild(p);
+  if (live && live.limit !== undefined) {
+    const effective = stored ? Number(stored) : Number(live.default || 0);
+    if (effective !== Number(live.limit)) {
+      const p = document.createElement('p');
+      p.className = 'set-warn';
+      p.textContent = 'Saved. This journal is still stopping at '
+        + (live.limit ? fmt(live.limit) : 'nothing') + ' until you restart it.';
+      box.parentElement.appendChild(p);
+    }
   }
 }
 
@@ -601,7 +608,11 @@ async function save() {
   // beforehand would wipe the only confirmation the author ever sees. It
   // also leaves the pending markers on screen if the restart is refused.
   await loadSettings();
-  await restartServer(note);
+  // Follow wherever this instance actually is: a save made while looking at
+  // the demo journal (refused server-side, but the restart target should
+  // never assume 'journal' regardless) must restart back into the same demo,
+  // not silently drop the author into their real one.
+  await restartServer(note, true, inSeed() ? 'seed' : 'journal');
 }
 
 // The popover lives in the top layer, so it can't be positioned by a
