@@ -100,9 +100,7 @@ export async function loadSettings() {
           <div class="set-row" id="set-caps-control"></div>
           <div class="set-row">
             <label>Session cost</label>
-            <div class="set-control"><p class="set-warn">Not built yet. This is
-              where the running total for the open session will show, split
-              between the companion and background work.</p></div>
+            <div class="set-control" id="set-cost-control"></div>
           </div>
         </div>
       </details>
@@ -271,6 +269,13 @@ export async function loadSettings() {
   // to think their cap is working, and this is the only place that can tell
   // them otherwise. So: say what is true always, and name the stale values
   // only when they exist.
+  // Re-read on every open rather than once: the figure moves while the
+  // pane is shut, and a stale number here is worse than a slow one.
+  const models = $('set-models');
+  if (models) models.addEventListener('toggle', () => {
+    if (models.open) renderCost();
+  });
+
   const caps = $('set-caps-control');
   if (!s.spend_caps_enforced) {
     const note = document.createElement('p');
@@ -342,6 +347,65 @@ async function restartServer(note) {
   note.className = 'set-note error';
   note.textContent = 'saved, but the journal did not come back — '
     + 'start it again the way you normally do.';
+}
+
+// ---- session cost ----
+// Fetched when Models & Cost is opened, not polled. The figure only moves
+// when a call the author just triggered comes back, so there is nothing to
+// subscribe to -- and a number that ticks on its own in a settings pane
+// invites watching it, which is the opposite of the point.
+export function costLine(c) {
+  const dollars = c.total.dollars;
+  // Below a cent, a rounded figure reads as free. Say "under $0.01" instead:
+  // the honest statement is that it is small, not that it is nothing.
+  const money = dollars === 0 ? '$0.00'
+    : dollars < 0.01 ? 'under $0.01'
+    : '$' + dollars.toFixed(2);
+  return money + ' \u00b7 ' + c.total.tokens.toLocaleString() + ' tokens \u00b7 '
+    + c.total.calls + (c.total.calls === 1 ? ' call' : ' calls');
+}
+
+async function renderCost() {
+  const box = $('set-cost-control');
+  if (!box) return;
+  box.textContent = 'reading…';
+  let c;
+  try {
+    const r = await fetch('/api/cost');
+    if (!r.ok) throw new Error('the server did not return a cost');
+    c = await r.json();
+  } catch (e) {
+    // A cost view that fails should say so. Showing $0.00 on a failed fetch
+    // would be a lie in the one direction that matters.
+    box.textContent = '';
+    const err = document.createElement('p');
+    err.className = 'set-warn';
+    err.textContent = 'Could not read the session cost \u2014 ' + (e.message || e);
+    box.appendChild(err);
+    return;
+  }
+
+  box.textContent = '';
+  const total = document.createElement('p');
+  total.className = 'set-cost-total';
+  total.textContent = costLine(c);
+  box.appendChild(total);
+
+  const split = document.createElement('p');
+  split.className = 'set-help';
+  const part = (name, b) => c.labels[c.models[name]] + ' \u2014 $'
+    + b.dollars.toFixed(2) + ' over ' + b.calls
+    + (b.calls === 1 ? ' call' : ' calls');
+  split.textContent = 'Companion: ' + part('companion', c.companion)
+    + '. Background: ' + part('processing', c.processing) + '.';
+  box.appendChild(split);
+
+  const note = document.createElement('p');
+  note.className = 'set-help';
+  note.textContent = 'Since this journal last started, cleared when you close '
+    + 'a session. Estimated from list prices for the models above, not from '
+    + 'your account \u2014 treat it as a comparison between choices, not a bill.';
+  box.appendChild(note);
 }
 
 async function save() {

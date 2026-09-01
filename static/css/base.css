@@ -28,6 +28,22 @@
     border-radius: 6px; cursor: pointer;
   }
   nav button.active { background: var(--bg-input); color: var(--text); }
+
+  /* Cost: an icon, never a figure. The nav is in view the whole time someone
+     is writing, and a dollar amount parked there changes what the app feels
+     like -- so the number lives one click away and goes away again. */
+  nav { position: relative; }
+  #cost-toggle { font-size: 1rem; padding: .35rem .55rem; opacity: .55; }
+  #cost-toggle:hover, #cost-toggle[aria-expanded="true"] { opacity: 1; }
+  #cost-panel {
+    position: absolute; top: 100%; right: 0; margin-top: .3rem; z-index: 20;
+    background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 6px; padding: .6rem .8rem; white-space: nowrap;
+    font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+  }
+  #cost-panel[hidden] { display: none; }
+  .cost-line { color: var(--text); font-variant-numeric: tabular-nums; }
+  .cost-note { color: var(--text-dim); font-size: .75rem; margin-top: .15rem; }
   main { flex: 1; overflow: hidden; display: flex; }
   .tab { flex: 1; display: none; flex-direction: column; overflow: hidden; }
   .tab.active { display: flex; }

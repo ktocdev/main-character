@@ -50,6 +50,14 @@
   #set-models[open] summary { color: var(--accent); margin-bottom: .8rem; }
   .set-disclosure-body { padding-left: .2rem; }
 
+  /* The one figure in the section that is a number rather than a setting.
+     Bigger than the notes around it, and no colour of its own -- a running
+     cost tinted like a warning reads as a problem every time it is opened. */
+  .set-cost-total {
+    font-size: 1.05rem; color: var(--text);
+    margin: 0 0 .3rem; font-variant-numeric: tabular-nums;
+  }
+
   #settings-actions { display: flex; align-items: center; gap: 1rem; }
   .set-note { font-size: .85rem; color: var(--text-dim); }
   .set-note.ok { color: var(--accent); }

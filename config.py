@@ -260,11 +260,23 @@ def get_client():
     app boot with no `ANTHROPIC_API_KEY` at all, since the SDK raises on
     construction when the key is missing.
 
-    Phase 2 item 10 puts the spend-cap check here, in front of the
-    returned client, so the ceiling can't be bypassed by a call site.
+    The returned client is wrapped by `metering.py`, which counts what each
+    call cost on the way back. Wrapping here rather than at the call sites is
+    the same argument as mock mode: one swap instead of fourteen, and a new
+    call site is metered by default rather than by remembering to.
+
+    Mock mode is metered too. The counts are fictional, but the plumbing that
+    carries them is the same plumbing -- a cost view that only works against
+    the real API is one nobody can develop against.
+
+    Phase 2 item 10 puts the spend-cap check here, in front of the returned
+    client, so the ceiling can't be bypassed by a call site. It needs a check
+    *before* the call, which is why it is a separate piece of work from the
+    counting: metering only ever learns what a call cost after it is spent.
     """
+    import metering
     if MOCK_MODE:
         from mock_client import MockClient
-        return MockClient()
+        return metering.wrap(MockClient())
     import anthropic
-    return anthropic.Anthropic()
+    return metering.wrap(anthropic.Anthropic())

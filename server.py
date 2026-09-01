@@ -35,6 +35,7 @@ from pydantic import BaseModel
 import categories
 import companion
 import entities
+import metering
 import sessions
 from config import HOST, PORT, MOCK_MODE, get_client
 from config import DATE_FORMAT, date_style, parse_stamp, now_local, stamp as _now_stamp, zone_name
@@ -447,8 +448,47 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     STATE["messages"] = []
     _tracked(background_tasks, _after_close_seed, result["key"])
     _tracked(background_tasks, _after_close_refresh)
+    # Last, deliberately. Closing fires the memory pipeline, and that work is
+    # the closing session's cost -- it happened because of those entries, not
+    # the empty one that just opened. Background tasks run in order, so
+    # resetting here bills the pipeline to the session that caused it and
+    # still starts the new session at zero.
+    _tracked(background_tasks, metering.reset)
     return {"ok": True, **result}
 
+
+
+# ---------------------------------------------------------------------------
+# COST
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/cost")
+def cost():
+    """What the open session has spent so far.
+
+    Read on demand -- both cost views are collapsed by default (Phase 2 item
+    8), so this is fetched when one is opened rather than polled. There is
+    nothing to subscribe to: the number only moves when a call the user just
+    triggered comes back.
+
+    `estimated` is not decoration. These are list prices from a hand-kept
+    table, computed from token counts, and the UI has to be able to say so
+    rather than presenting a figure that looks like a statement.
+    """
+    import config
+    totals = metering.totals()
+    return {
+        **totals,
+        "models": {
+            "companion": config.MC_COMPANION_MODEL,
+            "processing": config.MC_PROCESSING_MODEL,
+        },
+        "labels": {m: config.MODEL_LABELS.get(m, m)
+                   for m in (config.MC_COMPANION_MODEL,
+                             config.MC_PROCESSING_MODEL)},
+        "estimated": True,
+    }
 
 
 # ---------------------------------------------------------------------------

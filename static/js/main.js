@@ -11,6 +11,7 @@ import * as triage from './triage.js';
 import * as categories from './categories.js';
 import * as patterns from './patterns.js';
 import * as settings from './settings.js';
+import * as cost from './cost.js';
 
 // ---- tabs ----
 // Categories came back with Phase 3 (entries split by date, 2026-07-11).
@@ -50,6 +51,7 @@ triage.init();
 categories.init();
 patterns.init();
 settings.init();
+cost.init();
 
 // Status carries the date style the write log stamps its entries with, so it
 // has to land before the log renders -- otherwise the first paint uses the
