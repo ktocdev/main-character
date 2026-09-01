@@ -12,6 +12,7 @@ later refactor "simplifies" away.
 
 import json
 import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -92,6 +93,63 @@ def test_a_value_cannot_smuggle_in_a_second_assignment(env):
 def test_a_value_with_spaces_round_trips(env):
     env_file.update_env({"MC_DATE_FORMAT": "%B %d, %Y"})
     assert env_file.read_env()["MC_DATE_FORMAT"] == "%B %d, %Y"
+
+
+def test_a_duplicated_key_is_written_where_it_is_read(env):
+    """dotenv takes the last assignment. Rewriting an earlier one would leave
+    the duplicate below it still winning -- a save that reports success and
+    changes nothing."""
+    env.write_text(STARTING_ENV + textwrap.dedent("""\
+        MC_TIMEZONE=UTC
+        # a stale duplicate someone left behind
+        MC_TIMEZONE=UTC
+        """), encoding="utf-8")
+    env_file.update_env({"MC_TIMEZONE": "Europe/Paris"})
+    assert env_file.read_env()["MC_TIMEZONE"] == "Europe/Paris"
+
+
+def test_clearing_removes_every_duplicate_assignment(env):
+    """Dropping only the last one would promote a shadowed line into effect."""
+    env.write_text(STARTING_ENV + textwrap.dedent("""\
+        MC_TIMEZONE=UTC
+        MC_TIMEZONE=Asia/Tokyo
+        """), encoding="utf-8")
+    env_file.update_env({"MC_TIMEZONE": ""})
+    assert "MC_TIMEZONE" not in env_file.read_env()
+
+
+def test_an_inline_comment_is_not_part_of_the_value(env):
+    """dotenv stops an unquoted value at a whitespace-preceded '#'. A reader
+    that didn't would report a value the app never loaded -- and would fold
+    the comment into the value for real on the next save."""
+    env.write_text(STARTING_ENV + "MC_TIMEZONE=UTC   # my zone" + "\n",
+                   encoding="utf-8")
+    assert env_file.read_env()["MC_TIMEZONE"] == "UTC"
+
+
+def test_a_quoted_value_ends_at_its_closing_quote(env):
+    env.write_text(STARTING_ENV + 'MC_DATE_FORMAT="%B %d, %Y"  # long' + "\n",
+                   encoding="utf-8")
+    assert env_file.read_env()["MC_DATE_FORMAT"] == "%B %d, %Y"
+
+
+def test_a_hash_inside_a_quoted_value_survives_a_round_trip(env):
+    env_file.update_env({"RAG_AUTHOR_NAME": "Jordan # not a comment"})
+    assert env_file.read_env()["RAG_AUTHOR_NAME"] == "Jordan # not a comment"
+
+
+def test_an_unlisted_date_format_keeps_the_style_it_renders_as():
+    """A format hand-set in .env is one the picker never offered, and
+    date_style is what the browser renders by. Reading every unknown format
+    as long would show %m/%d/%Y as "August 25, 2026" in the page while the
+    server's own stamps beside it stayed numeric."""
+    import config
+    assert config.date_style("%m/%d/%Y") == "short"
+    assert config.date_style("%d.%m.%Y") == "short"
+    assert config.date_style("%B %-d, %Y") == "long"
+    # the listed formats still answer from the table
+    for fmt, style in config.DATE_FORMATS.items():
+        assert config.date_style(fmt) == style
 
 
 # ---- the routes ----
@@ -179,6 +237,19 @@ def test_effort_is_validated_against_the_selected_model(env, client):
     assert "MC_COMPANION_MODEL" not in env_file.read_env()
 
 
+def test_effort_is_validated_against_the_stored_model(env, client):
+    """A model saved but not yet restarted into lives only in .env; config's
+    constant still names the old one. Judging the effort against that would
+    refuse a valid pair (or accept an impossible one) on the strength of a
+    model nothing is going to use."""
+    env_file.update_env({"MC_COMPANION_MODEL": "claude-haiku-4-5"})
+    # haiku takes no effort at all, whatever config was imported with
+    r = client.post("/api/settings",
+                    json={"values": {"MC_COMPANION_EFFORT": "high"}})
+    assert r.status_code == 400
+    assert "MC_COMPANION_EFFORT" not in env_file.read_env()
+
+
 def test_a_saved_value_comes_back_from_get_before_any_restart(env, client):
     """The regression this exists for: GET used to report config.DATE_FORMAT,
     frozen at import, so a save round-tripped to the old value and looked
@@ -217,6 +288,33 @@ def test_restart_waits_for_the_memory_pipeline(env, client, monkeypatch):
     assert r.status_code == 409
     assert "still running" in r.json()["error"]
     assert not server.RESTART["requested"]
+
+
+def test_status_identifies_which_process_answered(env, client):
+    """uvicorn keeps serving while it drains, so a 200 from /api/status is
+    not proof the restart happened. The client watches this id change."""
+    r = client.get("/api/status")
+    assert r.json()["instance"] == server.INSTANCE_ID
+
+
+def test_background_work_is_released_when_the_stream_dies(env, client, monkeypatch):
+    """A StreamingResponse that raises never reaches its background tasks, so
+    nothing would give the busy count back and /api/restart would answer 409
+    for the life of the process."""
+    import dreams
+
+    def boom(*a, **k):
+        raise RuntimeError("the model call failed mid-stream")
+
+    monkeypatch.setattr(server.companion, "stream_reply", boom)
+    monkeypatch.setattr(dreams, "store_dream_entry", lambda *a, **k: "d1")
+    monkeypatch.setattr(dreams, "ingest_dream_entry", lambda *a, **k: None)
+    monkeypatch.setattr(server.sessions, "append_message", lambda *a, **k: None)
+
+    before = server._BUSY["count"]
+    with pytest.raises(RuntimeError):
+        client.post("/api/entry", json={"text": "I dreamt of a door", "dream": True})
+    assert server._BUSY["count"] == before
 
 
 def test_a_save_records_its_keys_for_the_restart(env, client):

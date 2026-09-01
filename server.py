@@ -190,9 +190,20 @@ def home():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+# Which process is answering. The restart poll cannot use "the server
+# responded" as proof the new one is up: uvicorn keeps serving while it
+# drains, so the first poll is routinely answered by the process on its way
+# out, and the page then reloads into a closing socket. The client waits for
+# this value to change instead. PID alone would do on a single machine, but
+# it can be reused -- the start time is what makes it unambiguous.
+INSTANCE_ID = f"{os.getpid()}-{time.time_ns()}"
+
+
 @app.get("/api/status")
 def status():
     return {
+        # see INSTANCE_ID: the restart poll watches this, not the status code
+        "instance": INSTANCE_ID,
         "entries": STATE["collection"].count(),
         "entities": len(STATE["entity_index"]),
         "conversation_turns": len(STATE["messages"]) // 2,
@@ -278,6 +289,9 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
 
     when = parse_stamp(body.ts) if body.ts else None
 
+    # what the reply stream owes back if it dies before its background tasks
+    releases = []
+
     if body.dream:
         import dreams
         entry_id = dreams.store_dream_entry(text, when=when)
@@ -288,7 +302,8 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
             "dream, not a waking event. Respond to it as my companion: "
             "receive it, don't decode it with generic symbolism.\n\n" + text
         )
-        _tracked(background_tasks, dreams.ingest_dream_entry, text, entry_id, when)
+        releases.append(
+            _tracked(background_tasks, dreams.ingest_dream_entry, text, entry_id, when))
     else:
         # the entry joins the open session; it becomes journal memory
         # when the chat is closed (the summarize point)
@@ -302,12 +317,19 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
         )
 
     def gen():
-        yield from companion.stream_reply(
-            STATE["client"], STATE["collection"], STATE["entity_index"],
-            STATE["messages"], entry_message, include_dreams=body.dream,
-        )
-        sessions.append_message("companion", STATE["messages"][-1]["content"],
-                                when=when)
+        try:
+            yield from companion.stream_reply(
+                STATE["client"], STATE["collection"], STATE["entity_index"],
+                STATE["messages"], entry_message, include_dreams=body.dream,
+            )
+            sessions.append_message("companion", STATE["messages"][-1]["content"],
+                                    when=when)
+        except BaseException:
+            # the response ends here, so its background tasks never run --
+            # hand back what they were counted for (see _tracked)
+            for release in releases:
+                release()
+            raise
     return StreamingResponse(
         gen(),
         media_type="text/plain; charset=utf-8",
@@ -523,6 +545,7 @@ def _validate_settings(values: dict) -> dict[str, str]:
     showed them.
     """
     import config
+    from env_file import read_env
     unknown = sorted(set(values) - SETTINGS_KEYS)
     if unknown:
         raise ValueError(f"not a setting: {', '.join(unknown)}")
@@ -548,8 +571,15 @@ def _validate_settings(values: dict) -> dict[str, str]:
         if key == "MC_PROCESSING_MODEL" and value                 and value not in config.MODEL_EFFORT_LEVELS:
             raise ValueError(f"unknown model: {value}")
         if key == "MC_COMPANION_EFFORT" and value:
-            model = (values.get("MC_COMPANION_MODEL")
-                     or config.MC_COMPANION_MODEL).strip()
+            # the model this effort will actually run under: the one in
+            # this save if it carries one, else what .env holds. config's
+            # constant is frozen at import, so after a model change that
+            # hasn't been restarted into yet it names the *old* model -- and
+            # would judge the effort against a model nothing will use. GET
+            # already reads `values` from the file for the same reason.
+            model = str(values.get("MC_COMPANION_MODEL")
+                        or read_env().get("MC_COMPANION_MODEL")
+                        or config.MC_COMPANION_MODEL).strip()
             allowed = config.MODEL_EFFORT_LEVELS.get(model, [])
             if value not in allowed:
                 raise ValueError(
@@ -619,16 +649,33 @@ _BUSY_LOCK = threading.Lock()
 
 def _tracked(background_tasks: BackgroundTasks, fn, *args):
     """Schedule background work and count it while it runs, so a restart can
-    tell whether it would be interrupting the memory pipeline."""
+    tell whether it would be interrupting the memory pipeline.
+
+    Returns an idempotent release callable. The task calls it for you when it
+    finishes, but a caller whose response might never reach its background
+    tasks -- a StreamingResponse whose generator raises, or whose reader
+    disconnects -- has to call it itself: Starlette runs the tasks only after
+    a clean stream, so an unreleased count would sit there forever and make
+    /api/restart answer 409 for the life of the process.
+    """
+    held = {"yes": True}
+
+    def release():
+        with _BUSY_LOCK:
+            if held["yes"]:
+                held["yes"] = False
+                _BUSY["count"] -= 1
+
     def run():
         try:
             fn(*args)
         finally:
-            with _BUSY_LOCK:
-                _BUSY["count"] -= 1
+            release()
+
     with _BUSY_LOCK:
         _BUSY["count"] += 1
     background_tasks.add_task(run)
+    return release
 
 
 @app.post("/api/restart")
@@ -1479,7 +1526,14 @@ if __name__ == "__main__":
         # hand the author a dead port and a stack trace.
         for _ in range(50):
             probe = socket.socket()
-            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # Exactly the options the replacement's own bind will use, or
+            # this probe answers a different question than the one asked.
+            # uvicorn sets SO_REUSEADDR on POSIX (so a socket in TIME_WAIT is
+            # no obstacle) and not on Windows -- where SO_REUSEADDR means
+            # "bind even though someone is still listening", which would make
+            # this loop succeed on the first try and wait for nothing.
+            if os.name != "nt":
+                probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 probe.bind((HOST, PORT))
                 probe.close()

@@ -30,14 +30,37 @@ function markPending(controlId, key, describe) {
   $(controlId).appendChild(p);
 }
 
+// A picker can only send back what it can show. When .env holds a value this
+// list has no option for -- a hand-set date format, a zone this machine can't
+// resolve -- the select displays some *other* option, and saving from it would
+// overwrite the author's line with a value they never chose. Lock the control
+// out of the save instead, and say why it looks the way it does.
+function lockUnshowable(sel, controlId, stored, describe) {
+  if (!stored || [...sel.options].some(o => o.value === stored)) return;
+  sel.dataset.locked = '1';
+  const p = document.createElement('p');
+  p.className = 'set-warn';
+  p.textContent = '.env sets this to ' + describe + ', which this list can\'t '
+    + 'show, so saving here leaves it alone. Edit .env to change it.';
+  $(controlId).appendChild(p);
+}
+
 export async function loadSettings() {
   const body = $('settings-body');
   body.textContent = 'loading…';
+  $('settings-save').disabled = true;
   let s;
   try {
-    s = await (await fetch('/api/settings')).json();
+    const res = await fetch('/api/settings');
+    s = await res.json();
+    // an error body is valid JSON and would otherwise walk straight into the
+    // rendering below, throw on a missing field, and leave this pane sitting
+    // on "loading…" with no idea what went wrong
+    if (!res.ok || !s || !s.values || !s.options) {
+      throw new Error((s && s.error) || 'the server did not return settings');
+    }
   } catch (e) {
-    body.textContent = 'could not read settings.';
+    body.textContent = 'could not read settings — ' + (e.message || e);
     return;
   }
   loaded = s;
@@ -79,6 +102,8 @@ export async function loadSettings() {
     date.add(opt);
   }
   $('set-date-control').appendChild(date);
+  lockUnshowable(date, 'set-date-control', v.MC_DATE_FORMAT || '',
+    'the format ' + (v.MC_DATE_FORMAT || ''));
   markPending('set-date-control', 'MC_DATE_FORMAT',
     a => (o.date_formats.find(f => f.value === a) || {}).example || a);
 
@@ -94,6 +119,8 @@ export async function loadSettings() {
   if (!v.MC_TIMEZONE) tz.value = '';
   tz.disabled = !s.tz_database;
   $('set-tz-control').appendChild(tz);
+  lockUnshowable(tz, 'set-tz-control', v.MC_TIMEZONE || '',
+    'the zone ' + (v.MC_TIMEZONE || ''));
   if (!s.tz_database) {
     // config._zone() swallows the lookup failure, so without this the picker
     // would offer nothing and never say why
@@ -128,9 +155,22 @@ export async function loadSettings() {
 // send the author to a terminal, ask the server to come back on its own and
 // reload the page once it answers again. The fetches below are *expected* to
 // fail for a few seconds -- the socket closes while the process is restarting.
+// Which process is answering right now, or null if none is. /api/status
+// returning 200 is not evidence the restart happened: uvicorn keeps serving
+// while it drains, so the poll below has to watch for the id to *change*.
+async function instanceId() {
+  try {
+    const res = await fetch('/api/status', {cache: 'no-store'});
+    return res.ok ? ((await res.json()).instance || null) : null;
+  } catch (e) {
+    return null;      // still down
+  }
+}
+
 async function restartServer(note) {
   note.className = 'set-note';
   note.textContent = 'restarting to apply…';
+  const before = await instanceId();
   let r;
   try {
     r = await (await fetch('/api/restart', {method: 'POST'})).json();
@@ -146,12 +186,11 @@ async function restartServer(note) {
   }
   for (let i = 0; i < 90; i++) {
     await new Promise(done => setTimeout(done, 700));
-    try {
-      if ((await fetch('/api/status', {cache: 'no-store'})).ok) {
-        location.reload();
-        return;
-      }
-    } catch (e) { }   // still down, keep waiting
+    const now = await instanceId();
+    if (now && now !== before) {    // a different process: it really is back
+      location.reload();
+      return;
+    }
   }
   note.className = 'set-note error';
   note.textContent = 'saved, but the journal did not come back — '
@@ -164,15 +203,19 @@ async function save() {
   const note = $('settings-note');
 
   // only what actually changed, so a save never rewrites a line the user
-  // didn't touch — and an untouched key field sends nothing at all
+  // didn't touch — and an untouched key field sends nothing at all. A control
+  // that is disabled or locked is skipped outright: its value is not an
+  // answer the author gave, so sending it would be this page inventing one.
   const values = {};
   const pairs = [
-    ['MC_DATE_FORMAT', $('set-date').value],
-    ['MC_TIMEZONE', $('set-tz').value],
-    ['MC_LANGUAGE', $('set-lang').value],
+    ['MC_DATE_FORMAT', 'set-date'],
+    ['MC_TIMEZONE', 'set-tz'],
+    ['MC_LANGUAGE', 'set-lang'],
   ];
-  for (const [key, val] of pairs) {
-    if (val !== (loaded.values[key] || '')) values[key] = val;
+  for (const [key, id] of pairs) {
+    const el = $(id);
+    if (el.disabled || el.dataset.locked) continue;
+    if (el.value !== (loaded.values[key] || '')) values[key] = el.value;
   }
   const key = $('set-key').value.trim();
   if (key) values.ANTHROPIC_API_KEY = key;

@@ -37,12 +37,30 @@ _ASSIGN = re.compile(r"^(\s*(?:export\s+)?)([A-Za-z_][A-Za-z0-9_]*)(\s*=)(.*)$")
 
 
 def _unquote(raw: str) -> str:
+    """Read a value the way python-dotenv does, inline comments included.
+
+    An unquoted value ends at the first whitespace-preceded `#`; a quoted one
+    ends at its closing quote, and whatever follows that is a comment too.
+    Without this, `MC_TIMEZONE=UTC # my zone` reads back with the comment
+    glued on -- which is not what the app loaded, and which the next save
+    would write into the value for real.
+    """
     v = raw.strip()
-    if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'):
-        v = v[1:-1]
-        if raw.strip()[0] == '"':
-            v = v.replace('\\"', '"').replace("\\\\", "\\")
-    return v
+    quote = v[:1]
+    if quote not in ("'", '"'):
+        return re.sub(r"\s+#.*", "", v).rstrip()
+    i = 1
+    while i < len(v):
+        if v[i] == "\\" and quote == '"' and i + 1 < len(v):
+            i += 2
+            continue
+        if v[i] == quote:
+            inner = v[1:i]
+            if quote == '"':
+                inner = inner.replace('\\"', '"').replace("\\\\", "\\")
+            return inner
+        i += 1
+    return v            # unterminated quote: take the line literally
 
 
 def _quote(value: str) -> str:
@@ -74,7 +92,8 @@ def update_env(changes: dict[str, str], path: Path | None = None) -> list[str]:
     """Apply `changes` to the file and return the keys actually written.
 
     An existing key is rewritten where it already sits, so its surrounding
-    comment stays attached to it. A new key is appended. A value of "" means
+    comment stays attached to it -- at its *last* assignment if the file
+    duplicates it, since that is the one the app reads. A new key is appended. A value of "" means
     *remove the assignment* rather than write an empty one, so clearing a
     setting in the UI restores config.py's default instead of overriding it
     with emptiness — the two are not the same for paths and model names.
@@ -86,21 +105,36 @@ def update_env(changes: dict[str, str], path: Path | None = None) -> list[str]:
 
     original = path.read_text(encoding="utf-8") if path.exists() else ""
     lines = original.splitlines()
-    remaining = dict(changes)
-    out: list[str] = []
 
-    for line in lines:
+    # Where each key is actually *read* from. dotenv takes the last assignment
+    # of a duplicated key, so that is the one a save has to rewrite: editing
+    # the first would leave the duplicate below it still winning, and the save
+    # would look like a silent no-op.
+    last_at: dict[str, int] = {}
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith("#"):
+            continue
+        m = _ASSIGN.match(line)
+        if m:
+            last_at[m.group(2)] = i
+
+    out: list[str] = []
+    for i, line in enumerate(lines):
         m = _ASSIGN.match(line) if not line.lstrip().startswith("#") else None
         key = m.group(2) if m else None
-        if key is None or key not in remaining:
+        if key is None or key not in changes:
             out.append(line)
             continue
-        value = remaining.pop(key)
+        value = changes[key]
         if value == "":
-            continue                      # drop the line: back to the default
+            continue      # drop *every* assignment: back to the default
+        if i != last_at[key]:
+            out.append(line)     # an already-shadowed duplicate; leave it be
+            continue
         out.append(f"{m.group(1)}{key}{m.group(3)}{_quote(value)}")
 
-    appended = [f"{k}={_quote(v)}" for k, v in remaining.items() if v != ""]
+    appended = [f"{k}={_quote(v)}" for k, v in changes.items()
+                if v != "" and k not in last_at]
     if appended and out and out[-1].strip():
         out.append("")
     out.extend(appended)

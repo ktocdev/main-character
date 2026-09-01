@@ -160,9 +160,19 @@ LANGUAGES = {"en": "English"}
 
 def date_style(fmt: str = None) -> str:
     """'long' or 'short' for the given format — what the browser needs to
-    render a stamp the same way the server would. Unknown formats read as
-    long, matching what /api/status did before the styles were named."""
-    return DATE_FORMATS.get((fmt if fmt is not None else DATE_FORMAT), "long")
+    render a stamp the same way the server would.
+
+    A format outside DATE_FORMATS can still be hand-set in .env, and the
+    Settings picker will not have offered it. Those fall back to the rule
+    /api/status used before the styles were named — a month name means long —
+    rather than reading as long unconditionally, which would render a custom
+    numeric format like %m/%d/%Y as "August 25, 2026" in the browser while
+    every server-side stamp stayed numeric.
+    """
+    fmt = fmt if fmt is not None else DATE_FORMAT
+    if fmt in DATE_FORMATS:
+        return DATE_FORMATS[fmt]
+    return "long" if "%B" in fmt else "short"
 
 
 def _zone():
