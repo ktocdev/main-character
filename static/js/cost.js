@@ -26,7 +26,11 @@ async function show() {
     line.textContent = costLine(c);
     const note = document.createElement('div');
     note.className = 'cost-note';
-    note.textContent = 'this session, estimated';
+    // Not "this session": the accumulator is process-global and a restart
+    // zeroes it, which the settings picker and the restart button both make
+    // easy to do mid-session. A figure that quietly resets under a label
+    // promising otherwise is the kind of wrong number that gets believed.
+    note.textContent = 'since this journal started, estimated';
     panel.append(line, note);
   } catch {
     // Silent-zero would be a lie in the one direction that matters.

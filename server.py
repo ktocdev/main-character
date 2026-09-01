@@ -233,7 +233,8 @@ def chat(body: ChatIn):
         # stamp — only a write-mode entry can be backdated — so the reply
         # is stamped at the moment it was actually generated.
         sessions.append_message("companion", STATE["messages"][-1]["content"])
-    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
+    return StreamingResponse(_metered_stream(gen()),
+                             media_type="text/plain; charset=utf-8")
 
 
 @app.post("/api/lookup")
@@ -246,7 +247,8 @@ def lookup(body: ChatIn):
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["lookup"], body.message,
         )
-    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
+    return StreamingResponse(_metered_stream(gen()),
+                             media_type="text/plain; charset=utf-8")
 
 
 @app.post("/api/lookup/reset")
@@ -332,7 +334,7 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
                 release()
             raise
     return StreamingResponse(
-        gen(),
+        _metered_stream(gen()),
         media_type="text/plain; charset=utf-8",
         headers={"X-Entry-Id": entry_id},
     )
@@ -364,7 +366,8 @@ def reflect():
         )
         sessions.append_message("companion", STATE["messages"][-1]["content"],
                                 collection=STATE["collection"])
-    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
+    return StreamingResponse(_metered_stream(gen()),
+                             media_type="text/plain; charset=utf-8")
 
 
 class SeedIn(BaseModel):
@@ -699,10 +702,12 @@ def save_settings(body: SettingsIn):
 #
 # Two things make this safe rather than merely convenient:
 #
-#   - Background work is refused, never interrupted. Tagging, entities,
+#   - Work in flight is refused, never interrupted. Tagging, entities,
 #     summaries, dream ingest and seed candidates run as BackgroundTasks
 #     *after* the response and cost real API calls; restarting mid-pipeline
-#     would throw that away with nothing to show for it. A restart waits.
+#     would throw that away with nothing to show for it. Streaming replies
+#     count too (see _metered_stream) -- the tokens are spent by the time
+#     the text is on screen. A restart waits for both.
 #   - The re-exec drops the keys that were just saved. os.execve keeps the
 #     environment and load_dotenv() does not override what is already set,
 #     so the new process would otherwise inherit the *old* values from this
@@ -746,6 +751,32 @@ def _tracked(background_tasks: BackgroundTasks, fn, *args):
     return release
 
 
+def _metered_stream(chunks):
+    """Hold the busy count for the life of a streaming reply.
+
+    A stream is spending tokens the whole time it runs, so /api/restart has to
+    refuse during one for the same reason it refuses during the memory
+    pipeline: what a restart would interrupt has already been paid for and
+    cannot be recovered. Only the dream path held a count before -- and only
+    for its background ingest -- which left the common case, a plain entry or
+    a chat turn, looking idle to the restart route while the reply was still
+    arriving.
+
+    The count is taken *inside* the generator rather than around it. A
+    generator that is never iterated never runs its `finally`, so a count
+    taken at call time would leak if a response were built and dropped, and
+    an unreleased count makes /api/restart answer 409 for the life of the
+    process (see _tracked, which learned this the same way).
+    """
+    with _BUSY_LOCK:
+        _BUSY["count"] += 1
+    try:
+        yield from chunks
+    finally:
+        with _BUSY_LOCK:
+            _BUSY["count"] -= 1
+
+
 @app.post("/api/restart")
 def restart_server():
     """Exit and come back, so a saved setting takes effect. The client polls
@@ -754,9 +785,10 @@ def restart_server():
         busy = _BUSY["count"]
     if busy:
         return JSONResponse(
-            {"error": "the memory pipeline is still running -- tagging, "
-                      "summaries and seed work would be lost. Try again in "
-                      "a moment."},
+            {"error": "something is still running -- a companion reply "
+                      "still arriving, or the memory pipeline's tagging, "
+                      "summaries and seed work. Restarting now would throw "
+                      "away work already paid for. Try again in a moment."},
             status_code=409)
 
     srv = SERVER["instance"]

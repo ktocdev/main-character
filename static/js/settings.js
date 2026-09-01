@@ -334,7 +334,7 @@ async function instanceId() {
   }
 }
 
-async function restartServer(note) {
+async function restartServer(note, saved = true) {
   note.className = 'set-note';
   note.textContent = 'restarting to apply…';
   const before = await instanceId();
@@ -345,10 +345,14 @@ async function restartServer(note) {
     r = {error: 'could not reach the server.'};
   }
   if (r.error) {
-    // the save itself still happened -- say so, or this reads as a lost edit
     note.className = 'set-note error';
-    note.textContent = r.error
-      + ' Your change is saved in .env; restart the journal to apply it.';
+    // After a save the refusal has to say the save survived it, or a restart
+    // that didn't happen reads as an edit that didn't happen. Pressed on its
+    // own there is nothing to reassure anyone about, and saying "your change
+    // is saved" when nothing was changed is just confusing.
+    note.textContent = saved
+      ? r.error + ' Your change is saved in .env; restart the journal to apply it.'
+      : r.error;
     return;
   }
   for (let i = 0; i < 90; i++) {
@@ -360,8 +364,25 @@ async function restartServer(note) {
     }
   }
   note.className = 'set-note error';
-  note.textContent = 'saved, but the journal did not come back — '
-    + 'start it again the way you normally do.';
+  note.textContent = (saved ? 'saved, but ' : '')
+    + 'the journal did not come back — start it again the way you normally do.';
+}
+
+// The restart the save flow already performs, reachable on its own. Item 7
+// made the app restart itself, but only as the tail of a successful save --
+// which left every other path telling the author to open a terminal: the 409
+// while the pipeline runs, the 501, a .env edited by hand, and the
+// stale-payload banner above that says "restart it and reload this page" with
+// no way to comply. Same function on purpose: a second restart path would
+// drift from the refusals and from the instance-id poll that is the only
+// evidence the process actually changed.
+async function restartNow() {
+  const btn = $('settings-restart');
+  btn.disabled = true;
+  await restartServer($('settings-note'), false);
+  // Only reached when the restart was refused or never landed -- a successful
+  // one reloads the page out from under this line.
+  btn.disabled = false;
 }
 
 // ---- session cost ----
@@ -486,6 +507,47 @@ async function save() {
   await restartServer(note);
 }
 
+// The popover lives in the top layer, so it can't be positioned by a
+// containing box -- it is placed against the `?` button each time it opens.
+// Clamped to the viewport rather than trusting the button to be far enough
+// from the right edge: Settings is a centred column and the window is not.
+const HELP_GAP = 8, HELP_EDGE = 16;
+
+function placeHelp() {
+  const help = $('settings-restart-help');
+  const at = $('settings-restart-info').getBoundingClientRect();
+  const w = help.offsetWidth, h = help.offsetHeight;
+
+  const left = Math.min(at.left, window.innerWidth - w - HELP_EDGE);
+  help.style.left = Math.max(HELP_EDGE, left) + 'px';
+
+  // Above when there isn't room below. These buttons are the last thing in a
+  // scrolling pane, so "below" is off the bottom of the window more often
+  // than not -- which is how this first shipped, and the text was unreadable.
+  const below = at.bottom + HELP_GAP;
+  const fits = below + h + HELP_EDGE <= window.innerHeight;
+  const top = fits ? below : at.top - HELP_GAP - h;
+  help.style.top = Math.max(HELP_EDGE, top) + 'px';
+}
+
 export function init() {
   $('settings-save').onclick = save;
+  $('settings-restart').onclick = restartNow;
+  // `toggle` fires after the popover is in the layer, so it has a width to
+  // measure by then; `beforetoggle` would measure zero.
+  const help = $('settings-restart-help');
+  help.addEventListener('toggle', e => {
+    if (e.newState === 'open') {
+      placeHelp();
+      // The panel is in the top layer, so it does not travel with the pane it
+      // was opened from: without this it hangs in place while the settings
+      // list scrolls away beneath it. Capture, because the scroll happens on
+      // #settings rather than on the window.
+      addEventListener('scroll', placeHelp, true);
+      addEventListener('resize', placeHelp);
+    } else {
+      removeEventListener('scroll', placeHelp, true);
+      removeEventListener('resize', placeHelp);
+    }
+  });
 }

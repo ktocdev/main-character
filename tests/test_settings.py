@@ -385,7 +385,44 @@ def test_restart_waits_for_the_memory_pipeline(env, client, monkeypatch):
     r = client.post("/api/restart")
     assert r.status_code == 409
     assert "still running" in r.json()["error"]
+    assert "companion reply" in r.json()["error"]   # not the pipeline alone
     assert not server.RESTART["requested"]
+
+
+def test_a_streaming_reply_holds_the_restart_off(env, client, monkeypatch):
+    """The tokens are spent while the text is still arriving, so a stream has
+    to count as busy. Only the dream path did before, which left the common
+    case -- a chat turn, a plain entry -- looking idle to /api/restart while
+    a paid-for reply was mid-flight."""
+    before = server._BUSY["count"]
+    seen = []
+
+    def fake(*a, **k):
+        seen.append(server._BUSY["count"])
+        yield "a reply, arriving"
+
+    monkeypatch.setattr(server.companion, "stream_reply", fake)
+
+    r = client.post("/api/lookup", json={"message": "when did I last write?"})
+    assert r.status_code == 200
+    assert seen == [before + 1]          # counted while the tokens were spending
+    assert server._BUSY["count"] == before   # and given back at the end
+
+
+def test_the_count_is_given_back_when_a_stream_dies(env, client, monkeypatch):
+    """A count taken for a stream and not returned would make /api/restart
+    answer 409 for the life of the process -- the same failure _tracked
+    already had to be taught, arriving by a different door."""
+    def fake(*a, **k):
+        yield "half a "
+        raise RuntimeError("the model call failed mid-stream")
+
+    monkeypatch.setattr(server.companion, "stream_reply", fake)
+
+    before = server._BUSY["count"]
+    with pytest.raises(RuntimeError):
+        client.post("/api/lookup", json={"message": "when did I last write?"})
+    assert server._BUSY["count"] == before
 
 
 def test_status_identifies_which_process_answered(env, client):
