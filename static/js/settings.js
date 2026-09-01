@@ -236,6 +236,21 @@ export async function loadSettings() {
     $('set-companion-effort-control').append(effort, effortNote);
 
     function fillEfforts(keep) {
+      // A model .env names but this list can't show locks the model picker
+      // (see lockUnshowable), and its effort levels are just as unknowable:
+      // filling the list from whichever option happened to be selected first
+      // would offer levels belonging to a different model, silently rewrite
+      // the author's stored effort to one of them, and get the whole save
+      // 400'd -- date format and all -- when the server validated it against
+      // the model actually in .env. So the effort is locked with the model.
+      if (cModel.dataset.locked) {
+        effort.textContent = '';
+        effort.disabled = true;
+        effortNote.textContent = '.env sets the companion model to one this '
+          + 'list can't show, so its effort levels aren't known here either. '
+          + 'Edit .env to change either.';
+        return;
+      }
       const levels = (o.models.find(m => m.value === cModel.value) || {}).efforts || [];
       effort.textContent = '';
       for (const level of levels) effort.add(new Option(level, level));

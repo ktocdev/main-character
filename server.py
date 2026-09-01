@@ -446,14 +446,18 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     STATE["messages"] = []
+    # First, before the pipeline is queued. The pipeline is arguably the
+    # closing session's cost -- it happened because of those entries -- but
+    # billing it there means resetting after it finishes, and the accumulator
+    # is one process-global counter: everything the *new* session spends while
+    # the pipeline runs would be zeroed along with it, and until then
+    # `/api/cost` would show the closed session's figure labelled "this
+    # session". Attribution is a display nicety; losing spend the user just
+    # incurred is a wrong number. So the new session starts at zero now and
+    # wears the pipeline's processing cost.
+    metering.reset()
     _tracked(background_tasks, _after_close_seed, result["key"])
     _tracked(background_tasks, _after_close_refresh)
-    # Last, deliberately. Closing fires the memory pipeline, and that work is
-    # the closing session's cost -- it happened because of those entries, not
-    # the empty one that just opened. Background tasks run in order, so
-    # resetting here bills the pipeline to the session that caused it and
-    # still starts the new session at zero.
-    _tracked(background_tasks, metering.reset)
     return {"ok": True, **result}
 
 
