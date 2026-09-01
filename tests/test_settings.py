@@ -25,9 +25,14 @@ import server
 # TrustedHostMiddleware refuses TestClient's default "testserver" host
 BASE = "http://127.0.0.1:8144"
 
+# Deliberately not key-shaped. scripts/check_leaks.sh greps every tracked
+# file for `sk-ant-` followed by a key body, and it cannot tell a fixture
+# from the real thing -- a realistic-looking placeholder here fails the
+# pre-push gate. Nothing in these tests depends on the shape, only on the
+# value being distinctive enough to find in a response body.
 STARTING_ENV = (
     "# my journal\n"
-    "ANTHROPIC_API_KEY=sk-ant-test-original\n"
+    "ANTHROPIC_API_KEY=fake-key-original\n"
     "\n"
     "# who the entries are by\n"
     "RAG_AUTHOR_NAME=Jordan\n"
@@ -98,7 +103,7 @@ def test_get_never_returns_the_api_key(env, client):
     assert body["api_key_set"] is True
     # not the value, and not a suffix of it either
     blob = json.dumps(body)
-    assert "sk-ant-test-original" not in blob
+    assert "fake-key-original" not in blob
     assert "original" not in blob
 
 
@@ -152,16 +157,16 @@ def test_one_bad_field_rejects_the_whole_save(env, client):
 
 def test_the_api_key_can_be_replaced_but_not_cleared(env, client):
     ok = client.post("/api/settings",
-                     json={"values": {"ANTHROPIC_API_KEY": "sk-ant-test-new"}})
+                     json={"values": {"ANTHROPIC_API_KEY": "fake-key-replacement"}})
     assert ok.status_code == 200
-    assert env_file.read_env()["ANTHROPIC_API_KEY"] == "sk-ant-test-new"
+    assert env_file.read_env()["ANTHROPIC_API_KEY"] == "fake-key-replacement"
     # and the response doesn't echo what it was just given
-    assert "sk-ant-test-new" not in json.dumps(ok.json())
+    assert "fake-key-replacement" not in json.dumps(ok.json())
 
     cleared = client.post("/api/settings",
                           json={"values": {"ANTHROPIC_API_KEY": ""}})
     assert cleared.status_code == 400
-    assert env_file.read_env()["ANTHROPIC_API_KEY"] == "sk-ant-test-new"
+    assert env_file.read_env()["ANTHROPIC_API_KEY"] == "fake-key-replacement"
 
 
 def test_effort_is_validated_against_the_selected_model(env, client):
