@@ -13,6 +13,7 @@ later refactor "simplifies" away.
 import json
 import sys
 import textwrap
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -331,31 +332,33 @@ def test_the_stored_model_can_also_widen_what_effort_is_allowed(env, client):
     assert env_file.read_env()["MC_COMPANION_EFFORT"] == "xhigh"
 
 
-def test_spend_caps_are_stored_but_reported_as_unenforced(env, client):
-    """Nothing checks them before a call yet. The UI needs to know that, or it
-    shows a ceiling the author believes is protecting them."""
+def test_spend_caps_round_trip_through_the_file(env, client):
+    """These were stored-but-unenforced for the whole of item 7; `caps.py`
+    reads them now, and `tests/test_caps.py` covers the enforcing. What is
+    still this module's business is the file: a cap that does not survive the
+    save is a ceiling the author believes they set."""
     body = client.get("/api/settings").json()
-    assert body["spend_caps_enforced"] is False
-    assert body["values"]["MC_MAX_SESSION_TOKENS"] == ""
-    # ...and they are not in `active`: there is no running value to disagree
-    assert "MC_MAX_SESSION_TOKENS" not in body["active"]
+    assert body["spend_caps_enforced"] is True
+    assert body["values"]["MC_MAX_SESSION_SPEND"] == ""
+    # ...and they are not in `active`: that dict is what *this process*
+    # loaded at import, and the caps are read live from config on each check
+    assert "MC_MAX_SESSION_SPEND" not in body["active"]
 
     assert client.post("/api/settings", json={
         "values": {"MC_MAX_MONTHLY_SPEND": "20"}}).status_code == 200
     assert env_file.read_env()["MC_MAX_MONTHLY_SPEND"] == "20"
 
-    # ...and GET hands it back, which is what the Settings pane keys on to
-    # warn that an existing cap in .env is stored but not protecting anyone.
-    # Without this the only reader who needs telling is the one told nothing.
+    # ...and GET hands it back, which is what the Settings pane fills its
+    # inputs from. A saved cap that came back blank would read as unset, and
+    # the next save would clear it.
     after = client.get("/api/settings").json()
     assert after["values"]["MC_MAX_MONTHLY_SPEND"] == "20"
-    assert after["spend_caps_enforced"] is False
 
 
 def test_a_negative_spend_cap_is_refused(env, client):
-    r = client.post("/api/settings", json={"values": {"MC_MAX_SESSION_TOKENS": "-1"}})
+    r = client.post("/api/settings", json={"values": {"MC_MAX_SESSION_SPEND": "-1"}})
     assert r.status_code == 400
-    assert "MC_MAX_SESSION_TOKENS" not in env_file.read_env()
+    assert "MC_MAX_SESSION_SPEND" not in env_file.read_env()
 
 
 def test_an_unknown_model_is_refused(env, client):
@@ -385,6 +388,118 @@ def test_restart_waits_for_the_memory_pipeline(env, client, monkeypatch):
     r = client.post("/api/restart")
     assert r.status_code == 409
     assert "still running" in r.json()["error"]
+    assert "companion reply" in r.json()["error"]   # not the pipeline alone
+    assert not server.RESTART["requested"]
+
+
+def test_a_streaming_reply_holds_the_restart_off(env, client, monkeypatch):
+    """The tokens are spent while the text is still arriving, so a stream has
+    to count as busy. Only the dream path did before, which left the common
+    case -- a chat turn, a plain entry -- looking idle to /api/restart while
+    a paid-for reply was mid-flight."""
+    before = server._BUSY["count"]
+    seen = []
+
+    def fake(*a, **k):
+        seen.append(server._BUSY["count"])
+        yield "a reply, arriving"
+
+    monkeypatch.setattr(server.companion, "stream_reply", fake)
+
+    r = client.post("/api/lookup", json={"message": "when did I last write?"})
+    assert r.status_code == 200
+    assert seen == [before + 1]          # counted while the tokens were spending
+    assert server._BUSY["count"] == before   # and given back at the end
+
+
+def test_the_count_is_given_back_when_a_stream_dies(env, client, monkeypatch):
+    """A count taken for a stream and not returned would make /api/restart
+    answer 409 for the life of the process -- the same failure _tracked
+    already had to be taught, arriving by a different door."""
+    def fake(*a, **k):
+        yield "half a "
+        raise RuntimeError("the model call failed mid-stream")
+
+    monkeypatch.setattr(server.companion, "stream_reply", fake)
+
+    before = server._BUSY["count"]
+    with pytest.raises(RuntimeError):
+        client.post("/api/lookup", json={"message": "when did I last write?"})
+    assert server._BUSY["count"] == before
+
+
+# ---- the seed instance ----
+#
+# `server.RESTART` is module-global and these set it, so every test here
+# restores it through monkeypatch rather than by hand: leaving `requested`
+# True leaks a pending restart into whatever runs next, which is how the
+# first draft of these tests failed only when the suite ran in order.
+
+def test_the_seed_destination_lives_only_in_the_child_environment(
+        env, client, monkeypatch, tmp_path):
+    """Nothing about the seed instance is written to .env. That is the whole
+    mechanism for getting back out: the destination dies with the process, so
+    any later restart lands on real data."""
+    (tmp_path / "chroma_data").mkdir()
+    (tmp_path / "chroma_data" / "chroma.sqlite3").touch()
+    monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
+    # not object(): this one gets all the way to `srv.should_exit = True`,
+    # which a bare object cannot carry
+    monkeypatch.setitem(server.SERVER, "instance", SimpleNamespace())
+    monkeypatch.setitem(server.RESTART, "requested", False)
+    monkeypatch.setitem(server.RESTART, "into", "journal")
+
+    r = client.post("/api/restart", json={"into": "seed"})
+    assert r.status_code == 200 and r.json()["into"] == "seed"
+    assert "MC_SEED_INSTANCE" not in env_file.read_env()
+
+    child = server.restart_env()
+    assert child["MC_SEED_INSTANCE"] == "1"
+    assert child["RAG_JOURNAL_DIR"].endswith("journal_entries")
+
+
+def test_a_plain_restart_always_leaves_the_seed_instance(env, monkeypatch):
+    """The way home is any restart at all. The keys are dropped
+    unconditionally and only put back when the seed is asked for by name, so a
+    demo is one restart deep and cannot be wandered into permanently."""
+    monkeypatch.setitem(server.os.environ, "MC_SEED_INSTANCE", "1")
+    monkeypatch.setitem(server.os.environ, "RAG_JOURNAL_DIR",
+                        "seed_corpus/install/journal_entries")
+    monkeypatch.setitem(server.RESTART, "into", "journal")
+
+    child = server.restart_env()
+    assert "MC_SEED_INSTANCE" not in child
+    assert "RAG_JOURNAL_DIR" not in child
+
+
+def test_an_uninstalled_seed_corpus_is_refused_not_booted_empty(
+        env, client, monkeypatch, tmp_path):
+    """An author who asked for the corpus and got a blank journal has no way
+    to tell that from a broken one."""
+    monkeypatch.setattr(server, "SEED_ROOT", tmp_path)   # nothing installed
+    monkeypatch.setitem(server.SERVER, "instance", object())
+    monkeypatch.setitem(server.RESTART, "requested", False)
+
+    r = client.post("/api/restart", json={"into": "seed"})
+    assert r.status_code == 409
+    assert "not installed" in r.json()["error"]
+    assert not server.RESTART["requested"]
+
+
+def test_a_partially_built_seed_corpus_is_refused_too(
+        env, client, monkeypatch, tmp_path):
+    """An interrupted `run_capture.sh --wipe` can leave chroma_data/ created
+    but empty. The directory existing is not the same as the corpus being
+    installed, and booting into it would be exactly the blank-journal
+    failure the 409 above exists to prevent."""
+    (tmp_path / "chroma_data").mkdir()   # no chroma.sqlite3 inside
+    monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
+    monkeypatch.setitem(server.SERVER, "instance", object())
+    monkeypatch.setitem(server.RESTART, "requested", False)
+
+    r = client.post("/api/restart", json={"into": "seed"})
+    assert r.status_code == 409
+    assert "not installed" in r.json()["error"]
     assert not server.RESTART["requested"]
 
 

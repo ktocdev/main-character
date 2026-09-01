@@ -40,16 +40,6 @@
   }
   .set-warn { color: var(--accent); font-size: .8rem; margin-top: .4rem; max-width: 34rem; }
 
-  /* Models & cost: closed on load. Someone opening Settings for the date
-     format should not be met with model ids and dollar figures. */
-  #set-models summary {
-    cursor: pointer; color: var(--text); font-size: .9rem;
-    padding: .5rem 0; list-style-position: outside;
-  }
-  #set-models summary:hover { color: var(--accent); }
-  #set-models[open] summary { color: var(--accent); margin-bottom: .8rem; }
-  .set-disclosure-body { padding-left: .2rem; }
-
   /* The one figure in the section that is a number rather than a setting.
      Bigger than the notes around it, and no colour of its own -- a running
      cost tinted like a warning reads as a problem every time it is opened. */
@@ -59,6 +49,37 @@
   }
 
   #settings-actions { display: flex; align-items: center; gap: 1rem; }
+
+  /* The restart button and its explanation, kept together. The paragraph used
+     to sit under the whole actions row, where it read as describing Save --
+     the louder button, and the one it is not about. */
+  .set-with-info { display: inline-flex; align-items: center; gap: .4rem; }
+  .set-info {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 50%; width: 1.35rem; height: 1.35rem; padding: 0;
+    font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    line-height: 1; cursor: pointer; flex-shrink: 0;
+  }
+  .set-info:hover, .set-info:focus-visible {
+    color: var(--text); border-color: var(--accent-dim); outline: none;
+  }
+
+  /* Native popover: light dismiss and Escape come free, and the top layer
+     means no z-index fight with the tab panes. Position is set in JS on
+     `toggle` (anchor positioning isn't broadly supported yet). A browser
+     without popover support ignores the attribute and renders this inline,
+     which is exactly the paragraph this replaced -- worse placement, not a
+     missing explanation. */
+  .set-popover {
+    position: fixed; margin: 0; max-width: 26rem;
+    background: var(--bg-raised); border: 1px solid var(--border);
+    border-radius: 10px; padding: .8rem 1rem;
+    color: var(--text-dim); font-size: .8rem; line-height: 1.5;
+  }
+  .set-popover p { margin: 0; }
+  .set-popover p + p { margin-top: .6rem; }
+  .set-popover code { color: var(--text); }
+  .set-popover::backdrop { background: none; }
   .set-note { font-size: .85rem; color: var(--text-dim); }
   .set-note.ok { color: var(--accent); }
   .set-note.error { color: #c96a5a; }

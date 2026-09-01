@@ -21,6 +21,8 @@
 </head>
 <body>
 <div id="mock-banner">mock mode — replies are canned, not from Claude. No API calls are being made.</div>
+<div id="seed-banner-bar">demo journal — someone else&rsquo;s entries, and the replies are canned.
+  Nothing written here reaches yours. Restart to go back.</div>
 <header>
   <h1>journal</h1>
   <span class="status" id="status"></span>
@@ -217,7 +219,23 @@
       <div id="settings-body"></div>
       <div id="settings-actions">
         <button class="send" id="settings-save" disabled>save</button>
+        <span class="set-with-info">
+          <button class="quiet" id="settings-restart">restart the journal</button>
+        <button class="quiet" id="settings-seed">load demo journal</button>
+          <button class="set-info" type="button" id="settings-restart-info"
+                  popovertarget="settings-restart-help"
+                  aria-label="when to restart the journal">?</button>
+        </span>
         <span id="settings-note" class="set-note"></span>
+      </div>
+      <div id="settings-restart-help" class="set-popover" popover>
+        <p>Saving restarts the journal for you, so you rarely need this. It is
+          here for the times that doesn't happen: a restart refused because the
+          memory pipeline was still running, or a <code>.env</code> you edited
+          by hand.</p>
+        <p>It waits for anything in flight rather than interrupting it, reloads
+          this page once the journal is back, and starts the cost figure
+          over.</p>
       </div>
     </div>
   </section>

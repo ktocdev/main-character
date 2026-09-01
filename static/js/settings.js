@@ -45,6 +45,77 @@ function lockUnshowable(sel, controlId, stored, describe) {
   $(controlId).appendChild(p);
 }
 
+// What an empty box will actually do. Three different answers, and saying the
+// wrong one is how someone ends up believing they have a ceiling they don't:
+//
+//   - no `caps` block at all -- this journal predates the enforcement and is
+//     running code that reads none of these. Not "no limit": that would
+//     describe a setting, when what is true is that nothing is checking.
+//   - a default of 0 -- blank really does mean no ceiling, and "0 turns it
+//     off" is then a distinction without a difference, so it isn't offered.
+//   - a real default -- name the figure. "Blank uses the default" without it
+//     sends the reader to config.py to find out what they just agreed to.
+function capHelp(live) {
+  if (!live || live.limit === undefined) {
+    return 'This journal has not said what it is enforcing — it is '
+      + 'running a build from before the spend caps. Restart it.';
+  }
+  if (!live.default) return 'Leave it blank for no ceiling at all.';
+  return 'Blank uses the default, ' + money(live.default) + '. 0 turns it off.';
+}
+
+// A cap input. Blank is meaningful here and means "use the default", so the
+// placeholder has to name that default -- an empty box next to the words
+// "stop after" otherwise reads as no ceiling at all, which is the one thing
+// this pane must never imply while a ceiling is in force.
+function capField(id, key, values, live, fmt) {
+  const box = $(id + '-control');
+  if (!box) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = id;
+  input.value = values[key] || '';
+  input.autocomplete = 'off';
+  // The *default*, not the limit in force: this is what the box would mean if
+  // left empty, and the limit in force is already spelled out below. Blank
+  // when the journal hasn't said -- an invented "no limit" there would be the
+  // page answering a question it was never told the answer to.
+  input.placeholder = !live || live.limit === undefined ? ''
+    : live.default ? 'default: ' + fmt(live.default) : 'no limit';
+  box.appendChild(input);
+
+  // The process read its ceilings at import, same as every other setting.
+  // Comparing the file against what is actually in force is the only way to
+  // tell a saved cap from a live one -- and a saved-but-not-live cap is
+  // precisely the state someone believes they are protected in. Blank is a
+  // value here, not an absence of one -- it means "the default" -- so it has
+  // to be compared as that default rather than skipped, or clearing a
+  // non-default cap back to blank would drop the warning at exactly the
+  // moment the process is still enforcing the old figure.
+  const stored = (values[key] || '').trim();
+  if (live && live.limit !== undefined) {
+    const effective = stored ? Number(stored) : Number(live.default || 0);
+    if (effective !== Number(live.limit)) {
+      const p = document.createElement('p');
+      p.className = 'set-warn';
+      p.textContent = 'Saved. This journal is still stopping at '
+        + (live.limit ? fmt(live.limit) : 'nothing') + ' until you restart it.';
+      box.parentElement.appendChild(p);
+    }
+  }
+}
+
+// "used of limit" for one ceiling, or "used, no limit set".
+const money = n => '$' + Number(n).toFixed(2);
+
+function usedLine(label, cap, fmt) {
+  const p = document.createElement('p');
+  p.className = 'set-help';
+  p.textContent = label + ': ' + fmt(cap.used)
+    + (cap.limit ? ' of ' + fmt(cap.limit) : ' \u2014 no limit set');
+  return p;
+}
+
 export async function loadSettings() {
   const body = $('settings-body');
   body.textContent = 'loading…';
@@ -82,28 +153,30 @@ export async function loadSettings() {
     </section>
     <section class="set-group">
       <h3>Models &amp; cost</h3>
-      <details id="set-models">
-        <summary>Which models this journal uses, and what they cost</summary>
-        <div class="set-disclosure-body">
-          ${fieldRow('set-companion-model', 'Companion model',
-            'The voice you write to. This is the one place model quality is '
-            + 'felt directly, so it is worth spending more here than anywhere '
-            + 'else.')}
-          ${fieldRow('set-companion-effort', 'Companion effort',
-            'How hard the companion thinks before answering. Higher is slower '
-            + 'and costs more. The choices come from the model above &mdash; '
-            + 'not every model offers the same ones.')}
-          ${fieldRow('set-processing-model', 'Processing model',
-            'Everything that happens in the background: tagging, entities, '
-            + 'summaries, arcs, patterns, dreams. It runs in bulk and is where '
-            + 'most of the spend goes, so it is the useful place to trade down.')}
-          <div class="set-row" id="set-caps-control"></div>
-          <div class="set-row">
-            <label>Session cost</label>
-            <div class="set-control" id="set-cost-control"></div>
-          </div>
-        </div>
-      </details>
+      ${fieldRow('set-companion-model', 'Companion model',
+        'The voice you write to. This is the one place model quality is '
+        + 'felt directly, so it is worth spending more here than anywhere '
+        + 'else.')}
+      ${fieldRow('set-companion-effort', 'Companion effort',
+        'How hard the companion thinks before answering. Higher is slower '
+        + 'and costs more. The choices come from the model above &mdash; '
+        + 'not every model offers the same ones.')}
+      ${fieldRow('set-processing-model', 'Processing model',
+        'Everything that happens in the background: tagging, entities, '
+        + 'summaries, arcs, patterns, dreams. It runs in bulk and is where '
+        + 'most of the spend goes, so it is the useful place to trade down.')}
+      ${fieldRow('set-max-session', 'Stop after (dollars per session)',
+        'A ceiling on one session, counted from when the journal last '
+        + 'started and cleared when you close a chat. '
+        + capHelp((s.caps || {}).session))}
+      ${fieldRow('set-max-spend', 'Stop after (dollars per month)',
+        'A ceiling on the calendar month, kept in a small file so it '
+        + 'survives restarts. ' + capHelp((s.caps || {}).monthly))}
+      <div class="set-row" id="set-caps-control"></div>
+      <div class="set-row">
+        <label>Session cost</label>
+        <div class="set-control" id="set-cost-control"></div>
+      </div>
     </section>
     <section class="set-group">
       <h3>API key</h3>
@@ -284,38 +357,64 @@ export async function loadSettings() {
   // to think their cap is working, and this is the only place that can tell
   // them otherwise. So: say what is true always, and name the stale values
   // only when they exist.
-  // Re-read on every open rather than once: the figure moves while the
-  // pane is shut, and a stale number here is worse than a slow one.
-  const models = $('set-models');
-  if (models) models.addEventListener('toggle', () => {
-    if (models.open) renderCost();
-  });
+  // Rendered with the rest of the section rather than on a disclosure's
+  // first open. The figure is a snapshot of the moment the pane was loaded --
+  // there is nothing to subscribe to, since it only moves when a call the
+  // author just triggered comes back, and a number that ticks on its own in a
+  // settings pane invites watching it. Reopening Settings re-reads it.
+  renderCost();
+
+  capField('set-max-session', 'MC_MAX_SESSION_SPEND', v,
+           (s.caps || {}).session, money);
+  capField('set-max-spend', 'MC_MAX_MONTHLY_SPEND', v,
+           (s.caps || {}).monthly, money);
 
   const caps = $('set-caps-control');
   if (!s.spend_caps_enforced) {
+    // A server older than the enforcement stores these and reads none of
+    // them. Saying so is the whole point of the flag: a pane that showed the
+    // fields without this would be claiming a ceiling that does not exist.
     const note = document.createElement('p');
-    note.className = 'set-help';
-    note.textContent = 'Nothing limits what this journal can spend. Until '
-      + 'spend caps are built, the backstop that does not depend on this app '
-      + 'being correct is a spend limit on your Anthropic Console account.';
+    note.className = 'set-warn';
+    note.textContent = 'This journal stores these but nothing checks them '
+      + '\u2014 it is running a build from before the caps were enforced. '
+      + 'Restart it to pick up the new one.';
     caps.appendChild(note);
-
-    const set = [['MC_MAX_SESSION_TOKENS', 'tokens per session'],
-                 ['MC_MAX_MONTHLY_SPEND', 'dollars per month']]
-      .filter(([key]) => v[key]);
-    if (set.length) {
-      const warn = document.createElement('p');
-      warn.className = 'set-warn';
-      warn.textContent = 'Your .env already sets '
-        + set.map(([key, label]) => v[key] + ' ' + label).join(' and ')
-        + ' \u2014 stored, but not read by anything yet. It will start '
-        + 'applying when caps are enforced; it is not protecting you now.';
-      caps.appendChild(warn);
+  } else {
+    caps.appendChild(usedLine('This session', s.caps.session, money));
+    caps.appendChild(usedLine('This month (' + s.caps.monthly.month + ')',
+                              s.caps.monthly, money));
+    if (v.MC_MAX_SESSION_TOKENS) {
+      // It was a token count, briefly, and nothing reads it now. Silence here
+      // would leave a line in .env that looks exactly like a cap.
+      const dead = document.createElement('p');
+      dead.className = 'set-warn';
+      dead.textContent = 'Your .env still sets MC_MAX_SESSION_TOKENS. That '
+        + 'setting was replaced by the dollar figure above and is ignored \u2014 '
+        + 'delete the line so it stops looking like a ceiling.';
+      caps.appendChild(dead);
+    }
+    if (!s.caps.monthly.recording) {
+      const mock = document.createElement('p');
+      mock.className = 'set-warn';
+      mock.textContent = 'Mock mode: the month\u2019s figure is whatever real '
+        + 'use last recorded. Nothing spent here reaches it, because none of '
+        + 'it is real.';
+      caps.appendChild(mock);
     }
   }
 
+  const backstop = document.createElement('p');
+  backstop.className = 'set-help';
+  backstop.textContent = 'These are estimates from list prices, checked '
+    + 'before each call \u2014 so the call that crosses a line finishes, and '
+    + 'the next one is refused. The backstop that does not depend on this app '
+    + 'being right is a spend limit on your Anthropic Console account.';
+  caps.appendChild(backstop);
+
   $('settings-save').disabled = false;
   $('settings-note').textContent = '';
+  syncSeedButton();
 }
 
 // A save is only half a change: the process read .env at import. Rather than
@@ -334,21 +433,28 @@ async function instanceId() {
   }
 }
 
-async function restartServer(note) {
+async function restartServer(note, saved = true, into = 'journal') {
   note.className = 'set-note';
   note.textContent = 'restarting to apply…';
   const before = await instanceId();
   let r;
   try {
-    r = await (await fetch('/api/restart', {method: 'POST'})).json();
+    r = await (await fetch('/api/restart', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({into}),
+    })).json();
   } catch (e) {
     r = {error: 'could not reach the server.'};
   }
   if (r.error) {
-    // the save itself still happened -- say so, or this reads as a lost edit
     note.className = 'set-note error';
-    note.textContent = r.error
-      + ' Your change is saved in .env; restart the journal to apply it.';
+    // After a save the refusal has to say the save survived it, or a restart
+    // that didn't happen reads as an edit that didn't happen. Pressed on its
+    // own there is nothing to reassure anyone about, and saying "your change
+    // is saved" when nothing was changed is just confusing.
+    note.textContent = saved
+      ? r.error + ' Your change is saved in .env; restart the journal to apply it.'
+      : r.error;
     return;
   }
   for (let i = 0; i < 90; i++) {
@@ -360,8 +466,25 @@ async function restartServer(note) {
     }
   }
   note.className = 'set-note error';
-  note.textContent = 'saved, but the journal did not come back — '
-    + 'start it again the way you normally do.';
+  note.textContent = (saved ? 'saved, but ' : '')
+    + 'the journal did not come back — start it again the way you normally do.';
+}
+
+// The restart the save flow already performs, reachable on its own. Item 7
+// made the app restart itself, but only as the tail of a successful save --
+// which left every other path telling the author to open a terminal: the 409
+// while the pipeline runs, the 501, a .env edited by hand, and the
+// stale-payload banner above that says "restart it and reload this page" with
+// no way to comply. Same function on purpose: a second restart path would
+// drift from the refusals and from the instance-id poll that is the only
+// evidence the process actually changed.
+async function restartNow() {
+  const btn = $('settings-restart');
+  btn.disabled = true;
+  await restartServer($('settings-note'), false);
+  // Only reached when the restart was refused or never landed -- a successful
+  // one reloads the page out from under this line.
+  btn.disabled = false;
 }
 
 // ---- session cost ----
@@ -440,6 +563,8 @@ async function save() {
     ['MC_COMPANION_MODEL', 'set-companion-model'],
     ['MC_COMPANION_EFFORT', 'set-companion-effort'],
     ['MC_PROCESSING_MODEL', 'set-processing-model'],
+    ['MC_MAX_SESSION_SPEND', 'set-max-session'],
+    ['MC_MAX_MONTHLY_SPEND', 'set-max-spend'],
   ];
   for (const [key, id] of pairs) {
     const el = $(id);
@@ -483,9 +608,90 @@ async function save() {
   // beforehand would wipe the only confirmation the author ever sees. It
   // also leaves the pending markers on screen if the restart is refused.
   await loadSettings();
-  await restartServer(note);
+  // Follow wherever this instance actually is: a save made while looking at
+  // the demo journal (refused server-side, but the restart target should
+  // never assume 'journal' regardless) must restart back into the same demo,
+  // not silently drop the author into their real one.
+  await restartServer(note, true, inSeed() ? 'seed' : 'journal');
+}
+
+// The popover lives in the top layer, so it can't be positioned by a
+// containing box -- it is placed against the `?` button each time it opens.
+// Clamped to the viewport rather than trusting the button to be far enough
+// from the right edge: Settings is a centred column and the window is not.
+const HELP_GAP = 8, HELP_EDGE = 16;
+
+function placeHelp() {
+  const help = $('settings-restart-help');
+  const at = $('settings-restart-info').getBoundingClientRect();
+  const w = help.offsetWidth, h = help.offsetHeight;
+
+  const left = Math.min(at.left, window.innerWidth - w - HELP_EDGE);
+  help.style.left = Math.max(HELP_EDGE, left) + 'px';
+
+  // Above when there isn't room below. These buttons are the last thing in a
+  // scrolling pane, so "below" is off the bottom of the window more often
+  // than not -- which is how this first shipped, and the text was unreadable.
+  const below = at.bottom + HELP_GAP;
+  const fits = below + h + HELP_EDGE <= window.innerHeight;
+  const top = fits ? below : at.top - HELP_GAP - h;
+  help.style.top = Math.max(HELP_EDGE, top) + 'px';
+}
+
+// Which journal is loaded is a fact about the running process, and
+// refreshStatus() has already put it on the body. Asking again through a
+// second payload would give this pane a way to disagree with the banner.
+const inSeed = () => document.body.classList.contains('seed-instance');
+
+// The one button whose *label* is the state. Called on load and after every
+// settings render, because the status that decides it arrives asynchronously.
+function syncSeedButton() {
+  const btn = $('settings-seed');
+  if (btn) btn.textContent = inSeed() ? 'return to my journal' : 'load demo journal';
+}
+
+// The demo corpus is a separate journal with its own data dirs, not a mode of
+// this one -- so getting there is a restart, same as any other setting read at
+// import. Nothing is written to .env, which is what makes the next restart the
+// way back: the destination lives in the child process's environment and dies
+// with it.
+async function loadSeed() {
+  const btn = $('settings-seed');
+  const note = $('settings-note');
+  if (inSeed()) {
+    btn.disabled = true;
+    await restartServer(note, false, 'journal');
+    btn.disabled = false;
+    return;
+  }
+  if (!confirm('Restart on the demo journal?\n\nIt has its own entries, '
+      + 'entities and summaries \u2014 nothing you do there touches yours. '
+      + 'Any restart brings you back.')) return;
+  btn.disabled = true;
+  await restartServer(note, false, 'seed');
+  btn.disabled = false;
 }
 
 export function init() {
   $('settings-save').onclick = save;
+  $('settings-restart').onclick = restartNow;
+  $('settings-seed').onclick = loadSeed;
+  syncSeedButton();
+  // `toggle` fires after the popover is in the layer, so it has a width to
+  // measure by then; `beforetoggle` would measure zero.
+  const help = $('settings-restart-help');
+  help.addEventListener('toggle', e => {
+    if (e.newState === 'open') {
+      placeHelp();
+      // The panel is in the top layer, so it does not travel with the pane it
+      // was opened from: without this it hangs in place while the settings
+      // list scrolls away beneath it. Capture, because the scroll happens on
+      // #settings rather than on the window.
+      addEventListener('scroll', placeHelp, true);
+      addEventListener('resize', placeHelp);
+    } else {
+      removeEventListener('scroll', placeHelp, true);
+      removeEventListener('resize', placeHelp);
+    }
+  });
 }

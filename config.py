@@ -149,6 +149,68 @@ EXCERPT_CHARS = int(os.getenv("MC_EXCERPT_CHARS", "2000"))
 MAX_TOKENS = int(os.getenv("MC_MAX_TOKENS", "8000"))  # companion reply budget
 
 # ---------------------------------------------------------------------------
+# SPEND CAPS
+# ---------------------------------------------------------------------------
+# Ceilings, enforced in `caps.py`. Blank means "use the default below"; an
+# explicit 0 means off. Both defaults sit deliberately above ordinary use --
+# above a long session, above a heavy month -- because these exist to catch a
+# runaway (a loop, a pasted novel, a pipeline fanning out further than
+# expected) rather than to ration normal writing. A cap sized to normal use
+# fires on a good week, and a journal that refuses to answer is a worse
+# failure than a surprising bill.
+#
+# The figures are a starting point, not a measurement: they were set before
+# any real month had been metered. Anyone with a few months of `spend_ledger`
+# behind them should replace them with something their own use argues for.
+
+
+def _positive(name: str, default: float) -> float:
+    """A non-negative number from the environment, or the default.
+
+    Unparsable falls back to the default rather than to 0/off. The Settings
+    route validates what it writes, so a bad value here came from a hand
+    edit -- and reading `MC_MAX_MONTHLY_SPEND=fifty` as "no limit" would
+    remove a ceiling the author believed they had just set.
+    """
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    return value if value >= 0 else default
+
+
+# Both in dollars, deliberately. The session ceiling started out in tokens
+# and was unusable as a setting: nobody knows whether 5,000,000 tokens is an
+# afternoon or a month, so the only thing an author could do with the number
+# was leave it alone. A ceiling nobody can hold an opinion about is not a
+# control, and the meter already tracks session dollars.
+# Named rather than inlined into the calls below: the Settings pane has to
+# say what "blank" will do, and "blank uses the default" without the figure is
+# not an answer -- it sends someone to this file to find out what they just
+# agreed to.
+DEFAULT_SESSION_SPEND = 10.0
+DEFAULT_MONTHLY_SPEND = 100.0
+
+MAX_SESSION_SPEND = _positive("MC_MAX_SESSION_SPEND", DEFAULT_SESSION_SPEND)
+MAX_MONTHLY_SPEND = _positive("MC_MAX_MONTHLY_SPEND", DEFAULT_MONTHLY_SPEND)
+
+# Where the monthly ledger lives. One small JSON file rather than a directory
+# like the others -- it holds one number per month and nothing else.
+SPEND_FILE = Path(os.getenv("MC_SPEND_FILE", _PROJECT_ROOT / "spend_ledger.json"))
+
+# The longest text a single entry, chat turn or lookup may carry. A rejection
+# is the point: silently truncating a journal entry loses writing the author
+# believes was saved, which is worse than the paste that prompted it. Sized so
+# that no entry anyone types can reach it and no accidental paste of a whole
+# document can get through -- roughly 25k tokens. Same convention as the
+# spend caps above: blank uses the default, 0 turns it off -- server.py's
+# _too_long() is where that 0 is read as "no ceiling" rather than as one.
+MAX_INPUT_CHARS = int(_positive("MC_MAX_INPUT_CHARS", 100_000))
+
+# ---------------------------------------------------------------------------
 # MISC
 # ---------------------------------------------------------------------------
 
@@ -271,10 +333,13 @@ def get_client():
     carries them is the same plumbing -- a cost view that only works against
     the real API is one nobody can develop against.
 
-    Phase 2 item 10 puts the spend-cap check here, in front of the returned
-    client, so the ceiling can't be bypassed by a call site. It needs a check
-    *before* the call, which is why it is a separate piece of work from the
-    counting: metering only ever learns what a call cost after it is spent.
+    The spend caps ride in the same wrapper (`caps.check()`, called from the
+    metering proxy) rather than in a second one around it. Two reasons: the
+    ceiling then cannot be bypassed by a call site, for the same reason the
+    counting cannot; and another proxy layer would put another frame in front
+    of every call, which is exactly what `metering._bucket` and
+    `mock_client._call_key` read to decide what a call *is*. That collision
+    has already broken every mock fixture once.
     """
     import metering
     if MOCK_MODE:
