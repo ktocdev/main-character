@@ -62,11 +62,13 @@ MODEL_LABELS = {
 
 # Model -> USD list price per million tokens, input and output.
 #
-# Display only. Nothing here bills, meters or enforces anything -- these
-# exist so the Settings pickers can show what a choice costs relative to the
-# others, which is the whole point of offering the choice. Anthropic's
-# pricing page is the authority; check these against it when adding a model,
-# and treat a figure here as stale rather than as a quote.
+# These started as labels beside the Settings pickers, so a cloner could see
+# what a choice costs relative to the others. `metering.py` now computes every
+# dollar figure the app shows from them, so a wrong row here is a wrong number
+# on screen rather than a wrong label -- but still nothing *bills* or refuses a
+# call against them; that is Phase 2 item 10. Anthropic's pricing page is the
+# authority: check these against it when adding a model, and treat a figure
+# here as an estimate that goes stale, never as a quote.
 MODEL_PRICES = {
     "claude-opus-4-6": {"in": 5.0, "out": 25.0},
     "claude-opus-4-7": {"in": 5.0, "out": 25.0},
