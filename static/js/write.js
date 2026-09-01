@@ -1,16 +1,30 @@
-import { $, api, refreshStatus } from './core.js';
+import { $, api, esc, refreshStatus } from './core.js';
 import { state } from './state.js';
-import { addMsg, streamInto, composerBusy } from './conversation.js';
+import { addMsg, streamInto, composerBusy, anchorTop } from './conversation.js';
 import { renderSessionPart, addSessionBraid, loadHistory } from './history.js';
 
 // ---- draft persistence + growing textarea ----
-// the write box survives an accidental refresh or tab close; it grows
-// with its content (like Claude desktop) up to 40% of the window.
+// the write box survives an accidental refresh or tab close; it grows with
+// its content (like Claude desktop) to fill the viewport, then scrolls
+// internally. Item 4: the earlier `innerHeight * 0.4` cap was the interim
+// stop; full height is the spec, and item 11's seed editor inherits it.
 // Enter never submits here — Enter and Shift+Enter both make new lines.
 function autosizeEntry() {
   const t = $('entry-text');
   t.style.height = 'auto';
-  t.style.height = Math.min(t.scrollHeight + 2, window.innerHeight * 0.4) + 'px';
+  // The composer is pinned to the bottom of the write panel and grows UPWARD,
+  // squeezing the log (flex:1) above it — so the room to grow is NOT the gap
+  // below the box (that is ~zero), it is the panel height minus the composer's
+  // own fixed chrome (stamp row, controls, padding) minus a small peek of the
+  // log we always keep visible. Measured after height:auto so both offset
+  // heights reflect the same layout pass.
+  const panel = t.closest('.tab');
+  const composer = t.closest('.composer');
+  const chrome = composer ? composer.offsetHeight - t.offsetHeight : 68;
+  const panelH = panel ? panel.clientHeight : window.innerHeight;
+  const LOG_PEEK = 80;  // never let the box eat the whole log
+  const max = Math.max(120, panelH - chrome - LOG_PEEK);
+  t.style.height = Math.min(t.scrollHeight + 2, max) + 'px';
 }
 function clearComposer() {
   $('entry-text').value = '';
@@ -41,11 +55,54 @@ export async function closeSession() {
   const r = await api('/api/sessions/close', {});
   if (!r) return;
   $('write-log').innerHTML = '';
-  $('entry-saved').textContent = `chat closed — saved as "${r.title}". The seed candidate is integrating — a download bar appears here when it's ready.`;
-  watchForCandidate();
+  $('entry-saved').textContent = `chat closed — saved as "${r.title}".`;
+  trackCloseProgress();
   state.sessionSel = 'current';
   if (state.activeTab === 'history') await loadHistory();
   refreshStatus();
+}
+
+// After a close, the memory pipeline runs as background tasks — so the close
+// response returns before any of it has happened (item 1). Poll the server's
+// progress record and show which stage is running instead of one static line.
+// The per-call delays mock mode adds are what make each stage visible without
+// a real key; against a live key the stages are genuinely long. When the seed
+// stage lands, its candidate banner appears the way watching /api/seed used to.
+let closePoll = null;
+const CP_GLYPH = {done: '✓', running: '…', failed: '✕', pending: '·'};
+function renderCloseProgress(steps, done) {
+  const box = $('close-progress');
+  if (!box) return;
+  box.hidden = false;
+  box.innerHTML = '<b>updating memory</b>'
+    + steps.map(s => `<div class="cp-step cp-${s.status}">`
+        + `<span class="cp-mark">${CP_GLYPH[s.status] || '·'}</span>`
+        + `<span>${esc(s.label)}</span></div>`).join('')
+    + (done ? '<div class="cp-done">memory updated — a fresh chat is open</div>' : '');
+}
+function trackCloseProgress() {
+  clearInterval(closePoll);
+  let seedShown = false;
+  let tries = 0;
+  const tick = async () => {
+    let p;
+    try { p = await (await fetch('/api/sessions/close/progress')).json(); }
+    catch (e) { return; }   // transient — the next tick tries again
+    renderCloseProgress(p.steps, p.done);
+    if (!seedShown && p.steps.some(s => s.key === 'seed' && s.status === 'done')) {
+      seedShown = true;
+      refreshSeedMenu();
+    }
+    // ~120 s ceiling so a stuck pipeline can't poll forever; the pipeline is
+    // seconds in mock mode and well under this against a real key.
+    if (p.done || ++tries > 120) {
+      clearInterval(closePoll);
+      refreshSeedMenu();
+      setTimeout(() => { const b = $('close-progress'); if (b) b.hidden = true; }, 8000);
+    }
+  };
+  closePoll = setInterval(tick, 1000);
+  tick();
 }
 
 // ---- the seed ritual (close → download candidate → edit in VS Code → upload) ----
@@ -58,18 +115,6 @@ async function refreshSeedMenu() {
   $('seed-download').hidden = !s.exists;
   $('seed-banner').hidden = !s.candidate_exists;
 }
-// after a close, the candidate integrates in the background — watch for it
-let seedPoll = null;
-function watchForCandidate() {
-  clearInterval(seedPoll);
-  let tries = 0;
-  seedPoll = setInterval(async () => {
-    const s = await seedState();
-    if ((s && s.candidate_exists) || ++tries > 30) clearInterval(seedPoll);
-    if (s && s.candidate_exists) refreshSeedMenu();
-  }, 10000);
-}
-
 // ---- write (the one conversation surface) ----
 // A chat over the current journal cluster: everything the open session
 // contains (the chat it continues + entries + replies) scrolls above,
@@ -177,8 +222,9 @@ export function init() {
     if (!text) return;
     clearComposer();
     composerBusy(true);
-    addMsg('you', text);
+    const you = addMsg('you', text);
     const el = addMsg('companion thinking', '');
+    anchorTop(you);   // stay on your own message while the reply streams in
     try { await streamInto(el, '/api/chat', {message: text}); }
     finally { composerBusy(false); $('entry-text').focus(); }
   };
@@ -186,6 +232,7 @@ export function init() {
   $('reflect-btn').onclick = async () => {
     composerBusy(true);
     const el = addMsg('companion thinking', '');
+    anchorTop(el);   // no message of your own here — hold on the reply itself
     try { await streamInto(el, '/api/reflect', {}); }
     finally { composerBusy(false); $('entry-text').focus(); }
   };
@@ -236,14 +283,42 @@ export function init() {
   $('entry-send').onclick = async () => {
     const text = $('entry-text').value.trim();
     if (!text) return;
+    const ts = entryStamp ? stampString(entryStamp) : null;
+
+    // No-reply mode (item 3): save the entry and skip the companion call
+    // entirely — no cost, sometimes you just want to write. The entry still
+    // becomes journal memory at close, exactly like a replied-to one.
+    if ($('entry-noreply').checked) {
+      clearComposer();
+      composerBusy(true);
+      $('entry-saved').textContent = 'saving…';
+      const you = addMsg('you', text);
+      anchorTop(you);
+      try {
+        const r = await api('/api/entry', {text, ts, no_reply: true});
+        if (r && r.ok) {
+          clearStamp();
+          $('entry-saved').textContent = 'entry saved, no reply — becomes journal memory when you close the chat';
+          refreshStatus();
+        } else {
+          you.remove();
+          $('entry-text').value = text;
+          localStorage.setItem('rag_draft', text);
+          autosizeEntry();
+          $('entry-saved').textContent = 'save failed — your draft is untouched';
+        }
+      } finally { composerBusy(false); $('entry-text').focus(); }
+      return;
+    }
+
     clearComposer();            // shrink the box back to default size right away
     composerBusy(true);
     $('entry-saved').textContent = 'saving…';
-    addMsg('you', text);
+    const you = addMsg('you', text);
     const el = addMsg('companion thinking', '');
+    anchorTop(you);             // stay on your entry while the reply streams
     try {
-      const res = await streamInto(el, '/api/entry',
-        {text, ts: entryStamp ? stampString(entryStamp) : null});
+      const res = await streamInto(el, '/api/entry', {text, ts});
       if (res.ok) {
         clearStamp();   // the next entry gets its own
         $('entry-saved').textContent = 'entry saved — becomes journal memory when you close the chat';

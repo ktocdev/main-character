@@ -330,6 +330,15 @@ def test_the_route_says_the_figure_is_an_estimate(api):
     assert api.get("/api/cost").json()["estimated"] is True
 
 
+def test_the_route_reports_whether_the_figure_is_mock(api):
+    """In mock mode the figure still climbs, so the popover needs the payload
+    to say the spend is not real -- the same claim the monthly card makes.
+    Asserted against config rather than a literal so it holds whichever mode
+    the suite runs in."""
+    import config
+    assert api.get("/api/cost").json()["mock"] is config.MOCK_MODE
+
+
 def test_the_route_names_the_models_the_figures_came_from(api):
     import config
     body = api.get("/api/cost").json()

@@ -2,6 +2,22 @@
   #help { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
   #help h2 { font-style: italic; font-weight: normal; font-size: 1.15rem; color: var(--accent); margin: 1.6rem 0 .8rem; }
   #help h2:first-child { margin-top: 0; }
+  /* collapsible sections (item 2): the summary reads as the old h2 heading,
+     with a rotating caret in place of the default disclosure triangle. */
+  #help .help-sec { border-bottom: 1px solid var(--border); padding: .3rem 0; }
+  #help .help-sec > summary {
+    list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: .5rem;
+    font-style: italic; font-size: 1.15rem; color: var(--accent);
+    padding: .6rem 0; user-select: none;
+  }
+  #help .help-sec > summary::-webkit-details-marker { display: none; }
+  #help .help-sec > summary::before {
+    content: "›"; font-style: normal; color: var(--accent-dim);
+    transition: transform .15s ease; display: inline-block;
+  }
+  #help .help-sec[open] > summary::before { transform: rotate(90deg); }
+  #help .help-sec[open] > summary { margin-bottom: .4rem; }
+  #help .help-sec > :last-child { margin-bottom: .8rem; }
   #help h3 { font: .95rem 'CMU Sans Demi Condensed', system-ui, sans-serif; font-weight: 600; margin-bottom: .3rem; }
   #help .where { font-weight: normal; font-size: .78rem; color: var(--accent-dim); margin-left: .5rem; }
   #help .step-n { display: inline-flex; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--accent-dim); color: var(--bg); align-items: center; justify-content: center; font-size: .8rem; margin-right: .4rem; }

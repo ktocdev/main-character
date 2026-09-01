@@ -44,6 +44,9 @@
   #cost-panel[hidden] { display: none; }
   .cost-line { color: var(--text); font-variant-numeric: tabular-nums; }
   .cost-note { color: var(--text-dim); font-size: .75rem; margin-top: .15rem; }
+  /* mock-mode status: tinted so it reads as a state, not a footnote, and
+     allowed to wrap so it does not stretch the nowrap panel. */
+  .cost-mock { color: var(--accent-dim); white-space: normal; max-width: 16rem; }
   main { flex: 1; overflow: hidden; display: flex; }
   .tab { flex: 1; display: none; flex-direction: column; overflow: hidden; }
   .tab.active { display: flex; }

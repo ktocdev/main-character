@@ -51,6 +51,7 @@
       <button class="quiet" id="seed-banner-download">download</button>
       <button class="quiet" id="seed-banner-upload">upload edited seed</button>
     </div>
+    <div id="close-progress" hidden></div>
     <div class="composer write-composer">
       <div id="entry-stamp" hidden>
         <span id="entry-stamp-text" title="when this entry was written"></span>
@@ -66,6 +67,9 @@
         <button class="send" id="entry-send" title="save as a journal entry (markdown backup now, journal memory at close)">save entry</button>
         <button class="send" id="chat-send" title="talk with the companion about it — part of the chat, becomes journal memory too">send</button>
         <button class="quiet" id="reflect-btn" title="let the companion open — it connects a dot or two across time">reflect</button>
+        <label id="noreply-wrap" title="save this entry without a companion reply — no Claude call, no cost">
+          <input type="checkbox" id="entry-noreply"> no reply
+        </label>
         <span class="saved-note" id="entry-saved"></span>
         <details id="write-actions">
           <summary title="chat actions">⋯</summary>
@@ -255,7 +259,8 @@
         <a href="#h-safety">safety</a>
       </nav>
 
-      <h2 id="h-write">write — the journal companion</h2>
+      <details class="help-sec" open>
+      <summary id="h-write">write — the journal companion</summary>
       <p>One chat stays open for as long as it feels right — about a week in practice. The write
       screen is that whole conversation: the chat it continues, your entries, the companion's
       replies, and everything you say back. <b>save entry</b> stores a journal entry (backed up to
@@ -272,7 +277,9 @@
       the dream extractor finds them at the summarize point, pulling each one into the dream realm
       while the entry itself stays in waking memory — exactly how your imported history behaves.</p>
 
-      <h2 id="h-chat">chat — look things up</h2>
+      </details>
+      <details class="help-sec">
+      <summary id="h-chat">chat — look things up</summary>
       <p>The chat screen is a tool, not the journal: ask it to pull things out of your history
       ("when did I last see Sam?", "what did I say about the move?"). It runs the same
       retrieval + companion brain, but it's a <em>separate conversation</em> — lookups never join
@@ -280,7 +287,9 @@
       Note its honest limit: it sees retrieved excerpts, not the whole journal, so answers are
       representative rather than exhaustive.</p>
 
-      <h2 id="h-search">search — every match, instantly</h2>
+      </details>
+      <details class="help-sec">
+      <summary id="h-search">search — every match, instantly</summary>
       <p>The search screen sweeps your <em>entire</em> journal locally — free, instant, no API
       calls. <b>meaning</b> mode ranks passages by how semantically close they are to whatever you
       describe, in your own words ("times I felt proud of my work"); <b>exact text</b> mode finds
@@ -293,13 +302,17 @@
       date — a passage written mid-week inside a week-long chat shows that chat's date until
       the Phase 3 per-day split.</p>
 
-      <h2 id="h-history">history — every chat, one at a time</h2>
+      </details>
+      <details class="help-sec">
+      <summary id="h-history">history — every chat, one at a time</summary>
       <p>Lands on the open chat: the conversation it continues (with Claude's replies interleaved,
       backfilled from your export), your entries, and the live thread. Every closed chat sits in
       the sidebar — click one to read it in full. Closed chats keep both sides for reading, but
       only your side is journal memory.</p>
 
-      <h2 id="h-entities">entities — curation workflow, the efficient order</h2>
+      </details>
+      <details class="help-sec">
+      <summary id="h-entities">entities — curation workflow, the efficient order</summary>
 
       <div class="help-step">
         <h3><span class="step-n">1</span> find duplicates first <span class="where">entities tab → "find duplicates (free)"</span></h3>
@@ -360,7 +373,9 @@
         (× a wrong tag in the categories tab) stick the same way entity merges do.</p>
       </div>
 
-      <h2 id="h-fixes">which fix do i want?</h2>
+      </details>
+      <details class="help-sec">
+      <summary id="h-fixes">which fix do i want?</summary>
       <table class="decision">
         <tr><td>Two names, same real thing, both names legit</td><td><b>merge</b> (keeps alias — still matchable by either name)</td></tr>
         <tr><td>Misspelling/typo that shouldn't be remembered</td><td><b>correct</b> (no alias)</td></tr>
@@ -370,7 +385,9 @@
         <tr><td>Shouldn't exist at all</td><td><b>delete</b></td></tr>
       </table>
 
-      <h2 id="h-categories">categories</h2>
+      </details>
+      <details class="help-sec">
+      <summary id="h-categories">categories</summary>
       <p>Every entry gets tagged with categories (work, relationships, health…) — automatically when a
       chat closes; <em>tag new entries</em> re-runs it manually for anything untagged (already-tagged
       entries are cached and free). Click a category chip to browse its entries and read its
@@ -380,14 +397,18 @@
       confirm. You can also hand-seed a category with keywords. Entry categories are deliberately
       flat — broad and scannable — so there's no sub-category nesting here.</p>
 
-      <h2 id="h-patterns">patterns</h2>
+      </details>
+      <details class="help-sec">
+      <summary id="h-patterns">patterns</summary>
       <p><em>detect patterns</em> re-reads the weekly arcs + domain documents and names recurring
       shapes — emotional cycles, behavioral pipelines, relationship dynamics — each with dated
       instances and a confidence level. Patterns are injected into the companion's context only
       when the conversation genuinely rhymes with one. <em>dismiss</em> hides a pattern; it only
       returns if new evidence shows up.</p>
 
-      <h2 id="h-dreams">dreams</h2>
+      </details>
+      <details class="help-sec">
+      <summary id="h-dreams">dreams</summary>
       <p>Dreams live in their own realm: a separate collection that waking questions can never
       accidentally surface. The extractor finds dreams inside your entries (at the summarize point,
       or via <em>extract dreams from history</em>), keeping the narrative, cast, tones, and — only
@@ -395,7 +416,9 @@
       <em>dream weather</em> line. Asking the companion about dreams crosses the boundary
       explicitly.</p>
 
-      <h2 id="h-safety">safety notes</h2>
+      </details>
+      <details class="help-sec">
+      <summary id="h-safety">safety notes</summary>
       <p>Everything is undoable — ↺/↻ in the nav cover every curation and observation change, 50 steps back.
       All your decisions live in <code>entity_graph/curation.json</code> and re-apply on every rebuild, so
       nothing you do here is ever lost by the system regenerating docs. One exception to know:
@@ -404,6 +427,7 @@
       the rest survive even that. Removed aliases keep their historical "as ‘name’" data; removal only
       stops name-matching. And your journal is these local folders: <code>chroma_data</code>,
       <code>journal_entries</code>, <code>entity_graph</code>, <code>summaries</code> — back them up.</p>
+      </details>
     </div>
   </section>
 

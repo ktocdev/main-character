@@ -33,8 +33,35 @@
   #entities-pane h2 { font-weight: normal; font-style: italic; font-size: 1.05rem; color: var(--text-dim); margin-bottom: 1rem; }
   #write-log, #chat-log { flex: 1; overflow-y: auto; padding: 1.5rem; max-width: 46rem; margin: 0 auto; width: 100%; }
   .write-composer { flex-direction: column; gap: .5rem; }
-  #entry-text { min-height: 4.5rem; max-height: 40vh; overflow-y: auto; }
+  /* height is set inline by autosizeEntry (item 4: grow to fill the viewport,
+     then scroll). This is only the backstop if that JS hasn't run yet. */
+  #entry-text { min-height: 4.5rem; max-height: 85vh; overflow-y: auto; }
   .write-controls { display: flex; align-items: center; gap: .6rem; }
+  /* no-reply toggle (item 3): quiet, sits with the other controls */
+  #noreply-wrap {
+    display: inline-flex; align-items: center; gap: .35rem; cursor: pointer;
+    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim);
+    white-space: nowrap;
+  }
+  #noreply-wrap input { cursor: pointer; }
+  /* close-pipeline progress (item 1): a small stage checklist above the box */
+  #close-progress {
+    max-width: 46rem; margin: 0 auto .25rem; width: 100%;
+    padding: .6rem 1.5rem; color: var(--accent-dim);
+    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+  }
+  #close-progress[hidden] { display: none; }
+  #close-progress b {
+    display: block; margin-bottom: .35rem; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: .08em; font-size: .72rem;
+  }
+  .cp-step { display: flex; align-items: baseline; gap: .5rem; padding: .1rem 0; opacity: .5; }
+  .cp-step.cp-running, .cp-step.cp-done, .cp-step.cp-failed { opacity: 1; }
+  .cp-mark { width: 1rem; flex-shrink: 0; text-align: center; }
+  .cp-running .cp-mark { color: var(--accent); animation: lamp-pulse 1.6s ease-in-out infinite; }
+  .cp-done .cp-mark { color: var(--accent-dim); }
+  .cp-failed .cp-mark { color: var(--you); }
+  .cp-done-line, .cp-done { margin-top: .4rem; color: var(--text-dim); }
   /* the entry's timestamp, above the box — quiet until you need it */
   #entry-stamp {
     display: flex; align-items: center; gap: .5rem;

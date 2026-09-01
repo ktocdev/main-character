@@ -10,6 +10,22 @@ export function addMsg(cls, text) {
   return d;
 }
 
+// Bring a message to the top of its scroller and leave it there — the
+// Claude-desktop anchor (item 5). After a send, the user's own entry sits at
+// the top and the companion reply grows below it instead of shoving the
+// viewport down. This also leaves the log scrolled away from the bottom, so
+// streamInto's follow-the-bottom rule below stays quiet for the whole reply
+// unless the user scrolls back down to it deliberately.
+export function anchorTop(el) {
+  const scroller = el.closest('#write-log, #chat-log');
+  if (scroller) scroller.scrollTop = el.offsetTop - scroller.offsetTop;
+}
+
+// Within this many px of the bottom counts as "reading the newest line", so
+// the log keeps following the stream. Past it the user has scrolled up to
+// read something and following would yank them back.
+const STICK_PX = 48;
+
 export async function streamInto(el, url, payload) {
   const res = await fetch(url, {
     method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -38,9 +54,13 @@ export async function streamInto(el, url, payload) {
     const chunk = dec.decode(value, {stream: true});
     if (!chunk) continue;
     if (!started) { el.classList.remove('thinking'); el.textContent = ''; started = true; }
-    el.textContent += chunk;
+    // Decide whether to follow *before* appending — the append changes
+    // scrollHeight, so measuring after would call every position "the bottom".
     const scroller = el.closest('#write-log, #chat-log');
-    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    const pinned = scroller &&
+      scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= STICK_PX;
+    el.textContent += chunk;
+    if (pinned) scroller.scrollTop = scroller.scrollHeight;
   }
   if (!started) { el.classList.remove('thinking'); el.textContent = '[no response]'; }
   return res;
