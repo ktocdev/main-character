@@ -189,6 +189,40 @@ export async function loadSettings() {
         <p class="set-help">Write-only: the key is never sent back to this
           page, not even partially. Leave it blank to keep the one you have.</p>
       </div>
+    </section>
+    <section class="set-group">
+      <h3>Data</h3>
+      <p class="set-help">Your writing is plain markdown on this computer, and
+        these do not need saving first &mdash; they act straight away, on the
+        journal as it is right now.</p>
+      <div class="set-row">
+        <label>Export</label>
+        <div class="set-control">
+          <button class="quiet" id="set-export">export to a folder</button>
+        </div>
+        <p class="set-help">Every entry as markdown, plus one JSON file with
+          all of them, plus everything the app worked out from them. Nothing
+          in it needs this app to read.</p>
+      </div>
+      <div class="set-row">
+        <label>Backup</label>
+        <div class="set-control">
+          <button class="quiet" id="set-backup">save a dated zip</button>
+        </div>
+        <p class="set-help">The same export as one file you can move. It lands
+          next to the journal, on the same disk &mdash; copy it somewhere that
+          survives this machine.</p>
+      </div>
+      <div class="set-row">
+        <label>Search index</label>
+        <div class="set-control">
+          <button class="quiet" id="set-rebuild">rebuild from my entries</button>
+        </div>
+        <p class="set-help">Rebuilds search from the markdown. Free and
+          offline &mdash; the embeddings are computed on this machine, so
+          there is no key and nothing to spend. Slow on a long journal.</p>
+      </div>
+      <div class="set-row" id="set-data-note"></div>
     </section>`;
 
   // date format
@@ -347,16 +381,12 @@ export async function loadSettings() {
   }
 
   // ---- spend caps ----
-  // There is no cap control here, because there is no cap: nothing reads
-  // these values before a call yet. An input would let someone set a ceiling
-  // and believe it protected them, and even a read-only "no limit" row is
-  // just a setting that does nothing taking up space.
-  //
-  // The exception is a value that is already in .env -- hand-added, or saved
-  // through the API, which whitelists both keys. That author has every reason
-  // to think their cap is working, and this is the only place that can tell
-  // them otherwise. So: say what is true always, and name the stale values
-  // only when they exist.
+  // Two real inputs, because `caps.py` now checks both before every call.
+  // This comment used to say the opposite -- that a cap control would be a
+  // setting nobody enforced -- and that reasoning is worth keeping in view:
+  // an input that lets someone set a ceiling and believe it protects them is
+  // worse than no input. `spend_caps_enforced` is what keeps the two honest,
+  // and the branch below is what a build from before the caps still shows.
   // Rendered with the rest of the section rather than on a disclosure's
   // first open. The figure is a snapshot of the moment the pane was loaded --
   // there is nothing to subscribe to, since it only moves when a call the
@@ -415,6 +445,10 @@ export async function loadSettings() {
   $('settings-save').disabled = false;
   $('settings-note').textContent = '';
   syncSeedButton();
+  // Not in init(): these buttons live inside #settings-body, which this
+  // function replaces wholesale every time Settings is opened, so handlers
+  // bound once at startup would be attached to elements that no longer exist.
+  wireData();
 }
 
 // A save is only half a change: the process read .env at import. Rather than
@@ -670,6 +704,57 @@ async function loadSeed() {
   btn.disabled = true;
   await restartServer(note, false, 'seed');
   btn.disabled = false;
+}
+
+// ---- data ----
+// Export, backup and rebuild call the same functions `export.py`, `backup.py`
+// and `rebuild_index.py` call from a terminal. They act on the journal as it
+// is on disk, not on anything unsaved in this pane, which is why they do not
+// wait for Save and do not restart anything.
+
+// Each of the three can take a while on a long journal -- the rebuild
+// embeds every chunk -- and the only honest thing to show meanwhile is that
+// it is running. A disabled button with a line under it beats a spinner that
+// cannot say how far along it is.
+async function runData(btn, label, url, describe) {
+  const note = $('set-data-note');
+  const all = ['set-export', 'set-backup', 'set-rebuild'].map($);
+  all.forEach(b => { if (b) b.disabled = true; });
+  const was = btn.textContent;
+  btn.textContent = label;
+  note.className = 'set-row set-help';
+  note.textContent = 'working…';
+  try {
+    const res = await fetch(url, {method: 'POST'});
+    const body = await res.json();
+    if (!res.ok || body.error) throw new Error(body.error || 'it did not finish');
+    note.textContent = describe(body);
+  } catch (e) {
+    note.className = 'set-row set-warn';
+    note.textContent = 'That did not work — ' + (e.message || e);
+  } finally {
+    btn.textContent = was;
+    all.forEach(b => { if (b) b.disabled = false; });
+  }
+}
+
+const mb = n => (n / 1e6).toFixed(1) + ' MB';
+
+function wireData() {
+  const exp = $('set-export'), bak = $('set-backup'), reb = $('set-rebuild');
+  if (exp) exp.onclick = () => runData(exp, 'exporting…',
+    '/api/data/export',
+    b => b.entries + ' entries written to ' + b.path);
+  if (bak) bak.onclick = () => runData(bak, 'zipping…',
+    '/api/data/backup',
+    b => mb(b.bytes) + ' written to ' + b.path
+       + ' — move it somewhere that survives this machine.');
+  if (reb) reb.onclick = () => runData(reb, 'rebuilding…',
+    '/api/data/rebuild',
+    b => 'search index rebuilt: '
+       + Object.entries(b).filter(([k, val]) => val && val.documents !== undefined)
+           .map(([k, val]) => val.documents + ' ' + k.replace('journal_', ''))
+           .join(', ') + '.');
 }
 
 export function init() {

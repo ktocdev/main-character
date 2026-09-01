@@ -19,6 +19,7 @@ import subprocess
 import sys
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -1025,6 +1026,83 @@ def seed_upload(body: SeedUploadIn):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     return {"ok": True, **info}
+
+
+# ---------------------------------------------------------------------------
+# DATA — export, backup, rebuild
+# ---------------------------------------------------------------------------
+# The three commands from `export.py`, `backup.py` and `rebuild_index.py`,
+# reachable without a terminal. They are the same functions the CLI calls, not
+# reimplementations: "you can take your writing and go" is only true if it is
+# true of what the button does too.
+#
+# None of them returns a file. This app serves one person on their own
+# machine, the folder is on that machine, and the path is in the response --
+# so a download endpoint would add a file-serving surface (and the path
+# validation that has to come with it) to save a trip to a folder the author
+# can already open.
+
+
+@contextmanager
+def _busy():
+    """Hold the restart-refusal count for a synchronous job.
+
+    Rebuilding the index rewrites the store the running process has open, and
+    a restart in the middle of it would leave a half-built index behind. The
+    streaming routes hold this the same way; see `_metered_stream`.
+    """
+    with _BUSY_LOCK:
+        _BUSY["count"] += 1
+    try:
+        yield
+    finally:
+        with _BUSY_LOCK:
+            _BUSY["count"] -= 1
+
+
+def export_has_entries() -> bool:
+    import export
+    return bool(export.read_entries())
+
+
+@app.post("/api/data/export")
+def data_export():
+    """Write the journal out as files. Returns where it went."""
+    import export
+    dest = export.default_dest()
+    with _busy():
+        info = export.export_journal(dest)
+    if not info["entries"]:
+        return JSONResponse({"error": "there are no entries to export yet."},
+                            status_code=409)
+    return {"ok": True, "path": str(dest), **info}
+
+
+@app.post("/api/data/backup")
+def data_backup():
+    """Write a dated zip of that same export."""
+    import backup
+    dest = backup.default_dest()
+    with _busy():
+        if not export_has_entries():
+            return JSONResponse({"error": "there are no entries to back up yet."},
+                                status_code=409)
+        info = backup.write_backup(dest)
+    return {"ok": True, "path": str(dest), **info}
+
+
+@app.post("/api/data/rebuild")
+def data_rebuild():
+    """Rebuild the search index from the journal files. Local embeddings, so
+    this costs nothing and needs no key -- but it is the slowest thing in
+    Settings by a wide margin on a large journal."""
+    import rebuild_index
+    with _busy():
+        if not export_has_entries():
+            return JSONResponse({"error": "there are no entries to index yet."},
+                                status_code=409)
+        result = rebuild_index.rebuild()
+    return {"ok": True, **result}
 
 
 @app.get("/api/entities")
