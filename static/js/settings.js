@@ -247,7 +247,7 @@ export async function loadSettings() {
         effort.textContent = '';
         effort.disabled = true;
         effortNote.textContent = '.env sets the companion model to one this '
-          + 'list can't show, so its effort levels aren't known here either. '
+          + "list can't show, so its effort levels aren't known here either. "
           + 'Edit .env to change either.';
         return;
       }
