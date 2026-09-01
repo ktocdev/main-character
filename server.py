@@ -14,6 +14,11 @@ Usage:
 import json
 import os
 import re
+import socket
+import subprocess
+import sys
+import threading
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -283,7 +288,7 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
             "dream, not a waking event. Respond to it as my companion: "
             "receive it, don't decode it with generic symbolism.\n\n" + text
         )
-        background_tasks.add_task(dreams.ingest_dream_entry, text, entry_id, when)
+        _tracked(background_tasks, dreams.ingest_dream_entry, text, entry_id, when)
     else:
         # the entry joins the open session; it becomes journal memory
         # when the chat is closed (the summarize point)
@@ -418,8 +423,8 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     STATE["messages"] = []
-    background_tasks.add_task(_after_close_seed, result["key"])
-    background_tasks.add_task(_after_close_refresh)
+    _tracked(background_tasks, _after_close_seed, result["key"])
+    _tracked(background_tasks, _after_close_refresh)
     return {"ok": True, **result}
 
 
@@ -572,6 +577,8 @@ def save_settings(body: SettingsIn):
     try:
         clean = _validate_settings(body.values or {})
         update_env(clean)
+        # .env is authoritative for these on the way back up -- see RESTART
+        RESTART["keys"].update(clean)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     return {
@@ -580,6 +587,76 @@ def save_settings(body: SettingsIn):
         "saved": sorted(k for k in clean if k not in WRITE_ONLY_KEYS),
         "restart_required": True,
     }
+
+
+# ---------------------------------------------------------------------------
+# RESTART
+# ---------------------------------------------------------------------------
+# A setting is only half a change until the process starts again, because
+# config.py reads its values at import and ~10 modules bind those constants
+# by name at import too (capture_fixtures.CLIENT_MODULES documents the same
+# hazard for get_client). Re-reading config in place would leave every one
+# of those stale, so the honest move is to actually start over -- and to do
+# it for the author rather than sending them to a terminal.
+#
+# Two things make this safe rather than merely convenient:
+#
+#   - Background work is refused, never interrupted. Tagging, entities,
+#     summaries, dream ingest and seed candidates run as BackgroundTasks
+#     *after* the response and cost real API calls; restarting mid-pipeline
+#     would throw that away with nothing to show for it. A restart waits.
+#   - The re-exec drops the keys that were just saved. os.execve keeps the
+#     environment and load_dotenv() does not override what is already set,
+#     so the new process would otherwise inherit the *old* values from this
+#     process's own dotenv load and the restart would look like a no-op --
+#     the same failure the settings UI already had once.
+
+RESTART = {"requested": False, "keys": set()}
+SERVER = {"instance": None}
+_BUSY = {"count": 0}
+_BUSY_LOCK = threading.Lock()
+
+
+def _tracked(background_tasks: BackgroundTasks, fn, *args):
+    """Schedule background work and count it while it runs, so a restart can
+    tell whether it would be interrupting the memory pipeline."""
+    def run():
+        try:
+            fn(*args)
+        finally:
+            with _BUSY_LOCK:
+                _BUSY["count"] -= 1
+    with _BUSY_LOCK:
+        _BUSY["count"] += 1
+    background_tasks.add_task(run)
+
+
+@app.post("/api/restart")
+def restart_server():
+    """Exit and come back, so a saved setting takes effect. The client polls
+    /api/status until it answers again, then reloads the page."""
+    with _BUSY_LOCK:
+        busy = _BUSY["count"]
+    if busy:
+        return JSONResponse(
+            {"error": "the memory pipeline is still running -- tagging, "
+                      "summaries and seed work would be lost. Try again in "
+                      "a moment."},
+            status_code=409)
+
+    srv = SERVER["instance"]
+    if srv is None:
+        # started by something other than this file's __main__ (a test, or an
+        # external uvicorn). Nothing here can re-exec, and claiming a restart
+        # that never happens is worse than refusing one.
+        return JSONResponse(
+            {"error": "this server cannot restart itself -- restart it the "
+                      "way you started it"},
+            status_code=501)
+
+    RESTART["requested"] = True
+    srv.should_exit = True      # uvicorn drains, run() returns, __main__ execs
+    return {"ok": True, "restarting": True}
 
 @app.post("/api/reset")
 def reset_conversation():
@@ -1385,4 +1462,37 @@ def delete_entity(body: NameIn):
 
 if __name__ == "__main__":
     print(f"\n  RAG Journal -> http://{HOST}:{PORT}\n")
-    uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
+    # uvicorn.run() builds this itself and keeps it private; building it
+    # here is what gives /api/restart something to set should_exit on.
+    SERVER["instance"] = uvicorn.Server(
+        uvicorn.Config(app, host=HOST, port=PORT, log_level="warning"))
+    SERVER["instance"].run()
+
+    if RESTART["requested"]:
+        # drop the just-saved keys so load_dotenv() sets them from the file
+        # instead of the new process inheriting this one's stale values
+        env = {k: v for k, v in os.environ.items() if k not in RESTART["keys"]}
+        print("  restarting to apply settings...", flush=True)
+
+        # run() has returned, but the listening socket is not always released
+        # by the time the replacement tries to bind. Wait for it rather than
+        # hand the author a dead port and a stack trace.
+        for _ in range(50):
+            probe = socket.socket()
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                probe.bind((HOST, PORT))
+                probe.close()
+                break
+            except OSError:
+                probe.close()
+                time.sleep(0.1)
+
+        # NOT os.execve: Windows has no real exec, and the emulation segfaults
+        # coming out of uvicorn's asyncio shutdown. Spawning a fresh process
+        # and exiting is predictable on both platforms. Handles are inherited
+        # on purpose, so the new process keeps printing wherever the old one
+        # was -- usually a terminal the author is watching.
+        subprocess.Popen(
+            [sys.executable, os.path.abspath(__file__), *sys.argv[1:]],
+            env=env, cwd=str(Path(__file__).parent))

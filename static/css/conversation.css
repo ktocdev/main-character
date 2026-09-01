@@ -3,6 +3,8 @@
   .msg.you { color: var(--you); }
   .msg.you::before { content: "you"; }
   .msg.companion::before { content: "companion"; }
+  /* the date rides the label row that is already there (write screen) */
+  .msg.you[data-stamp]::before { content: "you · " attr(data-stamp); }
   .msg::before {
     display: block; font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; letter-spacing: .08em;
     text-transform: uppercase; color: var(--accent-dim); margin-bottom: .25rem;

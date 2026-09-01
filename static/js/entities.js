@@ -1,4 +1,4 @@
-import { $, api, esc, refreshStatus } from './core.js';
+import { $, api, esc, fmtDate, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
 import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection } from './groups.js';
 
@@ -205,7 +205,7 @@ export async function showEntity(name) {
       lastDate = o.date;
       const d = document.createElement('div');
       d.className = 'obs-date';
-      d.textContent = o.date + (o.extracted_name !== r.name ? ` · as "${o.extracted_name}"` : '');
+      d.textContent = fmtDate(o.date) + (o.extracted_name !== r.name ? ` · as "${o.extracted_name}"` : '');
       docEl.appendChild(d);
     }
     const row = document.createElement('div');

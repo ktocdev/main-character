@@ -1,4 +1,4 @@
-import { $, api } from './core.js';
+import { $, api, fmtDate } from './core.js';
 
 // ---- patterns ----
 export async function loadPatterns() {
@@ -41,7 +41,7 @@ function renderPatterns(r) {
     inst.className = 'pat-instances';
     for (const i of p.instances) {
       const row = document.createElement('div');
-      row.textContent = `${i.date} — ${i.note}`;
+      row.textContent = `${fmtDate(i.date)} — ${i.note}`;
       inst.appendChild(row);
     }
     d.appendChild(inst);

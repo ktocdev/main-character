@@ -51,5 +51,9 @@ categories.init();
 patterns.init();
 settings.init();
 
+// Status carries the date style the write log stamps its entries with, so it
+// has to land before the log renders -- otherwise the first paint uses the
+// default and the dates quietly disagree with Settings. A status hiccup must
+// not cost the author their session view, hence the catch.
+await refreshStatus().catch(() => {});
 write.loadWriteLog();  // restore the open session on page load
-refreshStatus();

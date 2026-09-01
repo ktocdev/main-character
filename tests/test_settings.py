@@ -189,3 +189,34 @@ def test_a_saved_value_comes_back_from_get_before_any_restart(env, client):
     assert body["values"]["MC_DATE_FORMAT"] == other
     # ... and the process, so the UI can say it isn't in effect yet
     assert body["active"]["MC_DATE_FORMAT"] == before
+
+
+# ---- restart ----
+
+def test_restart_refuses_when_it_cannot_actually_restart(env, client):
+    """Under TestClient there is no uvicorn Server to stop, so the route must
+    say so. Reporting a restart that never happens would be worse than
+    refusing one: the author would wait for a change that never arrives."""
+    r = client.post("/api/restart")
+    assert r.status_code == 501
+    assert not server.RESTART["requested"]
+
+
+def test_restart_waits_for_the_memory_pipeline(env, client, monkeypatch):
+    """Tagging, summaries and seed candidates run after the response and cost
+    real API calls. A restart mid-pipeline throws that away silently."""
+    monkeypatch.setitem(server.SERVER, "instance", object())   # restartable
+    monkeypatch.setitem(server._BUSY, "count", 1)              # ...but busy
+
+    r = client.post("/api/restart")
+    assert r.status_code == 409
+    assert "still running" in r.json()["error"]
+    assert not server.RESTART["requested"]
+
+
+def test_a_save_records_its_keys_for_the_restart(env, client):
+    """os.execve keeps the environment and load_dotenv() won't override it,
+    so the new process must be told to forget exactly what was just saved."""
+    server.RESTART["keys"].clear()
+    client.post("/api/settings", json={"values": {"MC_DATE_FORMAT": "%m/%d/%y"}})
+    assert "MC_DATE_FORMAT" in server.RESTART["keys"]

@@ -124,6 +124,40 @@ export async function loadSettings() {
   $('settings-note').textContent = '';
 }
 
+// A save is only half a change: the process read .env at import. Rather than
+// send the author to a terminal, ask the server to come back on its own and
+// reload the page once it answers again. The fetches below are *expected* to
+// fail for a few seconds -- the socket closes while the process is restarting.
+async function restartServer(note) {
+  note.className = 'set-note';
+  note.textContent = 'restarting to apply…';
+  let r;
+  try {
+    r = await (await fetch('/api/restart', {method: 'POST'})).json();
+  } catch (e) {
+    r = {error: 'could not reach the server.'};
+  }
+  if (r.error) {
+    // the save itself still happened -- say so, or this reads as a lost edit
+    note.className = 'set-note error';
+    note.textContent = r.error
+      + ' Your change is saved in .env; restart the journal to apply it.';
+    return;
+  }
+  for (let i = 0; i < 90; i++) {
+    await new Promise(done => setTimeout(done, 700));
+    try {
+      if ((await fetch('/api/status', {cache: 'no-store'})).ok) {
+        location.reload();
+        return;
+      }
+    } catch (e) { }   // still down, keep waiting
+  }
+  note.className = 'set-note error';
+  note.textContent = 'saved, but the journal did not come back — '
+    + 'start it again the way you normally do.';
+}
+
 async function save() {
   if (!loaded) return;
   const btn = $('settings-save');
@@ -171,11 +205,10 @@ async function save() {
   }
   $('set-key').value = '';
   // reload first: loadSettings() ends by clearing the note, so setting it
-  // beforehand would wipe the only confirmation the author ever sees
+  // beforehand would wipe the only confirmation the author ever sees. It
+  // also leaves the pending markers on screen if the restart is refused.
   await loadSettings();
-  note.className = 'set-note ok';
-  // the process loaded .env at start, so nothing here is live yet
-  note.textContent = 'saved to .env — restart the journal for it to take effect.';
+  await restartServer(note);
 }
 
 export function init() {

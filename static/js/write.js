@@ -92,7 +92,7 @@ export async function loadWriteLog() {
     }
     const r = await (await fetch('/api/sessions/current')).json();
     for (const p of r.parts) renderSessionPart(el, p, true);
-    addSessionBraid(el, r.messages);
+    addSessionBraid(el, r.messages, null, true);
     el.scrollTop = el.scrollHeight;
   } catch (e) { }
 }
