@@ -267,6 +267,104 @@ def test_a_saved_value_comes_back_from_get_before_any_restart(env, client):
     assert body["active"]["MC_DATE_FORMAT"] == before
 
 
+# ---- models & cost ----
+
+def test_the_three_model_maps_cover_the_same_models(env):
+    """Effort levels, thinking support, labels and prices are four separate
+    dicts keyed by model id. A model added to one and missed in another is a
+    picker with no price, or a call that sends a parameter the model rejects."""
+    import config
+    models = set(config.MODEL_EFFORT_LEVELS)
+    assert set(config.MODEL_THINKING_SUPPORT) == models
+    assert set(config.MODEL_LABELS) == models
+    assert set(config.MODEL_PRICES) == models
+    for m, price in config.MODEL_PRICES.items():
+        assert price["in"] > 0 and price["out"] > 0, m
+
+
+def test_get_offers_the_full_lineup_to_both_pickers(env, client):
+    """Neither bucket restricts the options (Phase 0 item 6) -- the companion
+    and processing pickers read the same list and differ only in their copy."""
+    import config
+    body = client.get("/api/settings").json()
+    models = body["options"]["models"]
+    assert [m["value"] for m in models] == list(config.MODEL_EFFORT_LEVELS)
+    for m in models:
+        assert m["label"] and m["price"]["in"] > 0
+    # the effort list travels with each model, so the picker can repopulate
+    # without a second request -- and empty is meaningful, not missing
+    haiku = next(m for m in models if m["value"] == "claude-haiku-4-5")
+    assert haiku["efforts"] == [] and haiku["thinking"] is False
+
+
+def test_get_reports_the_model_settings_as_file_and_process(env, client):
+    body = client.get("/api/settings").json()
+    for key in ("MC_COMPANION_MODEL", "MC_COMPANION_EFFORT", "MC_PROCESSING_MODEL"):
+        assert key in body["values"] and key in body["active"]
+
+
+def test_a_model_and_its_effort_save_together(env, client):
+    """The picker sends both when a model change invalidates the effort.
+    Validation has to judge the effort against the model *in the same save*,
+    not the one already on disk, or a legal pair is rejected."""
+    ok = client.post("/api/settings", json={"values": {
+        "MC_COMPANION_MODEL": "claude-opus-4-7",
+        "MC_COMPANION_EFFORT": "xhigh",          # 4.7 has it, 4.6 does not
+    }})
+    assert ok.status_code == 200
+    stored = env_file.read_env()
+    assert stored["MC_COMPANION_MODEL"] == "claude-opus-4-7"
+    assert stored["MC_COMPANION_EFFORT"] == "xhigh"
+
+
+def test_the_stored_model_can_also_widen_what_effort_is_allowed(env, client):
+    """The other direction of test_effort_is_validated_against_the_stored_model
+    above, and the reason both exist: that one proves a stored model can
+    *refuse* an effort, which a validator that rejected everything would also
+    pass. This proves it can permit one the running model would not."""
+    client.post("/api/settings",
+                json={"values": {"MC_COMPANION_MODEL": "claude-opus-4-7"}})
+    # xhigh is invalid for the default 4.6 the process is still running on,
+    # and valid for the 4.7 now in .env. The file is what counts.
+    r = client.post("/api/settings", json={"values": {"MC_COMPANION_EFFORT": "xhigh"}})
+    assert r.status_code == 200
+    assert env_file.read_env()["MC_COMPANION_EFFORT"] == "xhigh"
+
+
+def test_spend_caps_are_stored_but_reported_as_unenforced(env, client):
+    """Nothing checks them before a call yet. The UI needs to know that, or it
+    shows a ceiling the author believes is protecting them."""
+    body = client.get("/api/settings").json()
+    assert body["spend_caps_enforced"] is False
+    assert body["values"]["MC_MAX_SESSION_TOKENS"] == ""
+    # ...and they are not in `active`: there is no running value to disagree
+    assert "MC_MAX_SESSION_TOKENS" not in body["active"]
+
+    assert client.post("/api/settings", json={
+        "values": {"MC_MAX_MONTHLY_SPEND": "20"}}).status_code == 200
+    assert env_file.read_env()["MC_MAX_MONTHLY_SPEND"] == "20"
+
+    # ...and GET hands it back, which is what the Settings pane keys on to
+    # warn that an existing cap in .env is stored but not protecting anyone.
+    # Without this the only reader who needs telling is the one told nothing.
+    after = client.get("/api/settings").json()
+    assert after["values"]["MC_MAX_MONTHLY_SPEND"] == "20"
+    assert after["spend_caps_enforced"] is False
+
+
+def test_a_negative_spend_cap_is_refused(env, client):
+    r = client.post("/api/settings", json={"values": {"MC_MAX_SESSION_TOKENS": "-1"}})
+    assert r.status_code == 400
+    assert "MC_MAX_SESSION_TOKENS" not in env_file.read_env()
+
+
+def test_an_unknown_model_is_refused(env, client):
+    r = client.post("/api/settings",
+                    json={"values": {"MC_PROCESSING_MODEL": "claude-imaginary-9"}})
+    assert r.status_code == 400
+    assert "MC_PROCESSING_MODEL" not in env_file.read_env()
+
+
 # ---- restart ----
 
 def test_restart_refuses_when_it_cannot_actually_restart(env, client):

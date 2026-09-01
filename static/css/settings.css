@@ -40,6 +40,16 @@
   }
   .set-warn { color: var(--accent); font-size: .8rem; margin-top: .4rem; max-width: 34rem; }
 
+  /* Models & cost: closed on load. Someone opening Settings for the date
+     format should not be met with model ids and dollar figures. */
+  #set-models summary {
+    cursor: pointer; color: var(--text); font-size: .9rem;
+    padding: .5rem 0; list-style-position: outside;
+  }
+  #set-models summary:hover { color: var(--accent); }
+  #set-models[open] summary { color: var(--accent); margin-bottom: .8rem; }
+  .set-disclosure-body { padding-left: .2rem; }
+
   #settings-actions { display: flex; align-items: center; gap: 1rem; }
   .set-note { font-size: .85rem; color: var(--text-dim); }
   .set-note.ok { color: var(--accent); }

@@ -510,9 +510,18 @@ def get_settings():
         "MC_DATE_FORMAT": config.DATE_FORMAT,
         "MC_TIMEZONE": config.TIMEZONE,
         "MC_LANGUAGE": config.LANGUAGE,
+        "MC_COMPANION_MODEL": config.MC_COMPANION_MODEL,
+        "MC_COMPANION_EFFORT": config.MC_COMPANION_EFFORT,
+        "MC_PROCESSING_MODEL": config.MC_PROCESSING_MODEL,
     }
+    # Deliberately not in `active`: nothing in the process reads the spend
+    # caps yet (Phase 2 item 10 is what will enforce them), so there is no
+    # running value for the file to disagree with. Reporting one would let
+    # the UI claim a cap is in effect when nothing checks it.
+    caps = {k: stored.get(k, "")
+            for k in ("MC_MAX_SESSION_TOKENS", "MC_MAX_MONTHLY_SPEND")}
     return {
-        "values": {k: stored.get(k, v) for k, v in active.items()},
+        "values": {**{k: stored.get(k, v) for k, v in active.items()}, **caps},
         "active": active,
         "options": {
             "date_formats": [
@@ -523,7 +532,22 @@ def get_settings():
             "timezones": zones,
             "languages": [{"value": v, "label": l}
                           for v, l in config.LANGUAGES.items()],
+            # One lineup, both pickers -- nothing is restricted by bucket.
+            # `efforts` travels with each model so the effort picker can
+            # repopulate from the selection without a second round trip, and
+            # an empty list is meaningful: that model takes no effort at all.
+            "models": [
+                {"value": m,
+                 "label": config.MODEL_LABELS.get(m, m),
+                 "efforts": efforts,
+                 "price": config.MODEL_PRICES.get(m),
+                 "thinking": config.MODEL_THINKING_SUPPORT.get(m, True)}
+                for m, efforts in config.MODEL_EFFORT_LEVELS.items()
+            ],
         },
+        # The caps are configurable before anything reads them, so the UI has
+        # to be able to say so rather than implying protection it hasn't got.
+        "spend_caps_enforced": False,
         # what the clock is actually doing, which is not always what
         # MC_TIMEZONE says — see config.zone_name
         "resolved_timezone": zone_name(),

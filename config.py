@@ -49,6 +49,33 @@ MODEL_EFFORT_LEVELS = {
     "claude-haiku-4-5": [],
 }
 
+# Model -> the name a person recognizes. The API ids are what get written
+# to .env; these are what the pickers show.
+MODEL_LABELS = {
+    "claude-opus-4-6": "Opus 4.6",
+    "claude-opus-4-7": "Opus 4.7",
+    "claude-opus-4-8": "Opus 4.8",
+    "claude-opus-5": "Opus 5",
+    "claude-sonnet-5": "Sonnet 5",
+    "claude-haiku-4-5": "Haiku 4.5",
+}
+
+# Model -> USD list price per million tokens, input and output.
+#
+# Display only. Nothing here bills, meters or enforces anything -- these
+# exist so the Settings pickers can show what a choice costs relative to the
+# others, which is the whole point of offering the choice. Anthropic's
+# pricing page is the authority; check these against it when adding a model,
+# and treat a figure here as stale rather than as a quote.
+MODEL_PRICES = {
+    "claude-opus-4-6": {"in": 5.0, "out": 25.0},
+    "claude-opus-4-7": {"in": 5.0, "out": 25.0},
+    "claude-opus-4-8": {"in": 5.0, "out": 25.0},
+    "claude-opus-5": {"in": 5.0, "out": 25.0},
+    "claude-sonnet-5": {"in": 3.0, "out": 15.0},
+    "claude-haiku-4-5": {"in": 1.0, "out": 5.0},
+}
+
 # Model -> whether the `thinking` parameter is supported at all. Where
 # it's supported, Opus 4.6/4.7/4.8 default to *off* when the parameter is
 # omitted; Sonnet 5 and Opus 5 default to *adaptive* when omitted. Haiku
