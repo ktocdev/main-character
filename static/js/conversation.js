@@ -15,7 +15,18 @@ export async function streamInto(el, url, payload) {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload),
   });
-  if (!res.ok) { el.classList.remove('thinking'); el.textContent = 'error: ' + (await res.text()); return res; }
+  if (!res.ok) {
+    el.classList.remove('thinking');
+    // Every route answers with {"error": ...}. Printing the raw body was fine
+    // while errors meant something had broken; a spend cap is the first
+    // refusal an author meets in normal use, and reading it as JSON turns
+    // "you are at your monthly ceiling" back into a crash.
+    const body = await res.text();
+    let message = body;
+    try { message = JSON.parse(body).error || body; } catch (e) { /* not JSON */ }
+    el.textContent = 'error: ' + message;
+    return res;
+  }
   // headers arrive before the model has produced anything, so keep the
   // thinking pulse until the first real token — that's the actual wait
   const reader = res.body.getReader();

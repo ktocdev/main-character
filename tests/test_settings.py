@@ -331,31 +331,33 @@ def test_the_stored_model_can_also_widen_what_effort_is_allowed(env, client):
     assert env_file.read_env()["MC_COMPANION_EFFORT"] == "xhigh"
 
 
-def test_spend_caps_are_stored_but_reported_as_unenforced(env, client):
-    """Nothing checks them before a call yet. The UI needs to know that, or it
-    shows a ceiling the author believes is protecting them."""
+def test_spend_caps_round_trip_through_the_file(env, client):
+    """These were stored-but-unenforced for the whole of item 7; `caps.py`
+    reads them now, and `tests/test_caps.py` covers the enforcing. What is
+    still this module's business is the file: a cap that does not survive the
+    save is a ceiling the author believes they set."""
     body = client.get("/api/settings").json()
-    assert body["spend_caps_enforced"] is False
-    assert body["values"]["MC_MAX_SESSION_TOKENS"] == ""
-    # ...and they are not in `active`: there is no running value to disagree
-    assert "MC_MAX_SESSION_TOKENS" not in body["active"]
+    assert body["spend_caps_enforced"] is True
+    assert body["values"]["MC_MAX_SESSION_SPEND"] == ""
+    # ...and they are not in `active`: that dict is what *this process*
+    # loaded at import, and the caps are read live from config on each check
+    assert "MC_MAX_SESSION_SPEND" not in body["active"]
 
     assert client.post("/api/settings", json={
         "values": {"MC_MAX_MONTHLY_SPEND": "20"}}).status_code == 200
     assert env_file.read_env()["MC_MAX_MONTHLY_SPEND"] == "20"
 
-    # ...and GET hands it back, which is what the Settings pane keys on to
-    # warn that an existing cap in .env is stored but not protecting anyone.
-    # Without this the only reader who needs telling is the one told nothing.
+    # ...and GET hands it back, which is what the Settings pane fills its
+    # inputs from. A saved cap that came back blank would read as unset, and
+    # the next save would clear it.
     after = client.get("/api/settings").json()
     assert after["values"]["MC_MAX_MONTHLY_SPEND"] == "20"
-    assert after["spend_caps_enforced"] is False
 
 
 def test_a_negative_spend_cap_is_refused(env, client):
-    r = client.post("/api/settings", json={"values": {"MC_MAX_SESSION_TOKENS": "-1"}})
+    r = client.post("/api/settings", json={"values": {"MC_MAX_SESSION_SPEND": "-1"}})
     assert r.status_code == 400
-    assert "MC_MAX_SESSION_TOKENS" not in env_file.read_env()
+    assert "MC_MAX_SESSION_SPEND" not in env_file.read_env()
 
 
 def test_an_unknown_model_is_refused(env, client):

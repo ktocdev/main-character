@@ -6,11 +6,16 @@ client returned by `config.get_client()` so that block is read on the way
 back out, added to a running per-session total, and priced against
 `config.MODEL_PRICES`. Nothing here changes a request.
 
+It does now *refuse* some: the proxy asks `caps.check()` before each call, so
+a spend ceiling cannot be bypassed by a call site for the same reason a call
+cannot go uncounted. The check lives here rather than in a second wrapper
+because another layer would add another frame to every call, and the frame
+stack is what decides which bucket a call belongs to (see `_bucket`).
+
 The accumulator is process-global and resets on restart, which is the right
 lifetime for the question it answers -- "what has this session cost me?" --
-and the wrong one for a monthly budget. Phase 2 item 10's
-`MC_MAX_MONTHLY_SPEND` needs its own store that survives restarts; this is
-deliberately not it.
+and the wrong one for a monthly budget. `caps.py` keeps that one in a file,
+and is handed each call's dollars from `record()` below.
 
 Three things are worth knowing before trusting the number:
 
@@ -22,11 +27,11 @@ Three things are worth knowing before trusting the number:
     marks its system prompt `cache_control: ephemeral`, so a total that
     ignored the cache fields would overcharge every turn after the first by
     roughly ten times on the cached portion.
-  - **A call is counted after it returns.** Nothing here can stop one, and a
-    call that raises is never counted -- though the tokens were still spent.
-    So the total is a floor under real spend, never a ceiling. That is also
-    why this cannot be the whole of a spend cap (item 10): a cap has to
-    compare *before* a call, and this only knows *after*.
+  - **A call is counted after it returns**, and a call that raises is never
+    counted though the tokens were still spent. So the total is a floor under
+    real spend, never a ceiling -- which is also why a cap can only ever be
+    compared against what is *already* spent, and why the call that crosses
+    a ceiling completes while the next one is refused.
 """
 
 import inspect
@@ -99,14 +104,20 @@ def read_usage(raw) -> dict:
 
 
 def record(bucket: str, model: str, raw) -> None:
+    import caps
     if raw is None:
         return
     usage = read_usage(raw)
+    dollars = price(model, usage)
     target = SESSION[bucket]
     target["calls"] += 1
     for field, value in usage.items():
         target[field] += value
-    target["dollars"] += price(model, usage)
+    target["dollars"] += dollars
+    # The monthly ledger is fed from here rather than from the call sites:
+    # every counted call is a spent call, and the two must never disagree
+    # about what happened.
+    caps.record_spend(dollars)
 
 
 def totals() -> dict:
@@ -189,6 +200,8 @@ class _MeteredMessages:
         self._skip = skip
 
     def create(self, **kwargs):
+        import caps
+        caps.check()
         # The bucket is read before the call, while the caller's frame is
         # still on the stack -- after it returns, it still is, but reading it
         # first keeps the two paths (create and stream) identical.
@@ -198,6 +211,8 @@ class _MeteredMessages:
         return response
 
     def stream(self, **kwargs):
+        import caps
+        caps.check()
         return _MeteredStream(self._inner.stream(**kwargs),
                               _bucket(self._skip), kwargs.get("model", ""))
 

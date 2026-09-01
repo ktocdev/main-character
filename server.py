@@ -32,8 +32,10 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import caps
 import categories
 import companion
+import config
 import entities
 import metering
 import sessions
@@ -221,8 +223,45 @@ def status():
     }
 
 
+# ---------------------------------------------------------------------------
+# SPEND GUARDS
+# ---------------------------------------------------------------------------
+# `caps.check()` runs inside the client proxy, so no call site can slip past
+# it. These add a second check at the top of the routes that stream, for one
+# reason: a StreamingResponse has already sent its status line by the time its
+# generator runs, so a refusal raised in there arrives as a 200 that stops
+# mid-sentence. Checking first is what turns it into a 429 the page can read.
+
+
+def _refused(exc) -> JSONResponse:
+    return JSONResponse({"error": exc.detail}, status_code=429)
+
+
+def _too_long(text: str):
+    """A 413 for input past config.MAX_INPUT_CHARS, or None.
+
+    Refusing beats truncating: an entry silently cut in half is writing the
+    author believes is saved and will not read again until it matters.
+    """
+    if len(text) <= config.MAX_INPUT_CHARS:
+        return None
+    return JSONResponse(
+        {"error": f"that is {len(text):,} characters, past the "
+                  f"{config.MAX_INPUT_CHARS:,} this journal accepts in one "
+                  f"go. Nothing was saved -- split it and send it in pieces."},
+        status_code=413)
+
+
 @app.post("/api/chat")
 def chat(body: ChatIn):
+    oversize = _too_long(body.message)
+    if oversize:
+        return oversize
+    try:
+        caps.check()
+    except caps.CapExceeded as exc:
+        return _refused(exc)
+
     def gen():
         sessions.append_message("you", body.message, collection=STATE["collection"])
         yield from companion.stream_reply(
@@ -242,6 +281,14 @@ def lookup(body: ChatIn):
     """The chat screen: pull information out of the journal. Its own
     conversation, separate from the journal companion — lookups never
     join the open session and never become journal memory."""
+    oversize = _too_long(body.message)
+    if oversize:
+        return oversize
+    try:
+        caps.check()
+    except caps.CapExceeded as exc:
+        return _refused(exc)
+
     def gen():
         yield from companion.stream_reply(
             STATE["client"], STATE["collection"], STATE["entity_index"],
@@ -289,6 +336,17 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
     text = body.text.strip()
     if not text:
         return JSONResponse({"error": "empty entry"}, status_code=400)
+    oversize = _too_long(text)
+    if oversize:
+        return oversize
+    # Before anything is written. Saving the entry and then refusing the reply
+    # would leave the journal holding an entry the author was told failed --
+    # and the composer restores the draft on failure, so refusing here loses
+    # nothing.
+    try:
+        caps.check()
+    except caps.CapExceeded as exc:
+        return _refused(exc)
 
     when = parse_stamp(body.ts) if body.ts else None
 
@@ -359,6 +417,11 @@ def extract_dreams(body: CategoryBuildIn):
 @app.post("/api/reflect")
 def reflect():
     """The companion opens the conversation: connects dots across time."""
+    try:
+        caps.check()
+    except caps.CapExceeded as exc:
+        return _refused(exc)
+
     def gen():
         yield from companion.stream_reflection(
             STATE["client"], STATE["collection"], STATE["entity_index"],
@@ -516,7 +579,7 @@ def cost():
 SETTINGS_KEYS = {
     "MC_DATE_FORMAT", "MC_TIMEZONE", "MC_LANGUAGE",
     "MC_COMPANION_MODEL", "MC_COMPANION_EFFORT", "MC_PROCESSING_MODEL",
-    "MC_MAX_SESSION_TOKENS", "MC_MAX_MONTHLY_SPEND",
+    "MC_MAX_SESSION_SPEND", "MC_MAX_MONTHLY_SPEND",
     "ANTHROPIC_API_KEY",
 }
 
@@ -565,10 +628,18 @@ def get_settings():
     # caps yet (Phase 2 item 10 is what will enforce them), so there is no
     # running value for the file to disagree with. Reporting one would let
     # the UI claim a cap is in effect when nothing checks it.
-    caps = {k: stored.get(k, "")
-            for k in ("MC_MAX_SESSION_TOKENS", "MC_MAX_MONTHLY_SPEND")}
+    # not `caps`: that name is the module holding the ceilings themselves,
+    # and shadowing it here cost six tests one afternoon
+    cap_values = {k: stored.get(k, "")
+                  for k in ("MC_MAX_SESSION_SPEND", "MC_MAX_MONTHLY_SPEND",
+                            # retired: it was a token count, and nothing reads
+                            # it now. Returned so the pane can say so -- a key
+                            # sitting in .env doing nothing is exactly how
+                            # someone ends up believing they have a ceiling.
+                            "MC_MAX_SESSION_TOKENS")}
     return {
-        "values": {**{k: stored.get(k, v) for k, v in active.items()}, **caps},
+        "values": {**{k: stored.get(k, v) for k, v in active.items()},
+                   **cap_values},
         "active": active,
         "options": {
             "date_formats": [
@@ -592,9 +663,13 @@ def get_settings():
                 for m, efforts in config.MODEL_EFFORT_LEVELS.items()
             ],
         },
-        # The caps are configurable before anything reads them, so the UI has
-        # to be able to say so rather than implying protection it hasn't got.
-        "spend_caps_enforced": False,
+        # Both ceilings, what has been used against them, and the fact that
+        # something is now checking. The UI reads `enforced` rather than
+        # assuming: it was False for the whole of item 7, and a pane that
+        # claims protection it hasn't got is the failure this key exists to
+        # prevent.
+        "spend_caps_enforced": True,
+        "caps": caps.status(),
         # what the clock is actually doing, which is not always what
         # MC_TIMEZONE says — see config.zone_name
         "resolved_timezone": zone_name(),
@@ -656,7 +731,7 @@ def _validate_settings(values: dict) -> dict[str, str]:
                 raise ValueError(
                     f"{model} does not take effort '{value}'"
                     + (f" (try: {', '.join(allowed)})" if allowed else ""))
-        if key in ("MC_MAX_SESSION_TOKENS", "MC_MAX_MONTHLY_SPEND") and value:
+        if key in ("MC_MAX_SESSION_SPEND", "MC_MAX_MONTHLY_SPEND") and value:
             try:
                 if float(value) < 0:
                     raise ValueError

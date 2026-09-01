@@ -95,12 +95,15 @@ Set `MC_MOCK=1` in `.env` and start the server as above. No key is needed — th
 Mock mode swaps the model, not the storage: everything you write still lands in the real `journal_entries/`, `chroma_data/`, and `entity_graph/`. There's no reset button — clearing out is the same job it is in real mode.
 
 ### Notes
-- **API costs** — browsing and searching are free (local embeddings, no API calls). Chat, writes, reflection, extraction, and tagging call Claude.
+- **API costs** — browsing and searching are free (local embeddings, no API calls). Chat, writes, reflection, extraction, and tagging call Claude. Settings → Models & cost shows a running estimate, split between the companion and background work.
+- **Spend caps** — two ceilings, in the same place: dollars per session and dollars per calendar month (`MC_MAX_SESSION_SPEND`, `MC_MAX_MONTHLY_SPEND`; blank uses the default, 0 turns one off). They are runaway detectors rather than budgets, so the defaults sit above a heavy month of ordinary writing. Both are checked *before* each call against what has already been spent, which means the call that crosses a line finishes and the next one is refused. The monthly total lives in `spend_ledger.json`.
+- **The backstop is not this app** — every figure here is an estimate from a hand-maintained list-price table, and the caps are only as right as the code enforcing them. Set a spend limit on your [Anthropic Console](https://console.anthropic.com/settings/limits) account: it is the one ceiling that holds if this one is wrong.
 - **Data storage** — everything lives locally:
   - `chroma_data/` — vector store (ChromaDB)
   - `journal_entries/` — markdown backups of entries and dreams
   - `entity_graph/` — extracted entities, profiles, aliases, groups, and curation history
   - `categories/`, `patterns/`, `dreams/`, `sessions/` — personal data (gitignored)
+  - `spend_ledger.json` — estimated spend per calendar month, for the monthly cap (gitignored)
 - **Stopping** — `Ctrl+C` in the terminal running `server.py`
 - **Port stuck** — if you can't restart: `Get-NetTCPConnection -LocalPort 8144 -State Listen | Stop-Process -Force`
 

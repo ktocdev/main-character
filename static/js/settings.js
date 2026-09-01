@@ -45,6 +45,70 @@ function lockUnshowable(sel, controlId, stored, describe) {
   $(controlId).appendChild(p);
 }
 
+// What an empty box will actually do. Three different answers, and saying the
+// wrong one is how someone ends up believing they have a ceiling they don't:
+//
+//   - no `caps` block at all -- this journal predates the enforcement and is
+//     running code that reads none of these. Not "no limit": that would
+//     describe a setting, when what is true is that nothing is checking.
+//   - a default of 0 -- blank really does mean no ceiling, and "0 turns it
+//     off" is then a distinction without a difference, so it isn't offered.
+//   - a real default -- name the figure. "Blank uses the default" without it
+//     sends the reader to config.py to find out what they just agreed to.
+function capHelp(live) {
+  if (!live || live.limit === undefined) {
+    return 'This journal has not said what it is enforcing — it is '
+      + 'running a build from before the spend caps. Restart it.';
+  }
+  if (!live.default) return 'Leave it blank for no ceiling at all.';
+  return 'Blank uses the default, ' + money(live.default) + '. 0 turns it off.';
+}
+
+// A cap input. Blank is meaningful here and means "use the default", so the
+// placeholder has to name that default -- an empty box next to the words
+// "stop after" otherwise reads as no ceiling at all, which is the one thing
+// this pane must never imply while a ceiling is in force.
+function capField(id, key, values, live, fmt) {
+  const box = $(id + '-control');
+  if (!box) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = id;
+  input.value = values[key] || '';
+  input.autocomplete = 'off';
+  // The *default*, not the limit in force: this is what the box would mean if
+  // left empty, and the limit in force is already spelled out below. Blank
+  // when the journal hasn't said -- an invented "no limit" there would be the
+  // page answering a question it was never told the answer to.
+  input.placeholder = !live || live.limit === undefined ? ''
+    : live.default ? 'default: ' + fmt(live.default) : 'no limit';
+  box.appendChild(input);
+
+  // The process read its ceilings at import, same as every other setting.
+  // Comparing the file against what is actually in force is the only way to
+  // tell a saved cap from a live one -- and a saved-but-not-live cap is
+  // precisely the state someone believes they are protected in.
+  const stored = (values[key] || '').trim();
+  if (stored && live && Number(stored) !== Number(live.limit)) {
+    const p = document.createElement('p');
+    p.className = 'set-warn';
+    p.textContent = 'Saved. This journal is still stopping at '
+      + (live.limit ? fmt(live.limit) : 'nothing') + ' until you restart it.';
+    box.parentElement.appendChild(p);
+  }
+}
+
+// "used of limit" for one ceiling, or "used, no limit set".
+const money = n => '$' + Number(n).toFixed(2);
+
+function usedLine(label, cap, fmt) {
+  const p = document.createElement('p');
+  p.className = 'set-help';
+  p.textContent = label + ': ' + fmt(cap.used)
+    + (cap.limit ? ' of ' + fmt(cap.limit) : ' \u2014 no limit set');
+  return p;
+}
+
 export async function loadSettings() {
   const body = $('settings-body');
   body.textContent = 'loading…';
@@ -82,28 +146,30 @@ export async function loadSettings() {
     </section>
     <section class="set-group">
       <h3>Models &amp; cost</h3>
-      <details id="set-models">
-        <summary>Which models this journal uses, and what they cost</summary>
-        <div class="set-disclosure-body">
-          ${fieldRow('set-companion-model', 'Companion model',
-            'The voice you write to. This is the one place model quality is '
-            + 'felt directly, so it is worth spending more here than anywhere '
-            + 'else.')}
-          ${fieldRow('set-companion-effort', 'Companion effort',
-            'How hard the companion thinks before answering. Higher is slower '
-            + 'and costs more. The choices come from the model above &mdash; '
-            + 'not every model offers the same ones.')}
-          ${fieldRow('set-processing-model', 'Processing model',
-            'Everything that happens in the background: tagging, entities, '
-            + 'summaries, arcs, patterns, dreams. It runs in bulk and is where '
-            + 'most of the spend goes, so it is the useful place to trade down.')}
-          <div class="set-row" id="set-caps-control"></div>
-          <div class="set-row">
-            <label>Session cost</label>
-            <div class="set-control" id="set-cost-control"></div>
-          </div>
-        </div>
-      </details>
+      ${fieldRow('set-companion-model', 'Companion model',
+        'The voice you write to. This is the one place model quality is '
+        + 'felt directly, so it is worth spending more here than anywhere '
+        + 'else.')}
+      ${fieldRow('set-companion-effort', 'Companion effort',
+        'How hard the companion thinks before answering. Higher is slower '
+        + 'and costs more. The choices come from the model above &mdash; '
+        + 'not every model offers the same ones.')}
+      ${fieldRow('set-processing-model', 'Processing model',
+        'Everything that happens in the background: tagging, entities, '
+        + 'summaries, arcs, patterns, dreams. It runs in bulk and is where '
+        + 'most of the spend goes, so it is the useful place to trade down.')}
+      ${fieldRow('set-max-session', 'Stop after (dollars per session)',
+        'A ceiling on one session, counted from when the journal last '
+        + 'started and cleared when you close a chat. '
+        + capHelp((s.caps || {}).session))}
+      ${fieldRow('set-max-spend', 'Stop after (dollars per month)',
+        'A ceiling on the calendar month, kept in a small file so it '
+        + 'survives restarts. ' + capHelp((s.caps || {}).monthly))}
+      <div class="set-row" id="set-caps-control"></div>
+      <div class="set-row">
+        <label>Session cost</label>
+        <div class="set-control" id="set-cost-control"></div>
+      </div>
     </section>
     <section class="set-group">
       <h3>API key</h3>
@@ -284,35 +350,60 @@ export async function loadSettings() {
   // to think their cap is working, and this is the only place that can tell
   // them otherwise. So: say what is true always, and name the stale values
   // only when they exist.
-  // Re-read on every open rather than once: the figure moves while the
-  // pane is shut, and a stale number here is worse than a slow one.
-  const models = $('set-models');
-  if (models) models.addEventListener('toggle', () => {
-    if (models.open) renderCost();
-  });
+  // Rendered with the rest of the section rather than on a disclosure's
+  // first open. The figure is a snapshot of the moment the pane was loaded --
+  // there is nothing to subscribe to, since it only moves when a call the
+  // author just triggered comes back, and a number that ticks on its own in a
+  // settings pane invites watching it. Reopening Settings re-reads it.
+  renderCost();
+
+  capField('set-max-session', 'MC_MAX_SESSION_SPEND', v,
+           (s.caps || {}).session, money);
+  capField('set-max-spend', 'MC_MAX_MONTHLY_SPEND', v,
+           (s.caps || {}).monthly, money);
 
   const caps = $('set-caps-control');
   if (!s.spend_caps_enforced) {
+    // A server older than the enforcement stores these and reads none of
+    // them. Saying so is the whole point of the flag: a pane that showed the
+    // fields without this would be claiming a ceiling that does not exist.
     const note = document.createElement('p');
-    note.className = 'set-help';
-    note.textContent = 'Nothing limits what this journal can spend. Until '
-      + 'spend caps are built, the backstop that does not depend on this app '
-      + 'being correct is a spend limit on your Anthropic Console account.';
+    note.className = 'set-warn';
+    note.textContent = 'This journal stores these but nothing checks them '
+      + '\u2014 it is running a build from before the caps were enforced. '
+      + 'Restart it to pick up the new one.';
     caps.appendChild(note);
-
-    const set = [['MC_MAX_SESSION_TOKENS', 'tokens per session'],
-                 ['MC_MAX_MONTHLY_SPEND', 'dollars per month']]
-      .filter(([key]) => v[key]);
-    if (set.length) {
-      const warn = document.createElement('p');
-      warn.className = 'set-warn';
-      warn.textContent = 'Your .env already sets '
-        + set.map(([key, label]) => v[key] + ' ' + label).join(' and ')
-        + ' \u2014 stored, but not read by anything yet. It will start '
-        + 'applying when caps are enforced; it is not protecting you now.';
-      caps.appendChild(warn);
+  } else {
+    caps.appendChild(usedLine('This session', s.caps.session, money));
+    caps.appendChild(usedLine('This month (' + s.caps.monthly.month + ')',
+                              s.caps.monthly, money));
+    if (v.MC_MAX_SESSION_TOKENS) {
+      // It was a token count, briefly, and nothing reads it now. Silence here
+      // would leave a line in .env that looks exactly like a cap.
+      const dead = document.createElement('p');
+      dead.className = 'set-warn';
+      dead.textContent = 'Your .env still sets MC_MAX_SESSION_TOKENS. That '
+        + 'setting was replaced by the dollar figure above and is ignored \u2014 '
+        + 'delete the line so it stops looking like a ceiling.';
+      caps.appendChild(dead);
+    }
+    if (!s.caps.monthly.recording) {
+      const mock = document.createElement('p');
+      mock.className = 'set-warn';
+      mock.textContent = 'Mock mode: the month\u2019s figure is whatever real '
+        + 'use last recorded. Nothing spent here reaches it, because none of '
+        + 'it is real.';
+      caps.appendChild(mock);
     }
   }
+
+  const backstop = document.createElement('p');
+  backstop.className = 'set-help';
+  backstop.textContent = 'These are estimates from list prices, checked '
+    + 'before each call \u2014 so the call that crosses a line finishes, and '
+    + 'the next one is refused. The backstop that does not depend on this app '
+    + 'being right is a spend limit on your Anthropic Console account.';
+  caps.appendChild(backstop);
 
   $('settings-save').disabled = false;
   $('settings-note').textContent = '';
@@ -461,6 +552,8 @@ async function save() {
     ['MC_COMPANION_MODEL', 'set-companion-model'],
     ['MC_COMPANION_EFFORT', 'set-companion-effort'],
     ['MC_PROCESSING_MODEL', 'set-processing-model'],
+    ['MC_MAX_SESSION_SPEND', 'set-max-session'],
+    ['MC_MAX_MONTHLY_SPEND', 'set-max-spend'],
   ];
   for (const [key, id] of pairs) {
     const el = $(id);
