@@ -1,0 +1,47 @@
+  /* History (sessions) */
+  #history-pane { flex: 1; display: flex; overflow: hidden; }
+  #session-list { width: 19rem; border-right: 1px solid var(--border); overflow-y: auto; padding: 1rem .8rem; flex-shrink: 0; }
+  .session-item {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    border-radius: 8px; padding: .5rem .6rem; cursor: pointer; color: var(--text);
+    font: .88rem 'CMU Sans Demi Condensed', system-ui, sans-serif; margin-bottom: .15rem;
+  }
+  .session-item:hover, .session-item.sel { background: var(--bg-input); }
+  .session-item .dates { display: block; font-size: .72rem; color: var(--text-dim); margin-top: .1rem; }
+  .session-item.open .dates { color: var(--accent); }
+  .session-item.open .dates::before { content: "● "; }
+  #session-view { flex: 1; overflow-y: auto; padding: 1.5rem; }
+  #session-view-inner { max-width: 46rem; margin: 0 auto; }
+  #session-toc {
+    width: 11rem; border-left: 1px solid var(--border); overflow-y: auto;
+    padding: 1rem .8rem; flex-shrink: 0;
+  }
+  #session-toc:empty { display: none; }
+  #session-toc .toc-head {
+    font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent-dim); margin-bottom: .4rem;
+  }
+  #session-toc .toc-date, #session-toc .toc-sub {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    cursor: pointer; border-radius: 6px; padding: .18rem .4rem;
+    font: .82rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text);
+  }
+  #session-toc .toc-sub { padding-left: 1.2rem; font-size: .72rem; color: var(--text-dim); }
+  #session-toc .toc-date:hover, #session-toc .toc-sub:hover { background: var(--bg-input); color: var(--accent); }
+  @media (max-width: 900px) { #session-toc { display: none; } }
+  .session-head { display: flex; align-items: baseline; gap: .8rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
+  .session-head h2 { font-style: italic; font-weight: normal; font-size: 1.05rem; color: var(--accent); }
+  .session-head .dates { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
+  .session-part-label {
+    font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent-dim); margin: 1.1rem 0 .3rem;
+  }
+  .session-part { white-space: pre-wrap; color: var(--you); margin-bottom: 1.4rem; font-size: .95rem; }
+  /* a carried-forward part is the closed chat this session continues, not
+     something just written into it — set apart so a session with nothing new
+     can't read as one holding a fresh entry */
+  .session-part-label.carried::after { content: ' · closed — carried forward'; }
+  .session-part.carried {
+    border-left: 2px solid var(--border); padding-left: .9rem; color: var(--text-dim);
+  }
+

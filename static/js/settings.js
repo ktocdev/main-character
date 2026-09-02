@@ -222,7 +222,7 @@ export async function loadSettings() {
           offline &mdash; the embeddings are computed on this machine, so
           there is no key and nothing to spend. Slow on a long journal.</p>
       </div>
-      <div class="set-row" id="set-data-note"></div>
+      <div id="set-data-note"></div>
     </section>`;
 
   // date format
@@ -722,15 +722,21 @@ async function runData(btn, label, url, describe) {
   all.forEach(b => { if (b) b.disabled = true; });
   const was = btn.textContent;
   btn.textContent = label;
-  note.className = 'set-row set-help';
+  // Put the answer directly under the button that was pressed. The note used to
+  // sit at the foot of the whole section, so an Export confirmation surfaced
+  // below Backup and Rebuild and read as unrelated help text; moving it here,
+  // and drawing it as a callout (below), ties it to the action that ran.
+  btn.closest('.set-row').append(note);
+  note.className = 'set-feedback working';
   note.textContent = 'working…';
   try {
     const res = await fetch(url, {method: 'POST'});
     const body = await res.json();
     if (!res.ok || body.error) throw new Error(body.error || 'it did not finish');
+    note.className = 'set-feedback ok';
     note.textContent = describe(body);
   } catch (e) {
-    note.className = 'set-row set-warn';
+    note.className = 'set-feedback error';
     note.textContent = 'That did not work — ' + (e.message || e);
   } finally {
     btn.textContent = was;
