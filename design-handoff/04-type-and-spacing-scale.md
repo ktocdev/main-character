@@ -9,13 +9,13 @@ no `--font-size-*` / `--space-*` custom properties, unlike GPS2's
 tokens.css, which formalizes both) and is worth keeping as the record of
 *why* these particular eight-and-eight steps were chosen.
 
-This was formalization, not redesign: every rem value in the app today is
-unchanged, because non-matching values (the long tail described below,
-e.g. `.72rem`, `.92rem`, `.45rem`) were deliberately left as literals
-rather than rounded to the nearest step — rounding them would have been a
-real (if tiny) visual change, which was out of scope for this pass. Radius
-was left alone entirely — it's already a clean de facto scale (see below)
-but wasn't tokenized in the real CSS, only documented as one.
+This was formalization, not redesign: every rem/px value in the app today
+is unchanged, because non-matching values (the long tail described below,
+e.g. `.72rem`, `.92rem`, `.45rem`, and radius's own `4px`/`12px` one-offs)
+were deliberately left as literals rather than rounded to the nearest
+step — rounding them would have been a real (if tiny) visual change, which
+was out of scope for this pass. Radius has since been tokenized too (see
+below) — it was already a clean de facto scale, and is now a named one.
 
 ## Font sizes in use (rem, all `font-size:` or `font:` shorthand declarations)
 
@@ -82,20 +82,23 @@ as scale steps.
 | `--space-7` | 1.2 | 19.2 | header gaps |
 | `--space-8` | 1.5 | 24 | pane outer padding (`padding: 1.5rem` on nearly every tab container), major section margins |
 
-## Radius — already a clean scale, no changes needed
+## Radius — now a named scale too
 
-| Value | Frequency | Where |
-|---|---|---|
-| 4px | 2 | `.set-control select/input`, `#entry-stamp` inputs |
-| 6px | 14 | small interactive elements — chips-as-buttons, list-item hover states, segmented control |
-| 8px | 8 | default component radius — buttons, cards' close cousins, `.quiet` button |
-| 10px | 10 | the primary card/input radius — `button.send`, textareas, `.dream-card`, most raised panels |
-| 12px | 1 | `#triage-card` only — the one "bigger than normal" card |
-| 50% | 2 | circular icon buttons (`.set-info`, `.step-n`) |
-| 999px | 8 | pills/chips |
+| Value | Frequency | Where | Token |
+|---|---|---|---|
+| 4px | 2 | `.set-control select/input`, `#help code` | left as a raw literal — one-off, not part of the named scale |
+| 6px | 14 | small interactive elements — chips-as-buttons, list-item hover states, segmented control | `--radius-sm` |
+| 8px | 8 | default component radius — buttons, cards' close cousins, `.quiet` button | `--radius-base` |
+| 10px | 10 | the primary card/input radius — `button.send`, textareas, `.dream-card`, most raised panels | `--radius-lg` |
+| 12px | 1 | `#triage-card` only — the one "bigger than normal" card | left as a raw literal — deliberately not merged into `--radius-lg` |
+| 50% | 2 | circular icon buttons (`.set-info`, `.step-n`) | `--radius-circle` |
+| 999px | 8 | pills/chips | `--radius-pill` |
 
-This reads as a real 3-tier system already: **6px** (small controls),
+This read as a real 3-tier system already — **6px** (small controls),
 **8–10px** (default components, roughly interchangeable), **pill/circle**
-(chips and icon buttons). Formalize as `--radius-sm: 6px`,
-`--radius-base: 8px`, `--radius-lg: 10px`, `--radius-pill: 999px`,
-`--radius-circle: 50%` — this matches what's already there almost exactly.
+(chips and icon buttons) — and is now wired up in `tokens.css` exactly as
+originally proposed, with the two genuine one-offs (`4px`, `12px`) left
+as literals rather than folded in. See `02-components.md` § Cards for a
+related finding this scale work surfaced: `.set-feedback` uses `6px`
+(`--radius-sm`) while every other card in that family uses `10px` — a real
+inconsistency, not a value this table smoothed over.

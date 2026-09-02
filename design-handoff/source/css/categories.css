@@ -5,7 +5,7 @@
   #cat-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-7); }
   .cat-chip {
     background: var(--bg-input); border: 1px solid var(--border); color: var(--text-dim);
-    border-radius: 999px; padding: .15rem var(--space-5); font: var(--font-sm) var(--font-ui); cursor: pointer;
+    border-radius: var(--radius-pill); padding: .15rem var(--space-5); font: var(--font-sm) var(--font-ui); cursor: pointer;
   }
   .cat-chip.active { border-color: var(--accent); color: var(--accent); }
   .cat-hint { color: var(--text-dim); font-style: italic; }
@@ -19,12 +19,12 @@
     font: var(--font-xs) var(--font-ui); cursor: pointer;
   }
   .cat-full {
-    white-space: pre-wrap; background: var(--bg-input); border-radius: 8px;
+    white-space: pre-wrap; background: var(--bg-input); border-radius: var(--radius-base);
     padding: var(--space-5) var(--space-6); margin-top: var(--space-4); font-size: .9rem;
   }
   .cat-domain {
     background: var(--bg-raised); border: 1px solid var(--border);
-    border-radius: 10px; padding: var(--space-6) var(--space-7); margin-bottom: var(--space-7);
+    border-radius: var(--radius-lg); padding: var(--space-6) var(--space-7); margin-bottom: var(--space-7);
   }
   .cat-domain-title {
     font: var(--font-2xs) var(--font-ui); color: var(--text-dim);
@@ -33,7 +33,7 @@
   .cat-domain-body { white-space: pre-wrap; font-size: .92rem; }
   .cat-chip.custom { border-style: dashed; }
   .cat-proposal {
-    border: 1px dashed var(--accent-dim); border-radius: 10px;
+    border: 1px dashed var(--accent-dim); border-radius: var(--radius-lg);
     padding: var(--space-5) var(--space-6); margin-bottom: var(--space-5); background: var(--bg-raised);
   }
   .cat-proposal b { color: var(--accent); }
@@ -50,7 +50,7 @@
   .custom-cat .cc-meta { font: .78rem var(--font-ui); color: var(--text-dim); font-style: italic; }
   .custom-cat .quiet { padding: .1rem var(--space-3); font-size: var(--font-2xs); }
   .kw-chip {
-    background: var(--bg-input); border: 1px solid var(--border); border-radius: 999px;
+    background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-pill);
     padding: .05rem .55rem; font: var(--font-2xs) var(--font-ui); color: var(--text-dim);
   }
   .kw-chip.member { border-color: var(--accent-dim); color: var(--accent); }
@@ -61,21 +61,21 @@
   .kw-chip button:hover { opacity: 1; }
   .cat-def {
     display: flex; flex-wrap: wrap; gap: .3rem; align-items: center;
-    background: var(--bg-input); border-radius: 8px; padding: var(--space-3) var(--space-5);
+    background: var(--bg-input); border-radius: var(--radius-base); padding: var(--space-3) var(--space-5);
     margin-bottom: var(--space-5); font: .82rem var(--font-ui); color: var(--text-dim);
   }
   .cat-def .lbl { text-transform: uppercase; letter-spacing: .05em; font-size: .72rem; }
   #cat-newform { display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-7); flex-wrap: wrap; }
   #cat-newform input {
     background: var(--bg-input); border: 1px solid var(--border); color: var(--text);
-    border-radius: 6px; padding: .3rem var(--space-4); font: var(--font-sm) var(--font-ui);
+    border-radius: var(--radius-sm); padding: .3rem var(--space-4); font: var(--font-sm) var(--font-ui);
   }
   .cat-summary {
     font-style: italic; color: var(--text-dim);
     border-bottom: 1px solid var(--border); padding-bottom: var(--space-4); margin-bottom: var(--space-4);
   }
   #cat-paused {
-    background: var(--bg-raised); border: 1px dashed var(--accent-dim); border-radius: 10px;
+    background: var(--bg-raised); border: 1px dashed var(--accent-dim); border-radius: var(--radius-lg);
     padding: var(--space-6) var(--space-7); color: var(--text-dim); font: .92rem/1.55 var(--font-ui);
   }
   #cat-paused b { color: var(--accent); }

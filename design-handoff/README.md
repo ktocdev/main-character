@@ -30,9 +30,9 @@ and every component file), not just documented. The reasoning: these are
 mechanical value-aliasing (same colors, same fonts, same sizes, just
 named), not a redesign, so fixing them before Claude Design starts means
 the relic pages reference tokens that actually exist. See `01-tokens.md`
-and `04-type-and-spacing-scale.md` for what changed. Radius was
-deliberately *not* tokenized in the real CSS (still documentation-only)
-and remains a case Claude Design can pick up if it wants one.
+and `04-type-and-spacing-scale.md` for what changed. Radius has since been
+tokenized too (`--radius-sm`/`--radius-base`/`--radius-lg`/`--radius-pill`/
+`--radius-circle`), the same way and for the same reason.
 
 ## Files in this bundle
 
@@ -126,15 +126,24 @@ not the visual style.
 
 ## Known gaps worth flagging to Claude Design
 
-- No `--radius-*` tokens in the real CSS — radius is a clean de facto
-  3-tier system (`6px`/`8–10px`/pill/circle, see
-  `04-type-and-spacing-scale.md`) but was deliberately left untokenized in
-  this pass. Worth naming if Claude Design wants a complete scale set.
+- **The eight card-like components don't actually share enough to merge
+  in code** — border treatment (solid+left-rule / plain / all-round
+  dashed), radius, and padding all vary. See `02-components.md` § Cards
+  for the full comparison table. This needs an actual design decision
+  (one `Card` component, `tone`/`size` props), not a find-and-replace —
+  which is why it's still a gap rather than something fixed alongside the
+  tokens.
+- **`.set-feedback` uses `--radius-sm` (6px) while its seven card
+  siblings all use `--radius-lg` (10px)** — a real inconsistency the
+  original draft of this doc had actually missed (it claimed a blanket
+  "10px–12px" range for the whole group). Worth a deliberate call: keep
+  the smaller radius as a real "this is a compact status callout, not a
+  content card" distinction, or normalize it to `10px`.
 - No dedicated "success" semantic color exists — only `--error` (added in
-  this pass) and `--accent` (doing double duty as the "ok"/positive color
-  in `.set-note.ok` / `.set-feedback.ok`). If new layouts need a real
-  success state distinct from the accent hue, that's new territory, not a
-  gap in the current tokens.
+  the tokens pass) and `--accent` (doing double duty as the "ok"/positive
+  color in `.set-note.ok` / `.set-feedback.ok`). If new layouts need a
+  real success state distinct from the accent hue, that's new territory,
+  not a gap in the current tokens.
 - (Previously listed here: no font-family tokens, no `--error` token, an
-  untokenized fallback color, no named type/spacing scale. All four are
+  untokenized fallback color, no named type/spacing/radius scale. All are
   now fixed in the real codebase — see `01-tokens.md`.)

@@ -5,7 +5,7 @@
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: var(--border); border-radius: 999px;
+    background: var(--border); border-radius: var(--radius-pill);
     border: 2px solid var(--bg); background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover { background-color: var(--accent-dim); }
@@ -25,7 +25,7 @@
   nav button {
     background: none; border: none; color: var(--text-dim);
     font: .9rem var(--font-ui); padding: .35rem var(--space-5);
-    border-radius: 6px; cursor: pointer;
+    border-radius: var(--radius-sm); cursor: pointer;
   }
   nav button.active { background: var(--bg-input); color: var(--text); }
 
@@ -38,7 +38,7 @@
   #cost-panel {
     position: absolute; top: 100%; right: 0; margin-top: .3rem; z-index: 20;
     background: var(--bg-input); border: 1px solid var(--border);
-    border-radius: 6px; padding: var(--space-4) var(--space-5); white-space: nowrap;
+    border-radius: var(--radius-sm); padding: var(--space-4) var(--space-5); white-space: nowrap;
     font: var(--font-sm) var(--font-ui);
   }
   #cost-panel[hidden] { display: none; }

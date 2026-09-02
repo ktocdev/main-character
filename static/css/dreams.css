@@ -5,7 +5,7 @@
   #dream-weather { font-style: italic; color: var(--accent); font-size: .9rem; margin-bottom: var(--space-7); }
   .dream-card {
     border: 1px solid var(--border); border-left: 3px solid var(--accent-dim);
-    border-radius: 10px; background: var(--bg-raised);
+    border-radius: var(--radius-lg); background: var(--bg-raised);
     padding: var(--space-6) var(--space-7); margin-bottom: var(--space-6);
   }
   .dream-card h3 {
@@ -13,7 +13,7 @@
     font-family: var(--font-ui); display: flex; align-items: center; gap: var(--space-2);
   }
   .dream-tone {
-    background: var(--bg-input); border-radius: 999px; padding: .05rem var(--space-4);
+    background: var(--bg-input); border-radius: var(--radius-pill); padding: .05rem var(--space-4);
     font: .72rem var(--font-ui); color: var(--accent);
   }
   .dream-card p { margin: .45rem 0 0; font-size: var(--font-base); }

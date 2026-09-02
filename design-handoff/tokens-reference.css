@@ -68,6 +68,15 @@
   --space-6: 1rem;
   --space-7: 1.2rem;
   --space-8: 1.5rem;  /* standard pane outer padding */
+
+  /* radius — two one-off values stay raw and untokenized on purpose:
+     4px (.set-control select/input, #help code) and 12px (#triage-card,
+     the one card bigger than the norm) */
+  --radius-sm:     6px;
+  --radius-base:   8px;
+  --radius-lg:     10px;  /* dominant radius — buttons, cards, inputs */
+  --radius-pill:   999px;
+  --radius-circle: 50%;
 }
 
 /* Light — applies when the OS prefers light AND no dark pin is set */
@@ -106,20 +115,10 @@
 
 /*
   ── PROPOSED, NOT IN THE REAL CODEBASE ──────────────────────────────────
-  Everything above this line matches the real tokens.css exactly. Radius
-  and motion-duration are documentation-only observations, not real custom
-  properties — see 04-type-and-spacing-scale.md for why radius doesn't need
-  one (it's already a clean de facto scale) and 01-tokens.md "Motion" for
-  the one keyframe.
+  Everything above this line matches the real tokens.css exactly.
+  Motion-duration is a documentation-only observation, not a real custom
+  property — see 01-tokens.md "Motion" for the one keyframe.
 */
 :root {
-  /* radius — already a clean scale in practice, just never named */
-  --radius-sm:     6px;
-  --radius-base:   8px;
-  --radius-lg:     10px;  /* dominant radius — buttons, cards, inputs */
-  --radius-pill:   999px;
-  --radius-circle: 50%;
-
-  /* motion */
   --duration-pulse: 1.6s; /* lamp-pulse: the app's one "something is happening" idiom */
 }

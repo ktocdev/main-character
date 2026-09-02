@@ -2,17 +2,17 @@
   #entities-pane { flex: 1; display: flex; overflow: hidden; }
   #entity-list { width: 21rem; border-right: 1px solid var(--border); overflow-y: auto; padding: var(--space-7); }
   #entity-list .kind { font: var(--font-3xs) var(--font-ui); text-transform: uppercase; letter-spacing: .08em; color: var(--accent-dim); margin: var(--space-6) 0 var(--space-2); }
-  #entity-list .ent-row { display: flex; align-items: center; gap: .2rem; border-radius: 6px; }
+  #entity-list .ent-row { display: flex; align-items: center; gap: .2rem; border-radius: var(--radius-sm); }
   #entity-list .ent-row:hover, #entity-list .ent-row.sel { background: var(--bg-input); }
   #entity-list .ent {
     flex: 1; min-width: 0; text-align: left; background: none; border: none;
     color: var(--text); font: var(--font-base) var(--font-ui); padding: var(--space-1) var(--space-2);
-    border-radius: 6px; cursor: pointer;
+    border-radius: var(--radius-sm); cursor: pointer;
   }
   #entity-list .ent .n { color: var(--text-dim); font-size: var(--font-xs); }
   #entity-list .ent-keep {
     flex-shrink: 0; background: none; border: 1px solid var(--border); color: var(--text-dim);
-    border-radius: 6px; font: var(--font-3xs) var(--font-ui); padding: .1rem .45rem;
+    border-radius: var(--radius-sm); font: var(--font-3xs) var(--font-ui); padding: .1rem .45rem;
     cursor: pointer; visibility: hidden; margin-right: .2rem;
   }
   #entity-list .ent-row:hover .ent-keep { visibility: visible; }
@@ -28,14 +28,14 @@
   .grp-row .grp-btn {
     flex: 1; text-align: left; background: none; border: none; color: var(--text);
     font: var(--font-base) var(--font-ui); padding: var(--space-1) var(--space-2);
-    cursor: pointer; border-radius: 6px;
+    cursor: pointer; border-radius: var(--radius-sm);
   }
   .grp-row .grp-btn:hover { background: var(--bg-raised); }
   .grp-row.on .grp-btn { color: var(--accent); }
   .grp-row .n { color: var(--text-dim); font-size: var(--font-2xs); }
   .grp-row .grp-edit {
     background: none; border: 1px solid var(--border); color: var(--text-dim);
-    border-radius: 6px; font: var(--font-3xs) var(--font-ui);
+    border-radius: var(--radius-sm); font: var(--font-3xs) var(--font-ui);
     padding: .1rem .45rem; cursor: pointer; visibility: hidden;
   }
   .grp-row:hover .grp-edit { visibility: visible; }
@@ -49,7 +49,7 @@
   .grp-editor input { padding: .2rem var(--space-3); font-size: var(--font-xs); }
   .grp-editor select {
     background: var(--bg-input); color: var(--text-dim); border: 1px solid var(--border);
-    border-radius: 6px; padding: .15rem var(--space-2); font: var(--font-2xs) var(--font-ui);
+    border-radius: var(--radius-sm); padding: .15rem var(--space-2); font: var(--font-2xs) var(--font-ui);
   }
   .kw-chip.dim, .chip.dim { opacity: .45; font-style: italic; }
   #entity-detail { flex: 1; overflow-y: auto; padding: var(--space-8); }
@@ -59,12 +59,12 @@
   .ent-actions input { width: 12rem; padding: .35rem var(--space-4); font-size: var(--font-sm); }
   .ent-actions select {
     background: var(--bg-input); color: var(--text-dim); border: 1px solid var(--border);
-    border-radius: 8px; padding: .3rem var(--space-3); font: var(--font-xs) var(--font-ui);
+    border-radius: var(--radius-base); padding: .3rem var(--space-3); font: var(--font-xs) var(--font-ui);
   }
   .alias-label { font: var(--font-xs) var(--font-ui); color: var(--text-dim); }
   .chip {
     display: inline-flex; align-items: center; gap: .3rem; background: var(--bg-input);
-    border-radius: 999px; padding: .1rem var(--space-4); font: var(--font-xs) var(--font-ui);
+    border-radius: var(--radius-pill); padding: .1rem var(--space-4); font: var(--font-xs) var(--font-ui);
     margin-right: .3rem;
   }
   .chip button { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: .9rem; padding: 0; }
@@ -78,7 +78,7 @@
     font: var(--font-2xs) var(--font-ui); padding: .1rem .3rem;
   }
   .obs .ops button:hover { color: var(--accent); }
-  #suggest-panel { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 10px; padding: var(--space-6); margin-bottom: var(--space-7); }
+  #suggest-panel { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-6); margin-bottom: var(--space-7); }
   .sg { border-bottom: 1px solid var(--border); padding: var(--space-4) 0; }
   .sg:last-child { border-bottom: none; }
   .sg .r { font: var(--font-xs) var(--font-ui); color: var(--text-dim); margin: .2rem 0 var(--space-2); }
@@ -87,7 +87,7 @@
   #suggest-btns { display: flex; gap: var(--space-2); margin-bottom: var(--space-4); flex-wrap: wrap; align-items: center; }
   #suggest-kind {
     background: var(--bg-input); color: var(--text-dim); border: 1px solid var(--border);
-    border-radius: 8px; padding: .3rem var(--space-3); cursor: pointer;
+    border-radius: var(--radius-base); padding: .3rem var(--space-3); cursor: pointer;
     font: var(--font-xs) var(--font-ui);
   }
   #type-chips { display: flex; gap: var(--space-2); margin-bottom: var(--space-2); flex-wrap: wrap; }
@@ -95,7 +95,7 @@
   .chip-toggle.on { background: var(--accent-dim); color: var(--bg); border-color: var(--accent-dim); }
   #batch-bar {
     display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
-    margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: 8px;
+    margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-base);
     background: var(--bg-input); border: 1px solid var(--accent-dim);
   }
   #batch-count { font: .78rem var(--font-ui); color: var(--accent); }
@@ -113,7 +113,7 @@
   .grp-members .gm {
     text-align: left; background: none; border: none; color: var(--text-dim);
     font: .9rem var(--font-ui); padding: .15rem var(--space-2);
-    cursor: pointer; border-radius: 6px;
+    cursor: pointer; border-radius: var(--radius-sm);
   }
   .grp-members .gm:hover { background: var(--bg-raised); color: var(--text); }
   .grp-members .gm.dim { opacity: .45; font-style: italic; cursor: default; }
@@ -129,7 +129,7 @@
   .gp-ent, .gp-sub {
     text-align: left; background: var(--bg-input); border: 1px solid var(--border);
     color: var(--text); font: .9rem var(--font-ui);
-    padding: .3rem .7rem; border-radius: 999px; cursor: pointer;
+    padding: .3rem .7rem; border-radius: var(--radius-pill); cursor: pointer;
   }
   .gp-ent:hover, .gp-sub:hover { border-color: var(--accent-dim); color: var(--accent); }
   .gp-sub .n, .gp-ent .n { color: var(--text-dim); font-size: var(--font-xs); margin-left: .15rem; }

@@ -20,7 +20,7 @@
   #help .help-sec > :last-child { margin-bottom: var(--space-5); }
   #help h3 { font: var(--font-base) var(--font-ui); font-weight: 600; margin-bottom: .3rem; }
   #help .where { font-weight: normal; font-size: .78rem; color: var(--accent-dim); margin-left: var(--space-3); }
-  #help .step-n { display: inline-flex; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--accent-dim); color: var(--bg); align-items: center; justify-content: center; font-size: var(--font-xs); margin-right: var(--space-2); }
+  #help .step-n { display: inline-flex; width: 1.4rem; height: 1.4rem; border-radius: var(--radius-circle); background: var(--accent-dim); color: var(--bg); align-items: center; justify-content: center; font-size: var(--font-xs); margin-right: var(--space-2); }
   #help p { font-size: var(--font-base); margin-bottom: var(--space-3); }
   #help .help-step { margin-bottom: 1.3rem; }
   #help table { border-collapse: collapse; margin: var(--space-3) 0 var(--space-5); font-size: .9rem; }
@@ -35,6 +35,6 @@
   }
   #help-toc a {
     color: var(--text-dim); text-decoration: none; font: var(--font-sm) var(--font-ui);
-    background: var(--bg-input); border-radius: 999px; padding: .15rem var(--space-5);
+    background: var(--bg-input); border-radius: var(--radius-pill); padding: .15rem var(--space-5);
   }
   #help-toc a:hover { color: var(--accent); }

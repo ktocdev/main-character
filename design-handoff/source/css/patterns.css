@@ -3,7 +3,7 @@
   #pat-header { display: flex; align-items: center; gap: var(--space-6); margin-bottom: var(--space-7); }
   #pat-status { font: var(--font-xs) var(--font-ui); color: var(--text-dim); }
   .pattern {
-    border: 1px solid var(--border); border-radius: 10px;
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
     background: var(--bg-raised); padding: var(--space-6) var(--space-7); margin-bottom: var(--space-6);
   }
   .pattern h3 {

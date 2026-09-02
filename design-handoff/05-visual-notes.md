@@ -226,6 +226,23 @@ component is likely the one with the biggest visible payoff.
   border, bold italic accent title, small dim meta ("medium confidence ·
   8 weeks"), italic reasoning line, three quiet buttons (confirm/not
   now/dismiss). Matches `.cat-proposal` in `02-components.md` exactly.
+- **The full category-browsing flow, in one shot** (`categories.png`,
+  updated to a taller capture): below the three proposal cards, the chip
+  row (`.cat-chip`) confirms chips carry a live count in their own label
+  ("emotional 30," "family 3"), not a separate badge, and shows the
+  `.active` state (`family 3`, `--accent` outline + text) mid-selection.
+  The "new category…" + "keywords, comma-separated" + "add" row
+  (`#cat-newform`) sits directly below the chips. Selecting a chip reveals
+  two things not visible in the earlier, shorter capture: the
+  `.cat-domain` summary card (uppercase eyebrow "FAMILY (3 ENTRIES,
+  THROUGH 2026-09-06)" over an AI-generated prose paragraph, rendered in
+  the body serif despite being machine-written — see `02-components.md`
+  for why that's consistent with the app's serif/sans split), and a
+  chronological list of that category's tagged entries where each row is a
+  live inline tag editor (chip-per-tag with `×`, plus a "+ tag…" control
+  that's actually a `<select>` — see the new "Inline tag editor" section
+  in `02-components.md`). This is the richest single screen in the whole
+  set and the main source of the newly-documented tag-editor pattern.
 - **Entity detail view** (`entities.png`): entity name as italic accent
   serif heading (same treatment as the wordmark, one size down), a row of
   five quiet action buttons plus one `<select>` for retype, then
