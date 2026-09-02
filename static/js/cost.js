@@ -32,6 +32,15 @@ async function show() {
     // promising otherwise is the kind of wrong number that gets believed.
     note.textContent = 'since this journal started, estimated';
     panel.append(line, note);
+    // In mock mode the figure above still climbs (the meter counts canned
+    // calls), so it needs saying outright that none of it is real -- the same
+    // fact Settings -> Models & Cost makes about the monthly ledger.
+    if (c.mock) {
+      const mock = document.createElement('div');
+      mock.className = 'cost-note cost-mock';
+      mock.textContent = 'mock mode — canned replies, nothing real is spent';
+      panel.append(mock);
+    }
   } catch {
     // Silent-zero would be a lie in the one direction that matters.
     panel.textContent = 'cost unavailable';

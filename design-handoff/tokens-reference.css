@@ -1,0 +1,125 @@
+/*
+  rag-journal — consolidated token reference
+  Source: static/css/tokens.css + static/css/base.css:1-37 (theme-switch logic)
+  This is a reference copy for design-system tooling, not a file the app
+  loads — the app's real source of truth remains static/css/tokens.css.
+  See 01-tokens.md for the full write-up (role of each token and the theme
+  precedence rules).
+
+  This file matches the real tokens.css as of the font-family/--error/
+  type-and-spacing-scale tokenization pass — the "escaped colors" and
+  "proposed scale" framing below has been resolved in the real codebase,
+  not just documented here. Kept as annotated commentary since it's still
+  useful context for Claude Design.
+*/
+
+/* Body prose font — loaded via Google Fonts <link> in index.html, not
+   self-hosted. Not part of tokens.css today; included here because it's
+   as load-bearing as any color token. */
+@font-face {
+  font-family: 'Old Standard TT';
+  src: local('Old Standard TT');
+  /* actual load: https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap */
+}
+
+/* UI chrome font — self-hosted, static/fonts/cmu-sans-demicondensed.ttf */
+@font-face {
+  font-family: 'CMU Sans Demi Condensed';
+  src: url('/static/fonts/cmu-sans-demicondensed.ttf') format('truetype');
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light dark; /* native controls follow the active theme */
+
+  /* ── DARK (default) ─────────────────────────────────────────────────── */
+  --bg:          #211d19; /* warm charcoal — never pure black */
+  --bg-raised:   #2a2521; /* cards, panels, menus */
+  --bg-input:    #322c27; /* inputs, chips, pressed nav */
+  --text:        #e8e0d5; /* primary text */
+  --text-dim:    #a99f92; /* secondary/meta text */
+  --accent:      #d99e5b; /* "lamp amber" — the one accent hue */
+  --accent-dim:  #8a6a44; /* quieter accent — labels, dashed borders */
+  --border:      #3d362f; /* all hairlines */
+  --you:         #c9b99f; /* the user's own words in a transcript */
+  --error:       #c96a5a; /* the app's one danger/error color */
+
+  /* fonts */
+  --font-ui:   'CMU Sans Demi Condensed', system-ui, sans-serif;
+  --font-body: 'Old Standard TT', Georgia, 'Times New Roman', serif;
+
+  /* type — UI chrome scale (prose uses body { font: 17px/1.65 var(--font-body); } directly, not this scale) */
+  --font-3xs:  .7rem;
+  --font-2xs:  .75rem;
+  --font-xs:   .8rem;   /* base size for buttons/meta/status — the workhorse */
+  --font-sm:   .85rem;
+  --font-base: .95rem;  /* primary UI text, message/entry text */
+  --font-md:   1.05rem;
+  --font-lg:   1.15rem;
+  --font-xl:   1.4rem;
+
+  /* spacing */
+  --space-1: .25rem;
+  --space-2: .4rem;   /* most common gap in the app */
+  --space-3: .5rem;
+  --space-4: .6rem;
+  --space-5: .8rem;
+  --space-6: 1rem;
+  --space-7: 1.2rem;
+  --space-8: 1.5rem;  /* standard pane outer padding */
+}
+
+/* Light — applies when the OS prefers light AND no dark pin is set */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:          #faf7f2;
+    --bg-raised:   #ffffff;
+    --bg-input:    #f1ece4;
+    --text:        #38322b;
+    --text-dim:    #8c8378;
+    --accent:      #b5732f;
+    --accent-dim:  #d9b183; /* note: LIGHTER than --accent in this theme — reversed from dark mode */
+    --border:      #e4dcd0;
+    --you:         #6b5d49;
+    --error:       #a8493a; /* darkened for contrast on a near-white bg, same pattern as --accent/--you */
+  }
+}
+
+/* Light — explicit pin via [data-theme="light"] on <html>, overrides OS */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg:          #faf7f2;
+  --bg-raised:   #ffffff;
+  --bg-input:    #f1ece4;
+  --text:        #38322b;
+  --text-dim:    #8c8378;
+  --accent:      #b5732f;
+  --accent-dim:  #d9b183;
+  --border:      #e4dcd0;
+  --you:         #6b5d49;
+  --error:       #a8493a;
+}
+
+/* Explicit dark pin — same values as the bare :root block, just wins over OS light */
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/*
+  ── PROPOSED, NOT IN THE REAL CODEBASE ──────────────────────────────────
+  Everything above this line matches the real tokens.css exactly. Radius
+  and motion-duration are documentation-only observations, not real custom
+  properties — see 04-type-and-spacing-scale.md for why radius doesn't need
+  one (it's already a clean de facto scale) and 01-tokens.md "Motion" for
+  the one keyframe.
+*/
+:root {
+  /* radius — already a clean scale in practice, just never named */
+  --radius-sm:     6px;
+  --radius-base:   8px;
+  --radius-lg:     10px;  /* dominant radius — buttons, cards, inputs */
+  --radius-pill:   999px;
+  --radius-circle: 50%;
+
+  /* motion */
+  --duration-pulse: 1.6s; /* lamp-pulse: the app's one "something is happening" idiom */
+}

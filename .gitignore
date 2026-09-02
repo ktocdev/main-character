@@ -37,6 +37,10 @@ import_list.txt
 # Local run artifacts
 *.log
 backups/
+# What export.py and backup.py write: the journal itself, in a folder and in
+# a zip. Both are the whole corpus in plain text — the single easiest thing
+# to commit by accident.
+exports/
 
 # All dev docs are local-only — real journal content, third-party names,
 # and the security audit throughout; none of it ships (Phase 1.5 items 1/4/5)

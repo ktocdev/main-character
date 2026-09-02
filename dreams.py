@@ -43,6 +43,7 @@ import re
 import sys
 from collections import Counter, defaultdict
 from datetime import date as date_type, datetime, timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -183,9 +184,10 @@ def get_dream_collection():
     )
 
 
-def store_dream_entry(text: str, when=None) -> str:
+def store_dream_entry(text: str, when=None) -> tuple[str, Path]:
     """Store a user-flagged dream entry: dream collection + markdown
-    backup. Never touches the waking collection or its pipelines."""
+    backup. Never touches the waking collection or its pipelines.
+    Returns (entry_id, backup_path)."""
     from config import now_local
     now = when or now_local()
     date = now.strftime("%Y-%m-%d")
@@ -206,7 +208,7 @@ def store_dream_entry(text: str, when=None) -> str:
         f"# Dream — {date} {time_of_day}\n_Date: {date}_\n_Realm: dream_\n\n{text}",
         encoding="utf-8",
     )
-    return entry_id
+    return entry_id, filepath
 
 
 def ingest_dream_entry(text: str, entry_id: str, when=None):

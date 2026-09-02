@@ -1,0 +1,241 @@
+# Component Inventory
+
+Every reusable UI pattern in rag-journal, grouped by kind. Class name,
+where it's defined, what it looks like, and its states. Everything uses the
+tokens from `01-tokens.md` — no component below introduces its own color.
+
+## Buttons
+
+Two button "voices," no more:
+
+- **`button.send`** (`conversation.css:22`) — the primary/affirmative
+  action. Solid `--accent` fill, `--bg` text (i.e. dark text on the amber
+  fill in dark mode), no border, `10px` radius, `0 1.2rem` padding, UI-sans
+  font at `.95rem`. `:disabled` → `opacity: .45`. Used for: save entry,
+  send, search, triage apply, settings save. There is exactly one of these
+  per screen/composer at a time — it's reserved for *the* primary action.
+- **`button.quiet`** (`conversation.css:27`) — everything else. Transparent
+  background, `1px solid var(--border)`, `--text-dim` text, `8px` radius,
+  `.3rem .7rem` padding, `.8rem` UI-sans. This is the workhorse — cancel,
+  clear, undo/redo, menu items, triage actions, category ops, settings
+  restart/seed. Hover states are mostly implicit (browser default) except
+  where a component overrides (e.g. entity list buttons darken to
+  `--bg-raised` on hover).
+- **Icon-only round buttons**: `#cost-toggle` (nav, opacity-based
+  hover/active) and `.set-info` (`settings.css:79`, a `?` in a circular
+  `1.35rem` button, `border-radius: 50%`) — same quiet-button DNA, just
+  circular and content-less save one glyph.
+
+No `button.danger`/destructive variant exists — delete actions (entity
+delete, category ×) currently render as plain `.quiet` buttons or bare `×`
+glyphs, relying on the confirm-less-but-undoable safety net rather than a
+visual warning color.
+
+## Inputs
+
+- **Text inputs / textareas** (`conversation.css:16`) — shared styling for
+  `textarea` and `input[type=text]`: `--bg-input` fill, `1px solid
+  var(--border)`, `10px` radius, `.7rem .9rem` padding, no resize handle,
+  focus state is a border color shift to `--accent-dim` (no glow/ring).
+  Every text entry point in the app — the composer, search, filters, triage,
+  settings — uses this one look.
+- **Smaller/inline inputs** override padding/width locally rather than via
+  a variant class (e.g. `.grp-newform input`, `.ent-actions input`,
+  `#cat-newform input` each set their own `padding`/`font-size`/`width`) —
+  there's no `input.compact` class, just ad hoc overrides. Worth
+  formalizing into a size variant if new layouts need it.
+- **`select`** elements (`.grp-editor select`, `.ent-actions select`,
+  `#suggest-kind`, `#retype-kind`) — same `--bg-input`/`--border` recipe as
+  text inputs, smaller radius (`6px`–`8px`), `.75rem`–`.8rem` UI-sans.
+- **Segmented control** — `#theme-toggle` (`settings.css:51`): a row of
+  borderless buttons inside one bordered, radius-clipped container, divided
+  by `1px solid var(--border)` between items, active item gets
+  `--bg-input` fill + `--accent` text. This is the one segmented-control
+  pattern in the app (Auto/Light/Dark) — reusable wherever a small
+  mutually-exclusive choice needs to sit inline.
+- **Checkbox rows** — plain native checkboxes with a label, e.g.
+  `#noreply-wrap` (`conversation.css:41`), `.ent-check`
+  (`entities.css:103`, `accent-color: var(--accent)` to tint the native
+  control). No custom checkbox skin exists — the native control is tinted
+  and left alone.
+
+## Chips / pills
+
+One visual family, several use cases, no shared base class (each context
+defines its own — worth consolidating):
+
+- **`.chip`** (`entities.css:65`) — `--bg-input` fill, full pill radius,
+  `.1rem .6rem`, optional trailing `×` button.
+- **`.chip-toggle`** (used as a modifier alongside `.quiet`, e.g.
+  `#flt-unreviewed`, `#search-mode`) — `.on` state fills `--accent-dim` with
+  `--bg` text. This is the toggle-chip pattern: a `.quiet` button that can
+  be "pressed."
+- **`.cat-chip`** (`categories.css:6`) — pill, `--border` outline,
+  `.active` → `--accent` outline + text. `.custom` modifier gets a dashed
+  border.
+- **`.kw-chip`** (`categories.css:52`) — smaller pill (keyword tags inside
+  a category), `.member` modifier tints it accent.
+- **`.dream-tone`** (`dreams.css:15`) — same pill shape, `--bg-input` fill,
+  `--accent` text, used for a single descriptive word (e.g. "uneasy").
+
+All chips share: pill radius (`999px`), `.7rem`–`.85rem` UI-sans, and a
+binary "neutral / accent-emphasized" state model. A future `Chip` component
+in the design system should unify these into one base + modifiers
+(`active`, `dashed`, `removable`) rather than the five parallel
+near-duplicates that exist today.
+
+## Cards / panels / callouts
+
+- **`.dream-card`** (`dreams.css:6`) — `--bg-raised` fill, thin `--border`
+  outline, a `3px solid var(--accent-dim)` **left accent rule**, `10px`
+  radius. This left-rule-on-a-raised-card recipe is the app's signature
+  "content card" shape.
+- **`.pattern`** (`patterns.css:5`) — same raised-card recipe, no left rule
+  (plain full border), `10px` radius.
+- **`.cat-domain`** (`categories.css:25`) — raised card, `10px` radius, no
+  left rule, holds a label + long-form generated text.
+- **`.cat-proposal`** (`categories.css:35`) — raised card with a **dashed**
+  `1px solid var(--accent-dim)` border instead of solid — the dashed border
+  is this app's convention for "this is a suggestion pending your
+  approval," reused at `#cat-paused` (`categories.css:77`) for the same
+  reason (categories tab announcing it's disabled).
+- **`#triage-card`** (`entities.css:146`) — raised card, `12px` radius
+  (slightly larger than the `10px` norm — it's the one full-screen focal
+  card in the app), generous `1.3rem 1.5rem` padding.
+- **`#suggest-panel`** (`entities.css:81`) — raised card, plain border,
+  `10px` radius — a lighter-weight container for inline suggestions.
+- **`.set-feedback`** (`settings.css:113`) — raised card, plain border +
+  `3px solid var(--accent-dim)` **left** rule (same idiom as dream-card),
+  modifiers `.working` (dim italic), `.ok` (left rule → `--accent`), `.error`
+  (left rule + text → `var(--error)`, `#c96a5a` — tokenized since the type/
+  spacing/font-family pass). This left-rule pattern is
+  effectively the app's "status callout" component — neutral/working/ok/error
+  by left-rule color, and it's the one place a semantic-status visual
+  vocabulary already exists.
+
+**Pattern to name for the design system**: "raised card, `--border` frame,
+optional `3px` left accent rule in `--accent-dim`/`--accent`/error-red,
+`10px`–`12px` radius" is one component (`Card`) with a `tone` prop, not six
+unrelated classes.
+
+## Banners
+
+Full-width, centered-text strips above the header, in the body's flex
+column (so they push content down rather than overlay it):
+
+- **`#mock-banner`** (`base.css:70`) — `--accent-dim` fill (the old
+  `#6b5b3e` dead fallback has since been deleted — it never fired), `--bg`
+  text.
+- **`#seed-banner-bar`** (`base.css:63`) — `--accent` fill (louder — this
+  one warns you're writing into someone else's data), `--bg` text.
+- Mutual exclusion is handled in CSS (seed banner wins) — see the comment
+  at `base.css:77-85` if this pattern gets reused; specificity is a tie and
+  source order is load-bearing.
+
+## Disclosure
+
+- **`<details>/<summary>` as an accordion**, used twice with slightly
+  different skins:
+  - `#help .help-sec` (`help.css:6`) — summary styled as the old section
+    heading (italic accent, `1.15rem`), custom `›` marker that rotates 90°
+    on `[open]`, default marker hidden.
+  - `#write-actions` (`conversation.css:80`) — summary styled as a `.quiet`
+    button (the `⋯` menu trigger), popover content is an absolutely
+    positioned `.menu` list of `.quiet` buttons with a drop shadow.
+  This is the app's native alternative to a JS dropdown/accordion — no
+  custom JS component backs either one.
+- **Native `popover`** — `.set-popover` (`settings.css:95`), used for the
+  restart-info tooltip. Fixed position (JS-positioned on `toggle`),
+  `--bg-raised` card, no backdrop tint.
+- **`#cost-panel`** (`base.css` — the `◌` cost-toggle icon in the nav,
+  confirmed open in `screenshots/cost-dropdown.png`) — a third floating-
+  panel idiom, simpler than the other two: plain `hidden`-attribute
+  toggle (not `<details>`, not the native `popover` API), absolutely
+  positioned under the toggle icon, `--bg-input` fill (a shade quieter
+  than the `.menu`/`.set-popover` pair's `--bg-raised`), holding exactly
+  two lines — `.cost-line` ("$0.00 · 0 tokens · 0 calls," `--text`,
+  tabular numerals so the figures don't jitter as they update) and
+  `.cost-note` ("since this journal started, estimated," smaller,
+  `--text-dim`). Three different floating-panel mechanisms
+  (`<details>`, native `popover`, plain `hidden`) for what are visually
+  the same "small card anchored under a trigger" shape — worth
+  consolidating into one custom popover component in the Claude Design
+  work rather than carrying all three forward.
+
+## Navigation / tabs
+
+- **Top nav** (`base.css:24`) — flat list of `nav button`, `--text-dim`
+  default, `.active` → `--bg-input` fill + `--text`. No underline/indicator
+  style — active state is purely a filled pill-corner rect
+  (`border-radius: 6px`, not full pill).
+- **Tab panes** — `.tab` / `.tab.active` (`base.css:51`) toggle
+  `display: none` / `flex`; every tab is a full-height flex column.
+- **Sidebar list items** (entities, history, session-toc) — a recurring
+  shape: full-width text-left button, `--text` default,
+  hover/selected → `--bg-input` fill, `6px`–`8px` radius, secondary meta
+  line in `--text-dim` at a smaller size directly below. This exact recipe
+  repeats as `.session-item`, `#entity-list .ent`, `.grp-row .grp-btn`,
+  `#session-toc .toc-date` — it's the de facto `ListItem` component.
+
+## Tables
+
+Two ad hoc tables, no shared table styling beyond borrow-from-help:
+`#help table` (`help.css:26`) — border-collapse, `.decision` variant adds a
+bottom border per row. Used only in the help tab (keyboard-shortcut and
+decision-guide tables). Not a component that appears elsewhere yet, but a
+candidate if new layouts need tabular data.
+
+## Status / progress
+
+- **`.cp-step`** close-pipeline checklist (`conversation.css:58`) —
+  opacity-based state machine: pending (`.5` opacity) → `.cp-running`
+  (full opacity, `--accent` mark, lamp-pulse animation) → `.cp-done`
+  (full opacity, `--accent-dim` mark) / `.cp-failed` (`--you` colored mark).
+  This is the only multi-step-progress UI in the app.
+- **`.saved-note`** / **`#triage-toast`** — a transient inline confirmation
+  string in `--accent-dim`/`--accent`, no toast container, no timeout
+  visual — just text that appears/disappears via JS.
+
+## Composer
+
+The write/chat input pattern (`conversation.css:12`): a `textarea` (or
+`input`) plus a `button.send` in a flex row, `max-width: 46rem`, centered.
+The write tab's composer (`.write-composer`, `conversation.css:35`) is the
+richer variant — stacked column with a controls row underneath containing
+the send button, a quiet "reflect" button, a checkbox, a saved-note, and
+the `⋯` menu. Any new "compose something" screen should start from this
+shape.
+
+## Native browser UI (in scope to fix in the Claude Design iteration)
+
+Three widgets the app relies on heavily render in raw OS/browser default
+appearance, not the app's theme, because CSS cannot restyle them. **This
+is in scope for the new-layout work** — build real replacement components
+rather than leaving the gap:
+
+- **`<select>` dropdown options** — the closed control is themed
+  (`--bg-input`/`--border`, see Inputs above), but the open option list is
+  plain OS chrome (white background, black text, generic sans, blue
+  highlight). Affects every `<select>` in the app — retype, suggest-kind,
+  and all seven in Settings (date display, time zone, language, companion
+  model, companion effort, processing model, plus theme uses a custom
+  segmented control instead so it's unaffected).
+- **`<datalist>` autocomplete** (the "target name…"/merge fields' name
+  suggestions) — same OS-chrome problem, unstyled regardless of theme.
+- **`title`-attribute tooltips** — white box, black text, hard corners.
+  This is the highest-volume instance: the app uses `title="..."` as its
+  primary help-text mechanism throughout `index.html`, so nearly every
+  icon button and ambiguous control breaks theme on hover.
+
+See "Native browser chrome breaks the illusion" in `05-visual-notes.md`
+for the screenshots this was confirmed against. There's no CSS fix —
+Claude Design should design real replacement components: a custom
+listbox/combobox for `<select>`, a custom autocomplete panel for
+`<datalist>`, and a custom tooltip component for every `title` attribute
+currently doing that job. Given the `title` volume in `index.html`, the
+tooltip component is probably the highest-leverage of the three.
+
+## Layout-level components
+
+See `03-layout-patterns.md` for the three-pane / centered-column shells
+these components live inside.
