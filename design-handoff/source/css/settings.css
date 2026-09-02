@@ -1,31 +1,31 @@
   /* Settings */
   /* the .tab section is a clipped flex column (base.css) — the pane inside
      it is what pads, centers and scrolls, same as #help and #patterns */
-  #settings { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
+  #settings { max-width: 46rem; margin: 0 auto; width: 100%; padding: var(--space-8); overflow-y: auto; }
   #settings h2 {
-    font-style: italic; font-weight: normal; font-size: 1.05rem;
+    font-style: italic; font-weight: normal; font-size: var(--font-md);
     color: var(--accent); margin-bottom: .3rem;
   }
-  #settings-intro { color: var(--text-dim); font-size: .85rem; margin-bottom: 1.8rem; }
+  #settings-intro { color: var(--text-dim); font-size: var(--font-sm); margin-bottom: 1.8rem; }
 
   .set-group { margin-bottom: 2.2rem; }
   .set-group h3 {
-    font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    font: var(--font-3xs) var(--font-ui);
     letter-spacing: .08em; text-transform: uppercase;
     color: var(--accent-dim); font-weight: normal;
-    margin-bottom: 1rem; padding-bottom: .4rem;
+    margin-bottom: var(--space-6); padding-bottom: var(--space-2);
     border-bottom: 1px solid var(--border);
   }
 
-  .set-row { margin-bottom: 1.5rem; }
+  .set-row { margin-bottom: var(--space-8); }
   .set-row label {
     display: block; margin-bottom: .35rem;
-    color: var(--text); font-size: .95rem;
+    color: var(--text); font-size: var(--font-base);
   }
   .set-control select, .set-control input {
     background: var(--bg-input); color: var(--text);
     border: 1px solid var(--border); border-radius: 4px;
-    padding: .45rem .6rem; font-size: .9rem; font-family: inherit;
+    padding: .45rem var(--space-4); font-size: .9rem; font-family: inherit;
     min-width: 22rem; max-width: 100%;
   }
   .set-control select:focus, .set-control input:focus {
@@ -35,16 +35,16 @@
     opacity: .55; cursor: not-allowed;
   }
   .set-help {
-    color: var(--text-dim); font-size: .8rem;
-    margin-top: .4rem; max-width: 34rem; line-height: 1.5;
+    color: var(--text-dim); font-size: var(--font-xs);
+    margin-top: var(--space-2); max-width: 34rem; line-height: 1.5;
   }
   /* A group's lead paragraph (direct child of .set-group, e.g. Data) needs the
      same separation below it that .set-row carries, or the first row hugs the
      intro while every later row sits 1.5rem clear -- the gap above "Export"
      that read as too tight. Row-level help lives inside .set-row and is
      untouched by the child combinator. */
-  .set-group > .set-help { margin-bottom: 1.5rem; }
-  .set-warn { color: var(--accent); font-size: .8rem; margin-top: .4rem; max-width: 34rem; }
+  .set-group > .set-help { margin-bottom: var(--space-8); }
+  .set-warn { color: var(--accent); font-size: var(--font-xs); margin-top: var(--space-2); max-width: 34rem; }
 
   /* Appearance: a segmented light/dark/auto switch. Client-only (localStorage),
      so unlike the .env rows it takes effect with no save and no restart. */
@@ -55,8 +55,8 @@
   #theme-toggle button {
     background: none; border: none; border-right: 1px solid var(--border);
     color: var(--text-dim); cursor: pointer;
-    font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
-    padding: .4rem 1rem;
+    font: var(--font-sm) var(--font-ui);
+    padding: var(--space-2) var(--space-6);
   }
   #theme-toggle button:last-child { border-right: none; }
   #theme-toggle button:hover:not(.active) { color: var(--text); }
@@ -66,20 +66,20 @@
      Bigger than the notes around it, and no colour of its own -- a running
      cost tinted like a warning reads as a problem every time it is opened. */
   .set-cost-total {
-    font-size: 1.05rem; color: var(--text);
+    font-size: var(--font-md); color: var(--text);
     margin: 0 0 .3rem; font-variant-numeric: tabular-nums;
   }
 
-  #settings-actions { display: flex; align-items: center; gap: 1rem; }
+  #settings-actions { display: flex; align-items: center; gap: var(--space-6); }
 
   /* The restart button and its explanation, kept together. The paragraph used
      to sit under the whole actions row, where it read as describing Save --
      the louder button, and the one it is not about. */
-  .set-with-info { display: inline-flex; align-items: center; gap: .4rem; }
+  .set-with-info { display: inline-flex; align-items: center; gap: var(--space-2); }
   .set-info {
     background: none; border: 1px solid var(--border); color: var(--text-dim);
     border-radius: 50%; width: 1.35rem; height: 1.35rem; padding: 0;
-    font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    font: var(--font-2xs) var(--font-ui);
     line-height: 1; cursor: pointer; flex-shrink: 0;
   }
   .set-info:hover, .set-info:focus-visible {
@@ -95,29 +95,29 @@
   .set-popover {
     position: fixed; margin: 0; max-width: 26rem;
     background: var(--bg-raised); border: 1px solid var(--border);
-    border-radius: 10px; padding: .8rem 1rem;
-    color: var(--text-dim); font-size: .8rem; line-height: 1.5;
+    border-radius: 10px; padding: var(--space-5) var(--space-6);
+    color: var(--text-dim); font-size: var(--font-xs); line-height: 1.5;
   }
   .set-popover p { margin: 0; }
-  .set-popover p + p { margin-top: .6rem; }
+  .set-popover p + p { margin-top: var(--space-4); }
   .set-popover code { color: var(--text); }
   .set-popover::backdrop { background: none; }
-  .set-note { font-size: .85rem; color: var(--text-dim); }
+  .set-note { font-size: var(--font-sm); color: var(--text-dim); }
   .set-note.ok { color: var(--accent); }
-  .set-note.error { color: #c96a5a; }
+  .set-note.error { color: var(--error); }
 
   /* Result of an Export / Backup / Rebuild. settings.js moves it under whichever
      button was pressed; here it is drawn as a callout -- a raised panel with a
      left accent rule -- so it reads as that button's answer, not as another line
      of the dim help text it used to blend into. */
   .set-feedback {
-    margin-top: .6rem; padding: .55rem .8rem;
+    margin-top: var(--space-4); padding: .55rem var(--space-5);
     background: var(--bg-raised);
     border: 1px solid var(--border); border-left: 3px solid var(--accent-dim);
     border-radius: 6px;
-    font-size: .85rem; line-height: 1.5; color: var(--text);
+    font-size: var(--font-sm); line-height: 1.5; color: var(--text);
     max-width: 34rem;
   }
   .set-feedback.working { color: var(--text-dim); font-style: italic; }
   .set-feedback.ok { border-left-color: var(--accent); }
-  .set-feedback.error { border-left-color: #c96a5a; color: #c96a5a; }
+  .set-feedback.error { border-left-color: var(--error); color: var(--error); }

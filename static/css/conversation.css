@@ -6,11 +6,11 @@
   /* the date rides the label row that is already there (write screen) */
   .msg.you[data-stamp]::before { content: "you · " attr(data-stamp); }
   .msg::before {
-    display: block; font: .7rem 'CMU Sans Demi Condensed', system-ui, sans-serif; letter-spacing: .08em;
-    text-transform: uppercase; color: var(--accent-dim); margin-bottom: .25rem;
+    display: block; font: var(--font-3xs) var(--font-ui); letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent-dim); margin-bottom: var(--space-1);
   }
   .composer {
-    display: flex; gap: .6rem; padding: 1rem 1.5rem 1.25rem;
+    display: flex; gap: var(--space-4); padding: var(--space-6) var(--space-8) 1.25rem;
     max-width: 46rem; margin: 0 auto; width: 100%;
   }
   textarea, input[type=text] {
@@ -21,51 +21,51 @@
   textarea:focus, input[type=text]:focus { border-color: var(--accent-dim); }
   button.send {
     background: var(--accent); color: var(--bg); border: none; border-radius: 10px;
-    padding: 0 1.2rem; font: .95rem 'CMU Sans Demi Condensed', system-ui, sans-serif; cursor: pointer; flex-shrink: 0;
+    padding: 0 var(--space-7); font: var(--font-base) var(--font-ui); cursor: pointer; flex-shrink: 0;
   }
   button.send:disabled { opacity: .45; cursor: default; }
   button.quiet {
     background: none; border: 1px solid var(--border); color: var(--text-dim);
-    border-radius: 8px; padding: .3rem .7rem; font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; cursor: pointer;
+    border-radius: 8px; padding: .3rem .7rem; font: var(--font-xs) var(--font-ui); cursor: pointer;
   }
 
   /* Write + chat logs */
-  #entities-pane h2 { font-weight: normal; font-style: italic; font-size: 1.05rem; color: var(--text-dim); margin-bottom: 1rem; }
-  #write-log, #chat-log { flex: 1; overflow-y: auto; padding: 1.5rem; max-width: 46rem; margin: 0 auto; width: 100%; }
-  .write-composer { flex-direction: column; gap: .5rem; }
+  #entities-pane h2 { font-weight: normal; font-style: italic; font-size: var(--font-md); color: var(--text-dim); margin-bottom: var(--space-6); }
+  #write-log, #chat-log { flex: 1; overflow-y: auto; padding: var(--space-8); max-width: 46rem; margin: 0 auto; width: 100%; }
+  .write-composer { flex-direction: column; gap: var(--space-3); }
   /* height is set inline by autosizeEntry (item 4: grow to fill the viewport,
      then scroll). This is only the backstop if that JS hasn't run yet. */
   #entry-text { min-height: 4.5rem; max-height: 85vh; overflow-y: auto; }
-  .write-controls { display: flex; align-items: center; gap: .6rem; }
+  .write-controls { display: flex; align-items: center; gap: var(--space-4); }
   /* no-reply toggle (item 3): quiet, sits with the other controls */
   #noreply-wrap {
     display: inline-flex; align-items: center; gap: .35rem; cursor: pointer;
-    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim);
+    font: var(--font-xs) var(--font-ui); color: var(--text-dim);
     white-space: nowrap;
   }
   #noreply-wrap input { cursor: pointer; }
   /* close-pipeline progress (item 1): a small stage checklist above the box */
   #close-progress {
-    max-width: 46rem; margin: 0 auto .25rem; width: 100%;
-    padding: .6rem 1.5rem; color: var(--accent-dim);
-    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    max-width: 46rem; margin: 0 auto var(--space-1); width: 100%;
+    padding: var(--space-4) var(--space-8); color: var(--accent-dim);
+    font: var(--font-xs) var(--font-ui);
   }
   #close-progress[hidden] { display: none; }
   #close-progress b {
     display: block; margin-bottom: .35rem; color: var(--text-dim);
     text-transform: uppercase; letter-spacing: .08em; font-size: .72rem;
   }
-  .cp-step { display: flex; align-items: baseline; gap: .5rem; padding: .1rem 0; opacity: .5; }
+  .cp-step { display: flex; align-items: baseline; gap: var(--space-3); padding: .1rem 0; opacity: .5; }
   .cp-step.cp-running, .cp-step.cp-done, .cp-step.cp-failed { opacity: 1; }
   .cp-mark { width: 1rem; flex-shrink: 0; text-align: center; }
   .cp-running .cp-mark { color: var(--accent); animation: lamp-pulse 1.6s ease-in-out infinite; }
   .cp-done .cp-mark { color: var(--accent-dim); }
   .cp-failed .cp-mark { color: var(--you); }
-  .cp-done-line, .cp-done { margin-top: .4rem; color: var(--text-dim); }
+  .cp-done-line, .cp-done { margin-top: var(--space-2); color: var(--text-dim); }
   /* the entry's timestamp, above the box — quiet until you need it */
   #entry-stamp {
-    display: flex; align-items: center; gap: .5rem;
-    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    display: flex; align-items: center; gap: var(--space-3);
+    font: var(--font-xs) var(--font-ui);
     color: var(--accent-dim);
   }
   #entry-stamp input[type=date], #entry-stamp input[type=time] {
@@ -73,23 +73,23 @@
     border: 1px solid var(--border); border-radius: 6px;
     padding: .15rem .35rem; font: inherit;
   }
-  #entry-stamp-fields { display: inline-flex; align-items: center; gap: .4rem; }
+  #entry-stamp-fields { display: inline-flex; align-items: center; gap: var(--space-2); }
   /* an explicit display beats the hidden attribute — say it back */
   #entry-stamp[hidden], #entry-stamp-fields[hidden] { display: none; }
-  .saved-note { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--accent-dim); margin-left: 1rem; flex: 1; }
+  .saved-note { font: var(--font-xs) var(--font-ui); color: var(--accent-dim); margin-left: var(--space-6); flex: 1; }
   #write-actions { position: relative; margin-left: auto; }
   #write-actions summary {
     list-style: none; cursor: pointer; color: var(--text-dim);
     border: 1px solid var(--border); border-radius: 8px;
-    padding: .2rem .7rem; font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    padding: .2rem .7rem; font: .9rem var(--font-ui);
   }
   #write-actions summary::-webkit-details-marker { display: none; }
   #write-actions[open] summary { background: var(--bg-input); }
   #write-actions .menu {
     position: absolute; bottom: 2.2rem; right: 0; background: var(--bg-raised);
-    border: 1px solid var(--border); border-radius: 10px; padding: .5rem;
+    border: 1px solid var(--border); border-radius: 10px; padding: var(--space-3);
     box-shadow: 0 6px 24px rgba(0,0,0,.35); white-space: nowrap;
-    display: flex; flex-direction: column; gap: .4rem;
+    display: flex; flex-direction: column; gap: var(--space-2);
   }
   #write-actions .menu button { text-align: left; }
   /* discard is a mock-only reset; gated by the same body class the mock
@@ -98,10 +98,10 @@
   body.mock-mode #discard { display: block; }
   /* the seed ritual: candidate waiting between close and upload */
   #seed-banner {
-    display: flex; align-items: center; gap: .6rem;
-    max-width: 46rem; margin: 0 auto .25rem; width: 100%;
-    padding: .5rem 1.5rem; color: var(--accent-dim);
-    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    display: flex; align-items: center; gap: var(--space-4);
+    max-width: 46rem; margin: 0 auto var(--space-1); width: 100%;
+    padding: var(--space-3) var(--space-8); color: var(--accent-dim);
+    font: var(--font-xs) var(--font-ui);
   }
   #seed-banner[hidden] { display: none; }
   #seed-banner span { flex: 1; }

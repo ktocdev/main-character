@@ -2,9 +2,19 @@
 
 Source: `static/css/tokens.css`, `static/css/base.css:1-37`.
 
-All nine semantic tokens are defined once and reused everywhere — no
-component CSS file declares a raw color for a themeable surface. `color`
-declarations elsewhere in the app are one of these nine, always via `var()`.
+**This file now describes the real codebase, not a proposal.** The gaps
+this document originally flagged — no `--font-*` family tokens, no
+`--error` token, an untokenized fallback color — have since been fixed
+directly in `tokens.css` and the component files, on the reasoning that
+they're mechanical value-aliasing (same colors, same fonts, same sizes,
+just named) rather than a redesign, so doing it before Claude Design starts
+means the relic pages reference tokens that actually exist instead of
+tokens that would need backfilling into the app later anyway.
+
+All ten semantic color tokens (nine original + `--error`) are defined once
+and reused everywhere — no component CSS file declares a raw color for a
+themeable surface. `color` declarations elsewhere in the app are one of
+these ten, always via `var()`.
 
 ## Theme model
 
@@ -36,36 +46,31 @@ date/time inputs, select popups) follow suit automatically.
 | `--accent-dim` | `#8a6a44` | `#d9b183` | quieter accent — section labels, borders that should read as "accent family" without shouting |
 | `--border` | `#3d362f` | `#e4dcd0` | all hairline borders/dividers |
 | `--you` | `#c9b99f` | `#6b5d49` | the color of the user's own words in a conversation (`.msg.you`, `.session-part`) — distinct from `--text` so a transcript visually separates "you" from "companion" without needing a chat-bubble layout |
+| `--error` | `#c96a5a` (muted terracotta — unchanged, this was the app's only error color before it had a name) | `#a8493a` (new — darkened the same way `--accent`/`--you` are darkened for light mode, to hold contrast on a near-white background; not verified against a contrast checker, just pattern-matched to the app's existing light-mode darkening) | the only danger/error state (`.set-note.error`, `.set-feedback.error`) |
 
 Note the light palette isn't `--bg`/`--text` inverted 1:1 — `--accent` and
 `--accent-dim` swap emphasis (light mode's `--accent-dim` is *lighter* than
 its `--accent`, the reverse of dark mode), because in a bright cream
 background the muted amber needs to carry more weight to stay legible.
 
-### Two colors that escaped the system
+### One color retired
 
-- `#6b5b3e` — `base.css:73`, fallback value in
-  `background: var(--accent-dim, #6b5b3e)` for the mock-mode banner. Only
-  matters if `--accent-dim` is ever undefined, which it never is in practice.
-  Safe to drop, or worth folding into the accent scale as a documented
-  fallback.
-- `#c96a5a` (a muted terracotta red) — `settings.css`, used 3× for
-  `.set-note.error` and `.set-feedback.error` / `.set-feedback.error`. This
-  is the *only* error/danger color anywhere in the app. It has no token and
-  no light-mode variant defined (it's used as-is in both themes). If
-  Claude Design is proposing new layouts with any kind of destructive or
-  error state, this is the color to formalize as `--error` (and give it a
-  light-mode counterpart).
+- `#6b5b3e` — was a fallback value in `background: var(--accent-dim,
+  #6b5b3e)` for the mock-mode banner (`base.css:73`). It never fired in
+  practice (`--accent-dim` is always defined), so it's been deleted rather
+  than tokenized — the declaration is now the plain `var(--accent-dim)` it
+  was always resolving to.
 
-## Typography tokens (implicit — not variablized)
+## Typography tokens
 
-There are no `--font-*` custom properties; font stacks are written inline
-per rule. Two families:
+Two `--font-*` family tokens, both in `tokens.css` alongside the colors —
+font choice is a themeable property here, same as everything else:
 
-- **Body / prose**: `'Old Standard TT', Georgia, 'Times New Roman', serif`
-  — `base.css:15`, the default `body` font. Used for journal entries,
-  companion replies, help prose — anything meant to read as writing.
-- **UI chrome**: `'CMU Sans Demi Condensed', system-ui, sans-serif` — used
+- `--font-body`: `'Old Standard TT', Georgia, 'Times New Roman', serif` —
+  the default `body` font (`base.css:15`, `17px/1.65`, set directly, not
+  through this token — see note below). Used for journal entries, companion
+  replies, help prose — anything meant to read as writing.
+- `--font-ui`: `'CMU Sans Demi Condensed', system-ui, sans-serif` — used
   explicitly on nearly every interactive/meta element: nav buttons, status
   text, all buttons (`.send`, `.quiet`), chips, labels, table meta, cost
   panel, triage help, settings rows. This is the tell for "this is
@@ -74,6 +79,26 @@ per rule. Two families:
 The split is the core typographic idea of the app: serif = your words and
 the companion's words; condensed sans = the machinery around them. Any new
 component should pick one of these two, not introduce a third family.
+
+Note `body`'s own font declaration (`font: 17px/1.65 var(--font-body);`)
+uses the token for the family but not for the size — 17px is prose-specific
+and isn't part of the UI-chrome type scale below, so it stays a literal.
+
+## Type & spacing scale
+
+`--font-3xs` through `--font-xl` (8 steps) and `--space-1` through
+`--space-8` (8 steps) are also real tokens in `tokens.css` now — see
+`04-type-and-spacing-scale.md` for the full frequency analysis and the
+scale table. They were wired into every component file as a straight
+find-and-replace of exact-match values only: a declaration like
+`font-size: .72rem` that doesn't land exactly on a named step was left as a
+literal rather than rounded to the nearest one, so this changed zero pixels
+anywhere in the app — it only named the values that were already a scale
+in practice. Radius was *not* tokenized (no `--radius-*` custom properties
+exist) even though `04-type-and-spacing-scale.md` documents it as a clean
+de facto 3-tier system (`6px`/`8–10px`/pill/circle) — that's a
+documentation-only observation for Claude Design, not something ported
+into the real CSS in this pass.
 
 ## Motion
 

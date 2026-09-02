@@ -107,7 +107,8 @@ near-duplicates that exist today.
 - **`.set-feedback`** (`settings.css:113`) — raised card, plain border +
   `3px solid var(--accent-dim)` **left** rule (same idiom as dream-card),
   modifiers `.working` (dim italic), `.ok` (left rule → `--accent`), `.error`
-  (left rule + text → the unTokenized `#c96a5a`). This left-rule pattern is
+  (left rule + text → `var(--error)`, `#c96a5a` — tokenized since the type/
+  spacing/font-family pass). This left-rule pattern is
   effectively the app's "status callout" component — neutral/working/ok/error
   by left-rule color, and it's the one place a semantic-status visual
   vocabulary already exists.
@@ -122,8 +123,9 @@ unrelated classes.
 Full-width, centered-text strips above the header, in the body's flex
 column (so they push content down rather than overlay it):
 
-- **`#mock-banner`** (`base.css:70`) — `--accent-dim` fill (with the
-  `#6b5b3e` fallback), `--bg` text.
+- **`#mock-banner`** (`base.css:70`) — `--accent-dim` fill (the old
+  `#6b5b3e` dead fallback has since been deleted — it never fired), `--bg`
+  text.
 - **`#seed-banner-bar`** (`base.css:63`) — `--accent` fill (louder — this
   one warns you're writing into someone else's data), `--bg` text.
 - Mutual exclusion is handled in CSS (seed banner wins) — see the comment

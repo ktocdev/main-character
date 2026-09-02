@@ -1,17 +1,21 @@
 # Observed Type & Spacing Values
 
-rag-journal has no `--font-size-*` / `--space-*` custom properties (unlike
-GPS2's tokens.css, which formalizes both). Every screen's CSS was hand-
-tuned in raw `rem`. This file is a frequency analysis of what's actually in
-use today.
+**Update: this is done.** `--font-3xs` through `--font-xl` and `--space-1`
+through `--space-8` are now real custom properties in `static/css/tokens.css`,
+and every component file has been wired up to them — but only where a
+declaration's value was an *exact* match to a named step. The frequency
+table below still describes the starting point (rag-journal originally had
+no `--font-size-*` / `--space-*` custom properties, unlike GPS2's
+tokens.css, which formalizes both) and is worth keeping as the record of
+*why* these particular eight-and-eight steps were chosen.
 
-**Decided direction: fold these into a named scale.** Adopt the
-`--font-*` / `--space-*` tokens below as real custom properties — this is
-formalization, not redesign, so it should change nothing about how the
-app currently looks. Every named step below already matches an existing
-value (marked **bold**), so wiring components up to the tokens is a
-find-and-replace, not a restyle. Radius, by contrast, is already a clean
-de facto scale — no work needed there.
+This was formalization, not redesign: every rem value in the app today is
+unchanged, because non-matching values (the long tail described below,
+e.g. `.72rem`, `.92rem`, `.45rem`) were deliberately left as literals
+rather than rounded to the nearest step — rounding them would have been a
+real (if tiny) visual change, which was out of scope for this pass. Radius
+was left alone entirely — it's already a clean de facto scale (see below)
+but wasn't tokenized in the real CSS, only documented as one.
 
 ## Font sizes in use (rem, all `font-size:` or `font:` shorthand declarations)
 
@@ -34,7 +38,7 @@ de facto scale — no work needed there.
 | 1.15 | 18.4 | 3 | header `h1`, help `h2` |
 | 1.4 | 22.4 | 1 | triage-card `h2` (the one large focal heading) |
 
-## Named type scale (adopt as-is)
+## Named type scale (real, in `tokens.css`)
 
 Covers every value above without moving anything (values in **bold** are
 exact matches to existing usage; others are the nearest existing value
@@ -65,7 +69,7 @@ micro-adjustments (icon nudges, a specific gap that needed to be 1px
 tighter than its neighbor) rather than a second scale — don't treat those
 as scale steps.
 
-## Named spacing scale (adopt as-is)
+## Named spacing scale (real, in `tokens.css`)
 
 | Name | rem | px | Covers |
 |---|---|---|---|

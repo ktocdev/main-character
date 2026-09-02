@@ -84,10 +84,21 @@ function trackCloseProgress() {
   clearInterval(closePoll);
   let seedShown = false;
   let tries = 0;
+  const stop = () => {
+    clearInterval(closePoll);
+    refreshSeedMenu();
+    setTimeout(() => { const b = $('close-progress'); if (b) b.hidden = true; }, 8000);
+  };
   const tick = async () => {
     let p;
     try { p = await (await fetch('/api/sessions/close/progress')).json(); }
-    catch (e) { return; }   // transient — the next tick tries again
+    catch (e) {
+      // transient — the next tick tries again, but a run of failures still
+      // has to hit the same ~120 s ceiling normal polling does, or a
+      // persistently erroring endpoint polls forever.
+      if (++tries > 120) stop();
+      return;
+    }
     renderCloseProgress(p.steps, p.done);
     if (!seedShown && p.steps.some(s => s.key === 'seed' && s.status === 'done')) {
       seedShown = true;
@@ -95,11 +106,7 @@ function trackCloseProgress() {
     }
     // ~120 s ceiling so a stuck pipeline can't poll forever; the pipeline is
     // seconds in mock mode and well under this against a real key.
-    if (p.done || ++tries > 120) {
-      clearInterval(closePoll);
-      refreshSeedMenu();
-      setTimeout(() => { const b = $('close-progress'); if (b) b.hidden = true; }, 8000);
-    }
+    if (p.done || ++tries > 120) stop();
   };
   closePoll = setInterval(tick, 1000);
   tick();

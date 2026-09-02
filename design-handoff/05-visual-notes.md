@@ -1,25 +1,25 @@
 # Visual Notes (from screenshots)
 
-Two screenshot sets exist. `../screenshot/` (outside this folder) is the
-original round — six tabs, but taken before the rename and still shows the
-old "journal" wordmark; treat it as superseded. `screenshots/` (in this
-folder) is the current, thorough set: all ten tabs plus several
-interaction states (dropdowns, a native tooltip, a long autocomplete list)
-— all dark mode, mock/seed instance (hence the amber banner on every
-shot), correctly showing "main character." The notes below are keyed to
-the current set; the wordmark/logo notes further up this file were written
-against the first round and still hold.
+All screenshots now live in `screenshots/` (in this folder) — the original
+six-tab round that lived outside this folder at `../screenshot/` has been
+replaced and no longer exists. The current set covers all ten tabs plus
+several interaction states (open dropdowns, a native tooltip, a long
+autocomplete list, a checklist mid-run, a save/backup flow, the cost
+popover) — all dark mode, mock/seed instance (hence the amber banner on
+every shot), correctly showing "main character" throughout.
 
 ## The wordmark
 
-`header h1` (**"main character"**, renamed from "journal" — screenshots in
-`../screenshot/` still show the old name) renders as a genuine wordmark,
-not just a styled heading — italic serif, accent-colored, and visually the
-anchor of every screen. There is no logo asset anywhere in the codebase;
-this styled text *is* the brand mark today. If Claude Design is building a
-landing page, app icon, or any marketing surface, this is the thing to
-either extend into a real logo or deliberately keep as typographic-only —
-worth an explicit decision rather than defaulting to inventing an icon.
+`header h1` (**"main character"**, renamed from "journal") renders as a
+genuine wordmark, not just a styled heading — italic serif, accent-colored,
+and visually the anchor of every screen. Originally there was no logo
+asset anywhere in the codebase — this styled text *was* the entire brand
+mark. That's since changed: `source/mask-mark.svg` and
+`source/mask-mark-twotone.svg` (see "Logo concept" below) are real, usable
+mark assets now, in the app's own tokens, confirmed legible at the
+masthead's scale. Pairing the wordmark with the mark for a masthead
+lockup, vs. keeping them independent, is the remaining open call — not
+whether a mark exists at all.
 Also worth a beat of thought: "main character" is a two-word wordmark where
 "journal" was one — check line-wrapping/kerning at the header's fixed
 `1.15rem` size before assuming it drops in with no layout changes.
@@ -28,61 +28,57 @@ Directly under it, `.status` ("31 entries · 49 entities") sits as a small
 dim stat line — call this the **masthead** pattern: wordmark + one-line
 live stat, top-left, on every screen.
 
-## Logo concept (`source/mask.png`, `source/mask2.png`) — an evolving idea, not a finished mark
+## Logo concept — process history (source PNGs since deleted)
 
-Two iterations of the same two-tone theatrical mask, one half warm skin
-tone, one half white, black hair-cap, a single black teardrop on the pale
-half.
+The two SVGs in `source/` (`mask-mark.svg`, `mask-mark-twotone.svg`) came
+from three rounds of a two-tone theatrical mask concept — one half warm
+skin tone, one half white, black hair-cap, a single black teardrop on the
+pale half. The intermediate PNGs (`mask.png`/`mask2.png`/`mask3.png`) and
+render previews (`mask-mark-preview.png`/`mask-mark-twotone.png`) were
+working files and have since been deleted from `source/` — only the two
+final SVGs remain, which is what actually matters for handoff. Keeping
+the history here since it explains *why* the SVGs look the way they do:
 
-**Thematically it fits both versions** — a mask is a natural symbol for
-"playing a character," and the left/right split could map cleanly onto
+**Thematically it fit from the start** — a mask is a natural symbol for
+"playing a character," and the left/right split maps cleanly onto
 something the app already has a concept for: "you" vs. "companion," or the
 version of yourself performing vs. the one journaling in private.
 
-**`mask.png` (v1)** is glossy vector clip-art — gradient shading, heavy
-black outlines, photoreal red lips — against an app that is flat, warm,
-and restrained everywhere else.
+**v1** was glossy vector clip-art — gradient shading, heavy black
+outlines, photoreal red lips — against an app that is flat, warm, and
+restrained everywhere else. **v2** dropped the red lips and flattened the
+shading, but was still exported as plain RGB with a baked-in white
+background (no transparency) and was still off-palette. **v3** got to a
+genuine single-color mark: solid black linework on a real transparent
+background — confirmed via the PNG's alpha channel before it was trusted
+(it looked broken at first purely because it was being previewed against
+this editor's own dark background, black-on-black).
 
-**`mask2.png` (v2)** dropped the red lips and flattened the shading —
-closer to how the rest of the app looks, but still exported as plain RGB
-with a baked-in white background (no transparency), and still off-palette.
-
-**`mask3.png` (v3) is a genuine single-color mark**: solid black linework
-(hair silhouette, split-face outline, brows, eyes, nose, lips, one
-teardrop) on a real transparent background (confirmed via the PNG's alpha
-channel — it's RGBA, alpha ranges 0–254, not a flattened white/black
-square). It only *looked* broken in this editor at first because it was
-being previewed against this UI's own dark background — black-on-black.
-Once composited against white or the app's actual charcoal, the mark is
-there and reads clearly.
-
-**`source/mask-mark.svg`** — I vectorized `mask3.png` locally (via
-`potrace`, a bitmap-to-vector tracer) rather than relying on an image
-generator to hand-write SVG path data, which isn't something that kind of
-tool actually does reliably. The result is a true single `<path>` element,
-`fill="currentColor"`, transparent background, 13 subpaths as real bezier
-curves — confirmed to recolor correctly by swapping `currentColor` for
-`#d99e5b` (`--accent` dark) and rendering it, see `mask-mark-preview.png`.
-I also rendered it down to 32px wide (roughly the wordmark's scale) and
-the silhouette, split, eyes, and teardrop all still read clearly — the
-"too detailed for small sizes" risk I flagged earlier didn't materialize.
+**`source/mask-mark.svg`** — v3 vectorized locally (via `potrace`, a
+bitmap-to-vector tracer) rather than relying on an image generator to
+hand-write SVG path data, which isn't something that kind of tool actually
+does reliably. A true single `<path>` element, `fill="currentColor"`,
+transparent background, 13 subpaths as real bezier curves — confirmed to
+recolor correctly by swapping `currentColor` for `#d99e5b` (`--accent`
+dark) and rendering it. Also rendered down to 32px wide (roughly the
+wordmark's scale) and the silhouette, split, eyes, and teardrop all still
+read clearly — the "too detailed for small sizes" risk flagged earlier
+didn't materialize.
 
 **`source/mask-mark-twotone.svg`** — the two-tone follow-up, reinterpreting
-the original artwork's left/right face split (which was always the core
-concept — "you" vs. "companion," or the version of yourself performing vs.
-the one journaling in private) as two independently colorable paths
-instead of one flat color. Built by splitting `mask3.png`'s alpha bitmap
-at its exact horizontal center (the ink bounding box is symmetric, center
-column 512 of 1024 — confirmed before splitting, not assumed) and tracing
-each half separately, so the seam lands exactly on the artwork's existing
-center line rather than an arbitrary cut. Left half is `style="fill:
-var(--accent, #d99e5b)"`, right half `style="fill: var(--accent-dim,
-#8a6a44)"` — each references the real token by name with a literal
-fallback, so it picks up the live theme automatically when embedded in the
-app (the fallback only matters when the file is opened standalone, outside
-any element with those custom properties defined). Same small-size check
-as the single-tone version: still reads clearly at 32px wide.
-`mask-mark-twotone.png` shows it rendered on the app's charcoal background.
+the original artwork's left/right face split as two independently
+colorable paths instead of one flat color. Built by splitting v3's alpha
+bitmap at its exact horizontal center (the ink bounding box is symmetric,
+center column 512 of 1024 — confirmed before splitting, not assumed) and
+tracing each half separately, so the seam lands exactly on the artwork's
+existing center line rather than an arbitrary cut. Left half is
+`style="fill: var(--accent, #d99e5b)"`, right half `style="fill:
+var(--accent-dim, #8a6a44)"` — each references the real token by name with
+a literal fallback, so it picks up the live theme automatically when
+embedded in the app (the fallback only matters when the file is opened
+standalone, outside any element with those custom properties defined).
+Same small-size check as the single-tone version: still reads clearly at
+32px wide.
 
 **Where this leaves it**: both `mask-mark.svg` (one flat color, use
 `style="color: var(--accent)"` on the `<svg>` since it's `currentColor`)

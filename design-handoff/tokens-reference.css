@@ -3,8 +3,14 @@
   Source: static/css/tokens.css + static/css/base.css:1-37 (theme-switch logic)
   This is a reference copy for design-system tooling, not a file the app
   loads — the app's real source of truth remains static/css/tokens.css.
-  See 01-tokens.md for the full write-up (role of each token, the theme
-  precedence rules, and the two colors that never made it into this file).
+  See 01-tokens.md for the full write-up (role of each token and the theme
+  precedence rules).
+
+  This file matches the real tokens.css as of the font-family/--error/
+  type-and-spacing-scale tokenization pass — the "escaped colors" and
+  "proposed scale" framing below has been resolved in the real codebase,
+  not just documented here. Kept as annotated commentary since it's still
+  useful context for Claude Design.
 */
 
 /* Body prose font — loaded via Google Fonts <link> in index.html, not
@@ -37,63 +43,13 @@
   --accent-dim:  #8a6a44; /* quieter accent — labels, dashed borders */
   --border:      #3d362f; /* all hairlines */
   --you:         #c9b99f; /* the user's own words in a transcript */
-}
+  --error:       #c96a5a; /* the app's one danger/error color */
 
-/* Light — applies when the OS prefers light AND no dark pin is set */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg:          #faf7f2;
-    --bg-raised:   #ffffff;
-    --bg-input:    #f1ece4;
-    --text:        #38322b;
-    --text-dim:    #8c8378;
-    --accent:      #b5732f;
-    --accent-dim:  #d9b183; /* note: LIGHTER than --accent in this theme — reversed from dark mode */
-    --border:      #e4dcd0;
-    --you:         #6b5d49;
-  }
-}
+  /* fonts */
+  --font-ui:   'CMU Sans Demi Condensed', system-ui, sans-serif;
+  --font-body: 'Old Standard TT', Georgia, 'Times New Roman', serif;
 
-/* Light — explicit pin via [data-theme="light"] on <html>, overrides OS */
-:root[data-theme="light"] {
-  color-scheme: light;
-  --bg:          #faf7f2;
-  --bg-raised:   #ffffff;
-  --bg-input:    #f1ece4;
-  --text:        #38322b;
-  --text-dim:    #8c8378;
-  --accent:      #b5732f;
-  --accent-dim:  #d9b183;
-  --border:      #e4dcd0;
-  --you:         #6b5d49;
-}
-
-/* Explicit dark pin — same values as the bare :root block, just wins over OS light */
-:root[data-theme="dark"] { color-scheme: dark; }
-
-/*
-  ── UNTOKENIZED COLORS ────────────────────────────────────────────────
-  Not part of tokens.css. Included here as a flag for the design system —
-  see 01-tokens.md "Two colors that escaped the system."
-
-  --???: #6b5b3e;   fallback for var(--accent-dim) in the mock-mode banner
-                     (base.css:73) — never actually used since --accent-dim
-                     is always defined. Safe to retire.
-  --error:  #c96a5a; the ONLY error/danger color anywhere in the app
-                     (settings.css .set-note.error / .set-feedback.error).
-                     No light-mode variant exists. This is the color to
-                     promote to a real --error token if new layouts need
-                     a danger/destructive state.
-*/
-
-/*
-  ── PROPOSED SCALE TOKENS (not in the current codebase) ────────────────
-  See 04-type-and-spacing-scale.md for how these were derived from actual
-  usage frequency — every value below matches an existing size already in
-  use, this just names them.
-*/
-:root {
-  /* type — UI chrome scale (prose uses body { font: 17px/1.65 ... } directly, not this scale) */
+  /* type — UI chrome scale (prose uses body { font: 17px/1.65 var(--font-body); } directly, not this scale) */
   --font-3xs:  .7rem;
   --font-2xs:  .75rem;
   --font-xs:   .8rem;   /* base size for buttons/meta/status — the workhorse */
@@ -112,8 +68,52 @@
   --space-6: 1rem;
   --space-7: 1.2rem;
   --space-8: 1.5rem;  /* standard pane outer padding */
+}
 
-  /* radius */
+/* Light — applies when the OS prefers light AND no dark pin is set */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:          #faf7f2;
+    --bg-raised:   #ffffff;
+    --bg-input:    #f1ece4;
+    --text:        #38322b;
+    --text-dim:    #8c8378;
+    --accent:      #b5732f;
+    --accent-dim:  #d9b183; /* note: LIGHTER than --accent in this theme — reversed from dark mode */
+    --border:      #e4dcd0;
+    --you:         #6b5d49;
+    --error:       #a8493a; /* darkened for contrast on a near-white bg, same pattern as --accent/--you */
+  }
+}
+
+/* Light — explicit pin via [data-theme="light"] on <html>, overrides OS */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg:          #faf7f2;
+  --bg-raised:   #ffffff;
+  --bg-input:    #f1ece4;
+  --text:        #38322b;
+  --text-dim:    #8c8378;
+  --accent:      #b5732f;
+  --accent-dim:  #d9b183;
+  --border:      #e4dcd0;
+  --you:         #6b5d49;
+  --error:       #a8493a;
+}
+
+/* Explicit dark pin — same values as the bare :root block, just wins over OS light */
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/*
+  ── PROPOSED, NOT IN THE REAL CODEBASE ──────────────────────────────────
+  Everything above this line matches the real tokens.css exactly. Radius
+  and motion-duration are documentation-only observations, not real custom
+  properties — see 04-type-and-spacing-scale.md for why radius doesn't need
+  one (it's already a clean de facto scale) and 01-tokens.md "Motion" for
+  the one keyframe.
+*/
+:root {
+  /* radius — already a clean scale in practice, just never named */
   --radius-sm:     6px;
   --radius-base:   8px;
   --radius-lg:     10px;  /* dominant radius — buttons, cards, inputs */

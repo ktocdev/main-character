@@ -22,17 +22,23 @@ should read as more of the same app, not a rebrand.
    behavior). Any mobile layout is new design work from the token/component
    level up, not an adaptation of an existing responsive pattern.
 
-**Known, deliberately left alone:** the app's only error/danger color
-(`#c96a5a`, no token, no light-mode variant — see "Known gaps" below) stays
-exactly as-is in the real codebase. It's documented as a gap for Claude
-Design to resolve (a proper `--error` token with a light variant) as part
-of the new work, not something already fixed here.
+**Update:** the token gaps this bundle originally flagged as "known,
+deliberately left alone" — no `--font-*` family tokens, no `--error`
+token, an untokenized fallback color, no named type/spacing scale — have
+since been fixed directly in the real codebase (`static/css/tokens.css`
+and every component file), not just documented. The reasoning: these are
+mechanical value-aliasing (same colors, same fonts, same sizes, just
+named), not a redesign, so fixing them before Claude Design starts means
+the relic pages reference tokens that actually exist. See `01-tokens.md`
+and `04-type-and-spacing-scale.md` for what changed. Radius was
+deliberately *not* tokenized in the real CSS (still documentation-only)
+and remains a case Claude Design can pick up if it wants one.
 
 ## Files in this bundle
 
 1. [`01-tokens.md`](01-tokens.md) — every design token in use: color (dark +
-   light), typography, the two fonts, motion. Includes the two hardcoded
-   colors that escaped the token system and should probably get one.
+   light, now ten tokens including `--error`), typography (`--font-ui`/
+   `--font-body`), the named type/spacing scale, motion.
 2. [`02-components.md`](02-components.md) — full inventory of UI components
    and patterns with class names, states, and source references
    (`file.css:line`), organized by category (actions, inputs, cards/callouts,
@@ -41,22 +47,19 @@ of the new work, not something already fixed here.
    handful of layout patterns every screen is built from (three-pane,
    composer-anchored single column, centered reading column).
 4. [`04-type-and-spacing-scale.md`](04-type-and-spacing-scale.md) — the
-   *observed* type and spacing values in use today (this app has no formal
-   scale — sizes were hand-tuned per component). **Decided**: fold these
-   into the named `--font-*`/`--space-*` scale documented there — every
-   step matches an existing value, so this changes nothing visually.
+   frequency analysis behind the named `--font-*`/`--space-*` scale, which
+   is now real (wired into `tokens.css` and every component file, exact
+   matches only — nothing was rounded, so nothing changed visually).
 5. [`tokens-reference.css`](tokens-reference.css) — the actual token source
    (`tokens.css`) plus the two light-mode override blocks from `base.css`,
    consolidated into one file with every value annotated. Drop this straight
    into a relic page.
 6. [`05-visual-notes.md`](05-visual-notes.md) — notes from cross-checking
-   the above against real screenshots. Two sets exist:
-   `../screenshot/` (outside this folder, six tabs, pre-rename — still
-   shows "journal," superseded) and **[`screenshots/`](screenshots/)**
-   (in this folder, the current thorough set: all ten tabs plus several
-   interaction states — open dropdowns, a native tooltip, a long
-   autocomplete list, a checklist mid-run, and a save/backup flow caught
-   working → done). Mostly confirms 01–04, plus one real finding: three
+   the above against real screenshots in **[`screenshots/`](screenshots/)**
+   (in this folder): all ten tabs plus several interaction states — open
+   dropdowns, a native tooltip, a long autocomplete list, a checklist
+   mid-run, a save/backup flow caught working → done, and the cost
+   popover. Mostly confirms 01–04, plus one real finding: three
    native browser widgets (`<select>` options, `<datalist>` autocomplete,
    `title` tooltips) can't be restyled with CSS and break theme on every
    use — see "Native browser chrome breaks the illusion" in that file and
@@ -76,25 +79,20 @@ of the new work, not something already fixed here.
      Claude Design has no way to render CMU Sans Demi Condensed at all.
      (Old Standard TT doesn't need a copy — it's Google Fonts-hosted and
      loadable by name, see `index.html`'s `<link>` tags.)
-   - `source/mask.png`, `source/mask2.png`, `source/mask3.png` — three
-     iterations of a candidate logo concept (a two-tone theatrical mask),
-     each closer to the system's style than the last; see "Logo concept"
-     in `05-visual-notes.md` for the play-by-play.
-   - **`source/mask-mark.svg`** — `mask3.png` vectorized into a true
-     single-`<path>` SVG, transparent background, `fill="currentColor"` so
-     it recolors via CSS to whatever token it's given, confirmed legible
-     down to ~32px. `source/mask-mark-preview.png` shows it in `--accent`
-     on the app's charcoal background.
+   - **`source/mask-mark.svg`** — a logo mark, vectorized from a three-round
+     theatrical-mask concept (process history — the intermediate PNGs and
+     preview renders have since been deleted; see "Logo concept" in
+     `05-visual-notes.md` for the play-by-play). True single-`<path>` SVG,
+     transparent background, `fill="currentColor"` so it recolors via CSS
+     to whatever token it's given, confirmed legible down to ~32px.
    - **`source/mask-mark-twotone.svg`** — the same mark split into two
      independently colorable paths along its existing center seam (left
      half `--accent`, right half `--accent-dim`), reinterpreting the
      original concept's left/right duality instead of flattening it to one
-     color. `source/mask-mark-twotone.png` shows it rendered. This is the
-     closer match to the original idea — probably the one to lead with for
-     Claude Design, with the single-tone version as the fallback for
-     contexts where two colors would be too busy (very small favicon sizes,
-     monochrome contexts). The three PNGs (`mask.png`/`mask2.png`/
-     `mask3.png`) are process history, not something to hand off directly.
+     color. This is the closer match to the original idea — probably the
+     one to lead with for Claude Design, with the single-tone version as
+     the fallback for contexts where two colors would be too busy (very
+     small favicon sizes, monochrome contexts).
 
 ## What this app is
 
@@ -128,12 +126,15 @@ not the visual style.
 
 ## Known gaps worth flagging to Claude Design
 
-- No formal type or spacing scale — every screen's CSS hand-picked rem
-  values. See `04-type-and-spacing-scale.md`.
-- Two colors never made it into tokens: `#6b5b3e` (mock-banner fallback,
-  `base.css:73`) and `#c96a5a` (error red, `settings.css` — used 3×). Both
-  read as "this should have been a token" — likely `--accent-dim` fallback
-  and a new `--error`/`--danger` semantic token respectively.
-- No dedicated "danger" or "success" semantic color exists at all today —
-  `.set-note.error` / `.set-feedback.error` invent `#c96a5a` locally because
-  there's nothing to reach for.
+- No `--radius-*` tokens in the real CSS — radius is a clean de facto
+  3-tier system (`6px`/`8–10px`/pill/circle, see
+  `04-type-and-spacing-scale.md`) but was deliberately left untokenized in
+  this pass. Worth naming if Claude Design wants a complete scale set.
+- No dedicated "success" semantic color exists — only `--error` (added in
+  this pass) and `--accent` (doing double duty as the "ok"/positive color
+  in `.set-note.ok` / `.set-feedback.ok`). If new layouts need a real
+  success state distinct from the accent hue, that's new territory, not a
+  gap in the current tokens.
+- (Previously listed here: no font-family tokens, no `--error` token, an
+  untokenized fallback color, no named type/spacing scale. All four are
+  now fixed in the real codebase — see `01-tokens.md`.)

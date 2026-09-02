@@ -12,19 +12,19 @@
   ::-webkit-scrollbar-corner { background: transparent; }
   body {
     background: var(--bg); color: var(--text);
-    font: 17px/1.65 'Old Standard TT', Georgia, 'Times New Roman', serif;
+    font: 17px/1.65 var(--font-body);
     height: 100dvh; display: flex; flex-direction: column;
   }
   header {
-    display: flex; align-items: baseline; gap: 1.5rem;
-    padding: 1rem 1.5rem .8rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; gap: var(--space-8);
+    padding: var(--space-6) var(--space-8) var(--space-5); border-bottom: 1px solid var(--border);
   }
-  header h1 { font-size: 1.15rem; font-weight: normal; font-style: italic; color: var(--accent); }
-  header .status { font-size: .8rem; color: var(--text-dim); font-family: 'CMU Sans Demi Condensed', system-ui, sans-serif; }
-  nav { margin-left: auto; display: flex; gap: .25rem; }
+  header h1 { font-size: var(--font-lg); font-weight: normal; font-style: italic; color: var(--accent); }
+  header .status { font-size: var(--font-xs); color: var(--text-dim); font-family: var(--font-ui); }
+  nav { margin-left: auto; display: flex; gap: var(--space-1); }
   nav button {
     background: none; border: none; color: var(--text-dim);
-    font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif; padding: .35rem .8rem;
+    font: .9rem var(--font-ui); padding: .35rem var(--space-5);
     border-radius: 6px; cursor: pointer;
   }
   nav button.active { background: var(--bg-input); color: var(--text); }
@@ -38,12 +38,12 @@
   #cost-panel {
     position: absolute; top: 100%; right: 0; margin-top: .3rem; z-index: 20;
     background: var(--bg-input); border: 1px solid var(--border);
-    border-radius: 6px; padding: .6rem .8rem; white-space: nowrap;
-    font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    border-radius: 6px; padding: var(--space-4) var(--space-5); white-space: nowrap;
+    font: var(--font-sm) var(--font-ui);
   }
   #cost-panel[hidden] { display: none; }
   .cost-line { color: var(--text); font-variant-numeric: tabular-nums; }
-  .cost-note { color: var(--text-dim); font-size: .75rem; margin-top: .15rem; }
+  .cost-note { color: var(--text-dim); font-size: var(--font-2xs); margin-top: .15rem; }
   /* mock-mode status: tinted so it reads as a state, not a footnote, and
      allowed to wrap so it does not stretch the nowrap panel. */
   .cost-mock { color: var(--accent-dim); white-space: normal; max-width: 16rem; }
@@ -62,16 +62,16 @@
      not. */
   body.seed-instance #seed-banner-bar {
     display: block; text-align: center;
-    padding: .4rem 1rem;
+    padding: var(--space-2) var(--space-6);
     background: var(--accent); color: var(--bg);
-    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    font: var(--font-xs) var(--font-ui);
     letter-spacing: .02em;
   }
   body.mock-mode #mock-banner {
     display: block; text-align: center;
-    padding: .4rem 1rem;
-    background: var(--accent-dim, #6b5b3e); color: var(--bg);
-    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    padding: var(--space-2) var(--space-6);
+    background: var(--accent-dim); color: var(--bg);
+    font: var(--font-xs) var(--font-ui);
     letter-spacing: .02em;
   }
   /* One bar, not two. The seed instance is always mock mode, so both rules
