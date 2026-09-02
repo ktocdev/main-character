@@ -110,9 +110,37 @@ def discard_current(collection=None) -> None:
     forward context a fresh session always does, so this is a reset, not a
     delete of anything already committed. A testing affordance -- the route
     that calls it refuses outside mock mode, where an unsaved chat vanishing
-    with no entry would be data loss rather than a convenience."""
+    with no entry would be data loss rather than a convenience.
+
+    Write-mode entries (waking and dream) are backed up to disk -- and dreams
+    upserted into the dream collection -- the moment they're written, before
+    the chat ever closes (see `record_artifact`). Discard has to undo those
+    too, or the "no entry" promise is false: a rebuild or export would still
+    pick up the file the discarded chat left behind."""
+    cur = load_current(collection)
+    for art in cur.get("artifacts", []):
+        _discard_artifact(art)
     base = _initial_base(collection) if collection is not None else []
     save_current(_fresh(base=base))
+
+
+def record_artifact(art: dict, collection=None):
+    """Track a write-mode side effect (a backup file, a dream collection id)
+    against the open session, so `discard_current` can undo it. `art` is
+    {"kind": "entry_file", "path": ...} or
+    {"kind": "dream", "path": ..., "entry_id": ...}."""
+    cur = load_current(collection)
+    cur.setdefault("artifacts", []).append(art)
+    save_current(cur)
+
+
+def _discard_artifact(art: dict) -> None:
+    path = art.get("path")
+    if path:
+        Path(path).unlink(missing_ok=True)
+    if art.get("kind") == "dream" and art.get("entry_id"):
+        import dreams
+        dreams.get_dream_collection().delete(ids=[art["entry_id"]])
 
 
 def append_message(role: str, text: str, dream: bool = False, collection=None,
@@ -126,7 +154,7 @@ def append_message(role: str, text: str, dream: bool = False, collection=None,
     save_current(cur)
 
 
-def backup_entry_text(text: str, when: datetime | None = None):
+def backup_entry_text(text: str, when: datetime | None = None) -> Path:
     """Immediate markdown backup of a write-mode entry. The live copy is
     sessions/current.json; this file is the belt-and-suspenders copy so a
     new entry never has a single point of failure before the chat closes."""
@@ -138,6 +166,7 @@ def backup_entry_text(text: str, when: datetime | None = None):
         f"# Journal entry — {date} {now.strftime('%H:%M')}\n_Date: {date}_\n\n{text}",
         encoding="utf-8",
     )
+    return path
 
 
 def seed_messages(msgs: list[dict], collection=None) -> int:

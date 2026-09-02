@@ -520,7 +520,8 @@ def test_background_work_is_released_when_the_stream_dies(env, client, monkeypat
         raise RuntimeError("the model call failed mid-stream")
 
     monkeypatch.setattr(server.companion, "stream_reply", boom)
-    monkeypatch.setattr(dreams, "store_dream_entry", lambda *a, **k: "d1")
+    monkeypatch.setattr(dreams, "store_dream_entry",
+                        lambda *a, **k: ("d1", Path("d1.md")))
     monkeypatch.setattr(dreams, "ingest_dream_entry", lambda *a, **k: None)
     monkeypatch.setattr(server.sessions, "append_message", lambda *a, **k: None)
 

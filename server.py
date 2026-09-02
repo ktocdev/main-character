@@ -331,15 +331,28 @@ CLOSE_STEPS = [
     ("summaries", "refreshing weekly arcs and summaries"),
     ("dreams", "scanning for dreams"),
 ]
-_CLOSE = {"active": False, "running": None, "done": set(), "failed": None}
+_CLOSE = {"active": False, "running": None, "done": set(), "failed": set()}
 _CLOSE_LOCK = threading.Lock()
 
 
+def _close_reserve() -> bool:
+    """Atomically claim the progress record for a new close, so a second
+    close (a stray double-click, two tabs) can't start while a previous
+    close's background pipeline is still writing into the same record --
+    without this, the second close's reset would corrupt the first's
+    in-flight progress. Returns False if a close is already active."""
+    with _CLOSE_LOCK:
+        if _CLOSE["active"]:
+            return False
+        _CLOSE["active"] = True
+        return True
+
+
 def _close_begin():
-    """Reset the record before the tasks are queued, so a poll never shows the
+    """Reset the rest of the record once reserved, so a poll never shows the
     previous close's finished state as if it were this one's."""
     with _CLOSE_LOCK:
-        _CLOSE.update(active=True, running=None, done=set(), failed=None)
+        _CLOSE.update(active=True, running=None, done=set(), failed=set())
 
 
 def _close_finish():
@@ -356,7 +369,7 @@ def _close_step(key: str):
         yield
     except Exception:
         with _CLOSE_LOCK:
-            _CLOSE["failed"] = key
+            _CLOSE["failed"].add(key)
         raise
     else:
         with _CLOSE_LOCK:
@@ -373,23 +386,35 @@ def _after_close_refresh():
     docs + entry summaries, scan it for dreams, re-sync embeddings.
     Everything is incremental — cached work is skipped.
 
-    This is the last of the two close tasks, so it clears the progress
-    `active` flag when it finishes however it exits — the client stops polling
-    on that flag, so a missed clear would poll forever."""
+    Each step gets its own try/except -- a failed step is marked and the
+    exception logged, but the remaining steps still run, matching what
+    close_progress documents. This is the last of the two close tasks, so it
+    clears the progress `active` flag when it finishes however it exits --
+    the client stops polling on that flag, so a missed clear would poll
+    forever."""
     import dreams
     import summarizer
-    try:
-        with _close_step("categories"):
-            categories.build(quiet=True)
-        with _close_step("entities"):
-            STATE["entity_index"] = entities.build(quiet=True)
-        with _close_step("summaries"):
-            summarizer.build(quiet=True)
-        with _close_step("dreams"):
-            dreams.extract(quiet=True)
-    except Exception as e:
-        print(f"  post-close refresh failed: {e}")
-    finally:
+    with _INDEX_LOCK:
+        try:
+            with _close_step("categories"):
+                categories.build(quiet=True)
+        except Exception as e:
+            print(f"  post-close refresh: categories failed: {e}")
+        try:
+            with _close_step("entities"):
+                STATE["entity_index"] = entities.build(quiet=True)
+        except Exception as e:
+            print(f"  post-close refresh: entities failed: {e}")
+        try:
+            with _close_step("summaries"):
+                summarizer.build(quiet=True)
+        except Exception as e:
+            print(f"  post-close refresh: summaries failed: {e}")
+        try:
+            with _close_step("dreams"):
+                dreams.extract(quiet=True)
+        except Exception as e:
+            print(f"  post-close refresh: dreams failed: {e}")
         _close_finish()
 
 
@@ -422,17 +447,29 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
     # still becomes journal memory at the next close, exactly like a replied-to
     # entry. Dreams keep their realm ingest (memory, not the companion voice).
     if body.no_reply:
+        # No companion turn means nothing appends this to STATE["messages"]
+        # the way a reply does -- but conversation_messages() (rebuilt from
+        # current.json at server startup) puts every "you" message, raw, into
+        # that same list, no_reply included. Append it live here too, or the
+        # companion only learns this entry existed after a restart.
+        STATE["messages"].append({"role": "user", "content": text})
         if body.dream:
             import dreams
-            entry_id = dreams.store_dream_entry(text, when=when)
+            entry_id, dream_path = dreams.store_dream_entry(text, when=when)
             sessions.append_message("you", text, dream=True,
                                     collection=STATE["collection"], when=when)
+            sessions.record_artifact(
+                {"kind": "dream", "path": str(dream_path), "entry_id": entry_id},
+                collection=STATE["collection"])
             _tracked(background_tasks, dreams.ingest_dream_entry, text, entry_id, when)
         else:
             entry_id = "current-chat"
             sessions.append_message("you", text, collection=STATE["collection"],
                                     when=when)
-            sessions.backup_entry_text(text, when=when)
+            entry_path = sessions.backup_entry_text(text, when=when)
+            sessions.record_artifact(
+                {"kind": "entry_file", "path": str(entry_path)},
+                collection=STATE["collection"])
         return {"ok": True, "entry_id": entry_id, "no_reply": True}
 
     # Before anything is written. Saving the entry and then refusing the reply
@@ -449,9 +486,12 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
 
     if body.dream:
         import dreams
-        entry_id = dreams.store_dream_entry(text, when=when)
+        entry_id, dream_path = dreams.store_dream_entry(text, when=when)
         sessions.append_message("you", text, dream=True,
                                 collection=STATE["collection"], when=when)
+        sessions.record_artifact(
+            {"kind": "dream", "path": str(dream_path), "entry_id": entry_id},
+            collection=STATE["collection"])
         entry_message = (
             "The following is a dream I just had — I'm flagging it as a "
             "dream, not a waking event. Respond to it as my companion: "
@@ -465,7 +505,10 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
         entry_id = "current-chat"
         sessions.append_message("you", text, collection=STATE["collection"],
                                 when=when)
-        sessions.backup_entry_text(text, when=when)
+        entry_path = sessions.backup_entry_text(text, when=when)
+        sessions.record_artifact(
+            {"kind": "entry_file", "path": str(entry_path)},
+            collection=STATE["collection"])
         entry_message = (
             "The following is a new journal entry I just wrote — not a question. "
             "Respond to it as my companion.\n\n" + text
@@ -601,12 +644,22 @@ def seed_session(body: SeedIn):
 def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     """The summarize point: the user's side of the chat becomes a journal
     entry, the braid is archived, a fresh chat opens, and the full memory
-    pipeline runs in the background."""
+    pipeline runs in the background.
+
+    Reserves the close-progress record before doing any work, so a second
+    close (a stray double-click, two tabs) can't start while a previous
+    close's background pipeline is still writing into the same record."""
+    if not _close_reserve():
+        return JSONResponse(
+            {"error": "the memory pipeline from a previous close is still "
+                      "running -- wait for it to finish before closing again."},
+            status_code=409)
     try:
         result = sessions.close_session(
             STATE["collection"], STATE["client"], title_hint=body.title,
         )
     except ValueError as e:
+        _close_finish()
         return JSONResponse({"error": str(e)}, status_code=400)
     STATE["messages"] = []
     # First, before the pipeline is queued. The pipeline is arguably the
@@ -637,7 +690,10 @@ def discard_session():
     kept is data loss, not a reset -- there, `close` is how you clear the box.
 
     The in-memory reset mirrors close_session exactly (messages emptied, the
-    session meter zeroed) minus the parts that persist the chat.
+    session meter zeroed) minus the parts that persist the chat. Write-mode
+    entries back themselves up to disk (and dreams into the dream collection)
+    the moment they're written, before the chat closes -- discard undoes
+    those too (`sessions.discard_current`), or "no entry" would be false.
     """
     import config
     if not config.MOCK_MODE:
@@ -661,13 +717,13 @@ def close_progress():
     failed; a failed step doesn't stall the readout — the remaining steps
     still run and the client still finishes."""
     with _CLOSE_LOCK:
-        running, done, failed = _CLOSE["running"], set(_CLOSE["done"]), _CLOSE["failed"]
+        running, done, failed = _CLOSE["running"], set(_CLOSE["done"]), set(_CLOSE["failed"])
         active = _CLOSE["active"]
     steps = []
     for key, label in CLOSE_STEPS:
         if key in done:
             status = "done"
-        elif key == failed:
+        elif key in failed:
             status = "failed"
         elif key == running:
             status = "running"
@@ -991,6 +1047,12 @@ RESTART = {"requested": False, "keys": set(), "into": "journal"}
 SERVER = {"instance": None}
 _BUSY = {"count": 0}
 _BUSY_LOCK = threading.Lock()
+# _BUSY only counts for /api/restart's refusal -- it isn't exclusion. The
+# close pipeline's summarizer/dreams refresh and a manual index rebuild both
+# mutate the same journal_summaries/journal_dreams collections, so they need
+# an actual lock between them or one can delete/upsert over the other's
+# still-in-flight writes.
+_INDEX_LOCK = threading.Lock()
 
 
 def _tracked(background_tasks: BackgroundTasks, fn, *args):
@@ -1214,10 +1276,10 @@ def data_export():
     import export
     dest = export.default_dest()
     with _busy():
+        if not export_has_entries():
+            return JSONResponse({"error": "there are no entries to export yet."},
+                                status_code=409)
         info = export.export_journal(dest)
-    if not info["entries"]:
-        return JSONResponse({"error": "there are no entries to export yet."},
-                            status_code=409)
     return {"ok": True, "path": str(dest), **info}
 
 
@@ -1240,11 +1302,19 @@ def data_rebuild():
     this costs nothing and needs no key -- but it is the slowest thing in
     Settings by a wide margin on a large journal."""
     import rebuild_index
-    with _busy():
-        if not export_has_entries():
-            return JSONResponse({"error": "there are no entries to index yet."},
-                                status_code=409)
-        result = rebuild_index.rebuild()
+    if not _INDEX_LOCK.acquire(blocking=False):
+        return JSONResponse(
+            {"error": "the memory pipeline is still updating from a recent "
+                      "close -- try again in a moment."},
+            status_code=409)
+    try:
+        with _busy():
+            if not export_has_entries():
+                return JSONResponse({"error": "there are no entries to index yet."},
+                                    status_code=409)
+            result = rebuild_index.rebuild()
+    finally:
+        _INDEX_LOCK.release()
     return {"ok": True, **result}
 
 

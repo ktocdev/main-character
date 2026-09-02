@@ -161,9 +161,14 @@ def build_entries(dry_run: bool) -> dict:
             # the old CLI write-mode entries, and both are in the index today
             # -- dropping them would quietly delete writing from search, which
             # is the one outcome a rebuild must never produce.
+            # Closed entries and the open session both join their messages
+            # with "\n\n" (see close_session / _open_session_text), so a
+            # covered draft's text is one whole joined segment -- not just
+            # any substring, which a short or common draft could also match
+            # inside unrelated text and get wrongly skipped.
             covered = entry["text"] and (
-                entry["text"] in closed.get(entry["date"], "")
-                or entry["text"] in open_chat)
+                entry["text"] in closed.get(entry["date"], "").split("\n\n")
+                or entry["text"] in open_chat.split("\n\n"))
             if covered:
                 skipped += 1
                 continue
