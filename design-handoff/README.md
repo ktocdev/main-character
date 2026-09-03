@@ -5,42 +5,11 @@ Purpose: formalize the design language that already exists in rag-journal's CSS 
 **Direction: formalize, don't reinvent.** The palette, type choices, and component shapes below are the target — not a starting sketch. New layouts should read as more of the same app, not a rebrand.
 
 **Scope of "new layouts"** — confirmed as all three of:
-<<<<<<< Updated upstream
-1. **Refreshed existing screens** — the ten tabs as they exist today, same
-   content and IA, a more polished pass in this design language.
-2. **New screens with no current equivalent** — onboarding/first-run, empty
-   states, a landing/marketing page for "Main Character." These have zero
-   CSS to reference; `01`–`05` are the constraint set (tokens, components,
-   type/spacing, the wordmark/masthead), not a template to adapt.
-3. **Mobile/responsive** — the app today has essentially none (one
-   breakpoint, one rule, see `03-layout-patterns.md` § Responsive
-   behavior). This is **not optional or a follow-up phase** — every new
-   layout in categories 1 and 2 above should be designed with phone-width-
-   and-up support in mind from the start, since none of the existing
-   patterns have a mobile answer to fall back on. See
-   `03-layout-patterns.md` § Responsive behavior for what each layout
-   pattern needs specifically (the three-pane pattern and the top nav are
-   the two with no mobile story at all today, and need real interaction
-   design, not just a breakpoint).
-
-**Update:** the token gaps this bundle originally flagged as "known,
-deliberately left alone" — no `--font-*` family tokens, no `--error`
-token, an untokenized fallback color, no named type/spacing scale — have
-since been fixed directly in the real codebase (`static/css/tokens.css`
-and every component file), not just documented. The reasoning: these are
-mechanical value-aliasing (same colors, same fonts, same sizes, just
-named), not a redesign, so fixing them before Claude Design starts means
-the relic pages reference tokens that actually exist. See `01-tokens.md`
-and `04-type-and-spacing-scale.md` for what changed. Radius has since been
-tokenized too (`--radius-sm`/`--radius-base`/`--radius-lg`/`--radius-pill`/
-`--radius-circle`), the same way and for the same reason.
-=======
 1. **Refreshed existing screens** — the ten tabs as they exist today, same content and IA, a more polished pass in this design language.
 2. **New screens with no current equivalent** — onboarding/first-run, empty states, a landing/marketing page for "Main Character." These have zero CSS to reference; `01`–`05` are the constraint set (tokens, components, type/spacing, the wordmark/masthead), not a template to adapt.
-3. **Mobile/responsive** — mandatory, phone-width-and-up, for every deliverable in this round, not an optional add-on. The app today has essentially no responsive design of its own (one breakpoint, one rule — see `03-layout-patterns.md` § Responsive behavior), so this is new design work from the token/component level up, not an adaptation of an existing pattern. Claude Design should design and spec every new screen and component down to phone width from the start.
+3. **Mobile/responsive** — the app today has essentially none (one breakpoint, one rule, see `03-layout-patterns.md` § Responsive behavior). This is **not optional or a follow-up phase** — every new layout in categories 1 and 2 above should be designed with phone-width-and-up support in mind from the start, since none of the existing patterns have a mobile answer to fall back on. See `03-layout-patterns.md` § Responsive behavior for what each layout pattern needs specifically (the three-pane pattern and the top nav are the two with no mobile story at all today, and need real interaction design, not just a breakpoint).
 
-**Update:** the token gaps this bundle originally flagged as "known, deliberately left alone" — no `--font-*` family tokens, no `--error` token, an untokenized fallback color, no named type/spacing scale — have since been fixed directly in the real codebase (`static/css/tokens.css` and every component file), not just documented. The reasoning: these are mechanical value-aliasing (same colors, same fonts, same sizes, just named), not a redesign, so fixing them before Claude Design starts means the relic pages reference tokens that actually exist. See `01-tokens.md` and `04-type-and-spacing-scale.md` for what changed. Radius was deliberately *not* tokenized in the real CSS (still documentation-only) and remains a case Claude Design can pick up if it wants one.
->>>>>>> Stashed changes
+**Update:** the token gaps this bundle originally flagged as "known, deliberately left alone" — no `--font-*` family tokens, no `--error` token, an untokenized fallback color, no named type/spacing scale — have since been fixed directly in the real codebase (`static/css/tokens.css` and every component file), not just documented. The reasoning: these are mechanical value-aliasing (same colors, same fonts, same sizes, just named), not a redesign, so fixing them before Claude Design starts means the relic pages reference tokens that actually exist. See `01-tokens.md` and `04-type-and-spacing-scale.md` for what changed. Radius has since been tokenized too (`--radius-sm`/`--radius-base`/`--radius-lg`/`--radius-pill`/`--radius-circle`), the same way and for the same reason.
 
 ## Files in this bundle
 
@@ -69,28 +38,9 @@ A single-page journal app (`static/index.html`) with one shell and ten tabs (wri
 
 Do this in order, not all at once:
 
-1. **One consolidated token specimen page, first.** Every token in
-   `01-tokens.md`/`tokens-reference.css` on a single page — color (dark
-   *and* light, all ten), both font families at each step of the
-   `--font-*` scale, the `--space-*` scale, the `--radius-*` scale, motion
-   — live-rendered swatches next to var name, value, and usage note. This
-   is the `GPS2 Tokens.html` equivalent, and it's the foundation everything
-   else points back to, so it comes before any screen redesign work
-   starts, not after.
-2. **Then redesign the screenshot pages, one at a time**, using `01`–`05`
-   as the constraint set and referencing the token page rather than
-   restating token values inline on each screen.
-3. **Spin off a specimen page for a component only once it's actually
-   recurring** — e.g. once a button shows up in two or more of the
-   redesigned screens, that's the point to build a `Buttons` page
-   collecting every variant (`button.send`, `button.quiet`, the icon-only
-   round buttons) in one place, same pattern as `GPS2 Buttons.html` /
-   `GPS2 Design Elements.html` / `GPS2 Patterns.html`. Don't front-load a
-   full set of component pages before the screen work has shown which
-   components actually repeat enough to earn one — `02-components.md`
-   already flags likely candidates (`Card`, `Chip`, `ListItem`, the new
-   `TagEditor` pattern) but let the redesigns confirm which of those are
-   worth a dedicated page versus staying a one-off.
+1. **One consolidated token specimen page, first.** Every token in `01-tokens.md`/`tokens-reference.css` on a single page — color (dark *and* light, all ten), both font families at each step of the `--font-*` scale, the `--space-*` scale, the `--radius-*` scale, motion — live-rendered swatches next to var name, value, and usage note. This is the `GPS2 Tokens.html` equivalent, and it's the foundation everything else points back to, so it comes before any screen redesign work starts, not after.
+2. **Then redesign the screenshot pages, one at a time**, using `01`–`05` as the constraint set and referencing the token page rather than restating token values inline on each screen.
+3. **Spin off a specimen page for a component only once it's actually recurring** — e.g. once a button shows up in two or more of the redesigned screens, that's the point to build a `Buttons` page collecting every variant (`button.send`, `button.quiet`, the icon-only round buttons) in one place, same pattern as `GPS2 Buttons.html` / `GPS2 Design Elements.html` / `GPS2 Patterns.html`. Don't front-load a full set of component pages before the screen work has shown which components actually repeat enough to earn one — `02-components.md` already flags likely candidates (`Card`, `Chip`, `ListItem`, the new `TagEditor` pattern) but let the redesigns confirm which of those are worth a dedicated page versus staying a one-off.
 
 ## Fonts
 
@@ -99,30 +49,7 @@ Do this in order, not all at once:
 
 ## Known gaps worth flagging to Claude Design
 
-<<<<<<< Updated upstream
-- **The eight card-like components don't actually share enough to merge
-  in code** — border treatment (solid+left-rule / plain / all-round
-  dashed), radius, and padding all vary. See `02-components.md` § Cards
-  for the full comparison table. This needs an actual design decision
-  (one `Card` component, `tone`/`size` props), not a find-and-replace —
-  which is why it's still a gap rather than something fixed alongside the
-  tokens.
-- **`.set-feedback` uses `--radius-sm` (6px) while its seven card
-  siblings all use `--radius-lg` (10px)** — a real inconsistency the
-  original draft of this doc had actually missed (it claimed a blanket
-  "10px–12px" range for the whole group). Worth a deliberate call: keep
-  the smaller radius as a real "this is a compact status callout, not a
-  content card" distinction, or normalize it to `10px`.
-- No dedicated "success" semantic color exists — only `--error` (added in
-  the tokens pass) and `--accent` (doing double duty as the "ok"/positive
-  color in `.set-note.ok` / `.set-feedback.ok`). If new layouts need a
-  real success state distinct from the accent hue, that's new territory,
-  not a gap in the current tokens.
-- (Previously listed here: no font-family tokens, no `--error` token, an
-  untokenized fallback color, no named type/spacing/radius scale. All are
-  now fixed in the real codebase — see `01-tokens.md`.)
-=======
-- No `--radius-*` tokens in the real CSS — radius is a clean de facto 3-tier system (`6px`/`8–10px`/pill/circle, see `04-type-and-spacing-scale.md`) but was deliberately left untokenized in this pass. Worth naming if Claude Design wants a complete scale set.
-- No dedicated "success" semantic color exists — only `--error` (added in this pass) and `--accent` (doing double duty as the "ok"/positive color in `.set-note.ok` / `.set-feedback.ok`). If new layouts need a real success state distinct from the accent hue, that's new territory, not a gap in the current tokens.
-- (Previously listed here: no font-family tokens, no `--error` token, an untokenized fallback color, no named type/spacing scale. All four are now fixed in the real codebase — see `01-tokens.md`.)
->>>>>>> Stashed changes
+- **The eight card-like components don't actually share enough to merge in code** — border treatment (solid+left-rule / plain / all-round dashed), radius, and padding all vary. See `02-components.md` § Cards for the full comparison table. This needs an actual design decision (one `Card` component, `tone`/`size` props), not a find-and-replace — which is why it's still a gap rather than something fixed alongside the tokens.
+- **`.set-feedback` uses `--radius-sm` (6px) while its seven card siblings all use `--radius-lg` (10px)** — a real inconsistency the original draft of this doc had actually missed (it claimed a blanket "10px–12px" range for the whole group). Worth a deliberate call: keep the smaller radius as a real "this is a compact status callout, not a content card" distinction, or normalize it to `10px`.
+- No dedicated "success" semantic color exists — only `--error` (added in the tokens pass) and `--accent` (doing double duty as the "ok"/positive color in `.set-note.ok` / `.set-feedback.ok`). If new layouts need a real success state distinct from the accent hue, that's new territory, not a gap in the current tokens.
+- (Previously listed here: no font-family tokens, no `--error` token, an untokenized fallback color, no named type/spacing/radius scale. All are now fixed in the real codebase — see `01-tokens.md`.)

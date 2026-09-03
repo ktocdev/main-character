@@ -53,59 +53,11 @@ None of these three can be restyled with CSS — this is a real platform limitat
 
 ## Confirmed patterns, seen in context
 
-<<<<<<< Updated upstream
-- **Category proposal cards** (`categories.png`): dashed `--accent-dim`
-  border, bold italic accent title, small dim meta ("medium confidence ·
-  8 weeks"), italic reasoning line, three quiet buttons (confirm/not
-  now/dismiss). Matches `.cat-proposal` in `02-components.md` exactly.
-- **The full category-browsing flow, in one shot** (`categories.png`,
-  updated to a taller capture): below the three proposal cards, the chip
-  row (`.cat-chip`) confirms chips carry a live count in their own label
-  ("emotional 30," "family 3"), not a separate badge, and shows the
-  `.active` state (`family 3`, `--accent` outline + text) mid-selection.
-  The "new category…" + "keywords, comma-separated" + "add" row
-  (`#cat-newform`) sits directly below the chips. Selecting a chip reveals
-  two things not visible in the earlier, shorter capture: the
-  `.cat-domain` summary card (uppercase eyebrow "FAMILY (3 ENTRIES,
-  THROUGH 2026-09-06)" over an AI-generated prose paragraph, rendered in
-  the body serif despite being machine-written — see `02-components.md`
-  for why that's consistent with the app's serif/sans split), and a
-  chronological list of that category's tagged entries where each row is a
-  live inline tag editor (chip-per-tag with `×`, plus a "+ tag…" control
-  that's actually a `<select>` — see the new "Inline tag editor" section
-  in `02-components.md`). This is the richest single screen in the whole
-  set and the main source of the newly-documented tag-editor pattern.
-- **Entity detail view** (`entities.png`): entity name as italic accent
-  serif heading (same treatment as the wordmark, one size down), a row of
-  five quiet action buttons plus one `<select>` for retype, then
-  chronological observations grouped under uppercase tracked date labels
-  in `--accent-dim`. The date-label idiom (`JULY 30, 2026` style) recurs
-  identically in dream cards, session history, and here — it's the
-  system's one "temporal grouping" convention, worth naming as a
-  component (`DateLabel` / eyebrow) in its own right.
-- **Triage card** (`triage.png`): the one screen where a heading breaks
-  the italic-serif-accent convention — `#triage-card h2` is upright, not
-  italic, plain `--text` color, and notably larger (1.4rem) than any other
-  in-app heading. This is intentional per the CSS (`font-style: normal`
-  override) — triage is the one place the design wants a name to read as
-  "a fact being confirmed," not as a styled label.
-- **Settings section headers** ("APPEARANCE", "JOURNAL"): uppercase,
-  tracked, `--accent-dim`, small, with a full-width bottom border —
-  distinct from the italic-accent heading style used for h2 elsewhere.
-  Two heading idioms coexist in Settings alone (section eyebrows vs. plain
-  serif field labels like "Theme," "Date display") — both are already in
-  `02-components.md` but the screenshot makes clear they're visually quite
-  different weights, worth keeping distinct rather than consolidating.
-- **Segmented control** (`settings.png`, Theme: Auto/Light/Dark): matches
-  spec — bordered container, dividers between segments, active segment
-  gets `--bg-input` fill + `--accent` text.
-=======
 - **Category proposal cards** (`categories.png`): dashed `--accent-dim` border, bold italic accent title, small dim meta ("medium confidence · 8 weeks"), italic reasoning line, three quiet buttons (confirm/not now/dismiss). Matches `.cat-proposal` in `02-components.md` exactly.
-- **The full category-browsing flow, in one shot** (`categories.png`, updated to a taller capture): below the proposal cards and the "new category…" form sits the complete chip row with live counts baked into each label (`emotional 30`, `work 21`, `creative 19`, `social 16`, `pets 15`, `health 9`, `home 6`, `relationships 3`, `family 3`, `ai reflection 2`), one chip (`family`) shown `.active`. Selecting a chip reveals its `.cat-domain` summary card (see `02-components.md` § Cards) followed by the inline tag editor list (see `02-components.md` § Inline tag editor) — every tagged entry for that category, each with its own removable chip row and a "+ tag…" add-affordance. This is the fullest single-screen view captured in this bundle of how the chip/card/chip-list/select components actually compose into one real flow, not just how each looks in isolation.
+- **The full category-browsing flow, in one shot** (`categories.png`, updated to a taller capture): below the three proposal cards, the chip row (`.cat-chip`) confirms chips carry a live count in their own label ("emotional 30," "family 3"), not a separate badge, and shows the `.active` state (`family 3`, `--accent` outline + text) mid-selection. The "new category…" + "keywords, comma-separated" + "add" row (`#cat-newform`) sits directly below the chips. Selecting a chip reveals two things not visible in the earlier, shorter capture: the `.cat-domain` summary card (uppercase eyebrow "FAMILY (3 ENTRIES, THROUGH 2026-09-06)" over an AI-generated prose paragraph, rendered in the body serif despite being machine-written — see `02-components.md` for why that's consistent with the app's serif/sans split), and a chronological list of that category's tagged entries where each row is a live inline tag editor (chip-per-tag with `×`, plus a "+ tag…" control that's actually a `<select>` — see the new "Inline tag editor" section in `02-components.md`). This is the richest single screen in the whole set and the main source of the newly-documented tag-editor pattern.
 - **Entity detail view** (`entities.png`): entity name as italic accent serif heading (same treatment as the wordmark, one size down), a row of five quiet action buttons plus one `<select>` for retype, then chronological observations grouped under uppercase tracked date labels in `--accent-dim`. The date-label idiom (`JULY 30, 2026` style) recurs identically in dream cards, session history, and here — it's the system's one "temporal grouping" convention, worth naming as a component (`DateLabel` / eyebrow) in its own right.
 - **Triage card** (`triage.png`): the one screen where a heading breaks the italic-serif-accent convention — `#triage-card h2` is upright, not italic, plain `--text` color, and notably larger (1.4rem) than any other in-app heading. This is intentional per the CSS (`font-style: normal` override) — triage is the one place the design wants a name to read as "a fact being confirmed," not as a styled label.
 - **Settings section headers** ("APPEARANCE", "JOURNAL"): uppercase, tracked, `--accent-dim`, small, with a full-width bottom border — distinct from the italic-accent heading style used for h2 elsewhere. Two heading idioms coexist in Settings alone (section eyebrows vs. plain serif field labels like "Theme," "Date display") — both are already in `02-components.md` but the screenshot makes clear they're visually quite different weights, worth keeping distinct rather than consolidating.
 - **Segmented control** (`settings.png`, Theme: Auto/Light/Dark): matches spec — bordered container, dividers between segments, active segment gets `--bg-input` fill + `--accent` text.
->>>>>>> Stashed changes
 
 Nothing here contradicts `01-tokens.md`–`04-type-and-spacing-scale.md` — the token/component/layout inventory holds up. The native-chrome gap above is the one genuine finding that wasn't visible from CSS alone (CSS can't show you what a browser does when it takes over); everything else in this file is confirmation plus a few naming opportunities (masthead, DateLabel eyebrow) rather than corrections.

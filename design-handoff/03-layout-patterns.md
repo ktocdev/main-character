@@ -63,45 +63,13 @@ The messages themselves (`.msg`) are not chat bubbles — no background, no per-
 
 ## Responsive behavior
 
-<<<<<<< Updated upstream
-The app today is desktop-only; the only responsive rule in the whole CSS
-surface is `history.css:31` (`#session-toc` disappears under 900px). There
-is no mobile nav pattern, no stacking of the three-pane layout on narrow
-viewports, and no breakpoint system.
+The app today is desktop-only; the only responsive rule in the whole CSS surface is `history.css:31` (`#session-toc` disappears under 900px). There is no mobile nav pattern, no stacking of the three-pane layout on narrow viewports, and no breakpoint system.
 
-**This is a gap to close, not a boundary to respect.** Every new layout
-Claude Design produces — refreshed existing screens, new screens, all of
-it — should be designed with phone-width-and-up support in mind from the
-start, not as a desktop layout with mobile bolted on after. Concretely,
-that means for each pattern above:
+**This is a gap to close, not a boundary to respect.** Every new layout Claude Design produces — refreshed existing screens, new screens, all of it — should be designed with phone-width-and-up support in mind from the start, not as a desktop layout with mobile bolted on after. Concretely, that means for each pattern above:
 
-- **Pattern A (centered column)** — degrades most easily: drop the
-  `46rem` cap and side padding down to something phone-sized, keep it a
-  single column. Should be the least effortful of the three to take to
-  phone width.
-- **Pattern B (three-pane)** — has no mobile answer today at all. Needs a
-  real decision: collapse to one pane with a way back (list → detail
-  drill-in, a back control), not just hide the rail like the existing
-  900px rule does for the toc. This is the pattern most likely to need
-  actual new interaction design, not just a breakpoint.
-- **Composer-anchored column** — the fixed-bottom composer is already
-  close to a mobile-native shape (sticky input above the keyboard); mainly
-  needs the same width/padding treatment as Pattern A.
-- **Nav** — ten tab buttons in a flat top row has no phone-width answer
-  yet either (they'd overflow or wrap badly below ~500-600px); needs a
-  real mobile nav pattern (e.g. a menu/tab-bar), not just smaller buttons.
+- **Pattern A (centered column)** — degrades most easily: drop the `46rem` cap and side padding down to something phone-sized, keep it a single column. Should be the least effortful of the three to take to phone width.
+- **Pattern B (three-pane)** — has no mobile answer today at all. Needs a real decision: collapse to one pane with a way back (list → detail drill-in, a back control), not just hide the rail like the existing 900px rule does for the toc. This is the pattern most likely to need actual new interaction design, not just a breakpoint.
+- **Composer-anchored column** — the fixed-bottom composer is already close to a mobile-native shape (sticky input above the keyboard); mainly needs the same width/padding treatment as Pattern A.
+- **Nav** — ten tab buttons in a flat top row has no phone-width answer yet either (they'd overflow or wrap badly below ~500-600px); needs a real mobile nav pattern (e.g. a menu/tab-bar), not just smaller buttons.
 
-Treat "does this work on a phone" as a question to answer for every new
-screen, the same way "does this match the existing token/component
-language" already is — see `README.md` § Scope of "new layouts" for how
-this fits the three kinds of new-layout work in scope.
-=======
-**Mobile-phone-width-and-up support is a requirement for all new layout work, not an optional stretch goal.** The app today is desktop-oriented and has essentially no responsive design of its own — the only responsive rule in the whole CSS surface is `history.css:31` (`#session-toc` disappears under 900px). There is no mobile nav pattern, no stacking of the three-pane layout on narrow viewports, and no breakpoint system. That absence is a gap to close, not a boundary to respect: any new screen, refreshed screen, or new component Claude Design produces should be designed and specified down to phone width from the start, not patched in afterward.
-
-What that means per pattern here:
-
-- **Pattern A (centered column)** — the easiest case. The `46rem`/`44rem` cap already collapses gracefully toward full-width on narrow viewports; the open question is just padding/type-scale adjustments at small sizes, not a structural rework.
-- **Pattern B (three-pane)** — the hard case. Entities and history both assume list + detail (+ rail) side by side; none of that fits a phone screen simultaneously. This needs real new interaction design — most likely a list→detail drill-in (show the list, tap through to the detail, provide a way back) rather than any CSS-only reflow. Don't treat this as "make the three-pane layout responsive" — treat it as designing a second, phone-appropriate pattern for the same underlying "browse a list, view the selected one" need.
-- **Composer-anchored column** — same starting point as Pattern A, plus keyboard-safe-area considerations for the fixed-at-bottom composer on mobile browsers.
-- **Top nav** — ten tab buttons in a single row pushed right; there is no existing answer for phone width at all (no hamburger menu, no tab bar, no overflow scroll). This needs a real mobile nav pattern designed from scratch, not an extension of the current flat button row.
->>>>>>> Stashed changes
+Treat "does this work on a phone" as a question to answer for every new screen, the same way "does this match the existing token/component language" already is — see `README.md` § Scope of "new layouts" for how this fits the three kinds of new-layout work in scope.

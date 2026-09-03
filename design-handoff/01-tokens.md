@@ -50,22 +50,7 @@ Note `body`'s own font declaration (`font: 17px/1.65 var(--font-body);`) uses th
 
 ## Type, spacing & radius scale
 
-<<<<<<< Updated upstream
-`--font-3xs` through `--font-xl` (8 steps), `--space-1` through `--space-8`
-(8 steps), and `--radius-sm`/`--radius-base`/`--radius-lg`/`--radius-pill`/
-`--radius-circle` (5 steps) are all real tokens in `tokens.css` now — see
-`04-type-and-spacing-scale.md` for the full frequency analysis and scale
-tables. All three were wired into every component file as a straight
-find-and-replace of exact-match values only: a declaration like
-`font-size: .72rem` or `border-radius: 4px` that doesn't land exactly on a
-named step was left as a literal rather than rounded to the nearest one,
-so this changed zero pixels anywhere in the app — it only named values
-that were already a scale in practice. Two radius one-offs stayed raw on
-purpose: `4px` (`.set-control select/input`, `#help code`) and `12px`
-(`#triage-card`, the one intentionally-bigger card).
-=======
-`--font-3xs` through `--font-xl` (8 steps) and `--space-1` through `--space-8` (8 steps) are also real tokens in `tokens.css` now — see `04-type-and-spacing-scale.md` for the full frequency analysis and the scale table. They were wired into every component file as a straight find-and-replace of exact-match values only: a declaration like `font-size: .72rem` that doesn't land exactly on a named step was left as a literal rather than rounded to the nearest one, so this changed zero pixels anywhere in the app — it only named the values that were already a scale in practice. Radius was *not* tokenized (no `--radius-*` custom properties exist) even though `04-type-and-spacing-scale.md` documents it as a clean de facto 3-tier system (`6px`/`8–10px`/pill/circle) — that's a documentation-only observation for Claude Design, not something ported into the real CSS in this pass.
->>>>>>> Stashed changes
+`--font-3xs` through `--font-xl` (8 steps), `--space-1` through `--space-8` (8 steps), and `--radius-sm`/`--radius-base`/`--radius-lg`/`--radius-pill`/`--radius-circle` (5 steps) are all real tokens in `tokens.css` now — see `04-type-and-spacing-scale.md` for the full frequency analysis and scale tables. All three were wired into every component file as a straight find-and-replace of exact-match values only: a declaration like `font-size: .72rem` or `border-radius: 4px` that doesn't land exactly on a named step was left as a literal rather than rounded to the nearest one, so this changed zero pixels anywhere in the app — it only named values that were already a scale in practice. Two radius one-offs stayed raw on purpose: `4px` (`.set-control select/input`, `#help code`) and `12px` (`#triage-card`, the one intentionally-bigger card).
 
 ## Motion
 

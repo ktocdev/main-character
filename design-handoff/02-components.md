@@ -24,78 +24,28 @@ No `button.danger`/destructive variant exists — delete actions (entity delete,
 
 One visual family, several use cases, no shared base class (each context defines its own — worth consolidating):
 
-<<<<<<< Updated upstream
-- **`.chip`** (`entities.css:65`) — `--bg-input` fill, full pill radius,
-  `.1rem .6rem`, optional trailing `×` button.
-- **`.chip-toggle`** (used as a modifier alongside `.quiet`, e.g.
-  `#flt-unreviewed`, `#search-mode`) — `.on` state fills `--accent-dim` with
-  `--bg` text. This is the toggle-chip pattern: a `.quiet` button that can
-  be "pressed."
-- **`.cat-chip`** (`categories.css:6`) — pill, `--border` outline,
-  `.active` → `--accent` outline + text. `.custom` modifier gets a dashed
-  border. Label includes a live count (`emotional 30`, `family 3`) — the
-  count is part of the chip text, not a separate badge element.
-- **`.kw-chip`** (`categories.css:52`) — smaller pill (keyword tags inside
-  a category), `.member` modifier tints it accent.
-- **`.dream-tone`** (`dreams.css:15`) — same pill shape, `--bg-input` fill,
-  `--accent` text, used for a single descriptive word (e.g. "uneasy").
-=======
 - **`.chip`** (`entities.css:65`) — `--bg-input` fill, full pill radius, `.1rem .6rem`, optional trailing `×` button.
 - **`.chip-toggle`** (used as a modifier alongside `.quiet`, e.g. `#flt-unreviewed`, `#search-mode`) — `.on` state fills `--accent-dim` with `--bg` text. This is the toggle-chip pattern: a `.quiet` button that can be "pressed."
 - **`.cat-chip`** (`categories.css:6`) — pill, `--border` outline, `.active` → `--accent` outline + text. `.custom` modifier gets a dashed border. Label includes a live count (`emotional 30`, `family 3`) — the count is part of the chip text, not a separate badge element.
 - **`.kw-chip`** (`categories.css:52`) — smaller pill (keyword tags inside a category), `.member` modifier tints it accent.
 - **`.dream-tone`** (`dreams.css:15`) — same pill shape, `--bg-input` fill, `--accent` text, used for a single descriptive word (e.g. "uneasy").
->>>>>>> Stashed changes
 
 All chips share: pill radius (`999px`), `.7rem`–`.85rem` UI-sans, and a binary "neutral / accent-emphasized" state model. A future `Chip` component in the design system should unify these into one base + modifiers (`active`, `dashed`, `removable`) rather than the five parallel near-duplicates that exist today.
 
 ## Inline tag editor (category-tagged entry list)
 
-Seen in the categories tab below the `.cat-domain` summary card (`categories.png`): a list of `.cat-entry` rows, one per entry tagged with the active category. Each row is `h3` (date — title, clickable to toggle between `.cat-summary` and `.cat-full` text), an optional `.cat-ev` line, and a `.cat-tags` div. `.cat-tags` holds one `<span class="chip">` per existing category tag on that entry — the shared `.chip` from the section above, each with a trailing `×` button that calls `/api/categories/tag` with `present: false` to remove it — followed by a `.cat-add`: a native `<select>` used purely as an "add tag" affordance rather than a genuine multi-choice field. Its first option reads `+ tag…`; choosing any other option immediately fires `onchange` → `/api/categories/tag` with `present: true` and the select resets, with no separate confirm step. Source: `categories.js` (row-building logic) and `categories.css` (`.cat-entry`, `.cat-tags`, `.cat-add`). Worth naming as a `TagEditor` pattern distinct from the app's other `<select>` usage (see Native browser UI below) — this one is a repurposed native control standing in for what would otherwise be a custom multi-select/combobox.
+Confirmed in `screenshots/categories.png` — selecting a category chip reveals a chronological list of its tagged entries below the domain summary card, and each entry doubles as a live tag editor, not just a display:
 
-## Inline tag editor (category-tagged entry list)
+- **`.cat-entry`** (`categories.css:12`) — one row per entry, `1px solid var(--border)` bottom rule only (no card chrome — this is a list, not a stack of cards), `.7rem 0` padding.
+  - `h3` — `date — title` (e.g. "September 6, 2026 — Mom's visit"), `--font-base`, `600` weight, clickable (hover → `--accent`) to expand the full entry text inline (`.cat-full`, `categories.css:21` — `--bg-input` fill, `--radius-base`, appends below the row; holds a `.cat-summary` sub-block, italic `--text-dim` with a bottom rule, if the entry has an AI summary).
+  - `.cat-ev` — one italic `--text-dim` line: the model's stated reason this entry matches the selected category (e.g. "Mom's Labor Day weekend visit").
+  - `.cat-tags` — a row of the shared **`.chip`** component (same class as entities' chips, `entities.css:65`), one per category this entry carries, each with its usual trailing `×` to untag; followed by a native `<select class="cat-add">` styled to read as a "+ tag…" affordance (its own first `<option>`) rather than a real dropdown control — choosing an option tags the entry immediately, no separate confirm step. This is a native `<select>` doing double duty as an "add" button, distinct from every other `select` in `02-components.md` § Inputs, which are always genuine multi-choice fields.
 
-Confirmed in `screenshots/categories.png` — selecting a category chip
-reveals a chronological list of its tagged entries below the domain summary
-card, and each entry doubles as a live tag editor, not just a display:
-
-- **`.cat-entry`** (`categories.css:12`) — one row per entry, `1px solid
-  var(--border)` bottom rule only (no card chrome — this is a list, not a
-  stack of cards), `.7rem 0` padding.
-  - `h3` — `date — title` (e.g. "September 6, 2026 — Mom's visit"),
-    `--font-base`, `600` weight, clickable (hover → `--accent`) to expand
-    the full entry text inline (`.cat-full`, `categories.css:21` —
-    `--bg-input` fill, `--radius-base`, appends below the row; holds a
-    `.cat-summary` sub-block, italic `--text-dim` with a bottom rule, if
-    the entry has an AI summary).
-  - `.cat-ev` — one italic `--text-dim` line: the model's stated reason
-    this entry matches the selected category (e.g. "Mom's Labor Day
-    weekend visit").
-  - `.cat-tags` — a row of the shared **`.chip`** component (same class as
-    entities' chips, `entities.css:65`), one per category this entry
-    carries, each with its usual trailing `×` to untag; followed by a
-    native `<select class="cat-add">` styled to read as a "+ tag…"
-    affordance (its own first `<option>`) rather than a real dropdown
-    control — choosing an option tags the entry immediately, no separate
-    confirm step. This is a native `<select>` doing double duty as an
-    "add" button, distinct from every other `select` in `02-components.md`
-    § Inputs, which are always genuine multi-choice fields.
-
-This is the one place in the app where tags are edited inline, per-item, in
-a list context — distinct from the category page's own top-level chip row
-(`.cat-chip`, browse/filter) and from entity tagging (`02-components.md`
-§ Chips' `.chip`/`.chip-toggle`). Worth naming as its own small pattern
-(`TagEditor`: chip list + trailing add-affordance) if Claude Design wants
-to reuse the "removable tags on a list item" idiom elsewhere.
+This is the one place in the app where tags are edited inline, per-item, in a list context — distinct from the category page's own top-level chip row (`.cat-chip`, browse/filter) and from entity tagging (`02-components.md` § Chips' `.chip`/`.chip-toggle`). Worth naming as its own small pattern (`TagEditor`: chip list + trailing add-affordance) if Claude Design wants to reuse the "removable tags on a list item" idiom elsewhere.
 
 ## Cards / panels / callouts
 
-<<<<<<< Updated upstream
-All eight share `background: var(--bg-raised)` — that line is the one
-thing every one of them agrees on. Everything else varies enough that
-merging them into a real shared class would mean *deciding*, not just
-renaming — tried to consolidate this in code and stopped short of it for
-that reason; see the note after the table.
+All eight share `background: var(--bg-raised)` — that line is the one thing every one of them agrees on. Everything else varies enough that merging them into a real shared class would mean *deciding*, not just renaming — tried to consolidate this in code and stopped short of it for that reason; see the note after the table.
 
 | Selector | Border | Radius | Padding |
 |---|---|---|---|
@@ -108,49 +58,13 @@ that reason; see the note after the table.
 | `#suggest-panel` (`entities.css:81`) | `1px solid var(--border)`, plain | `--radius-lg` (10px) | `var(--space-6)` |
 | `.set-feedback` (`settings.css:113`) | `1px solid var(--border)` + `3px solid var(--accent-dim)` left rule | **`--radius-sm` (6px)** — smaller than every other card here | `.55rem var(--space-5)` |
 
-The `.set-feedback` radius is a real find, not a typo carried over from an
-earlier draft of this doc (which had claimed a blanket "10px–12px" range
-for the whole group) — it's the one card in this set that's visibly
-smaller-radius than its siblings. Worth a deliberate call from Claude
-Design: was `6px` intentional (a status callout reads as more compact,
-less card-like, than content cards) or drift that should join the `10px`
-norm? Either answer is fine, it just shouldn't be inherited silently.
+The `.set-feedback` radius is a real find, not a typo carried over from an earlier draft of this doc (which had claimed a blanket "10px–12px" range for the whole group) — it's the one card in this set that's visibly smaller-radius than its siblings. Worth a deliberate call from Claude Design: was `6px` intentional (a status callout reads as more compact, less card-like, than content cards) or drift that should join the `10px` norm? Either answer is fine, it just shouldn't be inherited silently.
 
-`.cat-domain`'s content has its own internal pattern, confirmed in
-`screenshots/categories.png`: an uppercase tracked eyebrow title
-(`.cat-domain-title`, `--font-2xs`, `--text-dim`, `.05em` tracking — e.g.
-"FAMILY (3 ENTRIES, THROUGH 2026-09-06)") over a prose body
-(`.cat-domain-body`, `.92rem`, no font-family override so it inherits the
-page's `--font-body` serif, not `--font-ui`) — an AI-generated summary of
-that category's entries. Despite being machine-generated, it reads as
-*content* (serif) rather than *chrome* (UI-sans), consistent with the
-serif = "writing" / sans = "machinery" split in `01-tokens.md`.
+`.cat-domain`'s content has its own internal pattern, confirmed in `screenshots/categories.png`: an uppercase tracked eyebrow title (`.cat-domain-title`, `--font-2xs`, `--text-dim`, `.05em` tracking — e.g. "FAMILY (3 ENTRIES, THROUGH 2026-09-06)") over a prose body (`.cat-domain-body`, `.92rem`, no font-family override so it inherits the page's `--font-body` serif, not `--font-ui`) — an AI-generated summary of that category's entries. Despite being machine-generated, it reads as *content* (serif) rather than *chrome* (UI-sans), consistent with the serif = "writing" / sans = "machinery" split in `01-tokens.md`.
 
-`.set-feedback` also carries the app's only semantic-status vocabulary:
-modifiers `.working` (dim italic), `.ok` (left rule → `--accent`), `.error`
-(left rule + text → `var(--error)`).
+`.set-feedback` also carries the app's only semantic-status vocabulary: modifiers `.working` (dim italic), `.ok` (left rule → `--accent`), `.error` (left rule + text → `var(--error)`).
 
-**Pattern to name for the design system**: "raised card, `--border` frame,
-optional `3px` left accent rule (solid) or all-round dashed border
-(pending/disabled), radius mostly `10px` with one smaller outlier and one
-larger one" is one component (`Card`) with `tone` (neutral/pending/status)
-and `size` props, not eight unrelated classes. Unifying the actual CSS
-selectors is real design work — left for that round rather than merged
-here, since forcing them to match now would mean picking answers (does
-`.set-feedback` grow to `10px`? does `.cat-proposal`'s all-round dash
-become a left rule instead?) that are Claude Design's to make, not a
-find-and-replace like the token work.
-=======
-- **`.dream-card`** (`dreams.css:6`) — `--bg-raised` fill, thin `--border` outline, a `3px solid var(--accent-dim)` **left accent rule**, `10px` radius. This left-rule-on-a-raised-card recipe is the app's signature "content card" shape.
-- **`.pattern`** (`patterns.css:5`) — same raised-card recipe, no left rule (plain full border), `10px` radius.
-- **`.cat-domain`** (`categories.css:25`) — raised card, `10px` radius, no left rule, holds a label + long-form generated text. Internally it's `.cat-domain-title` (an uppercase tracked eyebrow, e.g. "FAMILY (3 ENTRIES, THROUGH 2026-09-06)") followed by `.cat-domain-body`, a paragraph of AI-generated prose. `.cat-domain-body` has no `font-family` override of its own, so it inherits `body`'s `--font-body` (serif) rather than the UI-sans `--font-ui` used everywhere else in this card's chrome — the AI-generated summary reads as "content," styled the same as journal prose, not as interface text.
-- **`.cat-proposal`** (`categories.css:35`) — raised card with a **dashed** `1px solid var(--accent-dim)` border instead of solid — the dashed border is this app's convention for "this is a suggestion pending your approval," reused at `#cat-paused` (`categories.css:77`) for the same reason (categories tab announcing it's disabled).
-- **`#triage-card`** (`entities.css:146`) — raised card, `12px` radius (slightly larger than the `10px` norm — it's the one full-screen focal card in the app), generous `1.3rem 1.5rem` padding.
-- **`#suggest-panel`** (`entities.css:81`) — raised card, plain border, `10px` radius — a lighter-weight container for inline suggestions.
-- **`.set-feedback`** (`settings.css:113`) — raised card, plain border + `3px solid var(--accent-dim)` **left** rule (same idiom as dream-card), modifiers `.working` (dim italic), `.ok` (left rule → `--accent`), `.error` (left rule + text → `var(--error)`, `#c96a5a` — tokenized since the type/spacing/font-family pass). This left-rule pattern is effectively the app's "status callout" component — neutral/working/ok/error by left-rule color, and it's the one place a semantic-status visual vocabulary already exists.
-
-**Pattern to name for the design system**: "raised card, `--border` frame, optional `3px` left accent rule in `--accent-dim`/`--accent`/error-red, `10px`–`12px` radius" is one component (`Card`) with a `tone` prop, not six unrelated classes.
->>>>>>> Stashed changes
+**Pattern to name for the design system**: "raised card, `--border` frame, optional `3px` left accent rule (solid) or all-round dashed border (pending/disabled), radius mostly `10px` with one smaller outlier and one larger one" is one component (`Card`) with `tone` (neutral/pending/status) and `size` props, not eight unrelated classes. Unifying the actual CSS selectors is real design work — left for that round rather than merged here, since forcing them to match now would mean picking answers (does `.set-feedback` grow to `10px`? does `.cat-proposal`'s all-round dash become a left rule instead?) that are Claude Design's to make, not a find-and-replace like the token work.
 
 ## Banners
 
