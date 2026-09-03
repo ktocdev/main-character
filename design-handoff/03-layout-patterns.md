@@ -1,6 +1,6 @@
 # Layout Patterns
 
-rag-journal is a single `index.html`, one app shell, ten tabs. Every tab's content area resolves to one of three layout shapes below.
+rag-journal is a single `index.html`, one app shell, ten tabs. Every tab's content area resolves to one of the layout shapes below.
 
 ## App shell
 
@@ -8,7 +8,7 @@ rag-journal is a single `index.html`, one app shell, ten tabs. Every tab's conte
 body (flex column, 100dvh)
 ├─ #mock-banner / #seed-banner-bar   (conditional, full-width strip)
 ├─ header (flex row, baseline-aligned)
-│   ├─ h1 "main character" (italic accent serif... actually UI position, but styled accent)
+│   ├─ h1 "main character" (masthead position, styled as italic accent serif)
 │   ├─ .status
 │   └─ nav (pushed right via margin-left: auto)
 │       ├─ tab buttons ×10
@@ -34,7 +34,7 @@ Triage (`#triage`) is a variant: same centered column but narrower (`44rem`) and
 
 ## Pattern B — Three-pane
 
-Used by: entities, history, search-adjacent... actually just entities and history (search is Pattern A).
+Used by: entities, history (search looks similar but is Pattern A).
 
 ```
 #<pane>-pane (flex row, flex:1, overflow:hidden)
@@ -61,6 +61,20 @@ A refinement of Pattern A where the scrolling log and the input are two separate
 
 The messages themselves (`.msg`) are not chat bubbles — no background, no per-message card. They're differentiated purely by a small-caps uppercase label (`.msg::before`, "you" / "companion", optionally with a timestamp) in `--accent-dim`, and by text color (`--you` for the user's lines vs `--text` for the companion's). This keeps the transcript reading like a manuscript rather than a messaging app — worth preserving explicitly if Claude Design is tempted to bubble-ify it.
 
+## Pattern D — Full-height document editor (seed summary)
+
+Used by: the seed-summary editor only (`#tab-seed`), confirmed in `screenshots/write-edit-seed.png`.
+
+```
+.tab.active
+└─ #seed-editor { flex:1; display:flex; flex-direction:column; max-width:46rem; margin:0 auto; padding:1.5rem; }
+    ├─ #seed-editor-head   (flex row, wraps: back button + meta + optional inline warning)
+    ├─ #seed-editor-text   (textarea, flex:1, scrolls internally — the one document)
+    └─ #seed-editor-actions (flex row, wraps: 1 send + up to 5 quiet buttons + inline saved-note)
+```
+
+A variant of Pattern A's `46rem` centered column, not a new width or shell — the difference is what fills the middle: a single full-height `textarea` acting as the document, instead of a scrolling list/log. It's also the one screen in the app with no nav-tab entry point of its own; it's a sub-view reached from write (via `#seed-banner` or the `⋯` menu) and returned from via its own back button, so it always assumes it was pushed on top of write rather than being a standalone destination. See `02-components.md` § Document editor for the header/footer element breakdown.
+
 ## Responsive behavior
 
 The app today is desktop-only; the only responsive rule in the whole CSS surface is `history.css:31` (`#session-toc` disappears under 900px). There is no mobile nav pattern, no stacking of the three-pane layout on narrow viewports, and no breakpoint system.
@@ -70,6 +84,7 @@ The app today is desktop-only; the only responsive rule in the whole CSS surface
 - **Pattern A (centered column)** — degrades most easily: drop the `46rem` cap and side padding down to something phone-sized, keep it a single column. Should be the least effortful of the three to take to phone width.
 - **Pattern B (three-pane)** — has no mobile answer today at all. Needs a real decision: collapse to one pane with a way back (list → detail drill-in, a back control), not just hide the rail like the existing 900px rule does for the toc. This is the pattern most likely to need actual new interaction design, not just a breakpoint.
 - **Composer-anchored column** — the fixed-bottom composer is already close to a mobile-native shape (sticky input above the keyboard); mainly needs the same width/padding treatment as Pattern A.
-- **Nav** — ten tab buttons in a flat top row has no phone-width answer yet either (they'd overflow or wrap badly below ~500-600px); needs a real mobile nav pattern (e.g. a menu/tab-bar), not just smaller buttons.
+- **Nav** — ten tab buttons in a flat top row has no phone-width answer yet either (they'd overflow or wrap badly below ~500-600px), and by release time it's actually eleven-plus (Settings, plus a standalone cost-meter icon and a Publish entry point outside the tab list). Needs a real mobile nav pattern — a megamenu or equivalent grouping, not just smaller buttons or a bare hamburger list.
+- **Pattern D (document editor)** — same treatment as Pattern A (it's already that column, just with a textarea instead of a scrolling list); the multi-button footer row is the one thing to watch, since five-plus actions in a `flex-wrap` row will stack awkwardly narrow unless it's given real mobile treatment (icon-only buttons, an overflow menu) rather than left to wrap on its own.
 
 Treat "does this work on a phone" as a question to answer for every new screen, the same way "does this match the existing token/component language" already is — see `README.md` § Scope of "new layouts" for how this fits the three kinds of new-layout work in scope.

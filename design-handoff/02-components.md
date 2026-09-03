@@ -19,6 +19,7 @@ No `button.danger`/destructive variant exists — delete actions (entity delete,
 - **`select`** elements (`.grp-editor select`, `.ent-actions select`, `#suggest-kind`, `#retype-kind`) — same `--bg-input`/`--border` recipe as text inputs, smaller radius (`6px`–`8px`), `.75rem`–`.8rem` UI-sans.
 - **Segmented control** — `#theme-toggle` (`settings.css:51`): a row of borderless buttons inside one bordered, radius-clipped container, divided by `1px solid var(--border)` between items, active item gets `--bg-input` fill + `--accent` text. This is the one segmented-control pattern in the app (Auto/Light/Dark) — reusable wherever a small mutually-exclusive choice needs to sit inline.
 - **Checkbox rows** — plain native checkboxes with a label, e.g. `#noreply-wrap` (`conversation.css:41`), `.ent-check` (`entities.css:103`, `accent-color: var(--accent)` to tint the native control). No custom checkbox skin exists — the native control is tinted and left alone.
+- **`label.set-check`** (`settings.css:56`, confirmed in `screenshots/settings-categories.png`) — a richer checkbox row, one per life-domain category under Settings → Categories, generated into `#set-categories-control` (a `.set-control` wrapper repurposed to hold a stack of these instead of its usual single select/input). Each row is `align-items: flex-start` (not centered) so a multi-line definition can wrap under the label without the checkbox drifting off-baseline: bold `--text` category name (`work`, `relationships`, …) inline with a `--text-dim` dash-separated definition, `--font-xs`, checkbox nudged down `.15rem` to meet the first text line rather than centering on the full block. This is a second, more content-heavy checkbox pattern alongside the plain `#noreply-wrap`/`.ent-check` one above — reach for this version when the row needs a name + explanation, not just a label.
 
 ## Chips / pills
 
@@ -45,7 +46,7 @@ This is the one place in the app where tags are edited inline, per-item, in a li
 
 ## Cards / panels / callouts
 
-All eight share `background: var(--bg-raised)` — that line is the one thing every one of them agrees on. Everything else varies enough that merging them into a real shared class would mean *deciding*, not just renaming — tried to consolidate this in code and stopped short of it for that reason; see the note after the table.
+All eight share `background: var(--bg-raised)` — that line is the one thing every one of them agrees on. Everything else varies enough that merging them into a real shared class would mean *deciding*, not just renaming — see the note after the table.
 
 | Selector | Border | Radius | Padding |
 |---|---|---|---|
@@ -58,21 +59,23 @@ All eight share `background: var(--bg-raised)` — that line is the one thing ev
 | `#suggest-panel` (`entities.css:81`) | `1px solid var(--border)`, plain | `--radius-lg` (10px) | `var(--space-6)` |
 | `.set-feedback` (`settings.css:113`) | `1px solid var(--border)` + `3px solid var(--accent-dim)` left rule | **`--radius-sm` (6px)** — smaller than every other card here | `.55rem var(--space-5)` |
 
-The `.set-feedback` radius is a real find, not a typo carried over from an earlier draft of this doc (which had claimed a blanket "10px–12px" range for the whole group) — it's the one card in this set that's visibly smaller-radius than its siblings. Worth a deliberate call from Claude Design: was `6px` intentional (a status callout reads as more compact, less card-like, than content cards) or drift that should join the `10px` norm? Either answer is fine, it just shouldn't be inherited silently.
+`.set-feedback` is the one card in this set that's visibly smaller-radius than its siblings. Worth a deliberate call from Claude Design: was `6px` intentional (a status callout reads as more compact, less card-like, than content cards) or drift that should join the `10px` norm? Either answer is fine, it just shouldn't be inherited silently.
 
 `.cat-domain`'s content has its own internal pattern, confirmed in `screenshots/categories.png`: an uppercase tracked eyebrow title (`.cat-domain-title`, `--font-2xs`, `--text-dim`, `.05em` tracking — e.g. "FAMILY (3 ENTRIES, THROUGH 2026-09-06)") over a prose body (`.cat-domain-body`, `.92rem`, no font-family override so it inherits the page's `--font-body` serif, not `--font-ui`) — an AI-generated summary of that category's entries. Despite being machine-generated, it reads as *content* (serif) rather than *chrome* (UI-sans), consistent with the serif = "writing" / sans = "machinery" split in `01-tokens.md`.
 
 `.set-feedback` also carries the app's only semantic-status vocabulary: modifiers `.working` (dim italic), `.ok` (left rule → `--accent`), `.error` (left rule + text → `var(--error)`).
 
-**Pattern to name for the design system**: "raised card, `--border` frame, optional `3px` left accent rule (solid) or all-round dashed border (pending/disabled), radius mostly `10px` with one smaller outlier and one larger one" is one component (`Card`) with `tone` (neutral/pending/status) and `size` props, not eight unrelated classes. Unifying the actual CSS selectors is real design work — left for that round rather than merged here, since forcing them to match now would mean picking answers (does `.set-feedback` grow to `10px`? does `.cat-proposal`'s all-round dash become a left rule instead?) that are Claude Design's to make, not a find-and-replace like the token work.
+**Pattern to name for the design system**: "raised card, `--border` frame, optional `3px` left accent rule (solid) or all-round dashed border (pending/disabled), radius mostly `10px` with one smaller outlier and one larger one" is one component (`Card`) with `tone` (neutral/pending/status) and `size` props, not eight unrelated classes. Unifying the actual CSS selectors means picking answers (does `.set-feedback` grow to `10px`? does `.cat-proposal`'s all-round dash become a left rule instead?) that are Claude Design's to make, not this document's.
 
 ## Banners
 
 Full-width, centered-text strips above the header, in the body's flex column (so they push content down rather than overlay it):
 
-- **`#mock-banner`** (`base.css:70`) — `--accent-dim` fill (the old `#6b5b3e` dead fallback has since been deleted — it never fired), `--bg` text.
+- **`#mock-banner`** (`base.css:70`) — `--accent-dim` fill, `--bg` text.
 - **`#seed-banner-bar`** (`base.css:63`) — `--accent` fill (louder — this one warns you're writing into someone else's data), `--bg` text.
 - Mutual exclusion is handled in CSS (seed banner wins) — see the comment at `base.css:77-85` if this pattern gets reused; specificity is a tie and source order is load-bearing.
+
+A third, inline banner variant exists at a smaller scale: **`#seed-banner`** (`conversation.css:100`) — appears on the write tab between the log and the composer, once a new seed-summary candidate is ready to review. Unlike the two full-width strips above, this one sits inside the normal `46rem` centered column (same width as the composer), no fill color of its own (just `--accent-dim` text on the page background), holding one line of copy plus two actions: `button.send` ("edit seed summary") and a `button.quiet` ("download"). Smaller and quieter than the top-of-page banners on purpose — it's a nudge about content ready for review, not a mode-of-the-whole-app warning like the mock/demo strips.
 
 ## Disclosure
 
@@ -98,10 +101,21 @@ Two ad hoc tables, no shared table styling beyond borrow-from-help: `#help table
 
 - **`.cp-step`** close-pipeline checklist (`conversation.css:58`) — opacity-based state machine: pending (`.5` opacity) → `.cp-running` (full opacity, `--accent` mark, lamp-pulse animation) → `.cp-done` (full opacity, `--accent-dim` mark) / `.cp-failed` (`--you` colored mark). This is the only multi-step-progress UI in the app.
 - **`.saved-note`** / **`#triage-toast`** — a transient inline confirmation string in `--accent-dim`/`--accent`, no toast container, no timeout visual — just text that appears/disappears via JS.
+- **`.set-warn`** (`settings.css:47`) — an inline warning line, `--accent` text, `--font-xs`, capped `34rem` wide. Same idea as `.saved-note` (plain text, no container, JS-toggled) but for "heads up" rather than "done" — used for the settings restart notice and, in the seed editor (see below), the "you have an unsaved draft" note.
 
 ## Composer
 
 The write/chat input pattern (`conversation.css:12`): a `textarea` (or `input`) plus a `button.send` in a flex row, `max-width: 46rem`, centered. The write tab's composer (`.write-composer`, `conversation.css:35`) is the richer variant — stacked column with a controls row underneath containing the send button, a quiet "reflect" button, a checkbox, a saved-note, and the `⋯` menu. Any new "compose something" screen should start from this shape.
+
+## Document editor (seed summary)
+
+Confirmed in `screenshots/write-edit-seed.png` — `#seed-editor` (`conversation.css:113`, markup at `#tab-seed`) is a distinct fourth content shape, not a variant of the composer above: one full-height plain-text document instead of a scrolling log-plus-input. It's a sub-view of write, not a nav tab — there's no top-nav button for it; it's reached via `#seed-banner`'s "edit seed summary" button or the write `⋯` menu, and left via its own `← back to write` button, `#seed-back`.
+
+- **Header** (`#seed-editor-head`) — a `flex-wrap` row: `#seed-back` (fixed, never wraps), `#seed-editor-meta` (flex:1, `--text-dim`, `--font-xs` — "last saved …" timestamp), and `#seed-editor-draftnote` (a `.set-warn`, `hidden` by default, forces its own line via `flex-basis: 100%` when a draft note is showing).
+- **Body** — `#seed-editor-text`, one `textarea` set to `flex: 1` so it fills all remaining height and scrolls internally, `line-height: 1.6`. No autosize-to-content behavior like the composer's inputs — this one is a fixed viewport onto a potentially long document, styled with the same shared textarea look from `02-components.md` § Inputs (`--bg-input`, `--border`, `--radius-lg`).
+- **Footer** (`#seed-editor-actions`) — another `flex-wrap` row, one `button.send` ("save seed summary" — the single commit point) followed by four `button.quiet` (copy / download / upload / open with Claude), a conditional fifth quiet "discard draft," and an inline `.saved-note` at the end. Five-plus actions in one row is more than any other toolbar in the app (compare the composer's controls row) — this is the pattern to reach for if a new layout needs "one document, several export/import actions, one save."
+
+Same `46rem` centered column as every Pattern A screen (`03-layout-patterns.md`) — this is that pattern's shape with the scrolling content swapped for a single textarea and the composer swapped for a wider action row.
 
 ## Native browser UI (in scope to fix in the Claude Design iteration)
 

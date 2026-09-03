@@ -1,8 +1,8 @@
 # Observed Type & Spacing Values
 
-**Update: this is done.** `--font-3xs` through `--font-xl` and `--space-1` through `--space-8` are now real custom properties in `static/css/tokens.css`, and every component file has been wired up to them — but only where a declaration's value was an *exact* match to a named step. The frequency table below still describes the starting point (rag-journal originally had no `--font-size-*` / `--space-*` custom properties, unlike GPS2's tokens.css, which formalizes both) and is worth keeping as the record of *why* these particular eight-and-eight steps were chosen.
+`--font-3xs` through `--font-xl` and `--space-1` through `--space-8` are real custom properties in `static/css/tokens.css`, wired into every component file only where a declaration's value was an *exact* match to a named step. The frequency table below is the record of *why* these particular eight-and-eight steps were chosen.
 
-This was formalization, not redesign: every rem/px value in the app today is unchanged, because non-matching values (the long tail described below, e.g. `.72rem`, `.92rem`, `.45rem`, and radius's own `4px`/`12px` one-offs) were deliberately left as literals rather than rounded to the nearest step — rounding them would have been a real (if tiny) visual change, which was out of scope for this pass. Radius has since been tokenized too (see below) — it was already a clean de facto scale, and is now a named one.
+Non-matching values (the long tail described below, e.g. `.72rem`, `.92rem`, `.45rem`, and radius's own `4px`/`12px` one-offs) are left as literals rather than rounded to the nearest step, so no rem/px value in the app changed. Radius is tokenized too (see below).
 
 ## Font sizes in use (rem, all `font-size:` or `font:` shorthand declarations)
 
@@ -71,4 +71,4 @@ Most frequent: `.4rem` (37×), `1rem` (23×), `.5rem` (22×), `.8rem` (18×), `.
 | 50% | 2 | circular icon buttons (`.set-info`, `.step-n`) | `--radius-circle` |
 | 999px | 8 | pills/chips | `--radius-pill` |
 
-This read as a real 3-tier system already — **6px** (small controls), **8–10px** (default components, roughly interchangeable), **pill/circle** (chips and icon buttons) — and is now wired up in `tokens.css` exactly as originally proposed, with the two genuine one-offs (`4px`, `12px`) left as literals rather than folded in. See `02-components.md` § Cards for a related finding this scale work surfaced: `.set-feedback` uses `6px` (`--radius-sm`) while every other card in that family uses `10px` — a real inconsistency, not a value this table smoothed over.
+This is a real 3-tier system: **6px** (small controls), **8–10px** (default components, roughly interchangeable), **pill/circle** (chips and icon buttons), with the two genuine one-offs (`4px`, `12px`) left as literals rather than folded in. See `02-components.md` § Cards: `.set-feedback` uses `6px` (`--radius-sm`) while every other card in that family uses `10px` — a real inconsistency worth a deliberate call.

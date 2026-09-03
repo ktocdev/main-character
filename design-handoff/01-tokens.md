@@ -2,8 +2,6 @@
 
 Source: `static/css/tokens.css`, `static/css/base.css:1-37`.
 
-**This file now describes the real codebase, not a proposal.** The gaps this document originally flagged — no `--font-*` family tokens, no `--error` token, an untokenized fallback color — have since been fixed directly in `tokens.css` and the component files, on the reasoning that they're mechanical value-aliasing (same colors, same fonts, same sizes, just named) rather than a redesign, so doing it before Claude Design starts means the relic pages reference tokens that actually exist instead of tokens that would need backfilling into the app later anyway.
-
 All ten semantic color tokens (nine original + `--error`) are defined once and reused everywhere — no component CSS file declares a raw color for a themeable surface. `color` declarations elsewhere in the app are one of these ten, always via `var()`.
 
 ## Theme model
@@ -29,13 +27,9 @@ Dark is the default palette, not a toggle-on extra:
 | `--accent-dim` | `#8a6a44` | `#d9b183` | quieter accent — section labels, borders that should read as "accent family" without shouting |
 | `--border` | `#3d362f` | `#e4dcd0` | all hairline borders/dividers |
 | `--you` | `#c9b99f` | `#6b5d49` | the color of the user's own words in a conversation (`.msg.you`, `.session-part`) — distinct from `--text` so a transcript visually separates "you" from "companion" without needing a chat-bubble layout |
-| `--error` | `#c96a5a` (muted terracotta — unchanged, this was the app's only error color before it had a name) | `#a8493a` (new — darkened the same way `--accent`/`--you` are darkened for light mode, to hold contrast on a near-white background; not verified against a contrast checker, just pattern-matched to the app's existing light-mode darkening) | the only danger/error state (`.set-note.error`, `.set-feedback.error`) |
+| `--error` | `#c96a5a` (muted terracotta) | `#a8493a` | the only danger/error state (`.set-note.error`, `.set-feedback.error`) |
 
 Note the light palette isn't `--bg`/`--text` inverted 1:1 — `--accent` and `--accent-dim` swap emphasis (light mode's `--accent-dim` is *lighter* than its `--accent`, the reverse of dark mode), because in a bright cream background the muted amber needs to carry more weight to stay legible.
-
-### One color retired
-
-- `#6b5b3e` — was a fallback value in `background: var(--accent-dim, #6b5b3e)` for the mock-mode banner (`base.css:73`). It never fired in practice (`--accent-dim` is always defined), so it's been deleted rather than tokenized — the declaration is now the plain `var(--accent-dim)` it was always resolving to.
 
 ## Typography tokens
 
@@ -50,7 +44,7 @@ Note `body`'s own font declaration (`font: 17px/1.65 var(--font-body);`) uses th
 
 ## Type, spacing & radius scale
 
-`--font-3xs` through `--font-xl` (8 steps), `--space-1` through `--space-8` (8 steps), and `--radius-sm`/`--radius-base`/`--radius-lg`/`--radius-pill`/`--radius-circle` (5 steps) are all real tokens in `tokens.css` now — see `04-type-and-spacing-scale.md` for the full frequency analysis and scale tables. All three were wired into every component file as a straight find-and-replace of exact-match values only: a declaration like `font-size: .72rem` or `border-radius: 4px` that doesn't land exactly on a named step was left as a literal rather than rounded to the nearest one, so this changed zero pixels anywhere in the app — it only named values that were already a scale in practice. Two radius one-offs stayed raw on purpose: `4px` (`.set-control select/input`, `#help code`) and `12px` (`#triage-card`, the one intentionally-bigger card).
+`--font-3xs` through `--font-xl` (8 steps), `--space-1` through `--space-8` (8 steps), and `--radius-sm`/`--radius-base`/`--radius-lg`/`--radius-pill`/`--radius-circle` (5 steps) are real tokens in `tokens.css` — see `04-type-and-spacing-scale.md` for the full scale tables. Two radius values stay raw literals rather than named steps: `4px` (`.set-control select/input`, `#help code`) and `12px` (`#triage-card`, the one intentionally-bigger card).
 
 ## Motion
 

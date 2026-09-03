@@ -4,13 +4,7 @@
   This is a reference copy for design-system tooling, not a file the app
   loads — the app's real source of truth remains static/css/tokens.css.
   See 01-tokens.md for the full write-up (role of each token and the theme
-  precedence rules).
-
-  This file matches the real tokens.css as of the font-family/--error/
-  type-and-spacing-scale tokenization pass — the "escaped colors" and
-  "proposed scale" framing below has been resolved in the real codebase,
-  not just documented here. Kept as annotated commentary since it's still
-  useful context for Claude Design.
+  precedence rules). Everything below matches the real tokens.css exactly.
 */
 
 /* Body prose font — loaded via Google Fonts <link> in index.html, not
@@ -112,13 +106,3 @@
 
 /* Explicit dark pin — same values as the bare :root block, just wins over OS light */
 :root[data-theme="dark"] { color-scheme: dark; }
-
-/*
-  ── PROPOSED, NOT IN THE REAL CODEBASE ──────────────────────────────────
-  Everything above this line matches the real tokens.css exactly.
-  Motion-duration is a documentation-only observation, not a real custom
-  property — see 01-tokens.md "Motion" for the one keyframe.
-*/
-:root {
-  --duration-pulse: 1.6s; /* lamp-pulse: the app's one "something is happening" idiom */
-}
