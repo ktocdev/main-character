@@ -30,6 +30,13 @@ function markPending(controlId, key, describe) {
   $(controlId).appendChild(p);
 }
 
+// The active-state phrase for the category toggles' pending marker. The
+// message frame is "still running as {this} until you restart it", so this
+// describes what the process is tagging with right now, not what was saved.
+const describeCats = a => a
+  ? 'tagging with these off: ' + a.split(',').join(', ')
+  : 'tagging with every category on';
+
 // A picker can only send back what it can show. When .env holds a value this
 // list has no option for -- a hand-set date format, a zone this machine can't
 // resolve -- the select displays some *other* option, and saving from it would
@@ -150,6 +157,14 @@ export async function loadSettings() {
       ${fieldRow('set-lang', 'Language',
         'English is the only option today. The setting exists so adding '
         + 'another later is a configuration change, not a rebuild.')}
+      <div class="set-row">
+        <label>Categories</label>
+        <p class="set-help">The life-domain tags the companion suggests on new
+          entries. Turn off any that don’t fit your life &mdash; the
+          journal still grows its own categories from what you write. Entries
+          you’ve already tagged keep their tags either way.</p>
+        <div class="set-control" id="set-categories-control"></div>
+      </div>
     </section>
     <section class="set-group">
       <h3>Models &amp; cost</h3>
@@ -278,6 +293,31 @@ export async function loadSettings() {
   $('set-lang-control').appendChild(lang);
   markPending('set-lang-control', 'MC_LANGUAGE',
     a => (o.languages.find(l => l.value === a) || {}).label || a);
+
+  // categories — one checkbox per built-in, checked = offered on new entries.
+  // Stored as the *disabled* set (config.DISABLED_CATEGORIES), so an unchecked
+  // box is what gets sent. The list comes from the server so a category added
+  // later needs no change here. An older server sends no `categories`, in which
+  // case the section simply stays empty rather than throwing.
+  const catBox = $('set-categories-control');
+  if (catBox && Array.isArray(o.categories)) {
+    const off = new Set((v.MC_DISABLED_CATEGORIES || '')
+      .split(',').map(s => s.trim()).filter(Boolean));
+    for (const c of o.categories) {
+      const row = document.createElement('label');
+      row.className = 'set-check';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = c.name;
+      cb.checked = !off.has(c.name);
+      const text = document.createElement('span');
+      text.innerHTML = '<strong>' + esc(c.name) + '</strong> — '
+        + esc(c.description || '');
+      row.append(cb, text);
+      catBox.appendChild(row);
+    }
+    markPending('set-categories-control', 'MC_DISABLED_CATEGORIES', describeCats);
+  }
 
   // ---- models ----
   // Both pickers offer the same lineup: nothing is restricted by bucket. The
@@ -608,6 +648,19 @@ async function save() {
     if (!el || el.disabled || el.dataset.locked) continue;
     if (el.value !== (loaded.values[key] || '')) values[key] = el.value;
   }
+  // categories: unchecked boxes are the disabled set, in the built-in order
+  // they were rendered in (which matches the server's normalisation), so the
+  // comparison against the stored line is apples to apples. Only sent when it
+  // changed.
+  const catInputs = [...document.querySelectorAll(
+    '#set-categories-control input[type=checkbox]')];
+  if (catInputs.length) {
+    const disabled = catInputs.filter(b => !b.checked).map(b => b.value).join(',');
+    if (disabled !== (loaded.values.MC_DISABLED_CATEGORIES || '')) {
+      values.MC_DISABLED_CATEGORIES = disabled;
+    }
+  }
+
   const key = $('set-key').value.trim();
   if (key) values.ANTHROPIC_API_KEY = key;
 

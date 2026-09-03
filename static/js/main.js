@@ -1,6 +1,7 @@
 import { $, refreshStatus } from './core.js';
 import { state } from './state.js';
 import * as write from './write.js';
+import * as seed from './seed.js';
 import * as lookup from './lookup.js';
 import * as search from './search.js';
 import * as dreams from './dreams.js';
@@ -42,6 +43,7 @@ document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () =>
 
 // feature wiring, in original document order
 write.init();
+seed.init();
 lookup.init();
 search.init();
 dreams.init();

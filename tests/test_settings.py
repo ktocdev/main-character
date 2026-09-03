@@ -537,3 +537,96 @@ def test_a_save_records_its_keys_for_the_restart(env, client):
     server.RESTART["keys"].clear()
     client.post("/api/settings", json={"values": {"MC_DATE_FORMAT": "%m/%d/%y"}})
     assert "MC_DATE_FORMAT" in server.RESTART["keys"]
+
+
+# ---- categories ----
+
+def test_get_lists_the_built_in_categories(env, client):
+    """The toggles render from this, so every built-in has to arrive with its
+    definition, and the disabled line is reported like any other setting -- in
+    both `values` (the file) and `active` (the process)."""
+    import categories as cats
+    body = client.get("/api/settings").json()
+    offered = body["options"]["categories"]
+    assert [c["name"] for c in offered] == list(cats.CATEGORIES)
+    assert all(c["description"] for c in offered)
+    assert "MC_DISABLED_CATEGORIES" in body["values"]
+    assert "MC_DISABLED_CATEGORIES" in body["active"]
+
+
+def test_disabling_categories_round_trips_and_is_normalised(env, client):
+    """Stored in built-in order regardless of the order the toggles were sent,
+    so the line is stable and the pending-marker comparison stays honest."""
+    r = client.post("/api/settings",
+                    json={"values": {"MC_DISABLED_CATEGORIES": "pets,relationships"}})
+    assert r.status_code == 200
+    # relationships precedes pets in the built-in list
+    assert env_file.read_env()["MC_DISABLED_CATEGORIES"] == "relationships,pets"
+    after = client.get("/api/settings").json()
+    assert after["values"]["MC_DISABLED_CATEGORIES"] == "relationships,pets"
+
+
+def test_disabling_an_unknown_category_is_refused(env, client):
+    r = client.post("/api/settings", json={
+        "values": {"MC_DISABLED_CATEGORIES": "work,not_a_category"}})
+    assert r.status_code == 400
+    assert "MC_DISABLED_CATEGORIES" not in env_file.read_env()
+
+
+def test_disabling_every_category_is_refused(env, client):
+    """An empty enum is a schema the API rejects, and a tagger that can offer
+    nothing is a worse state than any one category being on: one has to stay."""
+    import categories as cats
+    r = client.post("/api/settings", json={
+        "values": {"MC_DISABLED_CATEGORIES": ",".join(cats.CATEGORIES)}})
+    assert r.status_code == 400
+    assert "MC_DISABLED_CATEGORIES" not in env_file.read_env()
+
+
+def test_clearing_the_disabled_line_turns_everything_back_on(env, client):
+    client.post("/api/settings",
+                json={"values": {"MC_DISABLED_CATEGORIES": "pets"}})
+    assert env_file.read_env()["MC_DISABLED_CATEGORIES"] == "pets"
+    client.post("/api/settings",
+                json={"values": {"MC_DISABLED_CATEGORIES": ""}})
+    # gone from the file entirely, so config's default (all on) applies again
+    assert "MC_DISABLED_CATEGORIES" not in env_file.read_env()
+
+
+def test_enabled_categories_drops_the_disabled_ones(monkeypatch):
+    import config
+    import categories as cats
+    monkeypatch.setattr(config, "DISABLED_CATEGORIES", ["pets", "relationships"])
+    enabled = cats.enabled_categories()
+    assert "pets" not in enabled and "relationships" not in enabled
+    assert "work" in enabled
+    # the definition rides along, so the tagging prompt still describes it
+    assert enabled["work"] == cats.CATEGORIES["work"]
+
+
+def test_tagging_never_offers_or_applies_a_disabled_category(monkeypatch):
+    """Two guarantees at once: the schema handed to the model excludes the
+    disabled name, and a reply that names it anyway (an old mock fixture, a
+    rename) is dropped rather than applied."""
+    import config
+    import categories as cats
+    monkeypatch.setattr(config, "DISABLED_CATEGORIES", ["pets"])
+    seen = {}
+
+    def create(**kw):
+        seen["enum"] = kw["output_config"]["format"]["schema"]["properties"][
+            "categories"]["items"]["properties"]["name"]["enum"]
+        text = json.dumps({"categories": [
+            {"name": "work", "evidence": "job stuff"},
+            {"name": "pets", "evidence": "the dog wandered through"},
+        ]})
+        return SimpleNamespace(
+            stop_reason="end_turn",
+            content=[SimpleNamespace(type="text", text=text)])
+
+    client = SimpleNamespace(messages=SimpleNamespace(create=create))
+    conv = {"text": "a short entry about my job", "date": "2026-08-01", "title": "Work"}
+    tags = cats.tag_conversation(client, conv)
+
+    assert "pets" not in seen["enum"] and "work" in seen["enum"]
+    assert "work" in tags and "pets" not in tags

@@ -219,6 +219,22 @@ AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 
 
 # ---------------------------------------------------------------------------
+# CATEGORIES
+# ---------------------------------------------------------------------------
+# Which built-in life-domain categories the tagger offers on new entries.
+# Stored as the *disabled* set, not the enabled one, and blank means all on:
+# a category added to the built-in list in a future version is then on by
+# default, where an enabled list written by an older build would silently
+# leave it off. Disabling one only stops it being offered going forward --
+# entries already tagged with it keep those tags (categories.py never re-tags
+# on its own), and its counts and domain summary still render.
+DISABLED_CATEGORIES = [
+    c.strip() for c in os.getenv("MC_DISABLED_CATEGORIES", "").split(",")
+    if c.strip()
+]
+
+
+# ---------------------------------------------------------------------------
 # TIME
 # ---------------------------------------------------------------------------
 # The server knows the real time; the model never should. Everything that
