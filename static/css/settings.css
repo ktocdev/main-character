@@ -46,6 +46,31 @@
   .set-group > .set-help { margin-bottom: var(--space-8); }
   .set-warn { color: var(--accent); font-size: var(--font-xs); margin-top: var(--space-2); max-width: 34rem; }
 
+  /* Category toggles: a checkbox and its definition on one row. The name is
+     full-strength text and the definition dim -- the same weighting a label
+     has over its help elsewhere in the pane. */
+  /* label.set-check, not .set-check: these labels sit inside a .set-row, whose
+     `.set-row label { display: block }` (class+element) outranks a lone class
+     and would override display:flex, killing the gap. Matching its specificity
+     and winning on source order restores the row. */
+  label.set-check {
+    display: flex; align-items: flex-start; gap: var(--space-5);
+    margin: var(--space-3) 0; max-width: 34rem;
+    font-size: var(--font-xs); line-height: 1.5; color: var(--text-dim);
+    cursor: pointer;
+  }
+  /* This checkbox sits inside a .set-control, so the shared select/input rule
+     (22rem min-width, border, padding, input background) lands on it and blows
+     it up into a wide box with the tick centred. Undo all of that -- it is a
+     bare checkbox, not a text field -- and nudge it down to meet the first line
+     of its label. */
+  .set-check input {
+    min-width: 0; width: auto; margin: .15rem 0 0; padding: 0;
+    border: none; background: none; border-radius: 0;
+    flex-shrink: 0; accent-color: var(--accent); cursor: pointer;
+  }
+  .set-check strong { color: var(--text); font-weight: 600; }
+
   /* Appearance: a segmented light/dark/auto switch. Client-only (localStorage),
      so unlike the .env rows it takes effect with no save and no restart. */
   #theme-toggle {

@@ -792,6 +792,7 @@ SETTINGS_KEYS = {
     "MC_DATE_FORMAT", "MC_TIMEZONE", "MC_LANGUAGE",
     "MC_COMPANION_MODEL", "MC_COMPANION_EFFORT", "MC_PROCESSING_MODEL",
     "MC_MAX_SESSION_SPEND", "MC_MAX_MONTHLY_SPEND",
+    "MC_DISABLED_CATEGORIES",
     "ANTHROPIC_API_KEY",
 }
 
@@ -820,6 +821,7 @@ def _available_timezones() -> list[str]:
 def get_settings():
     """Current settings, plus the option lists the pickers derive from."""
     import config
+    import categories as cats
     from env_file import read_env
     stored = read_env()
     zones = _available_timezones()
@@ -835,6 +837,11 @@ def get_settings():
         "MC_COMPANION_MODEL": config.MC_COMPANION_MODEL,
         "MC_COMPANION_EFFORT": config.MC_COMPANION_EFFORT,
         "MC_PROCESSING_MODEL": config.MC_PROCESSING_MODEL,
+        # The disabled set as one line, normalised to built-in order (same as
+        # the file stores). Blank means all on. In `active` like the rest, so
+        # the UI can tell a saved change from what this process is still tagging
+        # with -- categories.enabled_categories() froze this at import too.
+        "MC_DISABLED_CATEGORIES": ",".join(config.DISABLED_CATEGORIES),
     }
     # Deliberately not in `active`: nothing in the process reads the spend
     # caps yet (Phase 2 item 10 is what will enforce them), so there is no
@@ -874,6 +881,12 @@ def get_settings():
                  "thinking": config.MODEL_THINKING_SUPPORT.get(m, True)}
                 for m, efforts in config.MODEL_EFFORT_LEVELS.items()
             ],
+            # Every built-in category with its definition, in built-in order.
+            # The toggle for each is checked unless its name is in the disabled
+            # line above; the full list has to come from the server so a
+            # category added later shows up without a frontend change.
+            "categories": [{"name": n, "description": d}
+                           for n, d in cats.CATEGORIES.items()],
         },
         # Both ceilings, what has been used against them, and the fact that
         # something is now checking. The UI reads `enforced` rather than
@@ -943,6 +956,21 @@ def _validate_settings(values: dict) -> dict[str, str]:
                 raise ValueError(
                     f"{model} does not take effort '{value}'"
                     + (f" (try: {', '.join(allowed)})" if allowed else ""))
+        if key == "MC_DISABLED_CATEGORIES" and value:
+            import categories as cats
+            names = [n.strip() for n in value.split(",") if n.strip()]
+            unknown = [n for n in names if n not in cats.CATEGORIES]
+            if unknown:
+                raise ValueError(f"not a category: {', '.join(unknown)}")
+            # Disabling every category would leave the tagger with an empty
+            # enum, which the API rejects -- and a journal that can't tag is a
+            # worse state than any single category being on. One has to stay.
+            if not (set(cats.CATEGORIES) - set(names)):
+                raise ValueError("at least one category has to stay on")
+            # Store normalised to built-in order and de-duplicated, so the line
+            # is stable no matter what order the toggles were sent in.
+            wanted = set(names)
+            value = ",".join(n for n in cats.CATEGORIES if n in wanted)
         if key in ("MC_MAX_SESSION_SPEND", "MC_MAX_MONTHLY_SPEND") and value:
             try:
                 if float(value) < 0:
