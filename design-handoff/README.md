@@ -120,6 +120,33 @@ or component next to its var name, value, and usage note). Note that GPS2's
 game chrome) is unrelated to rag-journal — only borrow the page structure,
 not the visual style.
 
+## Deliverable sequence
+
+Do this in order, not all at once:
+
+1. **One consolidated token specimen page, first.** Every token in
+   `01-tokens.md`/`tokens-reference.css` on a single page — color (dark
+   *and* light, all ten), both font families at each step of the
+   `--font-*` scale, the `--space-*` scale, the `--radius-*` scale, motion
+   — live-rendered swatches next to var name, value, and usage note. This
+   is the `GPS2 Tokens.html` equivalent, and it's the foundation everything
+   else points back to, so it comes before any screen redesign work
+   starts, not after.
+2. **Then redesign the screenshot pages, one at a time**, using `01`–`05`
+   as the constraint set and referencing the token page rather than
+   restating token values inline on each screen.
+3. **Spin off a specimen page for a component only once it's actually
+   recurring** — e.g. once a button shows up in two or more of the
+   redesigned screens, that's the point to build a `Buttons` page
+   collecting every variant (`button.send`, `button.quiet`, the icon-only
+   round buttons) in one place, same pattern as `GPS2 Buttons.html` /
+   `GPS2 Design Elements.html` / `GPS2 Patterns.html`. Don't front-load a
+   full set of component pages before the screen work has shown which
+   components actually repeat enough to earn one — `02-components.md`
+   already flags likely candidates (`Card`, `Chip`, `ListItem`, the new
+   `TagEditor` pattern) but let the redesigns confirm which of those are
+   worth a dedicated page versus staying a one-off.
+
 ## Fonts
 
 - **Old Standard TT** (body serif) — loaded from Google Fonts in
