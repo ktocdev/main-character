@@ -113,10 +113,10 @@ function trackCloseProgress() {
 }
 
 // ---- the seed ritual (close → download candidate → edit in VS Code → upload) ----
-async function seedState() {
+export async function seedState() {
   try { return await (await fetch('/api/seed')).json(); } catch (e) { return null; }
 }
-async function refreshSeedMenu() {
+export async function refreshSeedMenu() {
   const s = await seedState();
   if (!s) return;
   $('seed-download').hidden = !s.exists;

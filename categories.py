@@ -78,28 +78,51 @@ Categories:
 {text}
 </entry>"""
 
-TAG_SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "properties": {
-        "categories": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "name": {"type": "string", "enum": list(CATEGORIES)},
-                    "evidence": {
-                        "type": "string",
-                        "description": "Short phrase: what in the entry earned this tag",
+def enabled_categories() -> dict:
+    """The built-in categories the tagger currently offers: CATEGORIES minus
+    whatever Settings has disabled (config.DISABLED_CATEGORIES).
+
+    Read live rather than bound at import so a test can set it; in the running
+    app it is frozen at import like every other setting, so a change needs a
+    restart. Only *tagging* narrows to this set -- build_index, update_chroma
+    and the summarizer keep using the full CATEGORIES, so an entry already
+    tagged with a now-disabled category keeps that tag, its count and its
+    domain summary. Disabling stops a category being offered; it never erases
+    what history already carries.
+    """
+    import config
+    disabled = set(config.DISABLED_CATEGORIES)
+    enabled = {name: desc for name, desc in CATEGORIES.items() if name not in disabled}
+    # The Settings UI refuses to disable every category, but MC_DISABLED_CATEGORIES
+    # is also a plain .env value -- hand-editing it isn't stopped the same way.
+    # An empty enum breaks every tag_conversation() call, so fail open here too.
+    return enabled or dict(CATEGORIES)
+
+
+def _tag_schema(names) -> dict:
+    """The tagging JSON schema, with its category enum set to `names`."""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "categories": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "name": {"type": "string", "enum": list(names)},
+                        "evidence": {
+                            "type": "string",
+                            "description": "Short phrase: what in the entry earned this tag",
+                        },
                     },
+                    "required": ["name", "evidence"],
                 },
-                "required": ["name", "evidence"],
             },
         },
-    },
-    "required": ["categories"],
-}
+        "required": ["categories"],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -108,14 +131,16 @@ TAG_SCHEMA = {
 
 def tag_conversation(client, conv: dict) -> dict:
     """Tag one conversation. Returns {category_name: evidence}."""
-    definitions = "\n".join(f"- {name}: {desc}" for name, desc in CATEGORIES.items())
+    enabled = enabled_categories()
+    definitions = "\n".join(f"- {name}: {desc}" for name, desc in enabled.items())
+    schema = _tag_schema(enabled)
     tags = {}
     for segment in _segments(conv["text"]):
         response = client.messages.create(
             model=MODEL,
             max_tokens=2000,
             **processing_thinking_kwargs(),
-            output_config={"format": {"type": "json_schema", "schema": TAG_SCHEMA}},
+            output_config={"format": {"type": "json_schema", "schema": schema}},
             messages=[{
                 "role": "user",
                 "content": TAG_PROMPT.format(
@@ -130,12 +155,13 @@ def tag_conversation(client, conv: dict) -> dict:
         # results are ordered most-central first; cap as a backstop against
         # over-tagging (a tag on everything is a tag on nothing)
         for item in json.loads(raw).get("categories", [])[:6]:
-            # TAG_SCHEMA's enum already constrains this on a real call, but
-            # mock mode replays recorded text without a schema — a fixture
-            # captured before a category was renamed would otherwise inject
-            # a name that isn't in CATEGORIES, and build_index() silently
-            # drops it from counts rather than erroring.
-            if item["name"] not in CATEGORIES:
+            # The schema already constrains this on a real call, but mock mode
+            # replays recorded text without one -- a fixture captured before a
+            # category was renamed or disabled would otherwise inject a name
+            # that is no longer offered, and build_index() silently drops an
+            # unknown one from counts rather than erroring. Checking `enabled`
+            # (a subset of CATEGORIES) covers both the rename and the disable.
+            if item["name"] not in enabled:
                 continue
             tags.setdefault(item["name"], item["evidence"])
     return tags
