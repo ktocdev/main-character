@@ -56,7 +56,8 @@
   <section class="tab active" id="tab-write">
     <div id="write-log"></div>
     <div id="seed-banner" hidden>
-      <span>your seed summary candidate is ready — download it, read it fully, edit, then upload it so this chat opens with it</span>
+      <span>your seed summary candidate is ready — the life summary every chat opens with. Read it through and edit it before it goes live.</span>
+      <button class="send" id="seed-banner-edit">edit seed summary</button>
       <button class="quiet" id="seed-banner-download">download</button>
       <button class="quiet" id="seed-banner-upload">upload edited seed</button>
     </div>
@@ -85,11 +86,36 @@
           <div class="menu">
             <button class="quiet" id="reset" title="the summarize point — your side of this chat becomes a journal entry, memory updates in the background, a fresh chat opens">summarize &amp; close chat</button>
             <button class="quiet" id="discard" title="throw this chat away — no journal entry, no memory update. testing affordance, shown only on a mock journal">discard this chat</button>
+            <button class="quiet" id="seed-edit" title="edit the seed summary in the app — the co-edited life summary that opens every chat">edit seed summary</button>
             <button class="quiet" id="seed-download" title="download the live seed summary — the co-edited life summary that opens every chat" hidden>download current seed</button>
             <button class="quiet" id="seed-upload-btn" title="upload your edited seed summary — it becomes the live seed for every new turn (the old one is backed up)">upload seed</button>
             <input type="file" id="seed-upload-file" accept=".md,.txt,text/markdown,text/plain" hidden>
           </div>
         </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Seed summary editor: not in the nav, a sub-view of write reached by the
+       banner or the ⋯ menu (item 11). Save is the one commit point; Enter only
+       ever makes a newline. -->
+  <section class="tab" id="tab-seed">
+    <div id="seed-editor">
+      <div id="seed-editor-head">
+        <button class="quiet" id="seed-back" title="back to the write screen">&larr; back to write</button>
+        <span id="seed-editor-meta"></span>
+        <span id="seed-editor-draftnote" class="set-warn" hidden></span>
+      </div>
+      <textarea id="seed-editor-text" placeholder="loading…" spellcheck="true"></textarea>
+      <div id="seed-editor-actions">
+        <button class="send" id="seed-save" title="make this the live seed — every new chat opens with it (the current one is backed up)">save seed summary</button>
+        <button class="quiet" id="seed-copy" title="copy the whole document to the clipboard">copy</button>
+        <button class="quiet" id="seed-dl" title="download what's in the box right now, edits and all">download</button>
+        <button class="quiet" id="seed-upload2" title="load a file from disk into the box (does not save)">upload</button>
+        <button class="quiet" id="seed-claude" title="copy the document with a revise instruction, then open claude.ai to paste it">open with Claude</button>
+        <button class="quiet" id="seed-discard-draft" title="throw away this unsaved draft and reload the current document" hidden>discard draft</button>
+        <span class="saved-note" id="seed-editor-note"></span>
+        <input type="file" id="seed-editor-file" accept=".md,.txt,text/markdown,text/plain" hidden>
       </div>
     </div>
   </section>
