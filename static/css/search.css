@@ -13,7 +13,7 @@
   .search-hit .hits-n { font-weight: normal; color: var(--text-dim); font-size: .78rem; margin-left: var(--space-2); }
   .search-hit .related-tag {
     font-weight: normal; font-size: .68rem; color: var(--accent-dim);
-    border: 1px solid var(--border); border-radius: 999px;
+    border: 1px solid var(--border); border-radius: var(--radius-pill);
     padding: .05rem var(--space-3); margin-left: var(--space-3); vertical-align: middle;
     letter-spacing: .04em;
   }

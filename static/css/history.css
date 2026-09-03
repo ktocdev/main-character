@@ -3,7 +3,7 @@
   #session-list { width: 19rem; border-right: 1px solid var(--border); overflow-y: auto; padding: var(--space-6) var(--space-5); flex-shrink: 0; }
   .session-item {
     display: block; width: 100%; text-align: left; background: none; border: none;
-    border-radius: 8px; padding: var(--space-3) var(--space-4); cursor: pointer; color: var(--text);
+    border-radius: var(--radius-base); padding: var(--space-3) var(--space-4); cursor: pointer; color: var(--text);
     font: .88rem var(--font-ui); margin-bottom: .15rem;
   }
   .session-item:hover, .session-item.sel { background: var(--bg-input); }
@@ -23,7 +23,7 @@
   }
   #session-toc .toc-date, #session-toc .toc-sub {
     display: block; width: 100%; text-align: left; background: none; border: none;
-    cursor: pointer; border-radius: 6px; padding: .18rem var(--space-2);
+    cursor: pointer; border-radius: var(--radius-sm); padding: .18rem var(--space-2);
     font: .82rem var(--font-ui); color: var(--text);
   }
   #session-toc .toc-sub { padding-left: var(--space-7); font-size: .72rem; color: var(--text-dim); }

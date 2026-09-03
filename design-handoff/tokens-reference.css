@@ -4,13 +4,7 @@
   This is a reference copy for design-system tooling, not a file the app
   loads — the app's real source of truth remains static/css/tokens.css.
   See 01-tokens.md for the full write-up (role of each token and the theme
-  precedence rules).
-
-  This file matches the real tokens.css as of the font-family/--error/
-  type-and-spacing-scale tokenization pass — the "escaped colors" and
-  "proposed scale" framing below has been resolved in the real codebase,
-  not just documented here. Kept as annotated commentary since it's still
-  useful context for Claude Design.
+  precedence rules). Everything below matches the real tokens.css exactly.
 */
 
 /* Body prose font — loaded via Google Fonts <link> in index.html, not
@@ -68,6 +62,15 @@
   --space-6: 1rem;
   --space-7: 1.2rem;
   --space-8: 1.5rem;  /* standard pane outer padding */
+
+  /* radius — two one-off values stay raw and untokenized on purpose:
+     4px (.set-control select/input, #help code) and 12px (#triage-card,
+     the one card bigger than the norm) */
+  --radius-sm:     6px;
+  --radius-base:   8px;
+  --radius-lg:     10px;  /* dominant radius — buttons, cards, inputs */
+  --radius-pill:   999px;
+  --radius-circle: 50%;
 }
 
 /* Light — applies when the OS prefers light AND no dark pin is set */
@@ -103,23 +106,3 @@
 
 /* Explicit dark pin — same values as the bare :root block, just wins over OS light */
 :root[data-theme="dark"] { color-scheme: dark; }
-
-/*
-  ── PROPOSED, NOT IN THE REAL CODEBASE ──────────────────────────────────
-  Everything above this line matches the real tokens.css exactly. Radius
-  and motion-duration are documentation-only observations, not real custom
-  properties — see 04-type-and-spacing-scale.md for why radius doesn't need
-  one (it's already a clean de facto scale) and 01-tokens.md "Motion" for
-  the one keyframe.
-*/
-:root {
-  /* radius — already a clean scale in practice, just never named */
-  --radius-sm:     6px;
-  --radius-base:   8px;
-  --radius-lg:     10px;  /* dominant radius — buttons, cards, inputs */
-  --radius-pill:   999px;
-  --radius-circle: 50%;
-
-  /* motion */
-  --duration-pulse: 1.6s; /* lamp-pulse: the app's one "something is happening" idiom */
-}

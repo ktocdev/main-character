@@ -45,6 +45,13 @@
     --space-6: 1rem;
     --space-7: 1.2rem;
     --space-8: 1.5rem;
+
+    /* radius */
+    --radius-sm:     6px;
+    --radius-base:   8px;
+    --radius-lg:     10px;
+    --radius-pill:   999px;
+    --radius-circle: 50%;
   }
   @media (prefers-color-scheme: light) {
     :root:not([data-theme="dark"]) {
