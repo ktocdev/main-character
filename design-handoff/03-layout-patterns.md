@@ -1,7 +1,6 @@
 # Layout Patterns
 
-rag-journal is a single `index.html`, one app shell, ten tabs. Every tab's
-content area resolves to one of three layout shapes below.
+rag-journal is a single `index.html`, one app shell, ten tabs. Every tab's content area resolves to one of three layout shapes below.
 
 ## App shell
 
@@ -18,36 +17,24 @@ body (flex column, 100dvh)
     └─ section.tab × N   (only .active one is display:flex, rest display:none)
 ```
 
-Header and nav never scroll; `main` clips overflow and hands scrolling
-down to whichever pane inside the active tab needs it. This is why every
-tab's own top-level container repeats `overflow-y: auto` — the scroll
-boundary is deliberately pushed as deep as possible so the header/nav
-never move.
+Header and nav never scroll; `main` clips overflow and hands scrolling down to whichever pane inside the active tab needs it. This is why every tab's own top-level container repeats `overflow-y: auto` — the scroll boundary is deliberately pushed as deep as possible so the header/nav never move.
 
 ## Pattern A — Centered reading column
 
-Used by: write, chat, search, categories, patterns, dreams, settings, help,
-triage.
+Used by: write, chat, search, categories, patterns, dreams, settings, help, triage.
 
 ```
 .tab.active (flex column, full height)
 └─ #<pane> { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
 ```
 
-A single scrolling column, capped at `46rem` (~736px) and centered, `1.5rem`
-padding. This is the dominant shape in the app — anything that's
-"read/write one thing at a time" uses it. The composer (where present) sits
-outside this scroll region, pinned at the bottom of the flex column, same
-`46rem` max-width so its edges line up with the content above it.
+A single scrolling column, capped at `46rem` (~736px) and centered, `1.5rem` padding. This is the dominant shape in the app — anything that's "read/write one thing at a time" uses it. The composer (where present) sits outside this scroll region, pinned at the bottom of the flex column, same `46rem` max-width so its edges line up with the content above it.
 
-Triage (`#triage`) is a variant: same centered column but narrower
-(`44rem`) and built around one focal `#triage-card` rather than a scrolling
-list.
+Triage (`#triage`) is a variant: same centered column but narrower (`44rem`) and built around one focal `#triage-card` rather than a scrolling list.
 
 ## Pattern B — Three-pane
 
-Used by: entities, history, search-adjacent... actually just entities and
-history (search is Pattern A).
+Used by: entities, history, search-adjacent... actually just entities and history (search is Pattern A).
 
 ```
 #<pane>-pane (flex row, flex:1, overflow:hidden)
@@ -56,24 +43,14 @@ history (search is Pattern A).
 └─ toc/rail       (optional, fixed width ~11rem, border-left, hidden below 900px)
 ```
 
-- **Entities** (`#entities-pane`): `#entity-list` (21rem) + `#entity-detail`
-  (flex:1) — no third rail.
-  Both entities and history are also the app's most compact list-item
-  screens; every filter chip / sort control lives stacked at the top of the
-  left pane before the scrolling list starts.
-- **History** (`#history-pane`): `#session-list` (19rem) + `#session-view`
-  (flex:1, inner content re-capped to 46rem) + `#session-toc` (11rem,
-  drops out entirely under 900px via media query — it's a nice-to-have,
-  not core).
+- **Entities** (`#entities-pane`): `#entity-list` (21rem) + `#entity-detail` (flex:1) — no third rail. Both entities and history are also the app's most compact list-item screens; every filter chip / sort control lives stacked at the top of the left pane before the scrolling list starts.
+- **History** (`#history-pane`): `#session-list` (19rem) + `#session-view` (flex:1, inner content re-capped to 46rem) + `#session-toc` (11rem, drops out entirely under 900px via media query — it's a nice-to-have, not core).
 
-This is the pattern to reach for if a new layout needs "browse a list,
-read/edit the selected one," optionally with a third "jump to a section
-within the current item" rail.
+This is the pattern to reach for if a new layout needs "browse a list, read/edit the selected one," optionally with a third "jump to a section within the current item" rail.
 
 ## Composer-anchored column (write/chat specific)
 
-A refinement of Pattern A where the scrolling log and the input are two
-separate flex children of the same tab, not one scrolling document:
+A refinement of Pattern A where the scrolling log and the input are two separate flex children of the same tab, not one scrolling document:
 
 ```
 .tab.active
@@ -82,16 +59,11 @@ separate flex children of the same tab, not one scrolling document:
 └─ .composer / .write-composer   (fixed at bottom, 46rem centered, does not scroll)
 ```
 
-The messages themselves (`.msg`) are not chat bubbles — no background,
-no per-message card. They're differentiated purely by a small-caps
-uppercase label (`.msg::before`, "you" / "companion", optionally with a
-timestamp) in `--accent-dim`, and by text color (`--you` for the user's
-lines vs `--text` for the companion's). This keeps the transcript reading
-like a manuscript rather than a messaging app — worth preserving explicitly
-if Claude Design is tempted to bubble-ify it.
+The messages themselves (`.msg`) are not chat bubbles — no background, no per-message card. They're differentiated purely by a small-caps uppercase label (`.msg::before`, "you" / "companion", optionally with a timestamp) in `--accent-dim`, and by text color (`--you` for the user's lines vs `--text` for the companion's). This keeps the transcript reading like a manuscript rather than a messaging app — worth preserving explicitly if Claude Design is tempted to bubble-ify it.
 
 ## Responsive behavior
 
+<<<<<<< Updated upstream
 The app today is desktop-only; the only responsive rule in the whole CSS
 surface is `history.css:31` (`#session-toc` disappears under 900px). There
 is no mobile nav pattern, no stacking of the three-pane layout on narrow
@@ -123,3 +95,13 @@ Treat "does this work on a phone" as a question to answer for every new
 screen, the same way "does this match the existing token/component
 language" already is — see `README.md` § Scope of "new layouts" for how
 this fits the three kinds of new-layout work in scope.
+=======
+**Mobile-phone-width-and-up support is a requirement for all new layout work, not an optional stretch goal.** The app today is desktop-oriented and has essentially no responsive design of its own — the only responsive rule in the whole CSS surface is `history.css:31` (`#session-toc` disappears under 900px). There is no mobile nav pattern, no stacking of the three-pane layout on narrow viewports, and no breakpoint system. That absence is a gap to close, not a boundary to respect: any new screen, refreshed screen, or new component Claude Design produces should be designed and specified down to phone width from the start, not patched in afterward.
+
+What that means per pattern here:
+
+- **Pattern A (centered column)** — the easiest case. The `46rem`/`44rem` cap already collapses gracefully toward full-width on narrow viewports; the open question is just padding/type-scale adjustments at small sizes, not a structural rework.
+- **Pattern B (three-pane)** — the hard case. Entities and history both assume list + detail (+ rail) side by side; none of that fits a phone screen simultaneously. This needs real new interaction design — most likely a list→detail drill-in (show the list, tap through to the detail, provide a way back) rather than any CSS-only reflow. Don't treat this as "make the three-pane layout responsive" — treat it as designing a second, phone-appropriate pattern for the same underlying "browse a list, view the selected one" need.
+- **Composer-anchored column** — same starting point as Pattern A, plus keyboard-safe-area considerations for the fixed-at-bottom composer on mobile browsers.
+- **Top nav** — ten tab buttons in a single row pushed right; there is no existing answer for phone width at all (no hamburger menu, no tab bar, no overflow scroll). This needs a real mobile nav pattern designed from scratch, not an extension of the current flat button row.
+>>>>>>> Stashed changes
