@@ -19,8 +19,14 @@ should read as more of the same app, not a rebrand.
    type/spacing, the wordmark/masthead), not a template to adapt.
 3. **Mobile/responsive** — the app today has essentially none (one
    breakpoint, one rule, see `03-layout-patterns.md` § Responsive
-   behavior). Any mobile layout is new design work from the token/component
-   level up, not an adaptation of an existing responsive pattern.
+   behavior). This is **not optional or a follow-up phase** — every new
+   layout in categories 1 and 2 above should be designed with phone-width-
+   and-up support in mind from the start, since none of the existing
+   patterns have a mobile answer to fall back on. See
+   `03-layout-patterns.md` § Responsive behavior for what each layout
+   pattern needs specifically (the three-pane pattern and the top nav are
+   the two with no mobile story at all today, and need real interaction
+   design, not just a breakpoint).
 
 **Update:** the token gaps this bundle originally flagged as "known,
 deliberately left alone" — no `--font-*` family tokens, no `--error`

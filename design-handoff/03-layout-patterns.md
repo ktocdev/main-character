@@ -92,9 +92,34 @@ if Claude Design is tempted to bubble-ify it.
 
 ## Responsive behavior
 
-The app is desktop-oriented; the only responsive rule in the whole CSS
+The app today is desktop-only; the only responsive rule in the whole CSS
 surface is `history.css:31` (`#session-toc` disappears under 900px). There
 is no mobile nav pattern, no stacking of the three-pane layout on narrow
-viewports, and no breakpoint system. If new layouts need to work
-below ~900px, that's new territory, not an extension of an existing
-pattern.
+viewports, and no breakpoint system.
+
+**This is a gap to close, not a boundary to respect.** Every new layout
+Claude Design produces — refreshed existing screens, new screens, all of
+it — should be designed with phone-width-and-up support in mind from the
+start, not as a desktop layout with mobile bolted on after. Concretely,
+that means for each pattern above:
+
+- **Pattern A (centered column)** — degrades most easily: drop the
+  `46rem` cap and side padding down to something phone-sized, keep it a
+  single column. Should be the least effortful of the three to take to
+  phone width.
+- **Pattern B (three-pane)** — has no mobile answer today at all. Needs a
+  real decision: collapse to one pane with a way back (list → detail
+  drill-in, a back control), not just hide the rail like the existing
+  900px rule does for the toc. This is the pattern most likely to need
+  actual new interaction design, not just a breakpoint.
+- **Composer-anchored column** — the fixed-bottom composer is already
+  close to a mobile-native shape (sticky input above the keyboard); mainly
+  needs the same width/padding treatment as Pattern A.
+- **Nav** — ten tab buttons in a flat top row has no phone-width answer
+  yet either (they'd overflow or wrap badly below ~500-600px); needs a
+  real mobile nav pattern (e.g. a menu/tab-bar), not just smaller buttons.
+
+Treat "does this work on a phone" as a question to answer for every new
+screen, the same way "does this match the existing token/component
+language" already is — see `README.md` § Scope of "new layouts" for how
+this fits the three kinds of new-layout work in scope.
