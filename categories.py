@@ -92,7 +92,11 @@ def enabled_categories() -> dict:
     """
     import config
     disabled = set(config.DISABLED_CATEGORIES)
-    return {name: desc for name, desc in CATEGORIES.items() if name not in disabled}
+    enabled = {name: desc for name, desc in CATEGORIES.items() if name not in disabled}
+    # The Settings UI refuses to disable every category, but MC_DISABLED_CATEGORIES
+    # is also a plain .env value -- hand-editing it isn't stopped the same way.
+    # An empty enum breaks every tag_conversation() call, so fail open here too.
+    return enabled or dict(CATEGORIES)
 
 
 def _tag_schema(names) -> dict:
@@ -119,11 +123,6 @@ def _tag_schema(names) -> dict:
         },
         "required": ["categories"],
     }
-
-
-# The full-set schema, kept for reference; tag_conversation builds a narrowed
-# one per call from enabled_categories() so a disabled category is never offered.
-TAG_SCHEMA = _tag_schema(CATEGORIES)
 
 
 # ---------------------------------------------------------------------------
