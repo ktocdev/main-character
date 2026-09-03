@@ -1,6 +1,6 @@
 import { $, api } from './core.js';
 import { state } from './state.js';
-import { refreshSeedMenu } from './write.js';
+import { refreshSeedMenu, seedState } from './write.js';
 
 // ---- seed summary editor (item 11) ----
 // The seed summary is the rolling, co-edited life summary every chat opens
@@ -33,9 +33,6 @@ let editorState = { srcWhich: 'current', srcUpdated: null };
 let baseline = '';
 let draftTimer = null;
 
-async function seedStatus() {
-  try { return await (await fetch('/api/seed')).json(); } catch (e) { return null; }
-}
 async function fetchDoc(which) {
   try {
     const r = await fetch('/api/seed/download?which=' + which);
@@ -111,7 +108,7 @@ export async function openSeedEditor() {
   const ta = $('seed-editor-text');
   ta.value = '';
   setNote('');
-  const s = await seedStatus();
+  const s = await seedState();
   const src = pickSource(s);
   const draft = readDraft();
   const hasDraft = !!(draft && typeof draft.text === 'string');
@@ -120,6 +117,9 @@ export async function openSeedEditor() {
     : { srcWhich: src.which, srcUpdated: src.updated };
   baseline = await fetchDoc(editorState.srcWhich);
   ta.value = hasDraft ? draft.text : baseline;
+  // Only true when nothing exists yet to load (no live seed, no candidate,
+  // no draft) -- otherwise the box always ends up with text in it.
+  ta.placeholder = ta.value ? '' : 'nothing saved yet — write your first seed summary here';
   renderMeta(s);
   renderDraftNote(s, hasDraft);
   ta.focus();
@@ -149,6 +149,8 @@ async function save() {
   }
   if (!confirm('Save this as your seed summary?\n\nEvery new chat will open with it. '
     + 'The current seed is backed up, and any pending candidate is retired.')) return;
+  clearTimeout(draftTimer);   // a debounce still pending from typing must not
+  draftTimer = null;          // re-write the draft after this commits
   const r = await api('/api/seed/upload', { text });
   if (!r) return;                 // api() already alerted on the error
   clearDraft();
@@ -208,6 +210,8 @@ async function openWithClaude() {
 }
 
 async function discardDraft() {
+  clearTimeout(draftTimer);   // a pending debounce must not resurrect the draft
+  draftTimer = null;
   clearDraft();
   await openSeedEditor();   // recomputes the source from current state, no draft now
   setNote('draft discarded');

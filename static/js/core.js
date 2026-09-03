@@ -61,6 +61,15 @@ export async function api(url, payload) {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload),
   });
+  // An unhandled server exception (500, or anything else that never went
+  // through a route's `{"error": ...}` response) won't carry an `error`
+  // key -- treat any non-ok status as a failure too, not just one that says so.
+  if (!res.ok) {
+    let msg = `request failed (${res.status})`;
+    try { const r = await res.json(); if (r && r.error) msg = r.error; } catch (e) {}
+    alert(msg);
+    return null;
+  }
   const r = await res.json();
   if (r.error) { alert(r.error); return null; }
   return r;

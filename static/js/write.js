@@ -113,7 +113,7 @@ function trackCloseProgress() {
 }
 
 // ---- the seed ritual (close → download candidate → edit in VS Code → upload) ----
-async function seedState() {
+export async function seedState() {
   try { return await (await fetch('/api/seed')).json(); } catch (e) { return null; }
 }
 export async function refreshSeedMenu() {
