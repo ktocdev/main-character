@@ -48,7 +48,7 @@ Note `body`'s own font declaration (`font: 17px/1.65 var(--font-body);`) uses th
 
 ## Motion
 
-One keyframe animation exists, `lamp-pulse` (`conversation.css:110`):
+One keyframe animation exists, `lamp-pulse` (`conversation.css:138`):
 
 ```css
 @keyframes lamp-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }

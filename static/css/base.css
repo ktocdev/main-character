@@ -52,35 +52,22 @@
   .tab.active { display: flex; }
 
 
-  /* Mock-mode banner — hidden unless /api/status reports mock:true, so the
-     markup can live in index.html unconditionally. Sits above the header
-     inside the body flex column, pushing the app down rather than
-     overlaying it, so it can't be scrolled out of sight or covered. */
-  #mock-banner, #seed-banner-bar { display: none; }
-  /* Louder than the mock banner on purpose. Canned replies are a detail you
-     can forget without consequence; writing into someone else's journal is
-     not. */
-  body.seed-instance #seed-banner-bar {
-    display: block; text-align: center;
-    padding: var(--space-2) var(--space-6);
-    background: var(--accent); color: var(--bg);
-    font: var(--font-xs) var(--font-ui);
-    letter-spacing: .02em;
-  }
-  body.mock-mode #mock-banner {
+  /* One banner for both non-live states. Hidden unless /api/status reports
+     mock (or the seed instance, which is always mock), so the markup can live
+     in index.html unconditionally. Sits above the header inside the body flex
+     column, pushing the app down rather than overlaying it, so it can't be
+     scrolled out of sight or covered. Text is set in core.js. */
+  #app-banner { display: none; }
+  body.mock-mode #app-banner {
     display: block; text-align: center;
     padding: var(--space-2) var(--space-6);
     background: var(--accent-dim); color: var(--bg);
     font: var(--font-xs) var(--font-ui);
     letter-spacing: .02em;
   }
-  /* One bar, not two. The seed instance is always mock mode, so both rules
-     would otherwise fire and stack -- and two warnings say less than one: a
-     reader working out which of them applies is reading neither. The seed
-     wording carries the canned-replies fact, so the mock bar stands down.
-
-     This has to come *after* the rule it overrides. Both selectors are one
-     id + one class + one type, so specificity is a tie and source order is
-     the only thing deciding it. Moving it up will silently bring the second
-     banner back. */
-  body.seed-instance #mock-banner { display: none; }
+  /* The demo runs the same banner a shade louder. The seed instance is always
+     mock mode, so the rule above already shows the bar; this only swaps the
+     fill. It has to come *after* the rule it overrides -- both selectors are
+     one id + one class + one type, so specificity is a tie and source order
+     decides it. */
+  body.seed-instance #app-banner { background: var(--accent); }

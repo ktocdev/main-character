@@ -1,17 +1,17 @@
 # Layout Patterns
 
-rag-journal is a single `index.html`, one app shell, ten tabs. Every tab's content area resolves to one of the layout shapes below.
+rag-journal is a single `index.html`, one app shell, eleven tabs. Every tab's content area resolves to one of the layout shapes below.
 
 ## App shell
 
 ```
 body (flex column, 100dvh)
-├─ #mock-banner / #seed-banner-bar   (conditional, full-width strip)
+├─ #app-banner                       (conditional, full-width strip — mock/demo)
 ├─ header (flex row, baseline-aligned)
 │   ├─ h1 "main character" (masthead position, styled as italic accent serif)
 │   ├─ .status
 │   └─ nav (pushed right via margin-left: auto)
-│       ├─ tab buttons ×10
+│       ├─ tab buttons ×11
 │       └─ #cost-toggle + #cost-panel (absolutely positioned popover, nav is position:relative)
 └─ main (flex: 1, overflow: hidden)
     └─ section.tab × N   (only .active one is display:flex, rest display:none)
@@ -84,7 +84,7 @@ The app today is desktop-only; the only responsive rule in the whole CSS surface
 - **Pattern A (centered column)** — degrades most easily: drop the `46rem` cap and side padding down to something phone-sized, keep it a single column. Should be the least effortful of the three to take to phone width.
 - **Pattern B (three-pane)** — has no mobile answer today at all. Needs a real decision: collapse to one pane with a way back (list → detail drill-in, a back control), not just hide the rail like the existing 900px rule does for the toc. This is the pattern most likely to need actual new interaction design, not just a breakpoint.
 - **Composer-anchored column** — the fixed-bottom composer is already close to a mobile-native shape (sticky input above the keyboard); mainly needs the same width/padding treatment as Pattern A.
-- **Nav** — ten tab buttons in a flat top row has no phone-width answer yet either (they'd overflow or wrap badly below ~500-600px), and by release time it's actually eleven-plus (Settings, plus a standalone cost-meter icon and a Publish entry point outside the tab list). Needs a real mobile nav pattern — a megamenu or equivalent grouping, not just smaller buttons or a bare hamburger list.
+- **Nav** — eleven tab buttons in a flat top row (the ten original plus Settings), with the cost-meter icon alongside, has no phone-width answer (they'd overflow or wrap badly below ~500-600px), and by release it grows further still (the Publish panel's entry point, Phase 5). Needs a real mobile nav pattern — a megamenu or equivalent grouping, not just smaller buttons or a bare hamburger list.
 - **Pattern D (document editor)** — same treatment as Pattern A (it's already that column, just with a textarea instead of a scrolling list); the multi-button footer row is the one thing to watch, since five-plus actions in a `flex-wrap` row will stack awkwardly narrow unless it's given real mobile treatment (icon-only buttons, an overflow menu) rather than left to wrap on its own.
 
 Treat "does this work on a phone" as a question to answer for every new screen, the same way "does this match the existing token/component language" already is — see `README.md` § Scope of "new layouts" for how this fits the three kinds of new-layout work in scope.
