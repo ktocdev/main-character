@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, esc, fmtDate, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
 import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection } from './groups.js';

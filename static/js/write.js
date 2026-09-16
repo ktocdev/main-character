@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, esc, refreshStatus } from './core.js';
 import { state } from './state.js';
 import { addMsg, streamInto, composerBusy, anchorTop } from './conversation.js';

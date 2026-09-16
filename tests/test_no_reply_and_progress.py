@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Phase 2 carry-over items 1 and 3 — the two that changed the backend.
 
 Item 3 (no-reply): a write can be saved without calling the companion at all.

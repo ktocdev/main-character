@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Resplit — Phase 3 one-shot migration: per-day entry granularity.
 

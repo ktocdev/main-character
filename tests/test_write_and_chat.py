@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The two routes the backdating work changed, neither of which had a test.
 
 test_smoke.py proves the app boots; nothing exercised /api/entry or

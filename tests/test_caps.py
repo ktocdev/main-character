@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 The spend ceilings: what stops a call, and what a stopped call looks like.
 

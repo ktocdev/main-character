@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Reset the installed demo (seed instance) to its pristine opening state.
 

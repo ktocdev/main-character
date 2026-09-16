@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 The same export, as one dated zip you can put somewhere else.
 

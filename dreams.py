@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Dream Layer — Phase 3A of the RAG Journal.
 

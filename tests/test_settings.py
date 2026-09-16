@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The settings surface: the .env writer and the two routes over it.
 
 Every test here points env_file.ENV_PATH at a throwaway file. Nothing in
