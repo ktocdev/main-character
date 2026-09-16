@@ -1,5 +1,7 @@
 # RAG Journal
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
 A journal with infinite memory — powered by retrieval-augmented generation.
 
 RAG Journal imports your Claude conversation exports and builds a searchable, context-aware journal on top of them. A companion persona uses semantic search + LLM reasoning over your history to respond with real memory — not generic advice, but grounded references to what you've actually written. The system extracts and tracks entities (people, projects, places), detects recurring patterns, and surfaces relevant context at multiple granularities (chunks, entry summaries, weekly arcs, per-domain living docs, entity profiles).
@@ -125,3 +127,16 @@ Design rationale and the companion's persona spec live in local-only dev notes (
 ## Status
 
 Backend is feature-complete for Phases 0–3. The next major work is Phase 4 (UI redesign with Vue). See the roadmap for what's shipped vs. deferred.
+
+## License
+
+[GNU Affero General Public License v3.0 or later](LICENSE) (AGPL-3.0-or-later).
+
+The Affero clause is the reason for the choice: if you run a modified version of this
+app as a network service that other people use, you have to offer them its source. A
+plain GPL or MIT license would let a hosted, multi-tenant version of a journal app be
+built on this code without that obligation, which is a sharper problem here than usual
+given what the app is holding.
+
+Every source file carries an `SPDX-License-Identifier: AGPL-3.0-or-later` header, so a
+file copied out of this repo still points back at its terms.
