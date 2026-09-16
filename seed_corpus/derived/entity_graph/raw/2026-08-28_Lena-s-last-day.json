@@ -1,0 +1,68 @@
+{
+  "people": [
+    {
+      "name": "Lena",
+      "relationship": "coworker",
+      "observations": [
+        "Today was Lena's last day at Meridian.",
+        "She kept a plant alive for two years at her desk.",
+        "She had a mug that said WORLD'S OKAYEST DESIGNER.",
+        "Was walked out to the parking garage with a box of her stuff.",
+        "Acted bright and brittle trying not to make her departure a moment.",
+        "Said she starts at Northlight next Friday, the 4th.",
+        "Said she'll put Jordan's name in for a job at Northlight once she gets settled.",
+        "Said Northlight's design team is four people and is hiring.",
+        "Said Northlight actually ships things.",
+        "Told Jordan they have good enough experience, citing the dashboard rebuild.",
+        "Said she's not doing Jordan a favor, she's telling Ana about someone good.",
+        "Was the only person Jordan could exchange a meaningful look with during a bad meeting."
+      ]
+    },
+    {
+      "name": "Marcus",
+      "relationship": "coworker",
+      "observations": [
+        "Said \"we'll miss you\" to Lena in the same voice he uses to accept a meeting invite."
+      ]
+    },
+    {
+      "name": "Ana",
+      "relationship": "contact of Lena's (at Northlight)",
+      "observations": [
+        "Lena said she would tell Ana about Jordan as someone good for the design team."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Dashboard rebuild",
+      "domain": "work",
+      "status": "completed",
+      "observations": [
+        "Jordan rebuilt the dashboard three times while a manager gave opposite feedback each round.",
+        "It shipped and people use it.",
+        "Jordan had written on the 20th that the dashboard work was good."
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Meridian",
+      "kind": "workplace",
+      "observations": [
+        "Lena's last day of work was at Meridian.",
+        "A sheet cake send-off was held in the kitchen there.",
+        "There is a parking garage at Meridian."
+      ]
+    },
+    {
+      "name": "Northlight",
+      "kind": "workplace",
+      "observations": [
+        "Lena starts working there next Friday, the 4th.",
+        "Its design team has four people and is hiring.",
+        "It actually ships things."
+      ]
+    }
+  ]
+}

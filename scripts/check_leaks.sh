@@ -24,12 +24,18 @@ cd "$(git rev-parse --show-toplevel)" || exit 2
 
 SELF="scripts/check_leaks.sh"
 NAME_LIST="third-party-names.txt"
-# The generator's docstring has to name the collisions it deliberately
-# leaves in the list (real people whose names are also common words), so
-# it trips the name pass on its own documentation -- the same failure the
-# `sk-ant-` pattern below is written to avoid. Exempt from the name pass
-# only; it is still searched for secret-shaped strings.
-NAME_SELF="scripts/gen_name_list.py"
+# Exempt from the name pass only; both are still searched for secret-shaped
+# strings. Each holds text that cannot be reworded to dodge a collision:
+#
+#   gen_name_list.py -- its docstring has to name the collisions it
+#     deliberately leaves in the list (real people whose names are also
+#     common words), so it trips the name pass on its own documentation --
+#     the same failure the `sk-ant-` pattern below is written to avoid.
+#   LICENSE -- the verbatim AGPL-3.0 text (Phase 3 item 1). "Major
+#     Component" is one of the license's own defined terms. A canonical
+#     license is not ours to edit, so the alternative to exempting it is a
+#     check that fails on every run until someone deletes the check.
+NAME_EXEMPT='^(scripts/gen_name_list\.py|LICENSE)$'
 
 # `sk-ant-` needs the key body, not just the prefix — .env.example ships
 # `# ANTHROPIC_API_KEY=sk-ant-...` as a placeholder, and a check that
@@ -84,7 +90,7 @@ if [ -z "${names:-}" ]; then
     fi
 else
     mapfile -d '' -t NAME_FILES < <(printf '%s\0' "${FILES[@]}" \
-                                    | grep -zv "^${NAME_SELF}$")
+                                    | grep -zvE "$NAME_EXEMPT")
     # the same xargs-status trap as the pattern pass above
     hits=$(printf '%s\0' "${NAME_FILES[@]}" \
            | xargs -0 grep -Inwf <(printf '%s\n' "$names"))

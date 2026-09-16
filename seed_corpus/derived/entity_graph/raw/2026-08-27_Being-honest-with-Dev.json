@@ -1,0 +1,32 @@
+{
+  "people": [
+    {
+      "name": "Dev",
+      "relationship": "friend",
+      "observations": [
+        "Jordan bailed on Dev Monday with a fake excuse about being swamped",
+        "Jordan texted Dev the real reason: bad news at work and shutting down",
+        "Dev replied within about a minute thanking Jordan for telling the truth",
+        "Dev said they would rather know Jordan is having a bad week than think Jordan didn't want to see them",
+        "Dev said they also disappear sometimes, but with a bass in their hands so it looks productive",
+        "Jordan and Dev are getting lunch Saturday"
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Mika got around Jordan's habit of hiding struggles years ago by refusing to believe Jordan's excuses"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Pepper sat on the counter watching Jordan chop garlic like a supervisor with no notes"
+      ]
+    }
+  ],
+  "projects": [],
+  "places": []
+}

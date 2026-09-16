@@ -1,0 +1,50 @@
+{
+  "people": [
+    {
+      "name": "Marcus",
+      "relationship": "coworker",
+      "observations": [
+        "Asked Jordan to make revisions that Jordan completed at work."
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Jordan texted her to apologize for bailing the previous night.",
+        "She told Jordan she knew Jordan would bounce back today."
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Jordan fed her an evening snack.",
+        "She did her purring head-bonk thing against Jordan's ankle."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Coda",
+      "domain": "creative",
+      "status": "active",
+      "observations": [
+        "Jordan had an idea for quick-start cards that remember last tempo and most-practiced pieces.",
+        "Jordan sketched UI layouts in notebook margins during work meetings.",
+        "Jordan spent two hours at Groundwork building the quick-start cards feature."
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Groundwork",
+      "kind": "cafe",
+      "observations": [
+        "Jordan went there after work to build the quick-start cards.",
+        "Jordan got the window table and spent two hours working there.",
+        "Jordan's coffee went cold while working."
+      ]
+    }
+  ]
+}

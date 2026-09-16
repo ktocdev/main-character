@@ -1,0 +1,52 @@
+{
+  "people": [
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Invited Jordan to an open mic at The Lantern on Friday",
+        "Signed both of them up for the open mic without fully asking first"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Sat on the amp during the entire practice session",
+        "Howled along during the quiet verse of the song",
+        "Made Jordan laugh so hard they lost the chord progression"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Singing practice",
+      "domain": "creative",
+      "status": "active",
+      "observations": [
+        "Jordan picked 'Fast Car' to perform because the range works and it's a widely known song",
+        "Practiced the song five times in the living room with guitar",
+        "First two run-throughs had voice cracking and timing issues on the bridge",
+        "By the third run-through found a groove",
+        "By the fifth run-through was actually singing rather than performing the motions"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "The Lantern",
+      "kind": "venue",
+      "observations": [
+        "Site of an upcoming open mic on Friday that Mika signed Jordan up for"
+      ]
+    },
+    {
+      "name": "living room",
+      "kind": "home",
+      "observations": [
+        "Jordan practiced singing and guitar here",
+        "Pepper sat on the amp here during practice"
+      ]
+    }
+  ]
+}

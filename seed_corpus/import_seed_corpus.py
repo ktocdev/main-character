@@ -138,6 +138,35 @@ def session_files() -> list[tuple[Path, Path]]:
     return files
 
 
+def derived_files() -> list[tuple[Path, Path]]:
+    """Everything Claude worked out about the corpus: the entity graph,
+    category assignments, the pattern library, the dream index. Produced
+    once by capture_fixtures.py and committed under derived/, then copied
+    in here the same way the sessions are.
+
+    They ship because the demo has to install without an API key. The
+    entries and the chroma index are free to build locally -- embeddings
+    are local -- but every one of these files is Claude output, so a
+    cloner who ran the capture themselves would need a key and would
+    spend real money to reproduce what is already fixed content. Without
+    them the demo boots with 34 entries and an empty Entities tab, which
+    reads as a broken app rather than a sparse one.
+
+    chroma_data/ deliberately stays out, the same way export.py leaves the
+    index out: it is derived from the entries, it is the one bulky part,
+    and import rebuilds it on the spot for nothing."""
+    here = Path(__file__).parent / "derived"
+    dests = {"entity_graph": ENTITY_DIR, "categories": CATEGORY_DIR,
+             "patterns": PATTERN_DIR, "dreams": DREAM_DIR}
+    files = []
+    for name, dst_root in dests.items():
+        src_root = here / name
+        for src in sorted(src_root.rglob("*")):
+            if src.is_file():
+                files.append((src, Path(dst_root) / src.relative_to(src_root)))
+    return files
+
+
 def refuse_if_real_journal(files: list[tuple[Path, Path]]):
     """Never clobber a real journal. Anything already in these stores that
     we didn't ship means they belong to an actual author, not a demo.
@@ -193,11 +222,12 @@ def refuse_if_unsandboxed():
                 "bash seed_corpus/run_capture.sh does this for you.")
 
 
-def install_sessions(files: list[tuple[Path, Path]], dry_run: bool):
+def install_files(files: list[tuple[Path, Path]], dry_run: bool):
     print()
     for src, dst in files:
         if not src.exists():
-            print(f"  MISSING {src.name} — run build_sessions.py first")
+            print(f"  MISSING {src.name} — run build_sessions.py "
+                  f"(sessions) or capture_fixtures.py (derived) first")
             continue
         if dry_run:
             print(f"  [dry] {src.name} -> {dst}")
@@ -220,7 +250,7 @@ def main():
         sys.exit(f"no .md files in {entries_dir}")
 
     # Both guards run before the first destructive or writing call. They
-    # used to sit inside install_sessions(), i.e. after --wipe had already
+    # used to sit inside install_files(), i.e. after --wipe had already
     # deleted the entries they were meant to protect.
     to_install = session_files()
     refuse_if_real_journal(to_install)
@@ -253,10 +283,13 @@ def main():
             eid = import_dream(e)
             print(f"  {e['date']}  {eid}  DREAM  {e['title'][:50]}")
 
-    install_sessions(to_install, args.dry_run)
+    install_files(to_install, args.dry_run)
+    install_files(derived_files(), args.dry_run)
 
     print(f"\ndone. {'(dry run, nothing written)' if args.dry_run else ''}")
-    if not args.dry_run:
+    if not args.dry_run and args.wipe:
+        # Only the capture path needs this. A plain install is already
+        # complete — derived/ supplied everything Claude would have.
         print("next: python capture_fixtures.py --stages tag,entities,summaries,dreams,patterns,organic --i-am-running-the-seed-corpus")
 
 

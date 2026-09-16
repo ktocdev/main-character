@@ -1,0 +1,44 @@
+{
+  "people": [
+    {
+      "name": "Dev",
+      "relationship": "date",
+      "observations": [
+        "Second time seeing Dev, at dinner at a Thai place on Elm",
+        "Dev showed up wearing an old Talking Heads t-shirt",
+        "Talked with Dev for two hours straight",
+        "Dev played a song they had been working on, holding their phone between them at the table",
+        "The song was a bass-driven instrumental with weird time signature changes",
+        "Jordan said the song reminded them of Thundercat and Dev said that was the highest possible compliment",
+        "Dev asked about progress with Coda and Jordan showed them the new wireframes on their phone",
+        "Dev asked if the app could track unstructured 'noodling' practice without logging it piece by piece",
+        "Jordan and Dev sketched ideas for a 'free play' mode on a napkin",
+        "Dev tried to grab the check but they split it evenly",
+        "Jordan and Dev walked a few blocks together before heading different directions",
+        "Dev texted Jordan a bass cover of a Radiohead song after getting home with no context"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Coda",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "Jordan showed Dev new wireframes for Coda on their phone",
+        "Dev suggested a feature to track unstructured practice time ('noodling')",
+        "Jordan and Dev sketched an idea for a 'free play' mode with a timer and optional tags after"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Thai place on Elm",
+      "kind": "venue",
+      "observations": [
+        "Jordan and Dev had dinner here for their second time seeing each other",
+        "Jordan arrived early and almost left due to anxiety before Dev showed up"
+      ]
+    }
+  ]
+}
