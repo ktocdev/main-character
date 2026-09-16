@@ -9,8 +9,8 @@ Provides the shared pieces the rest of the system builds on:
     query_journal()    — semantic search over everything imported
 
 Configuration (all optional, via .env or environment) lives in config.py:
-    RAG_JOURNAL_DIR    — markdown backup directory (default: ./journal_entries)
-    RAG_CHROMA_DIR     — vector store directory (default: ./chroma_data)
+    MC_JOURNAL_DIR    — markdown backup directory (default: ./journal_entries)
+    MC_CHROMA_DIR     — vector store directory (default: ./chroma_data)
 """
 
 import re

@@ -1,0 +1,52 @@
+{
+  "people": [
+    {
+      "name": "Marcus",
+      "relationship": "coworker",
+      "observations": [
+        "Liked the dashboard iteration presented at sprint demo",
+        "Said 'this is the right direction' about the dashboard",
+        "Jordan stopped trying to guess what Marcus wanted and designed independently"
+      ]
+    },
+    {
+      "name": "Lena",
+      "relationship": "coworker",
+      "observations": [
+        "Gave a thumbs up from across the table during the demo",
+        "Texted Jordan 'you crushed it today, just wanted you to know'"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "dashboard",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "Presented an iteration of the dashboard at sprint demo",
+        "Redesigned with simpler nav, bigger data cards, less chrome"
+      ]
+    },
+    {
+      "name": "Coda",
+      "domain": "personal",
+      "status": "active",
+      "observations": [
+        "Worked on Coda for two hours at Groundwork",
+        "Got quick-start cards hooked up to actual stored data showing last three sessions with tap to resume",
+        "Watched it pull in test data and display it correctly"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Groundwork",
+      "kind": "cafe",
+      "observations": [
+        "Went there after work to celebrate with an oat milk latte and a pastry",
+        "Set up at the window table and worked on Coda for two hours"
+      ]
+    }
+  ]
+}

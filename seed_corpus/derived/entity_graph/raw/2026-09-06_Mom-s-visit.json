@@ -1,0 +1,84 @@
+{
+  "people": [
+    {
+      "name": "Mom",
+      "relationship": "mother",
+      "observations": [
+        "Arrived Friday night for Labor Day weekend",
+        "Toured the apartment and complimented the green rug",
+        "Brought a folding chair from home because Jordan mentioned only having two",
+        "Brought a box of Dad's old guitar picks found while cleaning the garage",
+        "Said Dad wanted Jordan to have the guitar picks",
+        "Walked the loop at Greenwood Park with Jordan Saturday morning",
+        "Was told about work restructuring, role evaluation, legacy marketing, and Lena leaving",
+        "Said she wished Jordan had told her in July",
+        "Said she was not angry, just sad",
+        "Said 'You can tell me anything, I'm here for you'",
+        "Asked about eight follow-up questions about the job situation",
+        "Asked what Jordan would be doing if the job wasn't taking up mental real estate",
+        "Ate the roasted chicken dinner at the card table without commenting on the card table",
+        "Had Pepper sleep on her lap for an hour",
+        "Left Sunday afternoon"
+      ]
+    },
+    {
+      "name": "Dad",
+      "relationship": "father",
+      "observations": [
+        "No longer plays guitar because of arthritis",
+        "His old guitar picks were found by Mom while cleaning the garage"
+      ]
+    },
+    {
+      "name": "Lena",
+      "relationship": "coworker",
+      "observations": [
+        "Leaving, discussed as part of the work restructuring news told to Mom"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Usually hides from guests",
+        "Slept on Mom's lap for an hour during the visit"
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Named as someone Jordan also ran an information blackout on in the past"
+      ]
+    },
+    {
+      "name": "Dev",
+      "relationship": "friend",
+      "observations": [
+        "Named as someone Jordan also ran an information blackout on in the past"
+      ]
+    }
+  ],
+  "projects": [],
+  "places": [
+    {
+      "name": "Jordan's apartment",
+      "kind": "home",
+      "observations": [
+        "Cleaned for three hours before Mom's visit",
+        "Has a ceiling stain maintenance failed to fix",
+        "Mom toured the apartment and complimented the green rug",
+        "Has a card table used for dinner",
+        "Felt very quiet after Mom left"
+      ]
+    },
+    {
+      "name": "Greenwood Park",
+      "kind": "venue",
+      "observations": [
+        "Jordan and Mom walked the loop there Saturday morning",
+        "Jordan told Mom about work troubles near the pond there"
+      ]
+    }
+  ]
+}

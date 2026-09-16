@@ -1,0 +1,18 @@
+{
+  "merge": {},
+  "correct": {},
+  "retype": {},
+  "rename": {},
+  "alias_add": {
+    "person:dev": [
+      "Devon"
+    ],
+    "project:coda project": [
+      "Coda"
+    ]
+  },
+  "alias_remove": {},
+  "delete": [],
+  "reviewed": [],
+  "not_duplicates": []
+}

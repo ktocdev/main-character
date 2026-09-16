@@ -38,7 +38,7 @@ STARTING_ENV = (
     "ANTHROPIC_API_KEY=fake-key-original\n"
     "\n"
     "# who the entries are by\n"
-    "RAG_AUTHOR_NAME=Jordan\n"
+    "MC_AUTHOR_NAME=Jordan\n"
     "ANTHROPIC_BASE_URL=https://api.anthropic.com\n"
 )
 
@@ -70,10 +70,10 @@ def test_comments_and_unknown_keys_survive_a_save(env):
 
 
 def test_an_existing_key_is_rewritten_in_place(env):
-    env_file.update_env({"RAG_AUTHOR_NAME": "Katina"})
+    env_file.update_env({"MC_AUTHOR_NAME": "Katina"})
     lines = env.read_text(encoding="utf-8").splitlines()
     # still directly under its own comment, not appended to the end
-    assert lines[lines.index("# who the entries are by") + 1] == "RAG_AUTHOR_NAME=Katina"
+    assert lines[lines.index("# who the entries are by") + 1] == "MC_AUTHOR_NAME=Katina"
 
 
 def test_clearing_a_value_removes_the_assignment(env):
@@ -136,8 +136,8 @@ def test_a_quoted_value_ends_at_its_closing_quote(env):
 
 
 def test_a_hash_inside_a_quoted_value_survives_a_round_trip(env):
-    env_file.update_env({"RAG_AUTHOR_NAME": "Jordan # not a comment"})
-    assert env_file.read_env()["RAG_AUTHOR_NAME"] == "Jordan # not a comment"
+    env_file.update_env({"MC_AUTHOR_NAME": "Jordan # not a comment"})
+    assert env_file.read_env()["MC_AUTHOR_NAME"] == "Jordan # not a comment"
 
 
 def test_an_unlisted_date_format_keeps_the_style_it_renders_as():
@@ -456,7 +456,7 @@ def test_the_seed_destination_lives_only_in_the_child_environment(
 
     child = server.restart_env()
     assert child["MC_SEED_INSTANCE"] == "1"
-    assert child["RAG_JOURNAL_DIR"].endswith("journal_entries")
+    assert child["MC_JOURNAL_DIR"].endswith("journal_entries")
 
 
 def test_a_plain_restart_always_leaves_the_seed_instance(env, monkeypatch):
@@ -464,13 +464,13 @@ def test_a_plain_restart_always_leaves_the_seed_instance(env, monkeypatch):
     unconditionally and only put back when the seed is asked for by name, so a
     demo is one restart deep and cannot be wandered into permanently."""
     monkeypatch.setitem(server.os.environ, "MC_SEED_INSTANCE", "1")
-    monkeypatch.setitem(server.os.environ, "RAG_JOURNAL_DIR",
+    monkeypatch.setitem(server.os.environ, "MC_JOURNAL_DIR",
                         "seed_corpus/install/journal_entries")
     monkeypatch.setitem(server.RESTART, "into", "journal")
 
     child = server.restart_env()
     assert "MC_SEED_INSTANCE" not in child
-    assert "RAG_JOURNAL_DIR" not in child
+    assert "MC_JOURNAL_DIR" not in child
 
 
 def test_an_uninstalled_seed_corpus_is_refused_not_booted_empty(

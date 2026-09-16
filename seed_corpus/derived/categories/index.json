@@ -1,0 +1,359 @@
+{
+  "conversations": {
+    "2026-07-28_Working-on-Coda-at-Groundwork": {
+      "date": "2026-07-28",
+      "title": "Working on Coda at Groundwork",
+      "categories": {
+        "creative": "two hours on Coda's practice log screen",
+        "pets": "Pepper waiting by door, sat on shoes",
+        "emotional": "realize nothing bad happening is rare enough to notice"
+      }
+    },
+    "2026-07-30_Team-restructuring-news": {
+      "date": "2026-07-30",
+      "title": "Team restructuring news",
+      "categories": {
+        "work": "team restructuring, reorg, uncertainty at job",
+        "emotional": "avoiding anxiety by staying late",
+        "health": "cereal for dinner, low energy",
+        "pets": "Pepper asleep on my pillow"
+      }
+    },
+    "2026-07-31_Friday-run-with-Mika": {
+      "date": "2026-07-31",
+      "title": "Friday run with Mika",
+      "categories": {
+        "social": "met Mika at park, smoothies after",
+        "health": "3 mile run, training cooldown",
+        "work": "told her about the restructuring/reorg",
+        "creative": "20 minutes fixing Coda color contrast",
+        "emotional": "went home feeling lighter"
+      }
+    },
+    "2026-08-01_Quiet-Saturday": {
+      "date": "2026-08-01",
+      "title": "Quiet Saturday",
+      "categories": {
+        "home": "new rug, cooking dinner at home",
+        "pets": "Pepper claiming rug, knocking over water glass",
+        "emotional": "'nothing notable today, sometimes that's fine'"
+      }
+    },
+    "2026-08-03_Monday-crash": {
+      "date": "2026-08-03",
+      "title": "Monday crash",
+      "categories": {
+        "work": "design review, Marcus criticized dashboard in meeting",
+        "emotional": "shut down, punishing myself for caring",
+        "pets": "Pepper curled against leg, slept on chest",
+        "health": "didn't eat dinner, unhealthy pattern noted"
+      }
+    },
+    "2026-08-04_Breaking-out-of-it": {
+      "date": "2026-08-04",
+      "title": "Breaking out of it",
+      "categories": {
+        "creative": "three hours building the practice-session timer",
+        "emotional": "Monday heaviness, fog lifts, felt like different person",
+        "social": "Mikayla sat with him for 15 minutes",
+        "work": "called in sick, avoiding Marcus after yesterday"
+      }
+    },
+    "2026-08-07_Mom-called-about-visiting": {
+      "date": "2026-08-07",
+      "title": "Mom called about visiting",
+      "categories": {
+        "home": "apartment flaws, lease renewal decision, moving stress",
+        "family": "mom's visit, dad's knees, book club",
+        "work": "withheld work stress, reorg mentioned",
+        "pets": "Pepper sitting on forbidden counter"
+      }
+    },
+    "2026-08-08_Walk-with-Dev": {
+      "date": "2026-08-08",
+      "title": "Walk with Dev",
+      "categories": {
+        "dating": "nervous coffee walk with Dev, budding romantic interest",
+        "emotional": "reflecting on calm feeling, trying not to label it",
+        "creative": "described Coda practice-tracking project to Dev",
+        "social": "Mika talked her out of cancelling the meetup"
+      }
+    },
+    "2026-08-09_Lease-paperwork-and-errands": {
+      "date": "2026-08-09",
+      "title": "Lease paperwork and errands",
+      "categories": {
+        "home": "chores, ceiling stain, lease renewal decision",
+        "pets": "Pepper supervising, fur on rug",
+        "work": "scrolling job listings, senior UX designer roles",
+        "emotional": "stared at lease form, bracing for Monday",
+        "family": "fixing ceiling before Mom visits"
+      }
+    },
+    "2026-08-11_Sprint-review-fallout": {
+      "date": "2026-08-11",
+      "title": "Sprint review fallout",
+      "categories": {
+        "work": "sprint review, Marcus's contradictory feedback on dashboard",
+        "emotional": "withdrawal pattern, wanting to disappear",
+        "dating": "cancelled dinner plan with Mika",
+        "health": "didn't eat, sat in dark apartment"
+      }
+    },
+    "2026-08-12_Groundwork-again": {
+      "date": "2026-08-12",
+      "title": "Groundwork again",
+      "categories": {
+        "emotional": "feel terrible, isolate, recovery day, cycle",
+        "creative": "built quick-start cards for Coda at Groundwork",
+        "work": "forced self through standup, meetings, Marcus's revisions",
+        "social": "texted Mika to apologize for bailing",
+        "pets": "fed Pepper, her purring head-bonk"
+      }
+    },
+    "2026-08-14_Dream-about-the-empty-office": {
+      "date": "2026-08-14",
+      "title": "Dream about the empty office",
+      "categories": {
+        "emotional": "unsettling dream, admitting anxiety about restructuring",
+        "work": "standup, restructuring anxiety, Lena's prototype",
+        "health": "woke at 4am, early run to cope",
+        "pets": "Pepper staring from foot of bed"
+      }
+    },
+    "2026-08-14_Lena-is-leaving": {
+      "date": "2026-08-14",
+      "title": "Lena is leaving",
+      "categories": {
+        "work": "Lena leaving, Marcus, exit plan, office dynamics",
+        "emotional": "sinking feeling, guilt, feeling alone",
+        "creative": "'Coda could be the thing' side project mention",
+        "health": "early run this morning, walk at park"
+      }
+    },
+    "2026-08-15_Dinner-with-Dev": {
+      "date": "2026-08-15",
+      "title": "Dinner with Dev",
+      "categories": {
+        "dating": "second date with Dev at Thai restaurant",
+        "creative": "Coda wireframes and free play mode sketched",
+        "emotional": "anxiety before date, trying not to overthink"
+      }
+    },
+    "2026-08-17_Singing-practice": {
+      "date": "2026-08-17",
+      "title": "Singing practice",
+      "categories": {
+        "creative": "practicing guitar and singing for open mic",
+        "social": "Mika invited her to open mic night",
+        "pets": "Pepper howling along during practice",
+        "emotional": "felt good, present, not anxious"
+      }
+    },
+    "2026-08-18_AI-for-Coda": {
+      "date": "2026-08-18",
+      "title": "AI for Coda",
+      "categories": {
+        "work": "Coda recommendation engine feature design decision",
+        "ai_reflection": "outsourcing pattern recognition to a model",
+        "creative": "practice app for musicians, scales, pieces"
+      }
+    },
+    "2026-08-19_Solo-run-clear-head": {
+      "date": "2026-08-19",
+      "title": "Solo run clear head",
+      "categories": {
+        "health": "solo run, hill trail extension, legs burning",
+        "home": "lease renewal decision, rent increase, apartment",
+        "pets": "Pepper batted at shoelaces",
+        "emotional": "feeling assured this evening"
+      }
+    },
+    "2026-08-20_Sprint-demo-went-well": {
+      "date": "2026-08-20",
+      "title": "Sprint demo went well",
+      "categories": {
+        "work": "presented dashboard iteration, Marcus liked it",
+        "creative": "worked on Coda, quick-start cards hooked up",
+        "emotional": "felt like I could breathe again",
+        "social": "Lena's supportive text after the demo"
+      }
+    },
+    "2026-08-21_Open-mic-night": {
+      "date": "2026-08-21",
+      "title": "Open mic night",
+      "categories": {
+        "creative": "performed 'Fast Car' at open mic",
+        "social": "Mika and Dev meeting up, hitting it off",
+        "emotional": "pounding heart, uncontrollable grin, wanting the feeling to continue"
+      }
+    },
+    "2026-08-24_The-loop-again": {
+      "date": "2026-08-24",
+      "title": "The loop again",
+      "categories": {
+        "work": "role 'under evaluation', restructuring, Marcus one-on-one",
+        "emotional": "daze, withdrawal, gears unsticking pattern",
+        "social": "Mika showed up with pad thai, comforted him",
+        "pets": "Pepper climbed into lap, purring"
+      }
+    },
+    "2026-08-25_Groundwork-Coda-breakthrough": {
+      "date": "2026-08-25",
+      "title": "Groundwork Coda breakthrough",
+      "categories": {
+        "creative": "breakthrough on Coda prototype for practice app",
+        "emotional": "reflecting job isn't the whole story",
+        "social": "Mika stopped by, planning open mic",
+        "work": "coming here after work, stressful job thread"
+      }
+    },
+    "2026-08-27_Being-honest-with-Dev": {
+      "date": "2026-08-27",
+      "title": "Being honest with Dev",
+      "categories": {
+        "dating": "texted Dev honesty, lunch Saturday planned",
+        "emotional": "processing why she withdraws and protects appearances",
+        "work": "bad news at work triggered shutdown",
+        "social": "reflection on Mika's history of not believing excuses"
+      }
+    },
+    "2026-08-28_Lena-s-last-day": {
+      "date": "2026-08-28",
+      "title": "Lena's last day",
+      "categories": {
+        "work": "coworker Lena's last day at Meridian",
+        "emotional": "noticing reflexive self-doubt 'not good enough'",
+        "social": "walking Lena out, losing office connection"
+      }
+    },
+    "2026-08-29_Journal-entry-2026-08-29-19-53": {
+      "date": "2026-08-29",
+      "title": "Journal entry 2026-08-29 19:53",
+      "categories": {
+        "relationships": "nervous coffee walk with Dev, budding romantic interest",
+        "emotional": "reflecting on calm feeling, trying not to label it",
+        "creative": "described Coda practice-tracking project to Dev",
+        "social": "Mika talked her out of cancelling the meetup"
+      }
+    },
+    "2026-09-01_Coffee-Shop-Coda-Breakthrough": {
+      "date": "2026-09-01",
+      "title": "Coffee Shop Coda Breakthrough",
+      "categories": {
+        "relationships": "nervous coffee walk with Dev, budding romantic interest",
+        "emotional": "reflecting on calm feeling, trying not to label it",
+        "creative": "described Coda practice-tracking project to Dev",
+        "social": "Mika talked her out of cancelling the meetup"
+      }
+    },
+    "2026-09-01_Design-review-shutdown-and-going-interna": {
+      "date": "2026-09-01",
+      "title": "Design review shutdown and going internal",
+      "categories": {
+        "relationships": "nervous coffee walk with Dev, budding romantic interest",
+        "emotional": "reflecting on calm feeling, trying not to label it",
+        "creative": "described Coda practice-tracking project to Dev",
+        "social": "Mika talked her out of cancelling the meetup"
+      }
+    },
+    "2026-09-01_The-reorg-lands": {
+      "date": "2026-09-01",
+      "title": "The reorg lands",
+      "categories": {
+        "work": "reorg, moved to legacy marketing pages",
+        "emotional": "flat gray feeling, spiral loading up",
+        "creative": "worked on Coda's snippet library",
+        "social": "texted Lena the news, she responds"
+      }
+    },
+    "2026-09-02_Signing-the-lease-continued": {
+      "date": "2026-09-02",
+      "title": "Signing the lease — continued",
+      "categories": {
+        "relationships": "nervous coffee walk with Dev, budding romantic interest",
+        "emotional": "reflecting on calm feeling, trying not to label it",
+        "creative": "described Coda practice-tracking project to Dev",
+        "social": "Mika talked her out of cancelling the meetup"
+      }
+    },
+    "2026-09-03_Dev-tries-free-play": {
+      "date": "2026-09-03",
+      "title": "Dev tries free play",
+      "categories": {
+        "creative": "building Coda app, guitar practice, bass",
+        "ai_reflection": "reflecting on how app's design shapes use",
+        "emotional": "realizing app collects evidence he's okay",
+        "social": "Dev came over, worked through app together",
+        "pets": "Pepper reacting to the slapped notes"
+      }
+    },
+    "2026-09-06_Mom-s-visit": {
+      "date": "2026-09-06",
+      "title": "Mom's visit",
+      "categories": {
+        "family": "Mom's Labor Day weekend visit",
+        "emotional": "reflecting on pattern of hiding worries",
+        "work": "restructuring, role evaluation, Lena leaving",
+        "home": "cleaning, ceiling stain, maintenance issues",
+        "pets": "Pepper slept on Mom's lap"
+      }
+    },
+    "2026-09-08_Signing-the-lease-continued": {
+      "date": "2026-09-08",
+      "title": "Signing the lease — continued",
+      "categories": {
+        "relationships": "nervous coffee walk with Dev, budding romantic interest",
+        "emotional": "reflecting on calm feeling, trying not to label it",
+        "creative": "described Coda practice-tracking project to Dev",
+        "social": "Mika talked her out of cancelling the meetup"
+      }
+    },
+    "2026-09-09_Lena-s-referral": {
+      "date": "2026-09-09",
+      "title": "Lena's referral",
+      "categories": {
+        "work": "submitted job application, referral, portfolio write-up",
+        "creative": "writing up Coda case study, coding side project",
+        "emotional": "reflecting on self-doubt, believing others' praise",
+        "pets": "Pepper asleep on the pillow"
+      }
+    },
+    "2026-09-11_Phone-screen-with-Northlight": {
+      "date": "2026-09-11",
+      "title": "Phone screen with Northlight",
+      "categories": {
+        "work": "phone screen for job, onsite interview scheduled",
+        "creative": "discussed Coda side project and case study",
+        "health": "went for a run to burn off adrenaline",
+        "emotional": "reflecting on reorg feeling smaller now there's a door"
+      }
+    },
+    "2026-09-14_Signing-the-lease": {
+      "date": "2026-09-14",
+      "title": "Signing the lease",
+      "categories": {
+        "home": "signed the lease renewal tonight",
+        "work": "onsite interview the 24th, new manager",
+        "emotional": "handing people the heavy thing instead",
+        "health": "recurring office dream, third time",
+        "pets": "Pepper sleeping on the green rug"
+      }
+    }
+  },
+  "counts": {
+    "work": 21,
+    "relationships": 5,
+    "health": 9,
+    "creative": 21,
+    "social": 18,
+    "family": 3,
+    "pets": 15,
+    "emotional": 32,
+    "ai_reflection": 2,
+    "home": 6
+  },
+  "custom": [],
+  "tagged": 34,
+  "total": 34
+}

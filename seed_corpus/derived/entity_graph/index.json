@@ -1,0 +1,400 @@
+{
+  "Ana": {
+    "type": "person",
+    "path": "people\\ana.md",
+    "mentions": 3,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Dad": {
+    "type": "person",
+    "path": "people\\dad.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Dev": {
+    "type": "person",
+    "path": "people\\dev.md",
+    "mentions": 12,
+    "aliases": [
+      "Devon"
+    ],
+    "groups": [],
+    "reviewed": false
+  },
+  "Lena": {
+    "type": "person",
+    "path": "people\\lena.md",
+    "mentions": 12,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Marcus": {
+    "type": "person",
+    "path": "people\\marcus.md",
+    "mentions": 12,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Mika": {
+    "type": "person",
+    "path": "people\\mika.md",
+    "mentions": 14,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Mikayla": {
+    "type": "person",
+    "path": "people\\mikayla.md",
+    "mentions": 2,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Mom": {
+    "type": "person",
+    "path": "people\\mom.md",
+    "mentions": 5,
+    "aliases": [],
+    "groups": [
+      "Family"
+    ],
+    "reviewed": false
+  },
+  "Pepper": {
+    "type": "person",
+    "path": "people\\pepper.md",
+    "mentions": 20,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Priya": {
+    "type": "person",
+    "path": "people\\priya.md",
+    "mentions": 3,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "apartment": {
+    "type": "place",
+    "path": "places\\apartment.md",
+    "mentions": 6,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "coffee shop": {
+    "type": "place",
+    "path": "places\\coffee-shop.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Greenwood Park": {
+    "type": "place",
+    "path": "places\\greenwood-park.md",
+    "mentions": 7,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Groundwork": {
+    "type": "place",
+    "path": "places\\groundwork.md",
+    "mentions": 9,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "home": {
+    "type": "place",
+    "path": "places\\home.md",
+    "mentions": 3,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "internal tools": {
+    "type": "place",
+    "path": "places\\internal-tools.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Jordan's apartment": {
+    "type": "place",
+    "path": "places\\jordan-s-apartment.md",
+    "mentions": 2,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Jordan's living room": {
+    "type": "place",
+    "path": "places\\jordan-s-living-room.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "legacy marketing pages": {
+    "type": "place",
+    "path": "places\\legacy-marketing-pages.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "living room": {
+    "type": "place",
+    "path": "places\\living-room.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Meridian": {
+    "type": "place",
+    "path": "places\\meridian.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Northlight": {
+    "type": "project",
+    "path": "projects\\northlight.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "office": {
+    "type": "place",
+    "path": "places\\office.md",
+    "mentions": 3,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "park": {
+    "type": "place",
+    "path": "places\\park.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "sandwich place": {
+    "type": "place",
+    "path": "places\\sandwich-place.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Thai place": {
+    "type": "place",
+    "path": "places\\thai-place.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Thai place on Elm": {
+    "type": "place",
+    "path": "places\\thai-place-on-elm.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "The Lantern": {
+    "type": "place",
+    "path": "places\\the-lantern.md",
+    "mentions": 2,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "the office building (dream)": {
+    "type": "place",
+    "path": "places\\the-office-building-dream.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "the parking garage": {
+    "type": "place",
+    "path": "places\\the-parking-garage.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "the pond": {
+    "type": "place",
+    "path": "places\\the-pond.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Coda": {
+    "type": "project",
+    "path": "projects\\coda.md",
+    "mentions": 12,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Coda project": {
+    "type": "project",
+    "path": "projects\\coda-project.md",
+    "mentions": 1,
+    "aliases": [
+      "Coda"
+    ],
+    "groups": [],
+    "reviewed": false
+  },
+  "Coda's snippet library": {
+    "type": "project",
+    "path": "projects\\coda-s-snippet-library.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Dashboard": {
+    "type": "project",
+    "path": "projects\\dashboard.md",
+    "mentions": 2,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Dashboard project": {
+    "type": "project",
+    "path": "projects\\dashboard-project.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Dashboard rebuild": {
+    "type": "project",
+    "path": "projects\\dashboard-rebuild.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "exit plan": {
+    "type": "project",
+    "path": "projects\\exit-plan.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "internal dashboard layout": {
+    "type": "project",
+    "path": "projects\\internal-dashboard-layout.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "internal tools team": {
+    "type": "project",
+    "path": "projects\\internal-tools-team.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Meridian work": {
+    "type": "project",
+    "path": "projects\\meridian-work.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "nav component": {
+    "type": "project",
+    "path": "projects\\nav-component.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Northlight application": {
+    "type": "project",
+    "path": "projects\\northlight-application.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Northlight interview process": {
+    "type": "project",
+    "path": "projects\\northlight-interview-process.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "portfolio": {
+    "type": "project",
+    "path": "projects\\portfolio.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "portfolio update": {
+    "type": "project",
+    "path": "projects\\portfolio-update.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "reorg": {
+    "type": "project",
+    "path": "projects\\reorg.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "restructuring": {
+    "type": "project",
+    "path": "projects\\restructuring.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  },
+  "Singing practice": {
+    "type": "project",
+    "path": "projects\\singing-practice.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false
+  }
+}

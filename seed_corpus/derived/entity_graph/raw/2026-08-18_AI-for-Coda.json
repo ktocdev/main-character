@@ -1,0 +1,20 @@
+{
+  "people": [],
+  "projects": [
+    {
+      "name": "Coda",
+      "domain": "personal",
+      "status": "active",
+      "observations": [
+        "Considered adding an AI-powered recommendation engine that suggests what to practice next based on practice history",
+        "Idea: if user avoided scales for two weeks, app would nudge them back",
+        "Idea: if stuck on a piece, app suggests breaking it into sections",
+        "Debated whether a simple notification like 'you haven't practiced scales since Tuesday' would suffice instead of a recommendation engine",
+        "Decided the AI recommendation feature is probably overkill for v1",
+        "Decided to keep v1 simple: show streaks, show gaps, let the musician decide",
+        "Decided to save AI features for later once user needs are better understood"
+      ]
+    }
+  ],
+  "places": []
+}

@@ -1,0 +1,45 @@
+{
+  "people": [],
+  "projects": [
+    {
+      "name": "Coda",
+      "domain": "creative",
+      "status": "active",
+      "observations": [
+        "Spent about two hours on Coda's practice log screen at Groundwork",
+        "Idea is to log practiced items like scales, song sections, or improv and track streaks",
+        "Tracks what has been neglected, like a fitness tracker but for music",
+        "Has been noodling on Coda for months",
+        "UI started feeling like something real today",
+        "Got the streak counter working with little animated flames"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Groundwork",
+      "kind": "cafe",
+      "observations": [
+        "Went to Groundwork after work with the laptop",
+        "Got a cortado and set up at the window table",
+        "Noise level is right and nobody talks to the author there",
+        "Coffee is good",
+        "Author feels productive at Groundwork",
+        "Author wants to come here more after work instead of working from home"
+      ]
+    },
+    {
+      "name": "apartment",
+      "kind": "home",
+      "observations": [
+        "Pepper was waiting by the door when the author got home to grab the charger",
+        "Pepper sat on the author's shoes",
+        "Author almost stayed home instead of going out to work",
+        "Author knows working from the apartment leads to sitting on the couch refreshing feeds",
+        "Came back around 8",
+        "Pepper immediately forgave the author",
+        "Made pasta for a quiet evening"
+      ]
+    }
+  ]
+}

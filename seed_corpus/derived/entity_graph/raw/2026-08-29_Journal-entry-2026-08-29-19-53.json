@@ -1,0 +1,15 @@
+{
+  "people": [
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Covered the rug in fur before it was vacuumed",
+        "Supervised from the counter despite being banned from it",
+        "Author pretends not to notice her breaking the counter rule"
+      ]
+    }
+  ],
+  "projects": [],
+  "places": []
+}

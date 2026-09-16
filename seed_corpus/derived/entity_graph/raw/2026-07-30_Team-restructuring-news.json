@@ -1,0 +1,69 @@
+{
+  "people": [
+    {
+      "name": "Marcus",
+      "relationship": "coworker",
+      "observations": [
+        "Announced restructuring news in standup, calling it 'some team realignment happening in Q4'",
+        "Avoided eye contact while delivering the news, suggesting deeper cuts than stated"
+      ]
+    },
+    {
+      "name": "Lena",
+      "relationship": "coworker",
+      "observations": [
+        "Pulled Jordan aside after standup to discuss the news",
+        "Said she is already job searching",
+        "Said this is the third reorg in two years for her",
+        "Said she is tired of the uncertainty and rebuilding trust with new managers"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Was asleep on Jordan's pillow when Jordan came home"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "internal tools team",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "Jordan was moved onto this team during the first reorg",
+        "Jordan liked this team better than the consumer app team",
+        "May be dissolved entirely in the upcoming restructuring"
+      ]
+    },
+    {
+      "name": "portfolio",
+      "domain": "personal",
+      "status": "paused",
+      "observations": [
+        "Jordan feels they should be updating it but lacks the energy",
+        "Jordan considers working on it this weekend"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "office",
+      "kind": "workplace",
+      "observations": [
+        "Team of six may get split across two other squads",
+        "Jordan stayed late cleaning up old Figma files instead of going home"
+      ]
+    },
+    {
+      "name": "home",
+      "kind": "home",
+      "observations": [
+        "Jordan came home at 8pm",
+        "Pepper was asleep on Jordan's pillow",
+        "Jordan ate cereal for dinner"
+      ]
+    }
+  ]
+}

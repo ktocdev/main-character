@@ -77,3 +77,64 @@ def test_cross_origin_post_is_refused(client):
 
     same_origin = client.post("/api/reset", json={}, headers={"Origin": BASE})
     assert same_origin.status_code == 200
+
+
+XSS_NAME = '<img src=x onerror="alert(1)">'
+
+
+def test_hostile_entity_name_round_trips_as_text(client):
+    """Phase 0.5 item 1. The other half of the pair above: the server hands
+    entity names back as JSON text and never as markup.
+
+    An entity name is attacker-influenced in the one way that matters here:
+    it is extracted by a model out of whatever the journal happens to hold,
+    including an imported conversation someone else wrote. So a name can be
+    anything, and the defence is layered -- the server stores and serves it
+    verbatim, and `esc()` escapes it at render time (see the test below).
+
+    Verbatim is the assertion, not "escaped". A route that HTML-escapes on
+    the way out would double-escape in the browser and, worse, would make
+    the client-side escaping look redundant to the next person reading it.
+    """
+    import server
+
+    before = server.STATE["entity_index"]
+    server.STATE["entity_index"] = {
+        XSS_NAME: {"type": "person", "path": "people/xss.md", "mentions": 1},
+    }
+    try:
+        response = client.get("/api/entities")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("application/json")
+        assert XSS_NAME in response.json(), "name came back altered, not verbatim"
+        # Byte-level too. The angle brackets have to survive as angle
+        # brackets: a filter that rewrites some metacharacters and leaves
+        # others is the classic way an XSS defence becomes a false sense
+        # of one. (The inner quotes come back as \\" because that is JSON
+        # string encoding, which is not the same thing as HTML escaping.)
+        assert "<img src=x onerror=" in response.text
+        for escaped in ("&lt;", "&gt;", "&amp;", "&quot;"):
+            assert escaped not in response.text, (
+                f"route HTML-escaped the name ({escaped}) -- the browser "
+                "would double-escape it and esc() would look redundant")
+    finally:
+        server.STATE["entity_index"] = before
+
+
+def test_esc_escapes_every_html_metacharacter():
+    """`esc()` is what makes the verbatim round trip above safe, so the two
+    tests belong together -- weakening either one alone reopens the hole.
+
+    A source-level check, not an execution one: the suite is Python and has
+    no JS runtime, and pulling node into CI to run five assertions is a
+    worse trade than reading the table it would have run. What it catches is
+    the realistic regression -- someone trimming a character out of the map.
+    """
+    from pathlib import Path
+    source = (Path(__file__).resolve().parent.parent
+              / "static" / "js" / "core.js").read_text(encoding="utf-8")
+    esc = source[source.index("export const esc"):]
+    esc = esc[:esc.index("\n\n")] if "\n\n" in esc else esc[:400]
+    for char, entity in [("&", "&amp;"), ("<", "&lt;"), (">", "&gt;"),
+                         ('"', "&quot;"), ("'", "&#39;")]:
+        assert entity in esc, f"esc() no longer escapes {char!r}"

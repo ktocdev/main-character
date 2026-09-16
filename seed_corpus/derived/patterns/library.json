@@ -1,0 +1,182 @@
+{
+  "generated": "2026-08-27T19:56",
+  "hash": "e99ddb715233",
+  "patterns": [
+    {
+      "name": "The Blinds-Down Spiral",
+      "kind": "emotional cycle",
+      "description": "A criticism or blow at work (Marcus's whiplash feedback, reorg news) triggers an immediate shutdown: phone off, blinds closed, no dinner, withdrawal from Pepper and from the people who could help, followed eventually by a break in the fog once Jordan leaves the apartment.",
+      "trigger": "Public criticism, dismissal, or bad news from Marcus/work restructuring",
+      "instances": [
+        {
+          "date": "2026-08-03",
+          "note": "Marcus dismantles dashboard layout; Jordan lies about a headache, phone off, two hours staring at a wall, bed by nine."
+        },
+        {
+          "date": "2026-08-11",
+          "note": "Whiplash 'too safe' critique; Jordan cancels on Mika, sits on the floor by the window ignoring Pepper and dinner."
+        },
+        {
+          "date": "2026-08-24",
+          "note": "Restructuring news ('under evaluation') lands; Jordan leaves without telling anyone, closes blinds, cancels on Dev with a fake excuse."
+        },
+        {
+          "date": "2026-09-01",
+          "note": "Transfer to legacy marketing announced; the spiral starts loading again but breaks after twenty minutes instead of a full day."
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "Groundwork Comes Back to Life",
+      "kind": "recovery pattern",
+      "description": "What actually pulls Jordan out of a shutdown isn't rest or waiting it out — it's physically leaving the apartment and building something on Coda at Groundwork, which reliably restores a felt sense of competence and humanity within hours.",
+      "trigger": "A withdrawal/shutdown episode that has run its course enough for Jordan to leave the apartment",
+      "instances": [
+        {
+          "date": "2026-07-28",
+          "note": "Two hours at Groundwork on the practice log screen; Jordan notes explicitly that Groundwork gets things out of him the couch never will."
+        },
+        {
+          "date": "2026-08-04",
+          "note": "Sick day avoidance turns into three hours at Groundwork building the practice-session timer; Jordan feels like a different person by 2pm."
+        },
+        {
+          "date": "2026-08-12",
+          "note": "After apologizing to Mika, two hours at Groundwork building quick-start cards; comes back to life, groceries, real meal."
+        },
+        {
+          "date": "2026-08-25",
+          "note": "Creative breakthrough on free-play mode built in ninety minutes at Groundwork; Mika notices Jordan seems different, better."
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "The Outside Reach-In",
+      "kind": "relationship dynamic",
+      "description": "Jordan doesn't self-initiate recovery from a withdrawal episode; someone from outside has to reach in — Mika showing up uninvited, Dev getting told the truth, Mom finally getting the real story — and that reaching-in is what actually breaks the isolation, not Jordan's own insight into the pattern.",
+      "trigger": "Jordan going dark/withdrawing after a blow, followed by someone refusing to accept the 'I'm fine' cover story",
+      "instances": [
+        {
+          "date": "2026-08-24",
+          "note": "Mika shows up uninvited with pad thai, no questions, after Jordan goes dark on the restructuring news."
+        },
+        {
+          "date": "2026-08-27",
+          "note": "Jordan corrects the lie to Dev, telling them the real reason for cancelling; Dev responds with warmth, not judgment."
+        },
+        {
+          "date": "2026-09-06",
+          "note": "Mom finally gets the full story about work at Greenwood Park, five weeks after Jordan first knew; responds with sadness, not anger."
+        },
+        {
+          "date": "2026-08-28",
+          "note": "Lena pushes back hard on Jordan's reflexive self-disqualification, refusing to let the doubt stand unchallenged."
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "The Blackout-Then-Confession Move",
+      "kind": "relationship dynamic",
+      "description": "Jordan withholds hard news from the people closest to him (to 'spare them worry' or protect the appearance of being fine), runs an information blackout for days or weeks, then eventually confesses — and the confession, not the withholding, is what actually helps.",
+      "trigger": "Bad news Jordan feels responsible for managing alone (job trouble, cancelled plans, restructuring)",
+      "instances": [
+        {
+          "date": "2026-08-07",
+          "note": "Mom's call about Labor Day visit; Jordan says things are 'fine and good,' withholding the Marcus situation."
+        },
+        {
+          "date": "2026-08-24",
+          "note": "Fake excuse given to Dev to cover cancelling, rather than the real reason."
+        },
+        {
+          "date": "2026-09-06",
+          "note": "Jordan finally tells Mom everything about work, five weeks after first knowing, naming the pattern explicitly as the same move done to Mika, Dev, and now Mom."
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "Bench-Diagnosis by a Friend",
+      "kind": "relationship dynamic",
+      "description": "Someone close to Jordan names Jordan's own pattern back to him more clearly than Jordan can see it himself, often at Greenwood Park, and the naming lands as insight even when Jordan doesn't immediately act on it.",
+      "trigger": "A conversation during a walk or run with Mika, Dev, or Lena after a stretch of visible cycling",
+      "instances": [
+        {
+          "date": "2026-07-31",
+          "note": "Mika names the pattern: work instability makes Jordan drop Coda, and picking it back up is what helps — suggesting Coda is the portfolio update."
+        },
+        {
+          "date": "2026-08-14",
+          "note": "Lena independently suggests Coda could be Jordan's way out, echoing Mika's read from two weeks earlier."
+        },
+        {
+          "date": "2026-09-06",
+          "note": "Mom asks what Jordan would be doing if the job weren't taking up so much mental space, a question Jordan hadn't asked themselves."
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "Coda-as-Processing",
+      "kind": "creative rhythm",
+      "description": "Jordan's most productive creative stretches on Coda arrive directly on the heels of work distress or emotional turbulence, functioning as sideways processing rather than separate leisure time.",
+      "trigger": "Work-related stress, anxiety, or a recent emotional low that needs somewhere to go",
+      "instances": [
+        {
+          "date": "2026-08-04",
+          "note": "Streak counter and metronome work follows the Marcus design-review blowup, giving Jordan 'a hit of competence.'"
+        },
+        {
+          "date": "2026-08-12",
+          "note": "Quick-start cards built right after the shutdown/apology cycle with Mika."
+        },
+        {
+          "date": "2026-08-25",
+          "note": "Free-play mode breakthrough happens the day after restructuring news causes a shutdown."
+        }
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "The Reflexive No",
+      "kind": "emotional cycle",
+      "description": "When an opportunity or door opens (a referral, a compliment, a chance), Jordan's first reflex is self-disqualification or deflection before conscious thought can intervene, even though Jordan doesn't actually believe the disqualifying thought when examined directly.",
+      "trigger": "An unexpected opportunity, offer, or piece of good news arriving from someone else",
+      "instances": [
+        {
+          "date": "2026-08-28",
+          "note": "Lena offers the Northlight referral; Jordan immediately says 'I don't think I'd have good enough experience,' then notices he doesn't actually believe it."
+        },
+        {
+          "date": "2026-09-09",
+          "note": "Jordan nods along when Mika and Lena separately suggest Coda is the portfolio, without believing it, until the act of writing it up makes it true."
+        }
+      ],
+      "confidence": "medium"
+    },
+    {
+      "name": "Pepper Knows",
+      "kind": "recovery pattern",
+      "description": "Pepper's behavior — sleeping on Jordan's chest or lap specifically during low periods — functions as a reliable, wordless barometer and small comfort during the worst stretches of the shutdown cycle.",
+      "trigger": "A bad-news day or shutdown episode",
+      "instances": [
+        {
+          "date": "2026-08-03",
+          "note": "Pepper curls against Jordan's chest during the two-hour dark spell after the design review."
+        },
+        {
+          "date": "2026-08-24",
+          "note": "Pepper and then Mika pull Jordan back after the restructuring news lands."
+        },
+        {
+          "date": "2026-09-06",
+          "note": "Pepper, who usually hides from guests, sleeps on Mom's lap for an hour during the visit centered on finally telling the truth."
+        }
+      ],
+      "confidence": "medium"
+    }
+  ]
+}

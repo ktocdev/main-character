@@ -1,0 +1,74 @@
+{
+  "people": [
+    {
+      "name": "Priya",
+      "relationship": "new manager",
+      "observations": [
+        "Jordan will report to Priya starting the 21st under the new team structure"
+      ]
+    },
+    {
+      "name": "Marcus",
+      "relationship": "manager",
+      "observations": [
+        "Told Jordan the reorg news in a fifteen-minute one-on-one",
+        "Seemed almost pleased delivering the news, as if he had advocated for Jordan",
+        "Said 'this is a great opportunity to broaden your surface area' with a straight face"
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Has shown up at Jordan's door twice in the past during spiral episodes"
+      ]
+    },
+    {
+      "name": "Lena",
+      "relationship": "friend",
+      "observations": [
+        "Jordan texted her the reorg news",
+        "Replied calling legacy marketing 'the holding pen'",
+        "Said she starts a new job on Friday",
+        "Told Jordan to hang on"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Coda's snippet library",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "Jordan worked on cleanup for it for two hours at Groundwork"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Groundwork",
+      "kind": "cafe",
+      "observations": [
+        "Jordan walked there after almost spiraling, arrived around 6:30 with a thin evening crowd",
+        "Got a cortado and worked on the snippet library for two hours"
+      ]
+    },
+    {
+      "name": "internal tools",
+      "kind": "workplace team",
+      "observations": [
+        "This team is being dissolved as part of the reorg"
+      ]
+    },
+    {
+      "name": "legacy marketing pages",
+      "kind": "workplace team",
+      "observations": [
+        "Jordan is being moved to this team starting the 21st",
+        "Described as maintenance work updating templates for a site the company plans to replace",
+        "Two people already on the team have been there since the last reorg and haven't been promoted in three years",
+        "Known internally as where people are parked instead of being given severance"
+      ]
+    }
+  ]
+}
