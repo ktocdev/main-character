@@ -1169,8 +1169,8 @@ def restart_server(body: RestartIn | None = None):
         # that from a broken one.
         return JSONResponse(
             {"error": "the demo journal is not installed. Run "
-                      "`bash seed_corpus/run_capture.sh --wipe` to build it, "
-                      "then try again."},
+                      "`python seed_corpus/import_seed_corpus.py --demo` to "
+                      "build it (no API key needed), then try again."},
             status_code=409)
 
     with _BUSY_LOCK:

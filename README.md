@@ -1,142 +1,253 @@
-# RAG Journal
+# Main Character
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-A journal with infinite memory — powered by retrieval-augmented generation.
+**A journal that remembers everything you have ever written in it.**
 
-RAG Journal imports your Claude conversation exports and builds a searchable, context-aware journal on top of them. A companion persona uses semantic search + LLM reasoning over your history to respond with real memory — not generic advice, but grounded references to what you've actually written. The system extracts and tracks entities (people, projects, places), detects recurring patterns, and surfaces relevant context at multiple granularities (chunks, entry summaries, weekly arcs, per-domain living docs, entity profiles).
+You write an entry. Something you wrote three months ago is relevant, and the
+journal knows it — not because you tagged it, but because it went and looked.
 
-## What exists today
+That is the whole idea. Everything below is machinery in service of it: a local
+vector store so search works by meaning rather than keyword, an entity graph so
+the people in your life accumulate a history, rolling summaries so the journal
+has a sense of your life at week, month and year scale, and a companion that
+reads all of it before answering.
 
-### Core engine
-- **Bulk import** — parses Claude conversation exports, chunks them, stores them in ChromaDB with markdown backups
-- **Semantic retrieval** — multi-layer context assembly: (1) recent + snapshot, (2) semantic chunks, (3) entity docs, (4) pattern library
-- **Companion persona** — Claude turns retrieval context into thoughtful, grounded responses; streaming output to the browser
-- **Reflection mode** — companion initiates conversation by connecting dots across your history
-- **Sessions** — one chat stays open for days (about a week in practice); entries, replies, and follow-ups braid into it, surviving refreshes and restarts. Closing a chat is the *summarize point*: your side becomes a journal entry in the same shape as an imported conversation, the full braid is archived, and the memory pipeline (tagging, entities, summaries, dreams) runs in the background. The first session continues your most recent imported conversation.
+![The history tab, showing a chat braid with its entry summary and the entries it continued](assets/mc-history.png)
+
+## Start here
+
+Clone it, give it an API key, and start writing. That is the setup — the journal
+builds itself out of what you write, from the first entry.
+
+If you happen to have a Claude conversation export, you can import it as a
+starting corpus ([below](#importing-a-claude-export)). Most people will not, and
+that is fine — it is a bonus for the people who have one, not the front door.
+
+### 1. Install
+
+```bash
+git clone https://github.com/ktocdev/main-character.git
+cd main-character
+python -m venv .venv
+.venv/bin/pip install -r requirements.lock      # Windows: .venv\Scripts\pip
+```
+
+Python 3.12 or newer. The install is large and slow — it pulls ChromaDB's whole
+tree (onnxruntime, tokenizers) so that embeddings run on your machine instead of
+over the network. `requirements.txt` lists the same dependencies unpinned, for
+reference; install from the lock file.
+
+### 2. Add a key
+
+```bash
+cp .env.example .env
+```
+
+Uncomment `ANTHROPIC_API_KEY` in `.env` and paste a key from the
+[Anthropic Console](https://console.anthropic.com/). Everything else in that
+file has a working default.
+
+### 3. Run it
+
+```bash
+.venv/bin/python server.py                      # Windows: .venv\Scripts\python.exe
+```
+
+The journal opens at **http://127.0.0.1:8144**. Write something in the box and
+press *save entry*. That is the loop.
+
+Stop it with `Ctrl+C`. The UI reloads on a browser refresh; Python changes need
+a restart.
+
+## Look around first, without a key
+
+There is a demo journal — 30 entries of a fictional life, with the replies
+pre-recorded — so you can see what the app is actually like before deciding
+whether to pay for it.
+
+```bash
+python seed_corpus/import_seed_corpus.py --demo   # one-time, no key, free
+.venv/bin/python server.py
+```
+
+Then open **Settings → load demo journal**.
+
+The install is free because the embeddings are computed locally, and the replies
+are real Claude output captured once and committed to this repo — so nothing
+calls the API. In this mode the Anthropic SDK is never even constructed, which
+the test suite asserts rather than merely claiming.
+
+The demo is a separate journal with its own data directories, not a mode your
+own journal runs in: nothing you type there can reach your entries, and any
+restart puts you back. A banner says so the whole time you are in it.
+
+## What it costs
+
+- **Reading, searching and browsing are free.** Embeddings are computed on your
+  machine (all-MiniLM-L6-v2). Semantic search never calls an API.
+- **Writing costs.** The companion's reply, and the background pass that tags
+  the entry, extracts entities and updates summaries.
+- **Two models, so you can trade down.** The companion is the voice you actually
+  read, and defaults to Opus. Background processing is mechanical, runs in bulk,
+  and is where most of the tokens go — it defaults to Sonnet. Both are
+  changeable in Settings.
+- **Two spend caps**, per session and per calendar month, checked before each
+  call. They are runaway detectors rather than budgets, so the defaults sit
+  above a heavy month of ordinary writing.
+- **The real backstop is not this app.** Every figure it shows is an estimate
+  from a hand-maintained price table, and the caps are only as correct as the
+  code enforcing them. Set a spend limit on your
+  [Anthropic Console](https://console.anthropic.com/settings/limits) account.
+  That is the ceiling that holds when this one is wrong.
+
+## Your writing is yours
+
+Everything lives in files on your disk. Three commands, also under
+Settings → Data, none of which need a key:
+
+- `python export.py` — the whole journal as a folder: every entry as markdown,
+  one `entries.json` with all of them, and everything the pipeline inferred.
+  Nothing in it needs this app to read.
+- `python backup.py` — the same export as one dated zip. It lands next to the
+  journal, on the same disk, so move it somewhere that survives the machine.
+- `python rebuild_index.py` — rebuilds the search index from the markdown. Free
+  and offline. It is why the export leaves the index out: the index is derived
+  from what the export already holds, and this is the command that proves it.
+
+Where it all sits:
+
+| Directory | What |
+|---|---|
+| `journal_entries/` | Your entries and dreams, as markdown |
+| `chroma_data/` | The search index — derived, rebuildable |
+| `entity_graph/` | Extracted people, projects and places, with profiles |
+| `summaries/` | Entry summaries, weekly arcs, domain docs, the rolling snapshot |
+| `categories/`, `patterns/`, `dreams/`, `sessions/` | The rest of the pipeline's output |
+
+All of it is gitignored. None of it leaves your machine except as prompt text
+sent to the Anthropic API when you write.
+
+## What it is not
+
+**Single-user, local-only, no authentication — by design, not by omission.**
+
+The server binds to `127.0.0.1` and refuses requests that did not come from
+there. There are no accounts, no login and no permission model, because there is
+exactly one person: you.
+
+This is load-bearing, not a stage the app will grow out of. The server keeps its
+open conversation, its loaded entity index and its Chroma handle in one
+process-global dict (`STATE`, [`server.py:80`](server.py#L80)). A second person
+on the same instance would not get their own journal — they would get *yours*,
+mid-sentence. So:
+
+- Do not expose the port to the internet.
+- Do not put it behind a reverse proxy and share the URL.
+- A multi-user deployment is not unsupported, it is unsafe.
+
+If you want a journal several people use, this is the wrong codebase to start
+from.
+
+## What it does
+
+<details>
+<summary><b>The full feature list</b></summary>
+
+### Memory
+- **Semantic retrieval** — context assembled in layers: recent entries and the
+  current snapshot, then semantically matched chunks, then entity docs, then the
+  pattern library
+- **Sessions** — one chat stays open for days. Entries, replies and follow-ups
+  braid into it and survive restarts. Closing it is the summarize point: your
+  side becomes a journal entry, the braid is archived, and the memory pipeline
+  runs in the background
+- **Reflection** — the companion opens a conversation by connecting threads
+  across your history, rather than waiting to be asked
 
 ### Entity graph
-- **Extraction** — Claude pulls people, projects, places, and events from every entry
-- **Curation** — merge/rename/retype entities by hand; the user reviews all changes before saving
-- **Entity profiles** — living docs (1-3 paragraphs) per entity, auto-regenerated weekly as context grows
-- **Observations** — timestamped, tagged, browseable by entity with date facets
-- **Groups** — hand-made, nestable groupings of entities (e.g. "claude skills"); batch-select entities and file them all at once; a group can *roll up* so its members collapse out of the flat list and reveal inline when you click the group title
-- **Triage queue** — keyboard-driven review of extracted entities (keep / merge / correct / rename / alias / retype / delete), 50-deep undo across sessions
+- **Extraction** — people, projects, places and events, pulled from every entry
+- **Profiles** — a living 1–3 paragraph doc per entity, regenerated as context
+  accumulates
+- **Observations** — timestamped and tagged, browseable per entity by date
+- **Groups** — nestable hand-made groupings; a group can roll up so its members
+  collapse out of the flat list
+- **Triage** — a keyboard-driven review queue for extracted entities (keep,
+  merge, correct, rename, alias, retype, delete) with 50-deep undo
 
-### Context + summaries
-- **Entry summaries** — 2-3 sentence distillations of each entry, cached incrementally
-- **Weekly arcs** — short narratives of what happened each week, stitched from entry summaries
-- **Domain summaries** — ~500-word living docs per category (work, relationships, health, etc.), synthesized from arc context
-- **Status snapshot** — one-paragraph status of life right now, updated with every new entry
-- **Dream weather** — one-line tone signal from recent dreams, appended to the snapshot
+### Summaries
+- **Entry summaries** — 2–3 sentences per entry, cached incrementally
+- **Weekly arcs** — a short narrative per week, stitched from entry summaries
+- **Domain summaries** — a ~500-word living doc per category
+- **Status snapshot** — one paragraph on where life is right now, updated with
+  every entry
+- **Seed summary** — a rolling life summary you co-edit, which opens every chat
 
-### Category system
-- **Automatic tagging** — Claude tags new entries with built-in categories (work, relationships, health, emotional, etc.)
-- **Organic categories** — place/project entities are clustered by composite embedding (70% context, 30% name); Claude names the clusters; the user confirms/dismisses/defers them
-- **Custom categories** — hand-seeded with trigger keywords; entries are auto-tagged by member mention or keyword match
-- **Parent rollup** — categories can roll up to a parent (Gardens → Landmarks)
+### Categories
+- **Automatic tagging** against ten built-in categories, each of which can be
+  turned off
+- **Organic categories** — place and project entities clustered by embedding,
+  named by Claude, confirmed or dismissed by you
+- **Custom categories** — hand-seeded with trigger keywords
+- **Parent rollup** — categories can nest
 
-### Pattern library
-- **Pattern detection** — Claude scans arcs + domain docs to find recurring emotional cycles, behavioral pipelines, relationship dynamics, etc.; tracks 2+ dated instances per pattern with confidence scoring
-- **Smart filtering** — patterns can be dismissed; they re-surface only with new evidence
-- **Prompt injection** — patterns injected into companion context only when the question genuinely rhymes
+### Patterns
+- Recurring emotional cycles, behavioural pipelines and relationship dynamics,
+  each tracked with dated instances and a confidence score. Dismissed patterns
+  resurface only with new evidence, and they enter the companion's context only
+  when the question genuinely rhymes.
 
-### Dream layer
-- **Extraction** — Claude finds every discrete dream in the journal (only entries that mention dreams, cached per conversation)
-- **Realm isolation** — dreams live in a separate vector collection; waking queries can never surface them by accident
-- **User-flagged dreams** — write mode has a "this was a dream" checkbox; flagged entries go straight to the dream realm
-- **Dream weather** — tone signal from recent dreams (nightmare/anxiety/peaceful/etc.), appended to the snapshot
-- **Cast + interpretation** — dream people/places are spelled to match the waking entity graph; your own readings are captured (never invented)
+### Dreams
+- **Realm isolation** — dreams live in their own vector collection, so a waking
+  query can never surface one by accident
+- **Extraction and flagging** — found in the journal automatically, or marked
+  with a checkbox as you write
+- **Cast** — dream people and places are spelled to match the waking entity
+  graph
+- **Dream weather** — a one-line tone signal from recent dreams, appended to the
+  snapshot
+- **Your interpretations** are captured, never invented
 
-### Web UI
-- **Write tab** — the one conversation surface: journal entries ("save entry", markdown-backed immediately) and questions ("send") share the open chat; the companion's replies stream in between; everything persists on the server across refreshes and restarts; entries commit to journal memory when the chat closes; dream checkbox available
-- **Chat tab** — a throwaway "look something up" conversation with the companion; never stored as journal data
-- **Search tab** — search the whole journal by meaning (semantic similarity) or exact text
-- **Entities tab** — browse all people/projects/places with profiles, observations, groups, and edit options
-- **Categories tab** — browse entries by category; see domain summaries; tag new entries; propose and manage organic/custom categories
-- **Patterns tab** — view the pattern library with confidence, dated instances, and reasoning; dismiss individual patterns
-- **Dreams tab** — browse all extracted dreams with narrative, cast, tones, and your interpretation; extract dreams from history
-- **History tab** — lands on the open chat (the conversation it continues + every entry, reply, and follow-up in one braid); past chats in a sidebar, one open at a time; "summarize & start new chat" closes the session
-- **Triage tab** — keyboard-driven queue for reviewing extracted entities (keep / merge / correct / rename / alias / retype / delete / skip), with undo
-- **Help tab** — documentation of the system and your involvement
+</details>
 
-## What's planned
+## Importing a Claude export
 
-- **Phase 0: Short-message handling** — adapt the write flow for phone-sized bursts (deferred; pending design discussion)
-- **Dream layer v2** — scene-level chunking, parallel dream-entity graph, emergent symbol detection, interpretation patterns, cross-realm correlations, weekly dream digest
-- **Phase 4: Vue 3 UI rebuild** — rebuild the web UI on the app's own bespoke design tokens; the user to lead design (deferred; next when they're ready)
-- **Life Spectrum** — color-mapped timeline visualization of journal embeddings over time
-
-## How to run locally
-
-### Prerequisites
-- Python 3.12+ (or use the `.venv` with `uv`)
-- `ANTHROPIC_API_KEY` in `.env` (for chat, writes, and all Claude operations)
-
-### Install
-```bash
-pip install -r requirements.lock
-```
-Pulls in ChromaDB's transitive tree (onnxruntime, tokenizers, and friends for
-local embeddings) — the install is large and takes a while. `requirements.txt`
-documents the same deps unpinned, for reference; install from the lock file
-for a reproducible set of versions.
-
-### Start the server
-From the project root:
-```bash
-.venv\Scripts\python.exe server.py
-```
-
-The journal opens at **http://127.0.0.1:8144**. Static UI reloads on every browser refresh; Python changes need a server restart.
-
-### Look around without an API key (mock mode)
-
-Set `MC_MOCK=1` in `.env` and start the server as above. No key is needed — the Anthropic SDK is never constructed, so no network call is possible. Replies, entity extraction, tagging, summaries, patterns, and dreams all come from `mock_fixtures/` (real Claude output captured from a curated seed corpus), with per-call delays that match how the real thing feels, so loading states are actually visible.
-
-Mock mode swaps the model, not the storage: everything you write still lands in the real `journal_entries/`, `chroma_data/`, and `entity_graph/`. There's no reset button — clearing out is the same job it is in real mode.
-
-### Notes
-- **API costs** — browsing and searching are free (local embeddings, no API calls). Chat, writes, reflection, extraction, and tagging call Claude. Settings → Models & cost shows a running estimate, split between the companion and background work.
-- **Spend caps** — two ceilings, in the same place: dollars per session and dollars per calendar month (`MC_MAX_SESSION_SPEND`, `MC_MAX_MONTHLY_SPEND`; blank uses the default, 0 turns one off). They are runaway detectors rather than budgets, so the defaults sit above a heavy month of ordinary writing. Both are checked *before* each call against what has already been spent, which means the call that crosses a line finishes and the next one is refused. The monthly total lives in `spend_ledger.json`.
-- **The backstop is not this app** — every figure here is an estimate from a hand-maintained list-price table, and the caps are only as right as the code enforcing them. Set a spend limit on your [Anthropic Console](https://console.anthropic.com/settings/limits) account: it is the one ceiling that holds if this one is wrong.
-- **Taking your writing with you** — three commands, also in Settings → Data, none of which need a key:
-  - `python export.py` — the whole journal as a folder: every entry as markdown, one `entries.json` with all of them, and everything the pipeline inferred. Nothing in it needs this app to read.
-  - `python backup.py` — the same export as one dated zip. It lands next to the journal, on the same disk, so move it somewhere that survives the machine.
-  - `python rebuild_index.py` — rebuilds `chroma_data/` from the markdown. The embeddings are local (all-MiniLM-L6-v2), so this is free and offline. It is why the export leaves the index out: the index is derived from what the export holds, and this is the command that proves it.
-- **Data storage** — everything lives locally:
-  - `chroma_data/` — vector store (ChromaDB), derived; rebuild it any time with `python rebuild_index.py`
-  - `journal_entries/` — markdown backups of entries and dreams
-  - `entity_graph/` — extracted entities, profiles, aliases, groups, and curation history
-  - `categories/`, `patterns/`, `dreams/`, `sessions/` — personal data (gitignored)
-  - `spend_ledger.json` — estimated spend per calendar month, for the monthly cap (gitignored)
-- **Stopping** — `Ctrl+C` in the terminal running `server.py`
-- **Port stuck** — if you can't restart: `Get-NetTCPConnection -LocalPort 8144 -State Listen | Stop-Process -Force`
+Optional, and only useful if you already have one. `python bulk_import.py` reads
+a Claude conversation export, chunks it, embeds it and writes markdown backups,
+giving the journal a history to reason over from day one. Your messages become
+entries; Claude's replies are never stored as journal memory.
 
 ## Stack
 
-- **Python** — backend server (FastAPI), import pipeline, entity extraction, summarization
-- **ChromaDB** — local vector store with cosine similarity; separate collections for waking entries, summaries, dreams, and entity docs
-- **Claude API** — retrieval-augmented generation, pattern detection, entity extraction, summarization, naming, interpretation
-- **HTML + vanilla JS** — lightweight web UI (no build step, no dependencies on the frontend)
+Python and FastAPI on the backend, ChromaDB for local vector storage, the Claude
+API for generation, and plain HTML and vanilla JavaScript on the frontend — no
+build step, no frontend dependencies.
 
-## Architecture
+## Contributing
 
-Design rationale and the companion's persona spec live in local-only dev notes (`docs/discovery/`, gitignored — not part of this repo).
+There is no `CONTRIBUTING.md` and no PR template, because outside contributions
+are not really what this is set up for. If you have found a bug or want
+something, open an issue — that is genuinely welcome.
 
-## Status
+Note the license before building on it: AGPL-3.0-or-later, and the network-use
+clause is the part that tends to surprise people. See below.
 
-Backend is feature-complete for Phases 0–3. The next major work is Phase 4 (UI redesign with Vue). See the roadmap for what's shipped vs. deferred.
+## Security
+
+See [SECURITY.md](SECURITY.md). Short version: local-only with no auth is the
+design, running it exposed to the internet is out of scope by design rather than
+a reportable bug, and key handling, prompt injection, XSS in rendered entries
+and DNS rebinding are all in scope.
 
 ## License
 
 [GNU Affero General Public License v3.0 or later](LICENSE) (AGPL-3.0-or-later).
 
-The Affero clause is the reason for the choice: if you run a modified version of this
-app as a network service that other people use, you have to offer them its source. A
-plain GPL or MIT license would let a hosted, multi-tenant version of a journal app be
-built on this code without that obligation, which is a sharper problem here than usual
-given what the app is holding.
+The Affero clause is the reason for the choice: if you run a modified version of
+this app as a network service other people use, you have to offer them its
+source. MIT or plain GPL would let a hosted, multi-tenant version of a journal
+app be built on this code without that obligation — a sharper problem here than
+usual, given what the app is holding.
 
-Every source file carries an `SPDX-License-Identifier: AGPL-3.0-or-later` header, so a
-file copied out of this repo still points back at its terms.
+Every source file carries an `SPDX-License-Identifier: AGPL-3.0-or-later`
+header, so a file copied out of this repo still points back at its terms.
