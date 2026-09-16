@@ -63,3 +63,7 @@ third-party-names.txt*
 # and seed_corpus/summaries/.
 seed_corpus/build/
 seed_corpus/install/
+
+# Recording scratch: a fixture pinned to one reply for a screen capture
+# keeps its backup next to it. Working state, never a deliverable.
+mock_fixtures/*.bak
