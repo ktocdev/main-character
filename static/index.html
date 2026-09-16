@@ -29,9 +29,9 @@
 </script>
 </head>
 <body>
-<div id="mock-banner">mock mode — replies are canned, not from Claude. No API calls are being made.</div>
-<div id="seed-banner-bar">demo main character — someone else&rsquo;s entries, and the replies are canned.
-  Nothing written here reaches yours. Restart to go back.</div>
+<!-- One banner for both non-live states; text + tone set in core.js from
+     /api/status. Demo is the louder tone (see base.css). -->
+<div id="app-banner"></div>
 <header>
   <h1>main character</h1>
   <span class="status" id="status"></span>

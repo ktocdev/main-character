@@ -39,11 +39,13 @@ export async function refreshStatus() {
   // Mock mode is indistinguishable from real once a reply is on screen, so
   // the banner stays up for the whole session rather than appearing per-call.
   document.body.classList.toggle('mock-mode', !!s.mock);
-  // The seed instance is also mock mode, but only one bar shows: the seed
-  // wording says both things, and the CSS stands the mock bar down. The
-  // warning that has to survive is "these entries are not yours" -- canned
-  // replies cost nothing to forget.
+  // The seed instance is always mock mode; both states share one banner
+  // (CSS shows it on mock-mode, the seed class only makes it louder). The
+  // seed message subsumes the canned-replies fact, so it wins the text.
   document.body.classList.toggle('seed-instance', !!s.seed_instance);
+  $('app-banner').textContent = s.seed_instance
+    ? 'demo journal — sample entries, and the replies are canned. Restart to go back to yours.'
+    : 'mock mode — replies are canned, not from Claude. No API calls are being made.';
   if (s.date_style) state.dateStyle = s.date_style;
   // The server owns the clock and reads stamps back in *its* zone
   // (config.parse_stamp), so a browser in another zone would write a wall
