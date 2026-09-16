@@ -51,8 +51,8 @@ sys.path.insert(0, str(ROOT))
 if "--demo" in sys.argv:
     _I = Path(__file__).resolve().parent / "install"
     os.environ.update({
-        "RAG_JOURNAL_DIR": str(_I / "journal_entries"),
-        "RAG_CHROMA_DIR": str(_I / "chroma_data"),
+        "MC_JOURNAL_DIR": str(_I / "journal_entries"),
+        "MC_CHROMA_DIR": str(_I / "chroma_data"),
         "MC_ENTITY_DIR": str(_I / "entity_graph"),
         "MC_SUMMARY_DIR": str(_I / "summaries"),
         "MC_CATEGORY_DIR": str(_I / "categories"),
@@ -61,7 +61,7 @@ if "--demo" in sys.argv:
         "MC_SESSION_DIR": str(_I / "sessions"),
         # The corpus is Jordan's. Left alone, entity extraction would skip
         # entities matching the real author's name -- see run_capture.sh.
-        "RAG_AUTHOR_NAME": "Jordan",
+        "MC_AUTHOR_NAME": "Jordan",
     })
 
 from bulk_import import import_entry, entry_chunk_id, chunk_entry

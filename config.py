@@ -128,11 +128,36 @@ PORT = int(os.getenv("MC_PORT", "8144"))
 # ---------------------------------------------------------------------------
 # DATA DIRECTORIES
 # ---------------------------------------------------------------------------
-# RAG_JOURNAL_DIR / RAG_CHROMA_DIR keep their existing env var names (predate
-# this module); the rest are new and use the MC_ prefix.
+# Every data directory is MC_-prefixed. Three of these were RAG_-prefixed
+# until the public release (they predated this module, and the inconsistency
+# was carried rather than chosen); renaming them was a now-or-never call,
+# since doing it after strangers have working .env files is a breaking
+# change with an audience.
+#
+# _refuse_legacy_names is the migration aid for the one install that
+# predates the rename. It refuses rather than falling back, because the
+# failure it prevents is silent: an unread MC_AUTHOR_NAME does not error,
+# it just starts extracting an entity for the author, and an unread
+# MC_JOURNAL_DIR opens an empty journal that looks like data loss. Delete
+# this once the pre-release .env files are gone.
 
-JOURNAL_DIR = Path(os.getenv("RAG_JOURNAL_DIR", _PROJECT_ROOT / "journal_entries"))
-CHROMA_DIR = Path(os.getenv("RAG_CHROMA_DIR", _PROJECT_ROOT / "chroma_data"))
+def _refuse_legacy_names():
+    renamed = {"RAG_AUTHOR_NAME": "MC_AUTHOR_NAME",
+               "RAG_JOURNAL_DIR": "MC_JOURNAL_DIR",
+               "RAG_CHROMA_DIR": "MC_CHROMA_DIR"}
+    stale = [(old, new) for old, new in renamed.items() if os.getenv(old)]
+    if stale:
+        raise SystemExit(
+            "\n.env uses env var names that were renamed before release:\n"
+            + "".join(f"  {old}  ->  {new}\n" for old, new in stale)
+            + "\nRename them in .env and start again. Nothing else changed;\n"
+              "the values are still correct.")
+
+
+_refuse_legacy_names()
+
+JOURNAL_DIR = Path(os.getenv("MC_JOURNAL_DIR", _PROJECT_ROOT / "journal_entries"))
+CHROMA_DIR = Path(os.getenv("MC_CHROMA_DIR", _PROJECT_ROOT / "chroma_data"))
 ENTITY_DIR = Path(os.getenv("MC_ENTITY_DIR", _PROJECT_ROOT / "entity_graph"))
 SUMMARY_DIR = Path(os.getenv("MC_SUMMARY_DIR", _PROJECT_ROOT / "summaries"))
 CATEGORY_DIR = Path(os.getenv("MC_CATEGORY_DIR", _PROJECT_ROOT / "categories"))
@@ -216,7 +241,7 @@ MAX_INPUT_CHARS = int(_positive("MC_MAX_INPUT_CHARS", 100_000))
 # ---------------------------------------------------------------------------
 
 MOCK_MODE = os.getenv("MC_MOCK", "0").strip() == "1"
-AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
+AUTHOR = os.getenv("MC_AUTHOR_NAME", "").strip() or "the journal author"
 
 
 # ---------------------------------------------------------------------------

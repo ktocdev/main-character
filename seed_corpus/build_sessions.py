@@ -45,14 +45,14 @@ ENTRIES = HERE / "journal_entries"
 # sandbox every data dir before the project imports read config
 for _var, _sub in [
     ("MC_SESSION_DIR", "sessions"), ("MC_SUMMARY_DIR", "summaries"),
-    ("RAG_CHROMA_DIR", "chroma_data"), ("RAG_JOURNAL_DIR", "journal_entries"),
+    ("MC_CHROMA_DIR", "chroma_data"), ("MC_JOURNAL_DIR", "journal_entries"),
     ("MC_ENTITY_DIR", "entity_graph"), ("MC_CATEGORY_DIR", "categories"),
     ("MC_PATTERN_DIR", "patterns"), ("MC_DREAM_DIR", "dreams"),
 ]:
     os.environ[_var] = str(BUILD / _sub)
 # hard set, not setdefault - the real author's name must never reach a
 # braid or a seed that ships
-os.environ["RAG_AUTHOR_NAME"] = "Jordan"
+os.environ["MC_AUTHOR_NAME"] = "Jordan"
 
 sys.path.insert(0, str(HERE.parent))
 

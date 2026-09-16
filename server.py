@@ -1059,9 +1059,9 @@ SEED_ENV = {
     # Canned replies and a stand-in author: the corpus exists to be looked at
     # without a key and without spending anything.
     "MC_MOCK": "1",
-    "RAG_AUTHOR_NAME": "Jordan",
-    "RAG_JOURNAL_DIR": str(SEED_ROOT / "journal_entries"),
-    "RAG_CHROMA_DIR": str(SEED_ROOT / "chroma_data"),
+    "MC_AUTHOR_NAME": "Jordan",
+    "MC_JOURNAL_DIR": str(SEED_ROOT / "journal_entries"),
+    "MC_CHROMA_DIR": str(SEED_ROOT / "chroma_data"),
     "MC_ENTITY_DIR": str(SEED_ROOT / "entity_graph"),
     "MC_SUMMARY_DIR": str(SEED_ROOT / "summaries"),
     "MC_CATEGORY_DIR": str(SEED_ROOT / "categories"),

@@ -7,8 +7,8 @@ sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
 I = "seed_corpus/install"
 os.environ.update({
-    "RAG_AUTHOR_NAME": "Jordan",
-    "RAG_JOURNAL_DIR": f"{I}/journal_entries", "RAG_CHROMA_DIR": f"{I}/chroma_data",
+    "MC_AUTHOR_NAME": "Jordan",
+    "MC_JOURNAL_DIR": f"{I}/journal_entries", "MC_CHROMA_DIR": f"{I}/chroma_data",
     "MC_ENTITY_DIR": f"{I}/entity_graph", "MC_SUMMARY_DIR": f"{I}/summaries",
     "MC_CATEGORY_DIR": f"{I}/categories", "MC_PATTERN_DIR": f"{I}/patterns",
     "MC_DREAM_DIR": f"{I}/dreams", "MC_SESSION_DIR": f"{I}/sessions",
