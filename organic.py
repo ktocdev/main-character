@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Organic Category Creation — Phase 2 of the RAG Journal.
 

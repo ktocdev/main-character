@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Sessions — the chat-as-session layer of the RAG Journal.
 

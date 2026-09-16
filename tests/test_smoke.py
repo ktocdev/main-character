@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Fresh-clone smoke test: does mock mode actually work from nothing?
 
 This is the check that keeps "clone it and it works" true. It is not a

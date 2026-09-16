@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, refreshStatus } from './core.js';
 import { state } from './state.js';
 import * as write from './write.js';

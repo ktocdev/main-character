@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, fmtDate } from './core.js';
 import { state } from './state.js';
 import { closeSession, hasNewMaterial } from './write.js';

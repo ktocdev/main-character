@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Point every data dir at a throwaway tmp dir *before* config is imported.
 
 `config.py` reads the environment at import time, so this has to run

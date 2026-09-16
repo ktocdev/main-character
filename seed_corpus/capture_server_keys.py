@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Capture the two keys the batch stages can't reach."""
 import os, sys, json, pathlib
 

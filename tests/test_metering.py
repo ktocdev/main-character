@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 The cost meter: what it counts, how it prices it, and where it files it.
 

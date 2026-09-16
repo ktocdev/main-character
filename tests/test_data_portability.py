@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """export.py / backup.py / rebuild_index.py — the "you can leave" trio.
 
 The claim these three make together is that nothing in this app is trapped

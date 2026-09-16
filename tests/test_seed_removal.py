@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The seed-removal script's key rules.
 
 Both of these are here because both were wrong once, in the same way: an

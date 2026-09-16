@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, fmtDate } from './core.js';
 import { state } from './state.js';
 import { loadEntities } from './entities.js';

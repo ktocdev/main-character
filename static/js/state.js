@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Cross-module mutable state. ES-module import bindings are read-only,
 // so anything a module REASSIGNS from outside its own file lives on
 // this object; `filters` is only ever property-mutated, so it exports

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Regenerate third-party-names.txt from the entity graph.
 
 The leak grep's name pass (scripts/check_leaks.sh) is only as good as
