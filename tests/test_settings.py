@@ -445,6 +445,8 @@ def test_the_seed_destination_lives_only_in_the_child_environment(
     (tmp_path / "chroma_data" / "chroma.sqlite3").touch()
     (tmp_path / "chroma_data" / ".install-complete").touch()
     monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
+    from seed_corpus import reset_demo_state
+    monkeypatch.setattr(reset_demo_state, "restore", lambda path: None)
     # not object(): this one gets all the way to `srv.should_exit = True`,
     # which a bare object cannot carry
     monkeypatch.setitem(server.SERVER, "instance", SimpleNamespace())

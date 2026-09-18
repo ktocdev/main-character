@@ -213,6 +213,7 @@ def test_a_no_reply_entry_still_works_while_unconfigured(client, monkeypatch):
 
 def _fake_sdk(monkeypatch, on_create):
     """Stand in for the `anthropic` module the route imports lazily."""
+    monkeypatch.setattr(server, "MOCK_MODE", False)
     class FakeClient:
         def __init__(self, api_key=None, **kw):
             self.api_key = api_key
@@ -220,6 +221,32 @@ def _fake_sdk(monkeypatch, on_create):
 
     monkeypatch.setitem(sys.modules, "anthropic",
                         SimpleNamespace(Anthropic=FakeClient))
+
+
+def test_key_validation_obeys_caps(client, monkeypatch):
+    def forbidden(**kw):
+        raise AssertionError("SDK must not be called after the cap")
+    _fake_sdk(monkeypatch, forbidden)
+    def exhausted():
+        raise server.caps.CapExceeded("cap exhausted")
+    monkeypatch.setattr(server.caps, "check", exhausted)
+    assert client.post("/api/setup/validate-key", json={"key": FAKE_KEY}).status_code == 429
+
+
+def test_key_validation_records_real_spend(client, monkeypatch, tmp_path):
+    _fake_sdk(monkeypatch, lambda **kw: SimpleNamespace(
+        usage=SimpleNamespace(input_tokens=10, output_tokens=1)))
+    monkeypatch.setattr(config, "MOCK_MODE", False)
+    monkeypatch.setattr(config, "SPEND_FILE", tmp_path / "spend.json")
+    before = server.metering.totals()["total"]["calls"]
+    assert client.post("/api/setup/validate-key", json={"key": FAKE_KEY}).json() == {"ok": True}
+    assert server.metering.totals()["total"]["calls"] == before + 1
+    assert server.caps.spent_this_month() > 0
+
+
+def test_key_validation_refuses_mock_mode(client, monkeypatch):
+    monkeypatch.setattr(server, "MOCK_MODE", True)
+    assert client.post("/api/setup/validate-key", json={"key": FAKE_KEY}).status_code == 409
 
 
 def test_a_working_key_validates(client, monkeypatch):
@@ -430,6 +457,11 @@ def test_an_interrupted_demo_build_can_retry(client, monkeypatch, tmp_path):
     assert client.post("/api/setup/install-demo").json() == {"ok": True, "built": True}
     assert len(calls) == 2
     assert client.get("/api/status").json()["demo_built"] is True
+
+
+def test_demo_install_refuses_concurrent_rebuild(client):
+    with server._DEMO_LOCK:
+        assert client.post("/api/setup/install-demo").status_code == 409
 
 
 def test_the_demo_cannot_rebuild_itself_from_inside(client, monkeypatch, tmp_path):

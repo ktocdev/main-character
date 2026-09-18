@@ -904,16 +904,21 @@ def validate_key(body: ValidateKeyIn):
     key = (body.key or "").strip()
     if not key:
         return JSONResponse({"error": "no key given"}, status_code=400)
+    if MOCK_MODE:
+        return JSONResponse({"error": "key validation is unavailable in mock mode"},
+                            status_code=409)
     # Imported here and never at module scope: tests/test_smoke.py asserts the
     # SDK is absent from sys.modules while mock mode is up, which is what keeps
     # the README's "no network call is possible" claim honest.
     import anthropic
     try:
-        anthropic.Anthropic(api_key=key).messages.create(
+        metering.wrap(anthropic.Anthropic(api_key=key)).messages.create(
             model=VALIDATE_MODEL,
             max_tokens=1,
             messages=[{"role": "user", "content": "hi"}],
         )
+    except caps.CapExceeded as exc:
+        return _refused(exc)
     except Exception as exc:
         # Broad on purpose. A bad key, a revoked key, an empty account and a
         # machine with no network all fail differently and all belong on
@@ -923,6 +928,7 @@ def validate_key(body: ValidateKeyIn):
 
 
 DEMO_INSTALLER = Path(__file__).parent / "seed_corpus" / "import_seed_corpus.py"
+_DEMO_LOCK = threading.Lock()
 
 
 def _embedder_cached():
@@ -967,6 +973,15 @@ def _demo_built() -> bool:
 
 @app.post("/api/setup/install-demo")
 def install_demo():
+    if not _DEMO_LOCK.acquire(blocking=False):
+        return JSONResponse({"error": "the demo is already being rebuilt"}, status_code=409)
+    try:
+        return _install_demo()
+    finally:
+        _DEMO_LOCK.release()
+
+
+def _install_demo():
     """Build the demo journal, so reaching it never needs a terminal.
 
     A child process rather than an import, and the reason is not style. The
@@ -1442,26 +1457,23 @@ def restart_server(body: RestartIn | None = None):
             status_code=501)
 
     if into == "seed":
-        # Every arrival is the pristine opening state: the open 9/15-9/17
-        # session and the pending candidate. The demo invites a close, and a
-        # visitor who takes it -- or discards the chat -- would otherwise
-        # spend the demo for everyone after them until someone ran
-        # reset_demo_state.py from a terminal. The tradeoff: what a visitor
-        # writes survives only until they leave and come back.
-        #
-        # Done here, in the process that is leaving, rather than in the
-        # child's startup: a failure can still be reported to the caller,
-        # and it runs before any child has the install open. The same three
-        # files the script restores, imported rather than copied, so the two
-        # cannot drift. Never chroma, entries or entity data.
+        # The demo must be closed before its complete dataset is rebuilt.
+        if SEED_INSTANCE:
+            return JSONResponse({"error": "restart back to your own journal first"},
+                                status_code=409)
         from seed_corpus import reset_demo_state
+        if not _DEMO_LOCK.acquire(blocking=False):
+            return JSONResponse({"error": "the demo is already being rebuilt"}, status_code=409)
         try:
-            reset_demo_state.restore(SEED_ROOT)
-        except OSError as e:
+            with _busy():
+                reset_demo_state.restore(SEED_ROOT)
+        except (OSError, subprocess.TimeoutExpired) as e:
             return JSONResponse(
                 {"error": f"could not reset the demo to its opening state: "
                           f"{e}"},
                 status_code=500)
+        finally:
+            _DEMO_LOCK.release()
 
     RESTART["requested"] = True
     RESTART["into"] = into

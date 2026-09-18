@@ -195,17 +195,51 @@ def _fake_install(root: Path):
         encoding="utf-8")
 
 
-def test_restore_puts_the_three_opening_files_back(tmp_path):
-    _fake_install(tmp_path)
-    written = reset_demo_state.restore(tmp_path)
-    assert len(written) == 3
-    for rel in reset_demo_state.COPIES:
-        assert (tmp_path / rel).read_bytes() == \
-            (reset_demo_state.HERE / rel).read_bytes()
+def test_restore_removes_all_visitor_data(tmp_path, monkeypatch):
+    install = tmp_path / "install"
+    built = run_installer(install)
+    assert built.returncode == 0, built.stderr
+    monkeypatch.setattr(reset_demo_state, "INSTALL", install)
+    # Open and close Chroma in a child so Windows releases its file handles.
+    add = subprocess.run([sys.executable, "-c",
+        "import chromadb,sys; c=chromadb.PersistentClient(path=sys.argv[1]); "
+        "c.get_collection('journal_entries').upsert(ids=['private-review'], "
+        "documents=['private visitor writing'], embeddings=[[0.0]*384])",
+        str(install / "chroma_data")], capture_output=True, text=True)
+    assert add.returncode == 0, add.stderr
+    for directory in reset_demo_state.DATA_DIRS.values():
+        folder = install / directory
+        folder.mkdir(exist_ok=True)
+        (folder / "private.txt").write_text("private visitor writing")
+    # A real child rebuilds the index; no parent Chroma handle holds it open.
+    assert reset_demo_state.restore(install) == [install]
+    assert not list(install.rglob("private.txt"))
+    assert (install / "sessions" / "current.json").read_bytes() == SHIPPED.read_bytes()
+    assert (install / "chroma_data" / ".install-complete").is_file()
+    checked = subprocess.run([sys.executable, "-c",
+        "import chromadb,sys; c=chromadb.PersistentClient(path=sys.argv[1]); "
+        "assert not c.get_collection('journal_entries').get(ids=['private-review'])['ids']; "
+        "assert c.get_collection('journal_entries').count() == 29",
+        str(install / "chroma_data")], capture_output=True, text=True)
+    assert checked.returncode == 0, checked.stderr
 
 
-def test_restore_is_a_no_op_with_nothing_installed(tmp_path):
-    assert reset_demo_state.restore(tmp_path) == []
+def test_restore_refuses_other_paths_and_running_demo(tmp_path, monkeypatch):
+    install = tmp_path / "install"
+    _fake_install(install)
+    with pytest.raises(OSError, match="outside"):
+        reset_demo_state.restore(install)
+    monkeypatch.setattr(reset_demo_state, "INSTALL", install)
+    monkeypatch.setattr(server.config, "CHROMA_DIR", install / "chroma_data")
+    with pytest.raises(OSError, match="restart back"):
+        reset_demo_state.restore(install)
+    assert (install / "chroma_data" / "chroma.sqlite3").exists()
+
+
+def test_restore_is_a_no_op_with_nothing_installed(tmp_path, monkeypatch):
+    install = tmp_path / "install"
+    monkeypatch.setattr(reset_demo_state, "INSTALL", install)
+    assert reset_demo_state.restore(install) == []
     assert list(tmp_path.iterdir()) == []
 
 
@@ -215,6 +249,8 @@ def test_restarting_into_the_demo_restores_its_opening_state(
     install = tmp_path / "install"
     _fake_install(install)
     monkeypatch.setattr(server, "SEED_ROOT", install)
+    calls = []
+    monkeypatch.setattr(reset_demo_state, "restore", lambda path: calls.append(path))
     monkeypatch.setitem(server.SERVER, "instance", SimpleNamespace())
     monkeypatch.setitem(server.RESTART, "requested", False)
     monkeypatch.setitem(server.RESTART, "into", "journal")
@@ -222,8 +258,7 @@ def test_restarting_into_the_demo_restores_its_opening_state(
     with TestClient(server.app, base_url=BASE) as client:
         r = client.post("/api/restart", json={"into": "seed"})
     assert r.status_code == 200
-    assert (install / "sessions" / "current.json").read_bytes() == \
-        SHIPPED.read_bytes()
+    assert calls == [install]
 
 
 def test_a_plain_restart_leaves_the_demo_alone(tmp_path, monkeypatch):
