@@ -11,7 +11,7 @@ its _Realm: dream_ marker, then populates:
   - sessions/archive/  (the three closed sessions, both-sided braids)
   - sessions/current.json  (the open session: the days written since the
     last close, not yet closed)
-  - summaries/  (the live seed, its backup, the pending candidate)
+  - summaries/  (the reviewed live seed and its backups)
 
 The session archives and seed summaries are not written here — they are
 produced by build_sessions.py, which chats the corpus through the real
@@ -147,15 +147,14 @@ def import_dream(entry: dict):
 def session_files() -> list[tuple[Path, Path]]:
     """The seed loop's own history, produced by build_sessions.py: three
     closed sessions with both-sided braids, the live seed those closes
-    generated, the seed it replaced, and the candidate still awaiting
-    review. Copied as-is — none of it is regenerated at import.
+    generated and Jordan reviewed, and the seeds it replaced.
+    Copied as-is — none of it is regenerated at import.
 
     current.json ships too, and it is not empty. The demo opens three days
-    *after* the 9/14 close: the close produced the pending candidate, and
-    Jordan kept writing without closing again, so the open session holds
-    9/15-9/17 as messages with an empty base. One coherent state -- a week in
-    progress, the candidate still pending -- rather than the one moment in
-    the workflow with nothing on screen. Messages rather than base because
+    *after* the 9/14 close: Jordan reviewed and uploaded that summary before
+    writing the 9/15-9/17 entries, so they have the latest seed's context.
+    No candidate awaits review. The open session holds those entries as
+    messages with an empty base. Messages rather than base because
     only messages count as new material: a base-only session cannot be
     closed, and closing is what the demo invites.
 
@@ -168,7 +167,7 @@ def session_files() -> list[tuple[Path, Path]]:
              (here / "summaries" / "seed_backups",
               SUMMARY_DIR / "seed_backups")]
     files = [(here / "summaries" / n, SUMMARY_DIR / n)
-             for n in ("seed_summary.md", "seed_summary.candidate.md")]
+             for n in ("seed_summary.md",)]
     files.append((here / "sessions" / "current.json",
                   SESSION_DIR / "current.json"))
 

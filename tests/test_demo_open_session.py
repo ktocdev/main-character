@@ -31,6 +31,7 @@ sys.path.insert(0, str(ROOT))
 import env_file
 import server
 import sessions
+import seed
 from seed_corpus import reset_demo_state
 
 BASE = "http://127.0.0.1:8144"
@@ -160,6 +161,16 @@ def test_the_advertised_entry_count_is_unchanged(installed):
     """/api/status reports the chroma count. The open week must not move it:
     29 before these entries existed, 29 now."""
     assert installed.client.get_collection("journal_entries").count() == 29
+
+
+def test_open_week_has_the_latest_seed_loaded_and_no_pending_candidate(installed, monkeypatch):
+    summaries = installed.root / "summaries"
+    monkeypatch.setattr(seed, "SEED_FILE", summaries / "seed_summary.md")
+    monkeypatch.setattr(seed, "CANDIDATE_FILE", summaries / "seed_summary.candidate.md")
+    assert "Updated September 14, 2026" in seed.load_seed()
+    assert not seed.status()["candidate_exists"]
+    assert any("Updated August 25, 2026" in p.read_text(encoding="utf-8")
+               for p in (summaries / "seed_backups").glob("*.md"))
 
 
 def test_reinstalling_over_an_untouched_demo_is_not_refused(installed):
