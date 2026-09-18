@@ -6,6 +6,7 @@ export function addMsg(cls, text) {
   const d = document.createElement('div');
   d.className = 'msg ' + cls;
   d.textContent = text;
+  $('write-first-run')?.remove();   // see maybeFirstRun in write.js
   $('write-log').appendChild(d);
   $('write-log').scrollTop = $('write-log').scrollHeight;
   return d;

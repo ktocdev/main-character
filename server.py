@@ -1441,6 +1441,28 @@ def restart_server(body: RestartIn | None = None):
                       "way you started it"},
             status_code=501)
 
+    if into == "seed":
+        # Every arrival is the pristine opening state: the open 9/15-9/17
+        # session and the pending candidate. The demo invites a close, and a
+        # visitor who takes it -- or discards the chat -- would otherwise
+        # spend the demo for everyone after them until someone ran
+        # reset_demo_state.py from a terminal. The tradeoff: what a visitor
+        # writes survives only until they leave and come back.
+        #
+        # Done here, in the process that is leaving, rather than in the
+        # child's startup: a failure can still be reported to the caller,
+        # and it runs before any child has the install open. The same three
+        # files the script restores, imported rather than copied, so the two
+        # cannot drift. Never chroma, entries or entity data.
+        from seed_corpus import reset_demo_state
+        try:
+            reset_demo_state.restore(SEED_ROOT)
+        except OSError as e:
+            return JSONResponse(
+                {"error": f"could not reset the demo to its opening state: "
+                          f"{e}"},
+                status_code=500)
+
     RESTART["requested"] = True
     RESTART["into"] = into
     srv.should_exit = True      # uvicorn drains, run() returns, __main__ execs
