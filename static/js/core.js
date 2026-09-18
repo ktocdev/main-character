@@ -47,6 +47,13 @@ export async function refreshStatus() {
   $('app-banner').textContent = s.seed_instance
     ? 'demo journal — sample entries, and the replies are canned. Restart to go back to yours.'
     : 'mock mode — replies are canned, not from Claude. No API calls are being made.';
+  // A server too old to report this sends nothing; `!== false` reads that
+  // as configured rather than as a fresh clone, so the wizard cannot open
+  // over a journal that has been working for months.
+  state.configured = s.configured !== false;
+  state.demoBuilt = s.demo_built !== false;
+  state.embedderCached = s.embedder_cached === undefined
+    ? null : s.embedder_cached;
   if (s.date_style) state.dateStyle = s.date_style;
   // The server owns the clock and reads stamps back in *its* zone
   // (config.parse_stamp), so a browser in another zone would write a wall
@@ -59,6 +66,69 @@ export async function refreshStatus() {
   }
   if (s.tz) state.tz = s.tz;
 }
+// Build the demo journal if it is not there yet (Phase 3 item 5).
+//
+// Shared by the wizard's demo door and Settings' "load demo journal", which
+// both used to dead-end on a 409 telling the reader to go and run a command
+// in a terminal -- the one place a first-run flow cannot follow them. The
+// server does the building; this is the waiting and the saying so.
+//
+// `report(text, kind)` renders progress wherever the caller shows messages,
+// because the two callers write into different elements with different class
+// vocabularies. Returns whether the demo is now ready to restart into.
+// How long building the demo will take, as a fragment the three places that
+// mention it can drop into their own sentence. One source, because they used
+// to disagree, and because the estimate is the part most likely to change.
+//
+// The reason there is more than one answer: chroma fetches its embedding
+// model (about 90MB) at the first embed on the machine, not at install and
+// not per journal. From the wizard that is almost always this build, since a
+// fresh clone has embedded nothing yet. From Settings it usually is not,
+// because writing a single entry already paid for it. Saying which one the
+// reader is in beats listing both and leaving them to work it out.
+export function demoBuildWait() {
+  if (state.embedderCached === false) {
+    return 'a few minutes, while the 90MB embedding model downloads '
+      + '(once per machine, not once per journal)';
+  }
+  if (state.embedderCached === true) return 'around twenty seconds';
+  return 'around twenty seconds, or a few minutes if the embedding model '
+    + 'still has to download';
+}
+
+export async function installDemo(report) {
+  const started = Date.now();
+  let timer = null;
+  // Nothing on screen for the first beat. An already-built demo answers in
+  // about a millisecond, and a "building…" line flashing past would be a
+  // claim about work that never happened. Past that, the elapsed count is
+  // the only honest progress available: the build is a child process with
+  // no channel back, so a bar would be inventing a fraction it cannot know.
+  const hold = setTimeout(() => {
+    const tick = () => report('building the demo journal — 30 entries, '
+      + 'embedded on this machine (' + Math.round((Date.now() - started) / 1000)
+      + 's). Expect ' + demoBuildWait() + '.');
+    tick();
+    timer = setInterval(tick, 1000);
+  }, 400);
+  try {
+    const res = await fetch('/api/setup/install-demo', {method: 'POST'});
+    const body = await res.json();
+    if (!res.ok || body.error) throw new Error(body.error || 'it did not finish');
+    state.demoBuilt = true;
+    // Only when something was actually built: on the trips after the first
+    // there is nothing to announce, and the restart says its own piece next.
+    if (body.built) report('demo journal built. Opening it…');
+    return true;
+  } catch (e) {
+    report('Could not build the demo — ' + (e.message || e), 'error');
+    return false;
+  } finally {
+    clearTimeout(hold);
+    if (timer) clearInterval(timer);
+  }
+}
+
 export async function api(url, payload) {
   const res = await fetch(url, {
     method: 'POST', headers: {'Content-Type': 'application/json'},

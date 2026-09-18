@@ -7,7 +7,7 @@ process environment, python-dotenv puts .env into it at import, and this
 module is what edits the file in place without disturbing anything it
 doesn't recognize.
 
-Three properties matter more than convenience here:
+Four properties matter more than convenience here:
 
   - Comments and unknown keys survive. A cloner's hand-added
     ANTHROPIC_BASE_URL, a commented-out experiment, the blank lines that
@@ -19,6 +19,10 @@ Three properties matter more than convenience here:
   - A value can never introduce a second assignment. Newlines are refused
     outright: without that, writing one whitelisted key is enough to append
     any other — the exact escape the server's whitelist exists to prevent.
+  - The file is left mode 0600 on POSIX. It holds the API key, and the
+    onboarding wizard (Phase 3 item 5) creates it from nothing on a fresh
+    clone — so the permissions are this module's to get right, not the
+    author's to remember.
 
 Nothing here re-reads values into the running process. The app loads .env
 once at import, so a save takes effect on the next start; the caller is
@@ -151,6 +155,18 @@ def update_env(changes: dict[str, str], path: Path | None = None) -> list[str]:
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
             f.write(text)
+        # 0600 before the replace, not after: this file holds the API key, and
+        # a chmod on the far side of the rename leaves a window where it is
+        # readable. mkstemp already creates at 0600, so this mostly restates
+        # what is already true -- but the guarantee is the point, and a
+        # `path.write_text()` "simplification" here would silently drop it.
+        # A near no-op on Windows, where the ACL and not the mode bit is what
+        # actually protects the file; it is the POSIX case this is for.
+        try:
+            os.chmod(tmp, 0o600)
+        except OSError:
+            pass          # a filesystem that won't take a mode is not a reason
+                          # to refuse the save -- the write itself still stands
         os.replace(tmp, path)
     except BaseException:
         Path(tmp).unlink(missing_ok=True)

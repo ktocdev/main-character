@@ -88,7 +88,13 @@ STATE = {
 
 @app.on_event("startup")
 def startup():
-    STATE["client"] = get_client()
+    # No key and not mock: boot anyway, with no client, so the onboarding
+    # wizard has something to load into. The SDK raises at construction when
+    # the key is missing, so building it here is what used to take a fresh
+    # clone down before it could ever ask for one -- the first-run experience
+    # was a stack trace in a terminal. Everything else still loads: the data
+    # dirs are empty on a first run, which is a state the app already handles.
+    STATE["client"] = get_client() if config.is_configured() else None
     STATE["collection"] = get_collection()
     STATE["entity_index"] = companion.load_entity_index()
     # the open session survives restarts — rebuild the conversation from it
@@ -218,11 +224,23 @@ def status():
         # drives the UI banner — a canned reply must never be mistaken for
         # a real one
         "mock": MOCK_MODE,
+        # False on a fresh clone with no key: the first-run wizard opens over
+        # the app instead of letting someone write into a journal that cannot
+        # answer. Read live rather than frozen at startup, so the restart that
+        # follows the wizard's save reports the truth.
+        "configured": config.is_configured(),
         # ...and a demo journal must never be mistaken for the author's own.
         # The seed instance is also mock, so the UI shows one bar for both:
         # its wording covers the canned replies, and the fact that has to
         # land is that the entries belong to someone else.
         "seed_instance": SEED_INSTANCE,
+        # Whether the demo is already on disk. Only the first trip there pays
+        # to build its index, so this is what lets the wizard and Settings
+        # mention that wait exactly once instead of every time.
+        "demo_built": _demo_built(),
+        # ...and whether that build also has a 90 MB model download in
+        # front of it. True, False, or null when it cannot be told.
+        "embedder_cached": _embedder_cached(),
         # the server owns the clock; the client stamps against this
         "now": _now_stamp(),
         "tz": zone_name(),
@@ -266,8 +284,28 @@ def _too_long(text: str):
         status_code=413)
 
 
+def _unconfigured():
+    """A 409 for the routes that need a client, when there isn't one.
+
+    Reached only when the journal booted with no key (see `startup`). The
+    wizard covers the screen at that point, so nothing in the UI can get
+    here -- this is what a stray fetch, an old tab left open across the
+    setup, or a script gets instead of the AttributeError it would
+    otherwise pull out of `STATE["client"]` being None.
+    """
+    if STATE["client"] is not None:
+        return None
+    return JSONResponse(
+        {"error": "this journal has no API key yet -- finish setting it up "
+                  "first. Reload the page to pick up where you left off."},
+        status_code=409)
+
+
 @app.post("/api/chat")
 def chat(body: ChatIn):
+    unset = _unconfigured()
+    if unset:
+        return unset
     oversize = _too_long(body.message)
     if oversize:
         return oversize
@@ -295,6 +333,9 @@ def lookup(body: ChatIn):
     """The chat screen: pull information out of the journal. Its own
     conversation, separate from the journal companion — lookups never
     join the open session and never become journal memory."""
+    unset = _unconfigured()
+    if unset:
+        return unset
     oversize = _too_long(body.message)
     if oversize:
         return oversize
@@ -473,6 +514,13 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
                 collection=STATE["collection"])
         return {"ok": True, "entry_id": entry_id, "no_reply": True}
 
+    # Past the no_reply branch above on purpose: a no-reply save makes no
+    # Claude call, so it needs no client and stays available. Only the reply
+    # path below does.
+    unset = _unconfigured()
+    if unset:
+        return unset
+
     # Before anything is written. Saving the entry and then refusing the reply
     # would leave the journal holding an entry the author was told failed --
     # and the composer restores the draft on failure, so refusing here loses
@@ -558,6 +606,9 @@ def extract_dreams(body: CategoryBuildIn):
 @app.post("/api/reflect")
 def reflect():
     """The companion opens the conversation: connects dots across time."""
+    unset = _unconfigured()
+    if unset:
+        return unset
     try:
         caps.check()
     except caps.CapExceeded as exc:
@@ -772,6 +823,203 @@ def cost():
         # never written in mock mode; see caps.record_spend.)
         "mock": config.MOCK_MODE,
     }
+
+
+# ---------------------------------------------------------------------------
+# SETUP — the first-run wizard
+# ---------------------------------------------------------------------------
+# Phase 3 item 5. What a fresh clone lands on when there is no .env: the app
+# boots with no client (see `startup`), /api/status reports configured:false,
+# and the browser covers everything with the wizard until a key is in place.
+# It replaces editing .env blind, which was the only documented way in.
+#
+# The wizard *writes* through the settings route below rather than through a
+# second writer of its own -- the whitelist, the atomic write and the 0600 are
+# all already there, and a second path to the same file is a second path to
+# get wrong. The one thing it needs that does not already exist is a way to
+# find out whether a key works before committing it, which is this route.
+
+
+class ValidateKeyIn(BaseModel):
+    key: str
+
+
+# The cheapest real call the API sells: the smallest model, one token of
+# output, a one-word prompt. Deliberately a completion and not a cheaper
+# auth-only ping -- a key can be well-formed and still be revoked, mistyped,
+# or attached to an account with no credit left, and the last of those only
+# shows up when something actually asks for tokens. Finding that out here
+# costs a fraction of a cent; finding it out later costs the author their
+# first entry.
+VALIDATE_MODEL = "claude-haiku-4-5"
+
+
+def _readable(exc: BaseException) -> str:
+    """The most human sentence the SDK will give up about a failure.
+
+    An APIStatusError stringifies to `Error code: 401 - {'type': 'error',
+    'error': {...}, 'request_id': ...}` -- the whole response dict, which is
+    the right thing in a log and the wrong thing under a text field on a
+    stranger's first screen. The structured body carries exactly one sentence
+    worth reading ("invalid x-api-key", "your credit balance is too low"), so
+    prefer that and keep the full text only when there is no better one.
+    """
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        inner = body.get("error")
+        if isinstance(inner, dict) and inner.get("message"):
+            return str(inner["message"])
+    return str(exc)
+
+
+def _without(secret: str, message: str) -> str:
+    """The API's own words, with the key taken back out if they hold it.
+
+    Item 5's rule is one-directional: the key goes in and never comes back.
+    An error message is the one plausible way back out, so it is filtered
+    rather than trusted -- not because anything is known to echo it, but
+    because a failed attempt is the only path here that gets to say anything
+    at all.
+    """
+    return message.replace(secret, "<the key you entered>") if secret else message
+
+
+@app.post("/api/setup/validate-key")
+def validate_key(body: ValidateKeyIn):
+    """Does this key actually work? Answered by spending as close to nothing
+    as a real call can.
+
+    A failed validation is a 200 carrying `ok: false`, not a 4xx: the route
+    did its job and the verdict *is* the result. The wizard renders the reason
+    under the field rather than in an alert, which is also why the API's own
+    message is passed through -- "invalid x-api-key" and "your credit balance
+    is too low" send someone to two different places, and a flattened "that
+    key did not work" sends them to neither.
+
+    The key arrives here and goes no further: not written, not logged, not
+    echoed back. The client is built straight from it rather than through
+    config.get_client(), which would read mock mode and the .env that does
+    not exist yet.
+    """
+    key = (body.key or "").strip()
+    if not key:
+        return JSONResponse({"error": "no key given"}, status_code=400)
+    # Imported here and never at module scope: tests/test_smoke.py asserts the
+    # SDK is absent from sys.modules while mock mode is up, which is what keeps
+    # the README's "no network call is possible" claim honest.
+    import anthropic
+    try:
+        anthropic.Anthropic(api_key=key).messages.create(
+            model=VALIDATE_MODEL,
+            max_tokens=1,
+            messages=[{"role": "user", "content": "hi"}],
+        )
+    except Exception as exc:
+        # Broad on purpose. A bad key, a revoked key, an empty account and a
+        # machine with no network all fail differently and all belong on
+        # screen -- the wizard cannot act on any of them, but the author can.
+        return {"ok": False, "error": _without(key, _readable(exc))}
+    return {"ok": True}
+
+
+DEMO_INSTALLER = Path(__file__).parent / "seed_corpus" / "import_seed_corpus.py"
+
+
+def _embedder_cached():
+    """Whether the local embedding model is already on this machine.
+
+    Chroma downloads all-MiniLM-L6-v2 (about 90 MB) on the first embed it is
+    ever asked for -- not at startup, not when a collection is opened -- and
+    caches it under the *user's* home rather than the project. So it is paid
+    once per machine, by whatever embeds first. For someone who clones the
+    repo and looks at the demo before writing anything, that is the demo
+    build, which turns twenty seconds into a few minutes. Reported only so
+    the two doors into the demo can name the wait they are about to impose
+    instead of listing both possibilities and leaving the reader to guess
+    which one they are in.
+
+    The path is read off the embedding function's own class attributes, so a
+    chroma release that moves its cache moves this with it. None when the
+    class cannot be found at all -- a rough estimate is a small thing to get
+    wrong, a confident wrong one is not, and None is what the UI falls back
+    to its hedged wording on.
+    """
+    try:
+        from chromadb.utils.embedding_functions.onnx_mini_lm_l6_v2 import (
+            ONNXMiniLM_L6_V2 as ef)
+        return (Path(ef.DOWNLOAD_PATH) / ef.EXTRACTED_FOLDER_NAME
+                / "model.onnx").exists()
+    except Exception:
+        return None
+
+
+def _demo_built() -> bool:
+    """Whether the demo journal has been installed yet.
+
+    The database file rather than the directory: an interrupted build leaves
+    the folder behind. Reported by /api/status so the UI can warn about the
+    build standing in front of the first trip to the demo -- and say nothing
+    about it on every trip after, which is the whole point of asking.
+    """
+    return (SEED_ROOT / "chroma_data" / "chroma.sqlite3").exists()
+
+
+@app.post("/api/setup/install-demo")
+def install_demo():
+    """Build the demo journal, so reaching it never needs a terminal.
+
+    A child process rather than an import, and the reason is not style. The
+    installer points the eight data dirs at seed_corpus/install/ at *module
+    import time*, before it imports config -- because config freezes its
+    constants at import. In this process config was imported long ago, aimed
+    at the author's own journal, so importing the installer here would write
+    30 fictional entries straight into their real entries. A fresh
+    interpreter is what makes the redirect work at all, and it keeps the
+    installer's own guards (refuse_if_real_journal) running somewhere they
+    can still see the truth. The restart route spawns itself the same way and
+    for a related reason.
+
+    Nothing user-supplied reaches the command line: the argv is a fixed list.
+    """
+    if SEED_INSTANCE:
+        # The running demo holds its own Chroma files open. A rebuild from
+        # inside it deletes the markdown out from under the journal being
+        # read while the locked index survives -- leaving 29 entries on the
+        # status line with nothing behind them. Found the hard way.
+        return JSONResponse(
+            {"error": "the demo journal is what is running -- restart back "
+                      "to your own journal first, then rebuild it."},
+            status_code=409)
+
+    if _demo_built():
+        return {"ok": True, "built": False}
+
+    with _busy():
+        try:
+            done = subprocess.run(
+                [sys.executable, str(DEMO_INSTALLER), "--demo"],
+                cwd=str(Path(__file__).parent),
+                capture_output=True, text=True, timeout=900,
+            )
+        except subprocess.TimeoutExpired:
+            return JSONResponse(
+                {"error": "building the demo ran past fifteen minutes and "
+                          "was stopped. Run `python "
+                          "seed_corpus/import_seed_corpus.py --demo` in a "
+                          "terminal to see where it is getting stuck."},
+                status_code=504)
+
+    if done.returncode != 0:
+        # The installer's refusals are one useful line on stderr (it is the
+        # same script a person would run by hand), so pass the last one
+        # through rather than a generic failure -- "refusing to install over
+        # a journal I did not ship" is a sentence someone can act on.
+        output = (done.stderr or done.stdout or "").strip().splitlines()
+        return JSONResponse(
+            {"error": "the demo could not be built: "
+                      + (output[-1] if output else "no output")},
+            status_code=500)
+    return {"ok": True, "built": True}
 
 
 # ---------------------------------------------------------------------------

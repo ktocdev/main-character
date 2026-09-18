@@ -15,6 +15,7 @@ import * as patterns from './patterns.js';
 import * as settings from './settings.js';
 import * as cost from './cost.js';
 import * as help from './help.js';
+import * as wizard from './wizard.js';
 
 // ---- tabs ----
 // Categories came back with Phase 3 (entries split by date, 2026-07-11).
@@ -63,4 +64,14 @@ help.init();
 // default and the dates quietly disagree with Settings. A status hiccup must
 // not cost the author their session view, hence the catch.
 await refreshStatus().catch(() => {});
-write.loadWriteLog();  // restore the open session on page load
+
+// A journal with no API key yet (a fresh clone, no .env) gets the first-run
+// wizard over the top of the app instead of the write screen. `configured`
+// defaults to true and a failed status leaves it that way, so the wizard can
+// only open on a journal that actually said it needs setting up -- opening it
+// over a working journal would be the worse failure of the two.
+if (state.configured) {
+  write.loadWriteLog();  // restore the open session on page load
+} else {
+  wizard.open();
+}

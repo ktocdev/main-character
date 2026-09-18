@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, esc } from './core.js';
+import { $, esc, installDemo, demoBuildWait } from './core.js';
+import { state } from './state.js';
 
 // ---- settings ----
 // A UI over .env. Nothing here changes the running process: the app reads
@@ -508,7 +509,11 @@ async function instanceId() {
   }
 }
 
-async function restartServer(note, saved = true, into = 'journal') {
+// Exported for the first-run wizard, which ends on the same restart this
+// does. The instance-id poll below is the subtle part -- uvicorn keeps
+// serving while it drains, so "the server answered" is not evidence the
+// restart happened -- and a second copy of it would drift from this one.
+export async function restartServer(note, saved = true, into = 'journal') {
   note.className = 'set-note';
   note.textContent = 'restarting to apply…';
   const before = await instanceId();
@@ -752,10 +757,25 @@ async function loadSeed() {
     btn.disabled = false;
     return;
   }
+  // Only the first trip builds anything, so this is said once. In the
+  // dialog rather than only during the wait: a pause someone agreed to
+  // reads as the program working, and the same pause unannounced reads
+  // as the program stuck.
+  const build = state.demoBuilt ? '' :
+    '\n\nThe first trip there builds its search index: '
+    + demoBuildWait() + '. After that, switching is instant.';
   if (!confirm('Restart on the demo journal?\n\nIt has its own entries, '
       + 'entities and summaries \u2014 nothing you do there touches yours. '
-      + 'Any restart brings you back.')) return;
+      + 'Any restart brings you back.' + build)) return;
   btn.disabled = true;
+  // Built on demand when it is missing. Until this, the button's whole
+  // failure mode was a 409 naming a command to go and run -- a fine thing
+  // for a log to say and a poor thing for a button to do.
+  const ready = await installDemo((text, kind) => {
+    note.className = kind === 'error' ? 'set-note error' : 'set-note';
+    note.textContent = text;
+  });
+  if (!ready) { btn.disabled = false; return; }
   await restartServer(note, false, 'seed');
   btn.disabled = false;
 }
