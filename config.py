@@ -357,6 +357,26 @@ def parse_stamp(text: str) -> datetime | None:
 # ---------------------------------------------------------------------------
 
 
+def is_configured() -> bool:
+    """Whether this journal has what it needs to talk to Claude.
+
+    Read as "can get_client() succeed?" — the SDK raises at *construction*
+    when no key is present, so a fresh clone with no .env would otherwise
+    take the server down on startup before anything could ask the author
+    for one. `server.startup()` checks this before building the client, and
+    /api/status reports it so the first-run wizard knows to open.
+
+    A function rather than a constant because both callers want the truth
+    now: a key written by the wizard lands in .env, and the restart that
+    follows is what makes it true for the next process.
+
+    Mock mode counts as configured. It never constructs the SDK at all, so
+    it needs no key -- and the demo instance runs mock, which is what keeps
+    the wizard from opening over a journal that is working fine.
+    """
+    return MOCK_MODE or bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
+
+
 def get_client():
     """The single construction point for the Anthropic client.
 

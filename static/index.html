@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="/static/css/history.css">
 <link rel="stylesheet" href="/static/css/help.css">
 <link rel="stylesheet" href="/static/css/settings.css">
+<link rel="stylesheet" href="/static/css/wizard.css">
 <script>
   // Apply a pinned theme before first paint, so a choice that differs from the
   // OS setting doesn't flash the wrong palette for the moment before the app's
@@ -29,6 +30,19 @@
 </script>
 </head>
 <body>
+<!-- First run (Phase 3 item 5): when /api/status reports this journal has no
+     API key yet, main.js unhides this and wizard.js fills it. It covers the
+     app rather than sitting beside it -- a journal with no key has nothing to
+     show and nothing to write into. Empty and hidden until then, so a
+     configured journal never pays for it. -->
+<div id="setup-wizard" hidden>
+  <div id="wizard-card">
+    <div id="wizard-steps"></div>
+    <div id="wizard-body"></div>
+    <p id="wizard-note" class="wiz-note"></p>
+  </div>
+</div>
+
 <!-- One banner for both non-live states; text + tone set in core.js from
      /api/status. Demo is the louder tone (see base.css). -->
 <div id="app-banner"></div>

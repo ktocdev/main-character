@@ -1,0 +1,246 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* The first-run wizard (Phase 3 item 5).
+
+   An overlay rather than a tab: a journal with no key has nothing to show and
+   nothing to write into, so the app underneath is not a thing to be beside.
+   It covers everything, including the header nav, until a key is in place.
+
+   Everything here is built from the same tokens as the rest of the app, so
+   the first screen a stranger sees is recognizably the same program as the
+   one behind it -- and both themes come along for free. */
+
+#setup-wizard {
+  position: fixed;
+  inset: 0;
+  z-index: 100;              /* over the header, the banner and the popovers */
+  background: var(--bg);
+  overflow-y: auto;          /* the category step is the tall one */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-8) var(--space-6);
+}
+
+#setup-wizard[hidden] { display: none; }
+
+/* The app keeps rendering underneath; this stops it scrolling behind the
+   overlay on the steps that are taller than the window. */
+body.setting-up { overflow: hidden; }
+
+#wizard-card {
+  width: 100%;
+  max-width: 34rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  margin: auto 0;
+}
+
+/* ---- the step rail ---- */
+
+#wizard-steps {
+  display: flex;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--font-2xs);
+  letter-spacing: .04em;
+  text-transform: lowercase;
+  color: var(--text-dim);
+  margin-bottom: var(--space-7);
+}
+
+.wiz-step {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+}
+
+.wiz-step.at {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+.wiz-step.done { color: var(--text-dim); opacity: .7; }
+
+/* ---- content ---- */
+
+#wizard-body h2 {
+  font-family: var(--font-ui);
+  font-size: var(--font-xl);
+  margin: 0 0 var(--space-4);
+  color: var(--text);
+}
+
+.wiz-sub {
+  font-family: var(--font-ui);
+  font-size: var(--font-md);
+  margin: var(--space-7) 0 var(--space-2);
+  color: var(--text);
+}
+
+.wiz-lede {
+  margin: 0 0 var(--space-7);
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.wiz-help, .wiz-aside {
+  font-family: var(--font-ui);
+  font-size: var(--font-xs);
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: var(--space-3) 0 0;
+}
+
+.wiz-aside {
+  margin-top: var(--space-8);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.wiz-warn {
+  font-family: var(--font-ui);
+  font-size: var(--font-xs);
+  color: var(--accent);
+  line-height: 1.5;
+  margin: var(--space-3) 0 0;
+}
+
+.wiz-label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: var(--font-sm);
+  color: var(--text);
+  margin-bottom: var(--space-2);
+}
+
+#wizard-body input[type="text"],
+#wizard-body input[type="password"],
+#wizard-body select {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-ui);
+  font-size: var(--font-base);
+}
+
+#wizard-body input:focus, #wizard-body select:focus {
+  outline: none;
+  border-color: var(--accent-dim);
+}
+
+.wiz-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-7);
+}
+
+/* ---- the three doors ---- */
+/* Stacked rather than in a row: they are not equal choices, and a row would
+   read as if they were. "start writing" is the ordinary path. */
+
+.wiz-doors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: stretch;
+  margin: var(--space-7) 0 0;
+}
+
+.wiz-doors button {
+  width: 100%;
+  padding: var(--space-4);
+  font-size: var(--font-base);
+}
+
+/* ---- categories ---- */
+
+#wizard-body .wiz-check {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  font-family: var(--font-ui);
+  font-size: var(--font-xs);
+  color: var(--text-dim);
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.wiz-check input { accent-color: var(--accent); flex: none; }
+.wiz-check strong { color: var(--text); font-weight: 600; }
+
+.wiz-newcat {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-3);
+}
+
+#wizard-body .wiz-newcat input { flex: 1 1 auto; }
+.wiz-newcat button { flex: none; }
+
+.wiz-customrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--font-xs);
+  color: var(--text);
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* ---- import instructions ---- */
+
+.wiz-list {
+  font-family: var(--font-ui);
+  font-size: var(--font-xs);
+  color: var(--text-dim);
+  line-height: 1.6;
+  padding-left: 1.2rem;
+  margin: 0;
+}
+
+.wiz-cmd {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  margin: var(--space-4) 0 0;
+  overflow-x: auto;
+  font-size: var(--font-xs);
+  color: var(--text);
+}
+
+/* ---- the status line ---- */
+/* Carries both the wizard's own messages and, during the closing restart,
+   settings.js's -- which sets `set-note` / `set-note error` on whatever
+   element it is handed, so both vocabularies are styled here. */
+
+#wizard-note {
+  font-family: var(--font-ui);
+  font-size: var(--font-xs);
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin: var(--space-5) 0 0;
+  min-height: 1.2em;         /* no reflow when a message appears */
+}
+
+#wizard-note.error, #wizard-note.set-note.error { color: var(--error); }
+#wizard-note.warn { color: var(--accent); }
+
+@media (max-width: 40rem) {
+  #setup-wizard { padding: var(--space-5) var(--space-3); }
+  #wizard-card { padding: var(--space-6); }
+  .wiz-newcat { flex-wrap: wrap; }
+}
