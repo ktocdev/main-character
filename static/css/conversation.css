@@ -32,6 +32,9 @@
   /* Write + chat logs */
   #entities-pane h2 { font-weight: normal; font-style: italic; font-size: var(--font-md); color: var(--text-dim); margin-bottom: var(--space-6); }
   #write-log, #chat-log { flex: 1; overflow-y: auto; padding: var(--space-8); max-width: 46rem; margin: 0 auto; width: 100%; }
+  /* a new journal's empty write screen: one quiet note, gone at the first entry */
+  #write-first-run { color: var(--text-dim); font-size: var(--font-sm); line-height: 1.6; max-width: 34rem; margin: 20vh auto 0; text-align: center; }
+  #write-first-run p + p { margin-top: var(--space-3); }
   .write-composer { flex-direction: column; gap: var(--space-3); }
   /* height is set inline by autosizeEntry (item 4: grow to fill the viewport,
      then scroll). This is only the backstop if that JS hasn't run yet. */

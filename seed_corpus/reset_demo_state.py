@@ -1,60 +1,55 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
+"""Rebuild all demo data, only while the demo is stopped.
+
+Visitor entries, archives, embeddings, derived data and backups are removed
+before reinstalling the shipped corpus. The real journal is never a target.
 """
-Reset the installed demo (seed instance) to its pristine opening state.
-
-Restores three files from the seed-corpus source of truth into the live
-install (seed_corpus/install/), so the demo's Write page opens the way it
-ships:
-
-  - sessions/current.json           -> empty session (no open entry)
-  - summaries/seed_summary.md        -> the pre-upload live seed
-  - summaries/seed_summary.candidate.md -> the pending candidate, which is
-                                        what makes the "upload the candidate
-                                        seed" banner appear
-
-Why this is needed: the demo writes into seed_corpus/install/, so using it
-(pasting entries, closing a chat) mutates the open session's `base` and
-retires the pending candidate. That's normal app behaviour, but it means the
-first-run demo state is single-use. Run this to get it back:
-
-    python seed_corpus/reset_demo_state.py
-
-The session and candidate are read per request, so a browser refresh is
-enough to see the reset. (A restart is only needed if you also changed a
-mock fixture, whose responses are cached for the life of the process.)
-"""
-
+import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 INSTALL = HERE / "install"
+DATA_DIRS = {
+    "JOURNAL": "journal_entries", "CHROMA": "chroma_data",
+    "ENTITY": "entity_graph", "SUMMARY": "summaries",
+    "CATEGORY": "categories", "PATTERN": "patterns",
+    "DREAM": "dreams", "SESSION": "sessions",
+}
 
-# (source, destination) — source is the shipped truth, destination is live.
-COPIES = [
-    (HERE / "sessions" / "current.json",
-     INSTALL / "sessions" / "current.json"),
-    (HERE / "summaries" / "seed_summary.md",
-     INSTALL / "summaries" / "seed_summary.md"),
-    (HERE / "summaries" / "seed_summary.candidate.md",
-     INSTALL / "summaries" / "seed_summary.candidate.md"),
-]
+
+def restore(install: Path = INSTALL) -> list[Path]:
+    """Rebuild the designated install; a failed build remains retryable."""
+    install = Path(install).absolute()
+    if install.is_symlink() or install.resolve() != INSTALL.absolute():
+        raise OSError("refusing to reset a path outside the demo install")
+    if not install.exists():
+        return []
+    import config
+    active = [Path(getattr(config, name + "_DIR")).resolve() for name in DATA_DIRS]
+    if any(path == install or install in path.parents for path in active):
+        raise OSError("restart back to your own journal before resetting the demo")
+    env = os.environ.copy()
+    env.update({"MC_MOCK": "1", "MC_AUTHOR_NAME": "Jordan"})
+    env.update({"MC_" + name + "_DIR": str(install / directory)
+                for name, directory in DATA_DIRS.items()})
+    shutil.rmtree(install)
+    done = subprocess.run(
+        [sys.executable, str(HERE / "import_seed_corpus.py")],
+        cwd=str(HERE.parent), env=env, capture_output=True, text=True, timeout=900)
+    if done.returncode:
+        raise OSError("demo rebuild failed; retry loading the demo")
+    return [install]
 
 
 def main() -> None:
-    missing = [src for src, _ in COPIES if not src.exists()]
-    if missing:
-        names = ", ".join(str(m) for m in missing)
-        sys.exit(f"refusing to reset: source file(s) missing: {names}")
-
-    for src, dst in COPIES:
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
-        print(f"  {src.name} -> {dst}")
-
-    print("\ndemo reset to opening state: empty session + pending candidate.")
-    print("refresh the browser to see it (no restart needed).")
+    try:
+        written = restore()
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        sys.exit(f"could not reset demo: {exc}")
+    print("demo fully reset" if written else "no demo installed")
 
 
 if __name__ == "__main__":

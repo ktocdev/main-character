@@ -63,9 +63,14 @@ need a restart.
 
 ## Try it without a key
 
-A demo journal ships with the repo: 30 entries of a fictional life, with the
+A demo journal ships with the repo: seven weeks of a fictional life, with the
 companion's replies pre-recorded. You can see how the app works before deciding
 whether to pay for it.
+
+It opens mid-week, three days after the author last closed a chat. You can read
+the week so far, then press **summarize & close chat** to watch the memory
+pipeline run. Each trip into the demo starts from that same point, so anything
+you write there lasts only until you leave.
 
 ```bash
 python seed_corpus/import_seed_corpus.py --demo   # one-time, no key, free

@@ -68,6 +68,8 @@ SESSIONS = [
      "title": "Lena leaving and the open mic"},
     {"n": 3, "start": "2026-08-27", "end": "2026-09-14",
      "title": "The holding pen and a door"},
+    {"n": 4, "start": "2026-09-15", "end": "2026-09-17",
+     "title": "The waiting week"},
 ]
 
 # when each entry was written. Keyed by filename stem, not date - two
@@ -103,6 +105,9 @@ TIMES = {
     "2026-09-09_Lenas referral": "23:20",
     "2026-09-11_Phone screen with Northlight": "19:50",
     "2026-09-14_Signing the lease": "20:40",
+    "2026-09-15_Rebuilding free play": "21:15",
+    "2026-09-16_Booking the open mic": "22:00",
+    "2026-09-17_Building the presentation": "20:30",
 }
 
 # Entries Jordan keeps talking after, via send rather than save - the
@@ -168,6 +173,20 @@ FOLLOWUPS = {
         "I keep coming back to the fact that I used the feature every day "
         "and Dev saw it in one session. I want to understand what that "
         "actually says about how I design, not just feel bad about it.",
+    ],
+    "2026-09-16_Booking the open mic": [
+        "one more thing about the picks - Dev tried one on the low B "
+        "string and said it changes the attack completely, warmer. and "
+        "then they used it for the rest of practice. Dad would have "
+        "liked that.",
+    ],
+    "2026-09-17_Building the presentation": [
+        "I just went back and read the Coda case study I wrote on the 9th "
+        "and the version I'm putting in the deck is different. better. the "
+        "9th version was honest but defensive - 'I missed this but here's "
+        "why it's not that bad.' the deck version is just 'I missed this "
+        "and here's what I learned.' that's the whole difference and it "
+        "took me eight days to get there.",
     ],
     "2026-09-06_Moms visit": [
         "you're right, I skipped it. what I'd be doing is Coda, or something "

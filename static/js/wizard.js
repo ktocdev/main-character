@@ -96,7 +96,7 @@ function renderKey() {
     '<p class="wiz-aside">No key yet?',
     '  <a href="#" id="wiz-skip">look around the demo journal first</a>',
     '  &mdash; 30 entries of a fictional life, with the replies already',
-    '  recorded. Nothing is saved and nothing is spent.' + buildNote() + '</p>',
+    '  recorded. Nothing is spent. Demo writing is stored locally until the next demo visit, when all demo data is reset.' + buildNote() + '</p>',
   ].join('\n');
 
   const input = $('wiz-key');
@@ -425,7 +425,12 @@ async function finish(into) {
   // restartServer reloads the page itself once a *different* process answers,
   // and the reloaded page finds the journal configured -- so the wizard does
   // not open again.
-  await restartServer(note(), true, into);
+  try {
+    await restartServer(note(), true, into);
+  } finally {
+    // A refusal or timeout leaves this page open and must allow a retry.
+    buttons.forEach(b => { b.disabled = false; });
+  }
 }
 
 // The demo, from the key step, with nothing collected and nothing written.

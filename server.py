@@ -904,16 +904,21 @@ def validate_key(body: ValidateKeyIn):
     key = (body.key or "").strip()
     if not key:
         return JSONResponse({"error": "no key given"}, status_code=400)
+    if MOCK_MODE:
+        return JSONResponse({"error": "key validation is unavailable in mock mode"},
+                            status_code=409)
     # Imported here and never at module scope: tests/test_smoke.py asserts the
     # SDK is absent from sys.modules while mock mode is up, which is what keeps
     # the README's "no network call is possible" claim honest.
     import anthropic
     try:
-        anthropic.Anthropic(api_key=key).messages.create(
+        metering.wrap(anthropic.Anthropic(api_key=key)).messages.create(
             model=VALIDATE_MODEL,
             max_tokens=1,
             messages=[{"role": "user", "content": "hi"}],
         )
+    except caps.CapExceeded as exc:
+        return _refused(exc)
     except Exception as exc:
         # Broad on purpose. A bad key, a revoked key, an empty account and a
         # machine with no network all fail differently and all belong on
@@ -923,6 +928,7 @@ def validate_key(body: ValidateKeyIn):
 
 
 DEMO_INSTALLER = Path(__file__).parent / "seed_corpus" / "import_seed_corpus.py"
+_DEMO_LOCK = threading.Lock()
 
 
 def _embedder_cached():
@@ -956,16 +962,26 @@ def _embedder_cached():
 def _demo_built() -> bool:
     """Whether the demo journal has been installed yet.
 
-    The database file rather than the directory: an interrupted build leaves
-    the folder behind. Reported by /api/status so the UI can warn about the
-    build standing in front of the first trip to the demo -- and say nothing
+    Chroma creates its database before embedding, so only the installer's
+    completion marker proves the build finished. Reported by /api/status so
+    the UI can warn about the build before the first trip -- and say nothing
     about it on every trip after, which is the whole point of asking.
     """
-    return (SEED_ROOT / "chroma_data" / "chroma.sqlite3").exists()
+    return ((SEED_ROOT / "chroma_data" / "chroma.sqlite3").is_file()
+            and (SEED_ROOT / "chroma_data" / ".install-complete").is_file())
 
 
 @app.post("/api/setup/install-demo")
 def install_demo():
+    if not _DEMO_LOCK.acquire(blocking=False):
+        return JSONResponse({"error": "the demo is already being rebuilt"}, status_code=409)
+    try:
+        return _install_demo()
+    finally:
+        _DEMO_LOCK.release()
+
+
+def _install_demo():
     """Build the demo journal, so reaching it never needs a terminal.
 
     A child process rather than an import, and the reason is not style. The
@@ -1408,11 +1424,10 @@ def restart_server(body: RestartIn | None = None):
     if into not in ("journal", "seed"):
         return JSONResponse({"error": f"no such journal: {into}"},
                             status_code=400)
-    if into == "seed" and not (SEED_ROOT / "chroma_data" / "chroma.sqlite3").exists():
-        # Checked for the database file, not just the directory: an
-        # interrupted or half-run capture can leave an empty chroma_data/
-        # behind, and Path.exists() on the bare directory would call that
-        # "installed". Refusing beats booting an empty demo: an author who
+    if into == "seed" and not _demo_built():
+        # An interrupted build can leave a database before any entries are
+        # embedded. Require the completion marker too, as install_demo does.
+        # Refusing beats booting an empty demo: an author who
         # asked for the demo journal and got a blank one has no way to tell
         # that from a broken one.
         return JSONResponse(
@@ -1440,6 +1455,25 @@ def restart_server(body: RestartIn | None = None):
             {"error": "this server cannot restart itself -- restart it the "
                       "way you started it"},
             status_code=501)
+
+    if into == "seed":
+        # The demo must be closed before its complete dataset is rebuilt.
+        if SEED_INSTANCE:
+            return JSONResponse({"error": "restart back to your own journal first"},
+                                status_code=409)
+        from seed_corpus import reset_demo_state
+        if not _DEMO_LOCK.acquire(blocking=False):
+            return JSONResponse({"error": "the demo is already being rebuilt"}, status_code=409)
+        try:
+            with _busy():
+                reset_demo_state.restore(SEED_ROOT)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            return JSONResponse(
+                {"error": f"could not reset the demo to its opening state: "
+                          f"{e}"},
+                status_code=500)
+        finally:
+            _DEMO_LOCK.release()
 
     RESTART["requested"] = True
     RESTART["into"] = into

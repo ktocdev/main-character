@@ -146,8 +146,27 @@ export async function loadWriteLog() {
     const r = await (await fetch('/api/sessions/current')).json();
     for (const p of r.parts) renderSessionPart(el, p, true);
     addSessionBraid(el, r.messages, null, true);
+    if (!r.parts.length && !r.messages.length) await maybeFirstRun(el);
     el.scrollTop = el.scrollHeight;
   } catch (e) { }
+}
+
+// A brand-new journal's write screen is otherwise a blank log. One message,
+// shown only while there is nothing here and nothing has ever been closed,
+// so it goes away on its own: addMsg removes it at the first entry, and a
+// journal with archives never shows it again. No dismissal, nothing stored.
+// Worded with the help tab's own vocabulary so the two agree.
+async function maybeFirstRun(el) {
+  let s;
+  try { s = await (await fetch('/api/sessions')).json(); } catch (e) { return; }
+  if ((s.sessions || []).some(i => i.kind === 'archive')) return;
+  const d = document.createElement('div');
+  d.id = 'write-first-run';
+  d.innerHTML = '<p>This is one open chat, and everything you write here joins it. '
+    + '<b>save entry</b> keeps a journal entry; <b>send</b> talks it over with the companion.</p>'
+    + '<p>Write for about a week, then open the <b>⋯</b> menu and choose '
+    + '<b>summarize &amp; close chat</b> — that is when it all becomes journal memory.</p>';
+  el.appendChild(d);
 }
 
 // The entry's own timestamp. Stamped when the user starts writing, not

@@ -4,10 +4,13 @@ Import the seed corpus into the local data stores.
 
 Reads the markdown entries from journal_entries/ and the dream entry from
 its _Realm: dream_ marker, then populates:
-  - chroma_data/  (journal_entries + journal_dreams collections)
-  - journal_entries/  (markdown backups)
+  - chroma_data/  (journal_entries + journal_dreams collections) -- only
+    entries dated before OPEN_SESSION_FROM; the rest belong to the open
+    session and are never embedded here
+  - journal_entries/  (markdown backups of every entry, open ones included)
   - sessions/archive/  (the three closed sessions, both-sided braids)
-  - sessions/current.json  (the empty session the last close opened)
+  - sessions/current.json  (the open session: the days written since the
+    last close, not yet closed)
   - summaries/  (the live seed, its backup, the pending candidate)
 
 The session archives and seed summaries are not written here — they are
@@ -19,9 +22,10 @@ Usage:
     python seed_corpus/import_seed_corpus.py --dry-run
     python seed_corpus/import_seed_corpus.py --wipe
 
---wipe clears journal_entries collection, journal_dreams collection,
-journal_entries/ dir, and entity_graph/ before importing (the clean-
-slate path for capture_fixtures.py). Because it deletes outright, it
+--wipe clears the journal_entries, journal_dreams and journal_summaries
+collections, the journal_entries/ dir, and the entity_graph/, categories/,
+patterns/ and dreams/ dirs before importing (the clean-slate path for
+capture_fixtures.py). Because it deletes outright, it
 refuses to run unless the data dirs point somewhere under seed_corpus/ —
 use `bash seed_corpus/run_capture.sh --wipe`, which sets them for you.
 
@@ -68,6 +72,12 @@ from bulk_import import import_entry, entry_chunk_id, chunk_entry
 from config import ENTITY_DIR, CATEGORY_DIR, PATTERN_DIR, DREAM_DIR
 from config import SESSION_DIR, SUMMARY_DIR, CHROMA_DIR
 from rag_journal import get_collection, JOURNAL_DIR
+
+# Entries dated from here on belong to the demo's OPEN session, not to journal
+# memory. They ship as markdown backups -- which is exactly what a real journal
+# has on disk after "save entry" -- and enter chroma only if the visitor closes
+# the chat, the same way they would for a real author.
+OPEN_SESSION_FROM = "2026-09-15"
 
 
 def parse_entry(path: Path) -> dict:
@@ -140,14 +150,19 @@ def session_files() -> list[tuple[Path, Path]]:
     generated, the seed it replaced, and the candidate still awaiting
     review. Copied as-is — none of it is regenerated at import.
 
-    current.json ships too, and has to. Without it the first run falls into
-    load_current's first-run path, which builds a base from the newest
-    imported conversation — a session that looks like it continues 9/14
-    rather than one the 9/14 close just opened. That contradicts the pending
-    candidate sitting next to it: a real close ends with save_current(_fresh())
-    and an empty base. Shipping the file makes the demo state the corpus's
-    own, instead of whatever the first person to launch it happened to
-    generate."""
+    current.json ships too, and it is not empty. The demo opens three days
+    *after* the 9/14 close: the close produced the pending candidate, and
+    Jordan kept writing without closing again, so the open session holds
+    9/15-9/17 as messages with an empty base. One coherent state -- a week in
+    progress, the candidate still pending -- rather than the one moment in
+    the workflow with nothing on screen. Messages rather than base because
+    only messages count as new material: a base-only session cannot be
+    closed, and closing is what the demo invites.
+
+    Shipping it also keeps load_current's first-run path out of the way,
+    which would otherwise build a base from the newest imported
+    conversation and make the demo's state whatever the first person to
+    launch it happened to generate."""
     here = Path(__file__).parent
     pairs = [(here / "sessions" / "archive", SESSION_DIR / "archive"),
              (here / "summaries" / "seed_backups",
@@ -209,9 +224,13 @@ def refuse_if_real_journal(files: list[tuple[Path, Path]]):
         intruders.append(live.name)
     # the open session is installed now, so it can also be overwritten. Only
     # unsaved turns make it precious — a base-only or empty session is what
-    # any first run invents, and replacing that is the point.
+    # any first run invents, and replacing that is the point. The corpus's
+    # own open session has turns too, so an untouched copy of it is ours.
     open_session = SESSION_DIR / "current.json"
-    if open_session.exists():
+    shipped = here / "sessions" / "current.json"
+    if open_session.exists() and not (
+            shipped.exists()
+            and open_session.read_bytes() == shipped.read_bytes()):
         try:
             live_msgs = json.loads(
                 open_session.read_text(encoding="utf-8")).get("messages") or []
@@ -253,7 +272,7 @@ def install_files(files: list[tuple[Path, Path]], dry_run: bool):
         if not src.exists():
             print(f"  MISSING {src.name} — run build_sessions.py "
                   f"(sessions) or capture_fixtures.py (derived) first")
-            continue
+            raise FileNotFoundError(src)
         if dry_run:
             print(f"  [dry] {src.name} -> {dst}")
         else:
@@ -286,10 +305,16 @@ def main():
     if args.wipe:
         refuse_if_unsandboxed()
 
+    marker = CHROMA_DIR / ".install-complete"
+    if not args.dry_run:
+        marker.unlink(missing_ok=True)
+
     if args.wipe and not args.dry_run:
         wipe()
 
-    entries = [parse_entry(f) for f in files]
+    parsed = [(f, parse_entry(f)) for f in files]
+    open_files = [f for f, e in parsed if e["date"] >= OPEN_SESSION_FROM]
+    entries = [e for _, e in parsed if e["date"] < OPEN_SESSION_FROM]
     journal = [e for e in entries if not e["is_dream"]]
     dreams = [e for e in entries if e["is_dream"]]
 
@@ -312,8 +337,19 @@ def main():
             eid = import_dream(e)
             print(f"  {e['date']}  {eid}  DREAM  {e['title'][:50]}")
 
+    # The open session's entries: backup only, dreams included. See
+    # OPEN_SESSION_FROM -- embedding them would let search find unclosed
+    # material and a visitor's close add them a second time.
+    print(f"\n{len(open_files)} open-session entr"
+          f"{'y' if len(open_files) == 1 else 'ies'} (backup only, not embedded)")
+    install_files([(f, JOURNAL_DIR / f.name) for f in open_files],
+                  args.dry_run)
+
     install_files(to_install, args.dry_run)
     install_files(derived_files(), args.dry_run)
+
+    if not args.dry_run:
+        marker.touch()
 
     print(f"\ndone. {'(dry run, nothing written)' if args.dry_run else ''}")
     if not args.dry_run and args.wipe:
