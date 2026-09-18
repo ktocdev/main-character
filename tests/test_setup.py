@@ -93,14 +93,15 @@ def test_status_reports_whether_the_demo_has_been_built(
     only while there is something to warn about; a warning that fired every
     time would train the reader to ignore it.
 
-    Answered by the database file rather than the directory, the same way the
-    install route asks, so an interrupted build still reads as unbuilt.
+    Answered by the completion marker and database, the same way the install
+    route asks, so an interrupted build still reads as unbuilt.
     """
     monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
     assert client.get("/api/status").json()["demo_built"] is False
 
     (tmp_path / "chroma_data").mkdir()
     (tmp_path / "chroma_data" / "chroma.sqlite3").touch()
+    (tmp_path / "chroma_data" / ".install-complete").touch()
     assert client.get("/api/status").json()["demo_built"] is True
 
 
@@ -393,10 +394,10 @@ def test_installing_the_demo_spawns_a_fresh_interpreter(client, monkeypatch, tmp
 
 
 def test_an_installed_demo_is_not_rebuilt(client, monkeypatch, tmp_path):
-    """Checked by the database file rather than the directory, the same way
-    the restart route checks -- an interrupted build leaves the folder."""
+    """Only a completed install is skipped; a database alone is not enough."""
     (tmp_path / "chroma_data").mkdir()
     (tmp_path / "chroma_data" / "chroma.sqlite3").touch()
+    (tmp_path / "chroma_data" / ".install-complete").touch()
     monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
 
     def fake_run(argv, **kw):
@@ -405,6 +406,30 @@ def test_an_installed_demo_is_not_rebuilt(client, monkeypatch, tmp_path):
     monkeypatch.setattr(server.subprocess, "run", fake_run)
     r = client.post("/api/setup/install-demo")
     assert r.json() == {"ok": True, "built": False}
+
+
+def test_an_interrupted_demo_build_can_retry(client, monkeypatch, tmp_path):
+    chroma = tmp_path / "chroma_data"
+    chroma.mkdir()
+    (chroma / "chroma.sqlite3").touch()
+    monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
+    assert client.get("/api/status").json()["demo_built"] is False
+    assert client.post("/api/restart", json={"into": "seed"}).status_code == 409
+
+    calls = []
+
+    def build(argv, **kwargs):
+        calls.append(argv)
+        if len(calls) == 1:
+            return SimpleNamespace(returncode=1, stdout="", stderr="download failed")
+        (chroma / ".install-complete").touch()
+        return SimpleNamespace(returncode=0, stdout="done", stderr="")
+
+    monkeypatch.setattr(server.subprocess, "run", build)
+    assert client.post("/api/setup/install-demo").status_code == 500
+    assert client.post("/api/setup/install-demo").json() == {"ok": True, "built": True}
+    assert len(calls) == 2
+    assert client.get("/api/status").json()["demo_built"] is True
 
 
 def test_the_demo_cannot_rebuild_itself_from_inside(client, monkeypatch, tmp_path):

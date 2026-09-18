@@ -272,7 +272,7 @@ def install_files(files: list[tuple[Path, Path]], dry_run: bool):
         if not src.exists():
             print(f"  MISSING {src.name} — run build_sessions.py "
                   f"(sessions) or capture_fixtures.py (derived) first")
-            continue
+            raise FileNotFoundError(src)
         if dry_run:
             print(f"  [dry] {src.name} -> {dst}")
         else:
@@ -304,6 +304,10 @@ def main():
     refuse_if_real_journal(to_install)
     if args.wipe:
         refuse_if_unsandboxed()
+
+    marker = CHROMA_DIR / ".install-complete"
+    if not args.dry_run:
+        marker.unlink(missing_ok=True)
 
     if args.wipe and not args.dry_run:
         wipe()
@@ -343,6 +347,9 @@ def main():
 
     install_files(to_install, args.dry_run)
     install_files(derived_files(), args.dry_run)
+
+    if not args.dry_run:
+        marker.touch()
 
     print(f"\ndone. {'(dry run, nothing written)' if args.dry_run else ''}")
     if not args.dry_run and args.wipe:

@@ -443,6 +443,7 @@ def test_the_seed_destination_lives_only_in_the_child_environment(
     any later restart lands on real data."""
     (tmp_path / "chroma_data").mkdir()
     (tmp_path / "chroma_data" / "chroma.sqlite3").touch()
+    (tmp_path / "chroma_data" / ".install-complete").touch()
     monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
     # not object(): this one gets all the way to `srv.should_exit = True`,
     # which a bare object cannot carry

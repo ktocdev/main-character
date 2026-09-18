@@ -119,6 +119,7 @@ def installed(tmp_path_factory):
     root = tmp_path_factory.mktemp("demo-install")
     done = run_installer(root)
     assert done.returncode == 0, done.stderr or done.stdout
+    assert (root / "chroma_data" / ".install-complete").is_file()
 
     import chromadb
     client = chromadb.PersistentClient(path=str(root / "chroma_data"))
@@ -187,6 +188,7 @@ def test_reinstalling_over_an_untouched_demo_is_not_refused(installed):
 def _fake_install(root: Path):
     (root / "chroma_data").mkdir(parents=True)
     (root / "chroma_data" / "chroma.sqlite3").touch()
+    (root / "chroma_data" / ".install-complete").touch()
     (root / "sessions").mkdir()
     (root / "sessions" / "current.json").write_text(
         json.dumps({"started": "2026-09-18 09:00", "base": [], "messages": []}),

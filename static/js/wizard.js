@@ -425,7 +425,12 @@ async function finish(into) {
   // restartServer reloads the page itself once a *different* process answers,
   // and the reloaded page finds the journal configured -- so the wizard does
   // not open again.
-  await restartServer(note(), true, into);
+  try {
+    await restartServer(note(), true, into);
+  } finally {
+    // A refusal or timeout leaves this page open and must allow a retry.
+    buttons.forEach(b => { b.disabled = false; });
+  }
 }
 
 // The demo, from the key step, with nothing collected and nothing written.

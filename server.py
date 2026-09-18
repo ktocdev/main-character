@@ -956,12 +956,13 @@ def _embedder_cached():
 def _demo_built() -> bool:
     """Whether the demo journal has been installed yet.
 
-    The database file rather than the directory: an interrupted build leaves
-    the folder behind. Reported by /api/status so the UI can warn about the
-    build standing in front of the first trip to the demo -- and say nothing
+    Chroma creates its database before embedding, so only the installer's
+    completion marker proves the build finished. Reported by /api/status so
+    the UI can warn about the build before the first trip -- and say nothing
     about it on every trip after, which is the whole point of asking.
     """
-    return (SEED_ROOT / "chroma_data" / "chroma.sqlite3").exists()
+    return ((SEED_ROOT / "chroma_data" / "chroma.sqlite3").is_file()
+            and (SEED_ROOT / "chroma_data" / ".install-complete").is_file())
 
 
 @app.post("/api/setup/install-demo")
@@ -1408,11 +1409,10 @@ def restart_server(body: RestartIn | None = None):
     if into not in ("journal", "seed"):
         return JSONResponse({"error": f"no such journal: {into}"},
                             status_code=400)
-    if into == "seed" and not (SEED_ROOT / "chroma_data" / "chroma.sqlite3").exists():
-        # Checked for the database file, not just the directory: an
-        # interrupted or half-run capture can leave an empty chroma_data/
-        # behind, and Path.exists() on the bare directory would call that
-        # "installed". Refusing beats booting an empty demo: an author who
+    if into == "seed" and not _demo_built():
+        # An interrupted build can leave a database before any entries are
+        # embedded. Require the completion marker too, as install_demo does.
+        # Refusing beats booting an empty demo: an author who
         # asked for the demo journal and got a blank one has no way to tell
         # that from a broken one.
         return JSONResponse(
