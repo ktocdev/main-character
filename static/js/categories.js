@@ -270,7 +270,8 @@ function renderCatEntries() {
   }
 }
 
-async function toggleEntryText(row, c) {
+// also search.js's: a hit expands into its full entry the same way
+export async function toggleEntryText(row, c) {
   const existing = row.querySelector('.cat-full');
   if (existing) { existing.remove(); return; }
   const d = document.createElement('div');

@@ -46,6 +46,10 @@ exports/
 # and the security audit throughout; none of it ships (Phase 1.5 items 1/4/5)
 docs/
 
+# Build output: scripts/build_web_demo.py writes the web demo here. It is
+# published by copying it into the ktoc.dev site repo, never from this one.
+dist/
+
 # Later-phase artifacts (pre-emptive — Phase 0.5 item 5)
 publish.toml
 public_site/

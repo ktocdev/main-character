@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, fmtDate } from './core.js';
+import { toggleEntryText } from './categories.js';
 
 // ---- search ----
 // Exhaustive, local, free: every matching journal moment. "meaning" ranks
