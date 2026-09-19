@@ -22,7 +22,9 @@
     letter-spacing: .08em; color: var(--accent-dim); margin: var(--space-6) 0 .3rem;
     display: flex; align-items: center; gap: var(--space-2);
   }
-  #group-newform { display: flex; gap: .3rem; margin: .2rem 0 var(--space-2); }
+  /* hidden until "+ new" (groups.js); display lives here, not in a style
+     attribute, so index.html stays clear of inline styles for the demo's CSP */
+  #group-newform { display: none; gap: .3rem; margin: .2rem 0 var(--space-2); }
   #group-newform input { flex: 1; min-width: 0; padding: var(--space-1) var(--space-3); font-size: var(--font-sm); }
   .grp-row { display: flex; align-items: center; gap: .3rem; }
   .grp-row .grp-btn {
@@ -56,6 +58,9 @@
   #entity-doc { font-size: var(--font-base); margin-top: var(--space-6); }
   #entity-meta { font: var(--font-xs) var(--font-ui); color: var(--text-dim); }
   .ent-actions { display: flex; gap: var(--space-4); align-items: center; flex-wrap: wrap; margin-top: var(--space-5); }
+  /* the three action rows stay hidden until an entity is picked (entities.js) */
+  #entity-actions, #alias-row, #group-row { display: none; }
+  #alias-new, #group-add-input { width: 9rem; }
   .ent-actions input { width: 12rem; padding: .35rem var(--space-4); font-size: var(--font-sm); }
   .ent-actions select {
     background: var(--bg-input); color: var(--text-dim); border: 1px solid var(--border);
@@ -78,7 +83,7 @@
     font: var(--font-2xs) var(--font-ui); padding: .1rem .3rem;
   }
   .obs .ops button:hover { color: var(--accent); }
-  #suggest-panel { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-6); margin-bottom: var(--space-7); }
+  #suggest-panel { display: none; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-6); margin-bottom: var(--space-7); }
   .sg { border-bottom: 1px solid var(--border); padding: var(--space-4) 0; }
   .sg:last-child { border-bottom: none; }
   .sg .r { font: var(--font-xs) var(--font-ui); color: var(--text-dim); margin: .2rem 0 var(--space-2); }
@@ -94,7 +99,7 @@
   #filter-chips { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); flex-wrap: wrap; }
   .chip-toggle.on { background: var(--accent-dim); color: var(--bg); border-color: var(--accent-dim); }
   #batch-bar {
-    display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+    display: none; align-items: center; gap: var(--space-2); flex-wrap: wrap;
     margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: var(--radius-base);
     background: var(--bg-input); border: 1px solid var(--accent-dim);
   }
@@ -151,7 +156,7 @@
   #triage-obs .obs-date { margin: .7rem 0 .2rem; }
   #triage-help { margin-top: var(--space-6); font: var(--font-sm) var(--font-ui); color: var(--text-dim); }
   #triage-help b { color: var(--accent); font-weight: normal; }
-  #triage-input-row, #triage-kind-row { margin-top: var(--space-6); font: .9rem var(--font-ui); color: var(--text-dim); display: flex; gap: var(--space-4); align-items: center; flex-wrap: wrap; }
+  #triage-input-row, #triage-kind-row { margin-top: var(--space-6); font: .9rem var(--font-ui); color: var(--text-dim); display: none; gap: var(--space-4); align-items: center; flex-wrap: wrap; }
   #triage-input { flex: 1; min-width: 12rem; }
   #triage-apply { padding: .3rem 1.1rem; font-size: var(--font-sm); align-self: stretch; }
   #triage-toast { margin-top: var(--space-5); font: var(--font-sm) var(--font-ui); color: var(--accent); min-height: 1.2rem; }

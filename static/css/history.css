@@ -32,6 +32,7 @@
   .session-head { display: flex; align-items: baseline; gap: var(--space-5); margin-bottom: 1.4rem; flex-wrap: wrap; }
   .session-head h2 { font-style: italic; font-weight: normal; font-size: var(--font-md); color: var(--accent); }
   .session-head .dates { font: var(--font-xs) var(--font-ui); color: var(--text-dim); }
+  #session-close-btn { display: none; }  /* history.js shows it when a close is possible */
   .session-part-label {
     font: var(--font-3xs) var(--font-ui); letter-spacing: .08em; text-transform: uppercase;
     color: var(--accent-dim); margin: 1.1rem 0 .3rem;

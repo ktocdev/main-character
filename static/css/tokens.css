@@ -4,6 +4,24 @@
     font-weight: 400 600;
     font-display: swap;
   }
+  /* Old Standard TT, served from here rather than Google Fonts: the app makes
+     no third-party requests, and the published web demo can run under a
+     `default-src 'self'` CSP. SIL OFL 1.1, see fonts/OldStandard-OFL.txt. */
+  @font-face {
+    font-family: 'Old Standard TT';
+    src: url('/static/fonts/OldStandard-Regular.ttf') format('truetype');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Old Standard TT';
+    src: url('/static/fonts/OldStandard-Bold.ttf') format('truetype');
+    font-weight: 700; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Old Standard TT';
+    src: url('/static/fonts/OldStandard-Italic.ttf') format('truetype');
+    font-weight: 400; font-style: italic; font-display: swap;
+  }
   /* Dark is the default palette. The light palette below applies either when
      the OS asks for light *and* the reader hasn't pinned dark, or when the
      Appearance setting pins light outright (data-theme on <html>, set from

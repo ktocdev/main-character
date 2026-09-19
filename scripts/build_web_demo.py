@@ -269,6 +269,15 @@ def write_site(out: Path):
                       .replace("url('/static/", "url('../"), encoding="utf-8")
 
 
+CSP_BREAKERS = {
+    "inline style attribute": r"\sstyle=",
+    "inline <style> block": r"<style[\s>]",
+    "inline script": r"<script(?![^>]*\ssrc=)[^>]*>",
+    "inline event handler": r"\son[a-z]+=",
+    "off-site URL": r"(?:href|src)=[\"']?(?:https?:)?//|url\(\s*[\"']?(?:https?:)?//",
+}
+
+
 def leak_needles(tmp: Path) -> list[str]:
     """Paths that must never appear in the output, in every spelling they
     could take: native, forward-slashed, and JSON-escaped."""
@@ -293,6 +302,12 @@ def check_output(out: Path, tmp: Path):
             problems.append(f"{rel}: mentions ANTHROPIC")
         if path.suffix in (".html", ".css") and "/static/" in text:
             problems.append(f"{rel}: absolute /static/ URL left")
+        # The site is served under `default-src 'self'` with no 'unsafe-inline'
+        # (release-plan.md Phase 7), so each of these would be blocked there.
+        if path.suffix in (".html", ".css"):
+            problems += [f"{rel}: {what}" for what, pattern in CSP_BREAKERS.items()
+                         if (path.suffix == ".html" or what == "off-site URL")
+                         and re.search(pattern, text)]
     if problems:
         sys.exit("web demo build is not publishable:\n  " + "\n  ".join(problems))
 

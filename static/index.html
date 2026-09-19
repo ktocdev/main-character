@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/base.css">
 <link rel="stylesheet" href="/static/css/conversation.css">
@@ -157,7 +154,7 @@
 
   <section class="tab" id="tab-categories">
     <div id="categories">
-      <div id="cat-paused" style="display:none">
+      <div id="cat-paused">
         <b>Categories are paused.</b> Right now an “entry” is a whole week-long chat, so browsing a
         category shows a week's blob under one date instead of the individual days. This section
         won't be trustworthy until entries are re-run split by date (Phase 3) — it's kept in the nav
@@ -172,8 +169,8 @@
       <div id="cat-chips"></div>
       <div id="cat-custom-row"></div>
       <div id="cat-newform">
-        <input type="text" id="newcat-name" placeholder="new category…" style="width:10rem">
-        <input type="text" id="newcat-keywords" placeholder="keywords, comma-separated (optional)" style="width:16rem">
+        <input type="text" id="newcat-name" placeholder="new category…">
+        <input type="text" id="newcat-keywords" placeholder="keywords, comma-separated (optional)">
         <button class="quiet" id="newcat-add">add</button>
       </div>
       <div id="cat-entries"></div>
@@ -211,7 +208,7 @@
           <div class="session-head">
             <h2 id="session-title"></h2>
             <span class="dates" id="session-dates"></span>
-            <button class="quiet" id="session-close-btn" style="display:none"
+            <button class="quiet" id="session-close-btn"
               title="the summarize point — your side of this chat becomes a journal entry and a fresh chat opens">summarize &amp; start new chat</button>
             <button class="quiet" id="refresh-summaries"
               title="regenerate the weekly arcs + domain docs — a manual fallback; closing a chat does this automatically">refresh memory</button>
@@ -232,13 +229,13 @@
         <div id="triage-aliases"></div>
         <div id="triage-obs"></div>
       </div>
-      <div id="triage-input-row" style="display:none">
+      <div id="triage-input-row">
         <span id="triage-mode-label"></span>
         <input type="text" id="triage-input" list="entity-names" placeholder="type here…">
         <button class="send" id="triage-apply" title="apply this action (or press Enter)">apply</button>
         <button class="quiet" id="triage-cancel" title="cancel (or press Esc)">cancel</button>
       </div>
-      <div id="triage-kind-row" style="display:none">
+      <div id="triage-kind-row">
         move to: <button class="quiet" data-kind="person" title="retype to person (1)">1 person</button>
         <button class="quiet" data-kind="project" title="retype to project (2)">2 project</button>
         <button class="quiet" data-kind="place" title="retype to place (3)">3 place</button>
@@ -511,7 +508,7 @@
           <button class="quiet chip-toggle" id="sort-az" title="sort each group A–Z instead of by most mentions">A–Z</button>
           <button class="quiet chip-toggle" id="flt-select" title="check entities to add several to a group at once">select</button>
         </div>
-        <div id="batch-bar" style="display:none">
+        <div id="batch-bar">
           <span id="batch-count">0 selected</span>
           <input type="text" id="batch-group" list="group-names" placeholder="group name…">
           <button class="quiet" id="batch-add" title="add all checked entities to this group (new group if the name doesn't exist)">add to group</button>
@@ -530,7 +527,7 @@
           <div id="group-header">groups
             <button class="quiet" id="group-new-btn" title="create a group">+ new</button>
           </div>
-          <div id="group-newform" style="display:none">
+          <div id="group-newform">
             <input type="text" id="group-new-name" placeholder="group name…">
             <button class="quiet" id="group-new-save">create</button>
           </div>
@@ -539,10 +536,10 @@
         <div id="entity-groups"></div>
       </div>
       <div id="entity-detail">
-        <div id="suggest-panel" style="display:none"></div>
+        <div id="suggest-panel"></div>
         <h2 id="entity-name">select an entity</h2>
         <div id="entity-meta"></div>
-        <div class="ent-actions" id="entity-actions" style="display:none">
+        <div class="ent-actions" id="entity-actions">
           <input type="text" id="merge-target" list="entity-names" placeholder="target name…">
           <button class="quiet" id="merge-btn" title="combine; this name is kept as an alias">merge into</button>
           <button class="quiet" id="correct-btn" title="typo fix; this name is NOT kept as an alias">correct to</button>
@@ -555,16 +552,16 @@
           </select>
           <button class="quiet" id="delete-btn">delete</button>
         </div>
-        <div class="ent-actions" id="alias-row" style="display:none">
+        <div class="ent-actions" id="alias-row">
           <span class="alias-label">aliases:</span>
           <span id="alias-chips"></span>
-          <input type="text" id="alias-new" placeholder="add alias…" style="width:9rem">
+          <input type="text" id="alias-new" placeholder="add alias…">
           <button class="quiet" id="alias-add-btn">add</button>
         </div>
-        <div class="ent-actions" id="group-row" style="display:none">
+        <div class="ent-actions" id="group-row">
           <span class="alias-label">groups:</span>
           <span id="group-chips"></span>
-          <input type="text" id="group-add-input" list="group-names" placeholder="add to group…" style="width:9rem">
+          <input type="text" id="group-add-input" list="group-names" placeholder="add to group…">
           <button class="quiet" id="group-add-btn">add</button>
         </div>
         <div id="entity-doc"></div>

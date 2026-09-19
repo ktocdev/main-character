@@ -445,7 +445,8 @@ async function addSelectedToGroup() {
 export function init() {
   $('group-new-btn').onclick = () => {
     const f = $('group-newform');
-    const opening = f.style.display === 'none';
+    // computed, not f.style: it starts hidden by entities.css, not inline
+    const opening = getComputedStyle(f).display === 'none';
     f.style.display = opening ? 'flex' : 'none';
     if (opening) $('group-new-name').focus();
   };
