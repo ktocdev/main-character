@@ -88,6 +88,7 @@ function trackCloseProgress() {
   const stop = () => {
     clearInterval(closePoll);
     refreshSeedMenu();
+    refreshStatus();  // entity counts change after the background refresh
     setTimeout(() => { const b = $('close-progress'); if (b) b.hidden = true; }, 8000);
   };
   const tick = async () => {

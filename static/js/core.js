@@ -105,8 +105,8 @@ export async function installDemo(report) {
   // the only honest progress available: the build is a child process with
   // no channel back, so a bar would be inventing a fraction it cannot know.
   const hold = setTimeout(() => {
-    const tick = () => report('building the demo journal — 30 entries, '
-      + 'embedded on this machine (' + Math.round((Date.now() - started) / 1000)
+    const tick = () => report('building the demo journal — indexing 29 journal entries and 1 dream entry; '
+      + '3 more entries will open in the chat (' + Math.round((Date.now() - started) / 1000)
       + 's). Expect ' + demoBuildWait() + '.');
     tick();
     timer = setInterval(tick, 1000);

@@ -227,36 +227,6 @@
         "social": "walking Lena out, losing office connection"
       }
     },
-    "2026-08-29_Journal-entry-2026-08-29-19-53": {
-      "date": "2026-08-29",
-      "title": "Journal entry 2026-08-29 19:53",
-      "categories": {
-        "relationships": "nervous coffee walk with Dev, budding romantic interest",
-        "emotional": "reflecting on calm feeling, trying not to label it",
-        "creative": "described Coda practice-tracking project to Dev",
-        "social": "Mika talked her out of cancelling the meetup"
-      }
-    },
-    "2026-09-01_Coffee-Shop-Coda-Breakthrough": {
-      "date": "2026-09-01",
-      "title": "Coffee Shop Coda Breakthrough",
-      "categories": {
-        "relationships": "nervous coffee walk with Dev, budding romantic interest",
-        "emotional": "reflecting on calm feeling, trying not to label it",
-        "creative": "described Coda practice-tracking project to Dev",
-        "social": "Mika talked her out of cancelling the meetup"
-      }
-    },
-    "2026-09-01_Design-review-shutdown-and-going-interna": {
-      "date": "2026-09-01",
-      "title": "Design review shutdown and going internal",
-      "categories": {
-        "relationships": "nervous coffee walk with Dev, budding romantic interest",
-        "emotional": "reflecting on calm feeling, trying not to label it",
-        "creative": "described Coda practice-tracking project to Dev",
-        "social": "Mika talked her out of cancelling the meetup"
-      }
-    },
     "2026-09-01_The-reorg-lands": {
       "date": "2026-09-01",
       "title": "The reorg lands",
@@ -265,16 +235,6 @@
         "emotional": "flat gray feeling, spiral loading up",
         "creative": "worked on Coda's snippet library",
         "social": "texted Lena the news, she responds"
-      }
-    },
-    "2026-09-02_Signing-the-lease-continued": {
-      "date": "2026-09-02",
-      "title": "Signing the lease — continued",
-      "categories": {
-        "relationships": "nervous coffee walk with Dev, budding romantic interest",
-        "emotional": "reflecting on calm feeling, trying not to label it",
-        "creative": "described Coda practice-tracking project to Dev",
-        "social": "Mika talked her out of cancelling the meetup"
       }
     },
     "2026-09-03_Dev-tries-free-play": {
@@ -297,16 +257,6 @@
         "work": "restructuring, role evaluation, Lena leaving",
         "home": "cleaning, ceiling stain, maintenance issues",
         "pets": "Pepper slept on Mom's lap"
-      }
-    },
-    "2026-09-08_Signing-the-lease-continued": {
-      "date": "2026-09-08",
-      "title": "Signing the lease — continued",
-      "categories": {
-        "relationships": "nervous coffee walk with Dev, budding romantic interest",
-        "emotional": "reflecting on calm feeling, trying not to label it",
-        "creative": "described Coda practice-tracking project to Dev",
-        "social": "Mika talked her out of cancelling the meetup"
       }
     },
     "2026-09-09_Lena-s-referral": {
@@ -343,17 +293,17 @@
   },
   "counts": {
     "work": 21,
-    "relationships": 5,
+    "relationships": 0,
     "health": 9,
-    "creative": 21,
-    "social": 18,
+    "creative": 16,
+    "social": 13,
     "family": 3,
     "pets": 15,
-    "emotional": 32,
+    "emotional": 27,
     "ai_reflection": 2,
     "home": 6
   },
   "custom": [],
-  "tagged": 34,
-  "total": 34
+  "tagged": 29,
+  "total": 29
 }

@@ -555,7 +555,7 @@ def build_entity_docs(records: list[dict]) -> dict:
 
         index[ent["name"]] = {
             "type": kind,
-            "path": str(path.relative_to(ENTITY_DIR)),
+            "path": path.relative_to(ENTITY_DIR).as_posix(),
             "mentions": len(ent["timeline"]),
             "aliases": sorted(ent["aliases"]),
             "groups": gnames,

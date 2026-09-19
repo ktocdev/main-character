@@ -4,7 +4,7 @@ type: person
 relationship: mother
 first_seen: 2026-08-07
 last_seen: 2026-09-14
-mentions: 5
+mentions: 4
 groups: Family
 ---
 
@@ -31,9 +31,6 @@ groups: Family
 - Ate the roasted chicken dinner at the card table without commenting on the card table
 - Had Pepper sleep on her lap for an hour
 - Left Sunday afternoon
-
-### 2026-09-08 — Signing the lease — continued
-- Is planning to visit, prompting Jordan to look into fixing the ceiling stain
 
 ### 2026-09-11 — Phone screen with Northlight
 - Told about the phone screen within twenty minutes of the run

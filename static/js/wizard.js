@@ -95,8 +95,9 @@ function renderKey() {
     '</div>',
     '<p class="wiz-aside">No key yet?',
     '  <a href="#" id="wiz-skip">look around the demo journal first</a>',
-    '  &mdash; 30 entries of a fictional life, with the replies already',
-    '  recorded. Nothing is spent. Demo writing is stored locally until the next demo visit, when all demo data is reset.' + buildNote() + '</p>',
+    '  &mdash; 29 entries in journal memory, 3 more in the open chat, and 1 dream entry.',
+    '  Close the chat to bring journal memory to 32 entries. The life is fictional and the replies are recorded.',
+    '  Nothing is spent. Demo writing is stored locally until the next demo visit, when all demo data is reset.' + buildNote() + '</p>',
   ].join('\n');
 
   const input = $('wiz-key');

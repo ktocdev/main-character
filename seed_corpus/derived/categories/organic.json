@@ -1,27 +1,10 @@
 {
-  "generated": "2026-08-27T19:56",
+  "generated": "2026-09-19T10:17",
   "proposals": [
-    {
-      "id": "3d585f2ee5",
-      "name": "Coda At Groundwork",
-      "reason": "Jordan repeatedly works on the Coda practice-tracking project and the stalled portfolio update from the same coffee shop, Groundwork, while the office appears only as an unrelated work backdrop.",
-      "members": [
-        "Coda",
-        "Groundwork",
-        "portfolio",
-        "office",
-        "Coda project",
-        "portfolio update"
-      ],
-      "weeks": 8,
-      "coherence": 0.499,
-      "confidence": "medium",
-      "status": "proposed"
-    },
     {
       "id": "b7b6f97f4e",
       "name": "The Reorg",
-      "reason": "All four entries trace the same organizational upheaval moving Jordan from internal tools to legacy marketing pages under Priya starting the 21st.",
+      "reason": "All entries track Jordan's anxiety and shifting team assignments through the same company restructuring.",
       "members": [
         "internal tools team",
         "restructuring",
@@ -35,8 +18,8 @@
     },
     {
       "id": "e6b7578498",
-      "name": "Dashboard Redesign",
-      "reason": "All three entries follow the same dashboard project through repeated reworks and criticism from Marcus until it finally shipped.",
+      "name": "Dashboard Saga",
+      "reason": "All entries follow the repeated redesign and criticism cycle of the same internal dashboard project.",
       "members": [
         "internal dashboard layout",
         "Dashboard",

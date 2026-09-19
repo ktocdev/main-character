@@ -4,7 +4,7 @@ type: person
 relationship: pet
 first_seen: 2026-07-30
 last_seen: 2026-09-14
-mentions: 20
+mentions: 15
 ---
 
 ### 2026-07-30 — Team restructuring news
@@ -48,26 +48,6 @@ mentions: 20
 ### 2026-08-27 — Being honest with Dev
 - Pepper sat on the counter watching Jordan chop garlic like a supervisor with no notes
 
-### 2026-08-29 — Journal entry 2026-08-29 19:53
-- Covered the rug in fur before it was vacuumed
-- Supervised from the counter despite being banned from it
-- Author pretends not to notice her breaking the counter rule
-
-### 2026-09-01 — Coffee Shop Coda Breakthrough
-- Covered the rug in fur before it was vacuumed
-- Supervised from the counter despite being banned from it
-- Author pretends not to notice her breaking the counter rule
-
-### 2026-09-01 — Design review shutdown and going internal
-- Covered the rug in fur before it was vacuumed
-- Supervised from the counter despite being banned from it
-- Author pretends not to notice her breaking the counter rule
-
-### 2026-09-02 — Signing the lease — continued
-- Covered the rug in fur before it was vacuumed
-- Supervised from the counter despite being banned from it
-- Author pretends not to notice her breaking the counter rule
-
 ### 2026-09-03 — Dev tries free play
 - Left the room at the high slapped notes during Dev's practice
 - Came back at the end, as if making her position clear
@@ -75,11 +55,6 @@ mentions: 20
 ### 2026-09-06 — Mom's visit
 - Usually hides from guests
 - Slept on Mom's lap for an hour during the visit
-
-### 2026-09-08 — Signing the lease — continued
-- Covered the rug in fur before it was vacuumed
-- Supervised from the counter despite being banned from it
-- Author pretends not to notice her breaking the counter rule
 
 ### 2026-09-09 — Lena's referral
 - Was already asleep on the pillow Jordan was planning to use.

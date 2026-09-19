@@ -989,7 +989,7 @@ def _install_demo():
     import time*, before it imports config -- because config freezes its
     constants at import. In this process config was imported long ago, aimed
     at the author's own journal, so importing the installer here would write
-    30 fictional entries straight into their real entries. A fresh
+    the fictional corpus straight into their real entries. A fresh
     interpreter is what makes the redirect work at all, and it keeps the
     installer's own guards (refuse_if_real_journal) running somewhere they
     can still see the truth. The restart route spawns itself the same way and
@@ -1324,6 +1324,8 @@ SEED_ENV = {
     # without a key and without spending anything.
     "MC_MOCK": "1",
     "MC_AUTHOR_NAME": "Jordan",
+    # The recorded demo transition uses the complete built-in category set.
+    "MC_DISABLED_CATEGORIES": "",
     "MC_JOURNAL_DIR": str(SEED_ROOT / "journal_entries"),
     "MC_CHROMA_DIR": str(SEED_ROOT / "chroma_data"),
     "MC_ENTITY_DIR": str(SEED_ROOT / "entity_graph"),

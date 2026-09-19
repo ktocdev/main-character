@@ -11,7 +11,7 @@ its _Realm: dream_ marker, then populates:
   - sessions/archive/  (the three closed sessions, both-sided braids)
   - sessions/current.json  (the open session: the days written since the
     last close, not yet closed)
-  - summaries/  (the live seed, its backup, the pending candidate)
+  - summaries/  (the reviewed live seed and its backups)
 
 The session archives and seed summaries are not written here — they are
 produced by build_sessions.py, which chats the corpus through the real
@@ -147,15 +147,14 @@ def import_dream(entry: dict):
 def session_files() -> list[tuple[Path, Path]]:
     """The seed loop's own history, produced by build_sessions.py: three
     closed sessions with both-sided braids, the live seed those closes
-    generated, the seed it replaced, and the candidate still awaiting
-    review. Copied as-is — none of it is regenerated at import.
+    generated and Jordan reviewed, and the seeds it replaced.
+    Copied as-is — none of it is regenerated at import.
 
     current.json ships too, and it is not empty. The demo opens three days
-    *after* the 9/14 close: the close produced the pending candidate, and
-    Jordan kept writing without closing again, so the open session holds
-    9/15-9/17 as messages with an empty base. One coherent state -- a week in
-    progress, the candidate still pending -- rather than the one moment in
-    the workflow with nothing on screen. Messages rather than base because
+    *after* the 9/14 close: Jordan reviewed and uploaded that summary before
+    writing the 9/15-9/17 entries, so they have the latest seed's context.
+    No candidate awaits review. The open session holds those entries as
+    messages with an empty base. Messages rather than base because
     only messages count as new material: a base-only session cannot be
     closed, and closing is what the demo invites.
 
@@ -168,7 +167,7 @@ def session_files() -> list[tuple[Path, Path]]:
              (here / "summaries" / "seed_backups",
               SUMMARY_DIR / "seed_backups")]
     files = [(here / "summaries" / n, SUMMARY_DIR / n)
-             for n in ("seed_summary.md", "seed_summary.candidate.md")]
+             for n in ("seed_summary.md",)]
     files.append((here / "sessions" / "current.json",
                   SESSION_DIR / "current.json"))
 
@@ -180,8 +179,8 @@ def session_files() -> list[tuple[Path, Path]]:
 
 def derived_files() -> list[tuple[Path, Path]]:
     """Everything Claude worked out about the corpus: the entity graph,
-    category assignments, the pattern library, the dream index. Produced
-    once by capture_fixtures.py and committed under derived/, then copied
+    category assignments, summary layers, the pattern library, the dream index.
+    Captured through September 14 by capture_demo_close.py under derived/, then copied
     in here the same way the sessions are.
 
     They ship because the demo has to install without an API key. The
@@ -189,7 +188,7 @@ def derived_files() -> list[tuple[Path, Path]]:
     are local -- but every one of these files is Claude output, so a
     cloner who ran the capture themselves would need a key and would
     spend real money to reproduce what is already fixed content. Without
-    them the demo boots with 34 entries and an empty Entities tab, which
+    them the demo boots with 29 indexed entries and an empty Entities tab, which
     reads as a broken app rather than a sparse one.
 
     chroma_data/ deliberately stays out, the same way export.py leaves the
@@ -197,7 +196,8 @@ def derived_files() -> list[tuple[Path, Path]]:
     and import rebuilds it on the spot for nothing."""
     here = Path(__file__).parent / "derived"
     dests = {"entity_graph": ENTITY_DIR, "categories": CATEGORY_DIR,
-             "patterns": PATTERN_DIR, "dreams": DREAM_DIR}
+             "patterns": PATTERN_DIR, "dreams": DREAM_DIR,
+             "summaries": SUMMARY_DIR}
     files = []
     for name, dst_root in dests.items():
         src_root = here / name
@@ -349,6 +349,12 @@ def main():
     install_files(derived_files(), args.dry_run)
 
     if not args.dry_run:
+        # The demo ships every summary layer, not just the rolling seed.
+        # Populate retrieval locally from these captured docs (no API calls).
+        import summarizer
+        import dreams as dream_store
+        summarizer.sync_summary_embeddings(quiet=True)
+        dream_store.build_index()
         marker.touch()
 
     print(f"\ndone. {'(dry run, nothing written)' if args.dry_run else ''}")
