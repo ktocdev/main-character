@@ -32,6 +32,38 @@ function clearComposer() {
   localStorage.removeItem('rag_draft');
   autosizeEntry();
 }
+function restoreDraft(text) {
+  $('entry-text').value = text;
+  localStorage.setItem('rag_draft', text);
+  autosizeEntry();
+}
+
+// ---- save identity ----
+// Every deliberate save carries an id the server stores as the entry's own.
+// A save whose outcome is unknown (the connection dropped before an answer)
+// keeps its id with the draft, so saving that same text again is recognised
+// as a retry of it -- not a second entry. Once a save is confirmed the id is
+// spent: writing the same words again later is a new entry, and counts.
+const PENDING_SAVE = 'rag_pending_save';
+function newSaveId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)),
+    b => b.toString(16).padStart(2, '0')).join('');
+}
+function saveIdFor(text) {
+  let pending = null;
+  try { pending = JSON.parse(localStorage.getItem(PENDING_SAVE)); } catch (e) { }
+  if (pending && pending.text === text && pending.id) return pending.id;
+  const id = newSaveId();
+  try { localStorage.setItem(PENDING_SAVE, JSON.stringify({text, id})); } catch (e) { }
+  return id;
+}
+function settleSave() {
+  try { localStorage.removeItem(PENDING_SAVE); } catch (e) { }
+}
+const SAVED_NOTE = 'becomes journal memory when you close the chat';
+const UNREACHED = 'could not reach the journal — your draft is back, and '
+  + 'saving it again will not make a second copy';
 // The one rule that decides whether a close is possible, mirrored from the
 // server (sessions.close_session: "nothing new in this chat yet"). A
 // carried-forward base part is context, not new material — only messages
@@ -332,6 +364,8 @@ export function init() {
     // No-reply mode (item 3): save the entry and skip the companion call
     // entirely — no cost, sometimes you just want to write. The entry still
     // becomes journal memory at close, exactly like a replied-to one.
+    const save_id = saveIdFor(text);
+
     if ($('entry-noreply').checked) {
       clearComposer();
       composerBusy(true);
@@ -339,17 +373,25 @@ export function init() {
       const you = addMsg('you', text);
       anchorTop(you);
       try {
-        const r = await api('/api/entry', {text, ts, no_reply: true});
+        let r = null, unreached = false;
+        try { r = await api('/api/entry', {text, ts, no_reply: true, save_id}); }
+        catch (e) { unreached = true; }
         if (r && r.ok) {
+          settleSave();
           clearStamp();
-          $('entry-saved').textContent = 'entry saved, no reply — becomes journal memory when you close the chat';
+          if (r.duplicate) {
+            you.remove();   // the copy that landed earlier is already in the log
+            await loadWriteLog();
+          }
+          $('entry-saved').textContent = r.duplicate
+            ? 'that entry was already saved — nothing was added twice'
+            : `entry saved, no reply — ${SAVED_NOTE}`;
           refreshStatus();
         } else {
           you.remove();
-          $('entry-text').value = text;
-          localStorage.setItem('rag_draft', text);
-          autosizeEntry();
-          $('entry-saved').textContent = 'save failed — your draft is untouched';
+          restoreDraft(text);
+          $('entry-saved').textContent = unreached ? UNREACHED
+            : 'save failed — your draft is untouched';
         }
       } finally { composerBusy(false); $('entry-text').focus(); }
       return;
@@ -362,17 +404,32 @@ export function init() {
     const el = addMsg('companion thinking', '');
     anchorTop(you);             // stay on your entry while the reply streams
     try {
-      const res = await streamInto(el, '/api/entry', {text, ts});
-      if (res.ok) {
+      let res = null;
+      try { res = await streamInto(el, '/api/entry', {text, ts, save_id}); }
+      catch (e) {
+        el.classList.remove('thinking');
+        el.textContent = 'error: could not reach the journal';
+      }
+      // The response head says whether the entry is stored, and it arrives
+      // before the reply -- so a reply that fails afterwards cannot make a
+      // saved entry look unsaved, or tempt a resave that would double it.
+      if (res && res.headers.get('X-Entry-Saved') === '1') {
+        settleSave();
         clearStamp();   // the next entry gets its own
-        $('entry-saved').textContent = 'entry saved — becomes journal memory when you close the chat';
+        if (res.payload && res.payload.duplicate) {
+          await loadWriteLog();
+          $('entry-saved').textContent = 'that entry was already saved — nothing was added twice';
+        } else {
+          $('entry-saved').textContent = res.interrupted
+            ? `entry saved, but the reply was interrupted — the entry ${SAVED_NOTE}`
+            : `entry saved — ${SAVED_NOTE}`;
+        }
         refreshStatus();
       } else {
-        // save failed — put the draft back so nothing is lost
-        $('entry-text').value = text;
-        localStorage.setItem('rag_draft', text);
-        autosizeEntry();
-        $('entry-saved').textContent = 'save failed — your draft is untouched';
+        // not saved (or unknown) — put the draft back so nothing is lost
+        restoreDraft(text);
+        $('entry-saved').textContent = res ? 'save failed — your draft is untouched'
+          : UNREACHED;
       }
     } finally { composerBusy(false); $('entry-text').focus(); }
   };

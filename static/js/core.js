@@ -36,7 +36,14 @@ export function fmtDate(s) {
 
 export async function refreshStatus() {
   const s = await (await fetch('/api/status')).json();
+  // `entries` counts saved (and imported) entries: a save adds one at once,
+  // a close only moves it into journal memory. The ones still in the open
+  // chat are counted -- and saved -- already; the tooltip says where they are.
   $('status').textContent = `${s.entries} entries · ${s.entities} entities`;
+  const open = s.open_entries || 0;
+  $('status').title = open
+    ? `${open} ${open === 1 ? 'entry' : 'entries'} in this chat — added to journal memory when you close it`
+    : '';
   // Mock mode is indistinguishable from real once a reply is on screen, so
   // the banner stays up for the whole session rather than appearing per-call.
   document.body.classList.toggle('mock-mode', !!s.mock);
@@ -105,8 +112,8 @@ export async function installDemo(report) {
   // the only honest progress available: the build is a child process with
   // no channel back, so a bar would be inventing a fraction it cannot know.
   const hold = setTimeout(() => {
-    const tick = () => report('building the demo journal — indexing 29 journal entries and 1 dream entry; '
-      + '3 more entries will open in the chat (' + Math.round((Date.now() - started) / 1000)
+    const tick = () => report('building the demo journal — 32 entries and 1 dream entry; '
+      + 'the newest 3 will open in the chat (' + Math.round((Date.now() - started) / 1000)
       + 's). Expect ' + demoBuildWait() + '.');
     tick();
     timer = setInterval(tick, 1000);

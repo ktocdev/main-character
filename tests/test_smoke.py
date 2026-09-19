@@ -26,6 +26,10 @@ def client():
 
 
 def test_boots_in_mock_mode_with_empty_data(client):
+    # Saved entries count while their chat is still open, so an open chat an
+    # earlier test file left in the shared journal would not be empty data.
+    import sessions
+    sessions.CURRENT_FILE.unlink(missing_ok=True)
     response = client.get("/api/status")
     assert response.status_code == 200
     body = response.json()

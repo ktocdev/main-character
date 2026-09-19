@@ -28,6 +28,14 @@ weekly, domain, and entry summaries. Patterns and organic categories update
 through their normal explicit refresh buttons; those calls are recorded too.
 The seed remains unchanged until the candidate is uploaded.
 
+The header reads 32 entries before and after that close. The open chat's
+three primary messages are saved entries (`kind: "entry"` in the shipped
+`current.json`), so they count from the start; closing moves them from
+open to indexed (29 indexed + 3 open becomes 32 indexed + 0 open) and
+leaves the total alone. The follow-up messages are sends and never count.
+The index itself still goes from 29 records to 32 -- that is
+`journal_chunks`, not entries.
+
 To recapture, run `seed_corpus/capture_demo_close.py --live --phase before`,
 then `--live --phase close`, then `--live --phase extras`. These are paid
 authoring calls using only the fictional corpus, with all data and the spend

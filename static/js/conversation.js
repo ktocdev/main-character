@@ -45,24 +45,41 @@ export async function streamInto(el, url, payload) {
     el.textContent = 'error: ' + message;
     return res;
   }
+  // A route that had nothing to stream (a retried save that already landed)
+  // answers with JSON. That is a status for the caller, not reply text.
+  if ((res.headers.get('content-type') || '').includes('application/json')) {
+    el.classList.remove('thinking');
+    res.payload = await res.json().catch(() => null);
+    return res;
+  }
   // headers arrive before the model has produced anything, so keep the
   // thinking pulse until the first real token — that's the actual wait
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let started = false;
-  while (true) {
-    const {done, value} = await reader.read();
-    if (done) break;
-    const chunk = dec.decode(value, {stream: true});
-    if (!chunk) continue;
-    if (!started) { el.classList.remove('thinking'); el.textContent = ''; started = true; }
-    // Decide whether to follow *before* appending — the append changes
-    // scrollHeight, so measuring after would call every position "the bottom".
-    const scroller = el.closest('#write-log, #chat-log');
-    const pinned = scroller &&
-      scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= STICK_PX;
-    el.textContent += chunk;
-    if (pinned) scroller.scrollTop = scroller.scrollHeight;
+  try {
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      const chunk = dec.decode(value, {stream: true});
+      if (!chunk) continue;
+      if (!started) { el.classList.remove('thinking'); el.textContent = ''; started = true; }
+      // Decide whether to follow *before* appending — the append changes
+      // scrollHeight, so measuring after would call every position "the bottom".
+      const scroller = el.closest('#write-log, #chat-log');
+      const pinned = scroller &&
+        scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= STICK_PX;
+      el.textContent += chunk;
+      if (pinned) scroller.scrollTop = scroller.scrollHeight;
+    }
+  } catch (e) {
+    // The request already succeeded -- whatever it stored is stored. Only
+    // the reply broke off, so say that here and let the caller report the
+    // saved state from the response head it already has.
+    el.classList.remove('thinking');
+    el.textContent += (started ? '\n\n' : '') + '[the reply was interrupted]';
+    res.interrupted = true;
+    return res;
   }
   if (!started) { el.classList.remove('thinking'); el.textContent = '[no response]'; }
   return res;
