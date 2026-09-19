@@ -36,7 +36,7 @@ def test_web_demo_build(tmp_path):
                str(Path.home()), str(Path.home()).replace("\\", "/"),
                str(Path.home()).replace("\\", "\\\\")}
     for path in out.rglob("*"):
-        if not path.is_file() or path.suffix == ".ttf":
+        if not path.is_file() or path.suffix in (".ttf", ".png"):
             continue
         text = path.read_text(encoding="utf-8")
         rel = path.relative_to(out).as_posix()
