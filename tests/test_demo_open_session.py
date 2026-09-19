@@ -227,6 +227,9 @@ def test_restore_removes_all_visitor_data(tmp_path, monkeypatch):
     assert not list(install.rglob("private.txt"))
     assert (install / "sessions" / "current.json").read_bytes() == SHIPPED.read_bytes()
     assert (install / "chroma_data" / ".install-complete").is_file()
+    from seed_corpus.demo_close_state import content_manifest
+    expected = json.loads((ROOT / "seed_corpus" / "demo_close_expected.json").read_text(encoding="utf-8"))
+    assert content_manifest(install) == expected["before"]
     checked = subprocess.run([sys.executable, "-c",
         "import chromadb,sys; c=chromadb.PersistentClient(path=sys.argv[1]); "
         "assert not c.get_collection('journal_entries').get(ids=['private-review'])['ids']; "

@@ -101,6 +101,29 @@ def _prompt_text(kwargs: dict) -> str:
 _fixture_cache: dict[str, list] = {}
 
 
+def request_fingerprint(key: str, kwargs: dict) -> str:
+    """Match captured demo calls by their inputs, never by bucket position.
+
+    Domain prose includes the wall-clock date; it isn't journal content and
+    must not invalidate a replay tomorrow. All entry dates remain significant.
+    Model/latency/token settings don't change the identity of the input.
+    """
+    request = {k: kwargs[k] for k in ("system", "messages", "output_config")
+               if k in kwargs}
+    text = json.dumps(request, sort_keys=True, ensure_ascii=False)
+    if key == "summarizer.build_domains":
+        text = re.sub(r"Today is \d{4}-\d{2}-\d{2}\.", "Today is <capture-date>.", text)
+    return hashlib.sha256((key + "\n" + text).encode("utf-8")).hexdigest()
+
+
+def _recorded(key: str, kwargs: dict) -> str | None:
+    path = FIXTURE_DIR / "demo_close" / f"{request_fingerprint(key, kwargs)}.json"
+    if not path.is_file():
+        return None
+    record = json.loads(path.read_text(encoding="utf-8"))
+    return record["text"] if record["key"] == key else None
+
+
 def _fixtures(key: str) -> list:
     if key not in _fixture_cache:
         path = FIXTURE_DIR / f"{key}.json"
@@ -287,14 +310,14 @@ class _Messages:
         key = _call_key()
         time.sleep(DELAYS.get(key, DEFAULT_DELAY))
         prompt = _prompt_text(kwargs)
-        text = _pick(key, prompt) or _fallback(kwargs)
+        text = _recorded(key, kwargs) or _pick(key, prompt) or _fallback(kwargs)
         return _Response(text, prompt, kwargs.get("model", "mock"))
 
     def stream(self, **kwargs):
         key = _call_key()
         time.sleep(DELAYS.get(key, DEFAULT_DELAY))
         prompt = _prompt_text(kwargs)
-        text = _pick(key, prompt) or _fallback(kwargs)
+        text = _recorded(key, kwargs) or _pick(key, prompt) or _fallback(kwargs)
         return _Stream(text, prompt, kwargs.get("model", "mock"))
 
 

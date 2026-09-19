@@ -234,8 +234,11 @@ ROOT = Path(__file__).parent
 # real API calls too, so they need the same grep before they're pushed.
 SCAN_GLOBS = [
     "mock_fixtures/*.json",
+    "mock_fixtures/demo_close/*.json",
     "seed_corpus/sessions/**/*.json",
     "seed_corpus/summaries/**/*.md",
+    "seed_corpus/derived/**/*.json",
+    "seed_corpus/derived/**/*.md",
 ]
 
 

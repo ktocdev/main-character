@@ -52,7 +52,8 @@ file has a working default.
 ### 3. Run it
 
 ```bash
-.venv/bin/python server.py                      # Windows: .venv\Scripts\python.exe
+.venv/bin/python server.py                   # Windows: .venv\Scripts\python.exe server.py
+
 ```
 
 The journal opens at **http://127.0.0.1:8144**. Write something in the box and

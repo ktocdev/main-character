@@ -1,7 +1,7 @@
 {
   "Ana": {
     "type": "person",
-    "path": "people\\ana.md",
+    "path": "people/ana.md",
     "mentions": 3,
     "aliases": [],
     "groups": [],
@@ -9,7 +9,7 @@
   },
   "Dad": {
     "type": "person",
-    "path": "people\\dad.md",
+    "path": "people/dad.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -17,7 +17,7 @@
   },
   "Dev": {
     "type": "person",
-    "path": "people\\dev.md",
+    "path": "people/dev.md",
     "mentions": 12,
     "aliases": [
       "Devon"
@@ -27,7 +27,7 @@
   },
   "Lena": {
     "type": "person",
-    "path": "people\\lena.md",
+    "path": "people/lena.md",
     "mentions": 12,
     "aliases": [],
     "groups": [],
@@ -35,7 +35,7 @@
   },
   "Marcus": {
     "type": "person",
-    "path": "people\\marcus.md",
+    "path": "people/marcus.md",
     "mentions": 12,
     "aliases": [],
     "groups": [],
@@ -43,7 +43,7 @@
   },
   "Mika": {
     "type": "person",
-    "path": "people\\mika.md",
+    "path": "people/mika.md",
     "mentions": 14,
     "aliases": [],
     "groups": [],
@@ -51,7 +51,7 @@
   },
   "Mikayla": {
     "type": "person",
-    "path": "people\\mikayla.md",
+    "path": "people/mikayla.md",
     "mentions": 2,
     "aliases": [],
     "groups": [],
@@ -59,8 +59,8 @@
   },
   "Mom": {
     "type": "person",
-    "path": "people\\mom.md",
-    "mentions": 5,
+    "path": "people/mom.md",
+    "mentions": 4,
     "aliases": [],
     "groups": [
       "Family"
@@ -69,15 +69,15 @@
   },
   "Pepper": {
     "type": "person",
-    "path": "people\\pepper.md",
-    "mentions": 20,
+    "path": "people/pepper.md",
+    "mentions": 15,
     "aliases": [],
     "groups": [],
     "reviewed": false
   },
   "Priya": {
     "type": "person",
-    "path": "people\\priya.md",
+    "path": "people/priya.md",
     "mentions": 3,
     "aliases": [],
     "groups": [],
@@ -85,7 +85,7 @@
   },
   "apartment": {
     "type": "place",
-    "path": "places\\apartment.md",
+    "path": "places/apartment.md",
     "mentions": 6,
     "aliases": [],
     "groups": [],
@@ -93,7 +93,7 @@
   },
   "coffee shop": {
     "type": "place",
-    "path": "places\\coffee-shop.md",
+    "path": "places/coffee-shop.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -101,7 +101,7 @@
   },
   "Greenwood Park": {
     "type": "place",
-    "path": "places\\greenwood-park.md",
+    "path": "places/greenwood-park.md",
     "mentions": 7,
     "aliases": [],
     "groups": [],
@@ -109,7 +109,7 @@
   },
   "Groundwork": {
     "type": "place",
-    "path": "places\\groundwork.md",
+    "path": "places/groundwork.md",
     "mentions": 9,
     "aliases": [],
     "groups": [],
@@ -117,7 +117,7 @@
   },
   "home": {
     "type": "place",
-    "path": "places\\home.md",
+    "path": "places/home.md",
     "mentions": 3,
     "aliases": [],
     "groups": [],
@@ -125,7 +125,7 @@
   },
   "internal tools": {
     "type": "place",
-    "path": "places\\internal-tools.md",
+    "path": "places/internal-tools.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -133,7 +133,7 @@
   },
   "Jordan's apartment": {
     "type": "place",
-    "path": "places\\jordan-s-apartment.md",
+    "path": "places/jordan-s-apartment.md",
     "mentions": 2,
     "aliases": [],
     "groups": [],
@@ -141,7 +141,7 @@
   },
   "Jordan's living room": {
     "type": "place",
-    "path": "places\\jordan-s-living-room.md",
+    "path": "places/jordan-s-living-room.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -149,7 +149,7 @@
   },
   "legacy marketing pages": {
     "type": "place",
-    "path": "places\\legacy-marketing-pages.md",
+    "path": "places/legacy-marketing-pages.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -157,7 +157,7 @@
   },
   "living room": {
     "type": "place",
-    "path": "places\\living-room.md",
+    "path": "places/living-room.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -165,7 +165,7 @@
   },
   "Meridian": {
     "type": "place",
-    "path": "places\\meridian.md",
+    "path": "places/meridian.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -173,7 +173,7 @@
   },
   "Northlight": {
     "type": "project",
-    "path": "projects\\northlight.md",
+    "path": "projects/northlight.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -181,7 +181,7 @@
   },
   "office": {
     "type": "place",
-    "path": "places\\office.md",
+    "path": "places/office.md",
     "mentions": 3,
     "aliases": [],
     "groups": [],
@@ -189,7 +189,7 @@
   },
   "park": {
     "type": "place",
-    "path": "places\\park.md",
+    "path": "places/park.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -197,7 +197,7 @@
   },
   "sandwich place": {
     "type": "place",
-    "path": "places\\sandwich-place.md",
+    "path": "places/sandwich-place.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -205,7 +205,7 @@
   },
   "Thai place": {
     "type": "place",
-    "path": "places\\thai-place.md",
+    "path": "places/thai-place.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -213,7 +213,7 @@
   },
   "Thai place on Elm": {
     "type": "place",
-    "path": "places\\thai-place-on-elm.md",
+    "path": "places/thai-place-on-elm.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -221,7 +221,7 @@
   },
   "The Lantern": {
     "type": "place",
-    "path": "places\\the-lantern.md",
+    "path": "places/the-lantern.md",
     "mentions": 2,
     "aliases": [],
     "groups": [],
@@ -229,7 +229,7 @@
   },
   "the office building (dream)": {
     "type": "place",
-    "path": "places\\the-office-building-dream.md",
+    "path": "places/the-office-building-dream.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -237,7 +237,7 @@
   },
   "the parking garage": {
     "type": "place",
-    "path": "places\\the-parking-garage.md",
+    "path": "places/the-parking-garage.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -245,7 +245,7 @@
   },
   "the pond": {
     "type": "place",
-    "path": "places\\the-pond.md",
+    "path": "places/the-pond.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -253,7 +253,7 @@
   },
   "Coda": {
     "type": "project",
-    "path": "projects\\coda.md",
+    "path": "projects/coda.md",
     "mentions": 12,
     "aliases": [],
     "groups": [],
@@ -261,7 +261,7 @@
   },
   "Coda project": {
     "type": "project",
-    "path": "projects\\coda-project.md",
+    "path": "projects/coda-project.md",
     "mentions": 1,
     "aliases": [
       "Coda"
@@ -271,7 +271,7 @@
   },
   "Coda's snippet library": {
     "type": "project",
-    "path": "projects\\coda-s-snippet-library.md",
+    "path": "projects/coda-s-snippet-library.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -279,7 +279,7 @@
   },
   "Dashboard": {
     "type": "project",
-    "path": "projects\\dashboard.md",
+    "path": "projects/dashboard.md",
     "mentions": 2,
     "aliases": [],
     "groups": [],
@@ -287,7 +287,7 @@
   },
   "Dashboard project": {
     "type": "project",
-    "path": "projects\\dashboard-project.md",
+    "path": "projects/dashboard-project.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -295,7 +295,7 @@
   },
   "Dashboard rebuild": {
     "type": "project",
-    "path": "projects\\dashboard-rebuild.md",
+    "path": "projects/dashboard-rebuild.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -303,7 +303,7 @@
   },
   "exit plan": {
     "type": "project",
-    "path": "projects\\exit-plan.md",
+    "path": "projects/exit-plan.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -311,7 +311,7 @@
   },
   "internal dashboard layout": {
     "type": "project",
-    "path": "projects\\internal-dashboard-layout.md",
+    "path": "projects/internal-dashboard-layout.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -319,7 +319,7 @@
   },
   "internal tools team": {
     "type": "project",
-    "path": "projects\\internal-tools-team.md",
+    "path": "projects/internal-tools-team.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -327,7 +327,7 @@
   },
   "Meridian work": {
     "type": "project",
-    "path": "projects\\meridian-work.md",
+    "path": "projects/meridian-work.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -335,7 +335,7 @@
   },
   "nav component": {
     "type": "project",
-    "path": "projects\\nav-component.md",
+    "path": "projects/nav-component.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -343,7 +343,7 @@
   },
   "Northlight application": {
     "type": "project",
-    "path": "projects\\northlight-application.md",
+    "path": "projects/northlight-application.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -351,7 +351,7 @@
   },
   "Northlight interview process": {
     "type": "project",
-    "path": "projects\\northlight-interview-process.md",
+    "path": "projects/northlight-interview-process.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -359,7 +359,7 @@
   },
   "portfolio": {
     "type": "project",
-    "path": "projects\\portfolio.md",
+    "path": "projects/portfolio.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -367,7 +367,7 @@
   },
   "portfolio update": {
     "type": "project",
-    "path": "projects\\portfolio-update.md",
+    "path": "projects/portfolio-update.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -375,7 +375,7 @@
   },
   "reorg": {
     "type": "project",
-    "path": "projects\\reorg.md",
+    "path": "projects/reorg.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -383,7 +383,7 @@
   },
   "restructuring": {
     "type": "project",
-    "path": "projects\\restructuring.md",
+    "path": "projects/restructuring.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],
@@ -391,7 +391,7 @@
   },
   "Singing practice": {
     "type": "project",
-    "path": "projects\\singing-practice.md",
+    "path": "projects/singing-practice.md",
     "mentions": 1,
     "aliases": [],
     "groups": [],

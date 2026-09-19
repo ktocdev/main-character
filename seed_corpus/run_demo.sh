@@ -4,6 +4,7 @@
 # spends nothing — writes land in the sandbox, never in the real stores.
 I=seed_corpus/install
 export MC_MOCK=1 MC_AUTHOR_NAME=Jordan
+export MC_DISABLED_CATEGORIES=""
 export MC_JOURNAL_DIR=$I/journal_entries MC_CHROMA_DIR=$I/chroma_data
 export MC_ENTITY_DIR=$I/entity_graph MC_SUMMARY_DIR=$I/summaries
 export MC_CATEGORY_DIR=$I/categories MC_PATTERN_DIR=$I/patterns

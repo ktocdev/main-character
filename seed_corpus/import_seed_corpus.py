@@ -179,8 +179,8 @@ def session_files() -> list[tuple[Path, Path]]:
 
 def derived_files() -> list[tuple[Path, Path]]:
     """Everything Claude worked out about the corpus: the entity graph,
-    category assignments, the pattern library, the dream index. Produced
-    once by capture_fixtures.py and committed under derived/, then copied
+    category assignments, summary layers, the pattern library, the dream index.
+    Captured through September 14 by capture_demo_close.py under derived/, then copied
     in here the same way the sessions are.
 
     They ship because the demo has to install without an API key. The
@@ -188,7 +188,7 @@ def derived_files() -> list[tuple[Path, Path]]:
     are local -- but every one of these files is Claude output, so a
     cloner who ran the capture themselves would need a key and would
     spend real money to reproduce what is already fixed content. Without
-    them the demo boots with 34 entries and an empty Entities tab, which
+    them the demo boots with 29 indexed entries and an empty Entities tab, which
     reads as a broken app rather than a sparse one.
 
     chroma_data/ deliberately stays out, the same way export.py leaves the
@@ -196,7 +196,8 @@ def derived_files() -> list[tuple[Path, Path]]:
     and import rebuilds it on the spot for nothing."""
     here = Path(__file__).parent / "derived"
     dests = {"entity_graph": ENTITY_DIR, "categories": CATEGORY_DIR,
-             "patterns": PATTERN_DIR, "dreams": DREAM_DIR}
+             "patterns": PATTERN_DIR, "dreams": DREAM_DIR,
+             "summaries": SUMMARY_DIR}
     files = []
     for name, dst_root in dests.items():
         src_root = here / name
@@ -348,6 +349,12 @@ def main():
     install_files(derived_files(), args.dry_run)
 
     if not args.dry_run:
+        # The demo ships every summary layer, not just the rolling seed.
+        # Populate retrieval locally from these captured docs (no API calls).
+        import summarizer
+        import dreams as dream_store
+        summarizer.sync_summary_embeddings(quiet=True)
+        dream_store.build_index()
         marker.touch()
 
     print(f"\ndone. {'(dry run, nothing written)' if args.dry_run else ''}")

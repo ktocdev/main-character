@@ -1,0 +1,4 @@
+{
+  "key": "organic.scan",
+  "text": "{\"clusters\":[{\"index\":0,\"keep\":false,\"name\":\"\",\"reason\":\"Mixes a coffee shop, a coding project, a portfolio task, and an unrelated office/dream entry with no single coherent theme.\"},{\"index\":1,\"keep\":true,\"name\":\"The Reorg\",\"reason\":\"All entries track Jordan's anxiety and shifting team assignments through the same company restructuring.\"},{\"index\":2,\"keep\":true,\"name\":\"Dashboard Saga\",\"reason\":\"All entries follow the repeated redesign and criticism cycle of the same internal dashboard project.\"}]}"
+}
