@@ -299,22 +299,6 @@ export function init() {
 
   $('reset').onclick = () => { $('write-actions').removeAttribute('open'); closeSession(); };
 
-  // Mock-only reset (see /api/sessions/discard): throw the scratch chat away
-  // without committing it as an entry or running the pipeline. Visibility is
-  // gated in CSS by body.mock-mode; the server refuses it off mock regardless.
-  $('discard').onclick = async () => {
-    $('write-actions').removeAttribute('open');
-    if (!confirm('Discard this chat?\n\nIt is thrown away — no journal entry, '
-      + 'no memory update. This is a testing affordance for the mock journal.')) return;
-    const r = await api('/api/sessions/discard', {});
-    if (!r) return;
-    $('write-log').innerHTML = '';
-    $('entry-saved').textContent = 'chat discarded — a fresh one is open.';
-    state.sessionSel = 'current';
-    if (state.activeTab === 'history') await loadHistory();
-    refreshStatus();
-  };
-
   const resetTitle = $('reset').title;
   $('write-actions').addEventListener('toggle', async () => {
     if (!$('write-actions').open) return;

@@ -68,7 +68,9 @@ WRITES = {"current": 0, "archive": 0}
 # What an entry_id may contain. It lands in a filename (the immediate
 # backup), so no separators, no dots -- and no underscore, which the backup
 # name uses as its field delimiter (see export.DRAFT).
-ENTRY_ID = re.compile(r"^[A-Za-z0-9-]{8,64}$")
+# \Z, not $: `$` also matches before a trailing newline, which would let
+# "abcdefgh\n" through into a filename and a response header.
+ENTRY_ID = re.compile(r"^[A-Za-z0-9-]{8,64}\Z")
 
 TITLE_PROMPT = (
     "Give this journal chat a short title — 3 to 6 words, plain text, "
@@ -172,7 +174,8 @@ def _migrate_provenance(cur: dict) -> None:
 
     Old messages never recorded Save versus Send, and nothing in their prose
     can tell them apart. The one unambiguous evidence is the immediate backup
-    a save wrote: an `entry_file` artifact whose file body is exactly one
+    a save wrote: an `entry_file` artifact (sessions of that era tracked
+    their backups under `artifacts`) whose file body is exactly one
     message's text, stamped to that message's minute. Those messages become
     `kind: "entry"`. Everything else stays unclassified -- kept, closed and
     remembered as before, but not counted as a saved entry while open.
@@ -212,48 +215,6 @@ def _migrate_provenance(cur: dict) -> None:
     save_current(cur)
 
 
-def discard_current(collection=None) -> None:
-    """Throw the open chat away without closing it: no journal entry, no
-    archive, no memory pipeline. The next chat opens on the same carried-
-    forward context a fresh session always does, so this is a reset, not a
-    delete of anything already committed. A testing affordance -- the route
-    that calls it refuses outside mock mode, where an unsaved chat vanishing
-    with no entry would be data loss rather than a convenience.
-
-    Write-mode entries (waking and dream) are backed up to disk -- and dreams
-    upserted into the dream collection -- the moment they're written, before
-    the chat ever closes (see `record_artifact`). Discard has to undo those
-    too, or the "no entry" promise is false: a rebuild or export would still
-    pick up the file the discarded chat left behind."""
-    with LOCK:
-        cur = load_current(collection)
-        for art in cur.get("artifacts", []):
-            _discard_artifact(art)
-        base = _initial_base(collection) if collection is not None else []
-        save_current(_fresh(base=base))
-
-
-def record_artifact(art: dict, collection=None):
-    """Track a write-mode side effect (a backup file, a dream collection id)
-    against the open session, so `discard_current` can undo it. `art` is
-    {"kind": "entry_file", "path": ...} or
-    {"kind": "dream", "path": ..., "entry_id": ...}; either may also carry
-    `saved_entry_id`, the message it belongs to."""
-    with LOCK:
-        cur = load_current(collection)
-        cur.setdefault("artifacts", []).append(art)
-        save_current(cur)
-
-
-def _discard_artifact(art: dict) -> None:
-    path = art.get("path")
-    if path:
-        Path(path).unlink(missing_ok=True)
-    if art.get("kind") == "dream" and art.get("entry_id"):
-        import dreams
-        dreams.get_dream_collection().delete(ids=[art["entry_id"]])
-
-
 def append_message(role: str, text: str, dream: bool = False, collection=None,
                    when: datetime | None = None, kind: str | None = None):
     """Record one turn of the open session ('you' or 'companion'). A 'you'
@@ -277,12 +238,10 @@ def has_entry(entry_id: str, collection=None) -> bool:
 
 
 def save_entry(text: str, entry_id: str, dream: bool = False, collection=None,
-               when: datetime | None = None, artifact: dict | None = None) -> None:
-    """Persist one **save entry**: the message, its provenance and the side
-    effect `discard_current` would have to undo, in a single write -- so a
-    crash can never leave the entry recorded without its artifact, or the
-    other way round. Replied and no-reply saves both come through here, which
-    is what keeps their counting from drifting apart."""
+               when: datetime | None = None) -> None:
+    """Persist one **save entry**: the message and its provenance. Replied
+    and no-reply saves both come through here, which is what keeps their
+    counting from drifting apart."""
     with LOCK:
         cur = load_current(collection)
         msg = {"role": "you", "kind": "entry", "entry_id": entry_id,
@@ -290,9 +249,6 @@ def save_entry(text: str, entry_id: str, dream: bool = False, collection=None,
         if dream:
             msg["dream"] = True
         cur["messages"].append(msg)
-        if artifact:
-            cur.setdefault("artifacts", []).append(
-                {**artifact, "saved_entry_id": entry_id})
         save_current(cur)
 
 
