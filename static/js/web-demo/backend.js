@@ -71,6 +71,14 @@
     return before[key];
   }
 
+  // The server writes the archive during the close itself, so History moves
+  // to the after-close sessions as soon as the first close returns -- not
+  // when the pipeline behind it finishes.
+  function readSessions(key) {
+    if (closes > 0 && key in after) return after[key];
+    return before[key];
+  }
+
   // ---- responses ----
   function json(body, status = 200, headers = {}) {
     return new Response(JSON.stringify(body), {
@@ -139,7 +147,7 @@
 
   // ---- sessions ----
   function sessionList() {
-    const s = clone(read('/api/sessions').json);
+    const s = clone(readSessions('/api/sessions').json);
     s.current = {
       started: current.started,
       title: current.parts.length ? current.parts[0].title : null,
@@ -156,7 +164,7 @@
   function archive(id) {
     const extra = extraArchives.find(a => a.id === id);
     if (extra) return json(extra);
-    const r = read(`/api/sessions/archive?id=${id}`);
+    const r = readSessions(`/api/sessions/archive?id=${id}`);
     if (!r) return json({error: 'not found'}, 404);
     const body = clone(r.json);
     // The recorded close archived the demo's own three days. The visitor's
@@ -369,7 +377,7 @@
   }
 
   function fromCapture(key) {
-    const r = read(key);
+    const r = key.startsWith('/api/sessions/') ? readSessions(key) : read(key);
     if (!r) return json({error: 'not found'}, 404);
     if ('json' in r) return json(r.json, r.status);
     const headers = {'Content-Type': r.type || 'text/plain'};
