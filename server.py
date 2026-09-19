@@ -509,13 +509,11 @@ def _persist_entry(text: str, entry_id: str, when, dream: bool):
         dream_id = None
         if dream:
             import dreams
-            dream_id, path = dreams.store_dream_entry(text, when=when)
-            artifact = {"kind": "dream", "path": str(path), "entry_id": dream_id}
+            dream_id, _ = dreams.store_dream_entry(text, when=when)
         else:
-            path = sessions.backup_entry_text(text, when=when, entry_id=entry_id)
-            artifact = {"kind": "entry_file", "path": str(path)}
+            sessions.backup_entry_text(text, when=when, entry_id=entry_id)
         sessions.save_entry(text, entry_id, dream=dream, when=when,
-                            artifact=artifact, collection=STATE["collection"])
+                            collection=STATE["collection"])
     return True, dream_id
 
 
@@ -775,36 +773,6 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     _tracked(background_tasks, _after_close_seed, result["key"])
     _tracked(background_tasks, _after_close_refresh)
     return {"ok": True, **result}
-
-
-@app.post("/api/sessions/discard")
-def discard_session():
-    """Throw the open chat away without closing it -- mock only.
-
-    Closing writes the user's side as a journal entry and runs the whole
-    memory pipeline over it; on a mock journal that is only being poked at,
-    every scratch close quietly fills the corpus with test entries. This
-    resets to an empty chat instead: no entry, no archive, no pipeline. It is
-    refused on a real journal, where an unsaved chat disappearing with nothing
-    kept is data loss, not a reset -- there, `close` is how you clear the box.
-
-    The in-memory reset mirrors close_session exactly (messages emptied, the
-    session meter zeroed) minus the parts that persist the chat. Write-mode
-    entries back themselves up to disk (and dreams into the dream collection)
-    the moment they're written, before the chat closes -- discard undoes
-    those too (`sessions.discard_current`), or "no entry" would be false.
-    """
-    import config
-    if not config.MOCK_MODE:
-        return JSONResponse(
-            {"error": "Discarding a chat is a mock-mode testing affordance. "
-                      "On a real journal, close the chat to keep it as an "
-                      "entry -- nothing here throws your writing away."},
-            status_code=403)
-    sessions.discard_current(STATE["collection"])
-    STATE["messages"] = []
-    metering.reset()
-    return {"ok": True}
 
 
 @app.get("/api/sessions/close/progress")

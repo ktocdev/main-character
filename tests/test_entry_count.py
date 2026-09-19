@@ -13,7 +13,6 @@ docs/releasing/saved-entry-count-handoff.md, the acceptance list:
   * a close interrupted after its archive counts each entry once;
   * a save whose reply fails is still counted; one refused before it was
     stored is not;
-  * discard removes only that chat's entries;
   * legacy history counts once per dated entry, however it is chunked, and a
     rebuild of the index keeps the count; the migration of an old open chat
     is conservative and repeatable.
@@ -175,14 +174,6 @@ def test_a_torn_archive_is_skipped_not_fatal(col):
     (sessions.ARCHIVE_DIR / "0000-torn.json").write_text('{"parts": [', encoding="utf-8")
     assert entry_catalog.refresh(col)["entries"] == 1
     assert entry_catalog.is_saved("entry-one-0001", col)
-
-
-def test_discard_removes_the_open_entries(col):
-    sessions.save_current({**sessions._fresh(), "messages": []})
-    save(col, "scratch", "entry-one-0001")
-    assert totals(col) == (1, 1, 0)
-    sessions.discard_current()
-    assert totals(col) == (0, 0, 0)
 
 
 # ---- legacy history ----
@@ -391,6 +382,10 @@ def test_a_save_refused_before_storing_does_not_count(client, fresh):
     assert client.post("/api/entry", json={"text": "   "}).status_code == 400
     assert client.post("/api/entry", json={
         "text": "fine", "save_id": "../../etc"}).status_code == 400
+    # `$` would accept a trailing newline; it must be refused like any other
+    for sid in ("abcdefgh\n", "abcdefgh\n "):
+        assert client.post("/api/entry", json={
+            "text": "fine", "save_id": sid, "dream": True}).status_code == 400
     assert status(client)["entries"] == start
 
 
@@ -413,14 +408,6 @@ def test_a_dream_save_does_not_count(client, fresh):
     start = status(client)["entries"]
     client.post("/api/entry", json={"text": "I was flying over a lake",
                                     "dream": True, "no_reply": True})
-    assert status(client)["entries"] == start
-
-
-def test_discard_takes_that_chats_entries_back_out(client, fresh):
-    start = status(client)["entries"]
-    client.post("/api/entry", json={"text": "scratch", "no_reply": True})
-    assert status(client)["entries"] == start + 1
-    assert client.post("/api/sessions/discard", json={}).status_code == 200
     assert status(client)["entries"] == start
 
 
