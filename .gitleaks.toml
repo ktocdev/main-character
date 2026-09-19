@@ -1,0 +1,11 @@
+# Default gitleaks rules, plus one narrow allowlist.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Seed summary entry keys are date_title slugs, not credentials"
+# generic-api-key reads `"key": "2026-09-14_Signing-the-lease"` as a secret
+# (the word "key" next to a high-entropy value). Only that exact shape is
+# allowed, so a real token under a "key" field elsewhere still fails.
+regexTarget = "line"
+regexes = ['''^\s*"key": "\d{4}-\d{2}-\d{2}_[A-Za-z0-9-]+",?\s*$''']
