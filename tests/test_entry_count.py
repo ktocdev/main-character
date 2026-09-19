@@ -167,6 +167,16 @@ def test_retry_of_an_archived_save_is_recognised(col):
     assert not entry_catalog.is_saved("entry-new-0001", col)
 
 
+def test_a_torn_archive_is_skipped_not_fatal(col):
+    """An archive truncated by a crash (closes weren't always atomic) must
+    not stop the recount that startup and /api/status both run."""
+    save(col, "kept", "entry-one-0001")
+    sessions.close_session(col, title_hint="x")
+    (sessions.ARCHIVE_DIR / "0000-torn.json").write_text('{"parts": [', encoding="utf-8")
+    assert entry_catalog.refresh(col)["entries"] == 1
+    assert entry_catalog.is_saved("entry-one-0001", col)
+
+
 def test_discard_removes_the_open_entries(col):
     sessions.save_current({**sessions._fresh(), "messages": []})
     save(col, "scratch", "entry-one-0001")
@@ -355,6 +365,25 @@ def test_a_retried_save_is_stored_once(client, fresh):
     assert replied.headers["X-Entry-Saved"] == "1"
     assert status(client)["entries"] == start + 1
     assert len(you_messages()) == 1
+
+
+def test_a_retry_after_its_own_reply_hit_the_cap_is_a_duplicate(client, fresh, monkeypatch):
+    """The first attempt landed and its reply spent up to the cap, but the
+    response was lost. The retry must say "already saved", not 429 -- a
+    duplicate makes no call, so the cap has nothing to refuse."""
+    import caps
+    body = {"text": "landed, then the network dropped", "save_id": "capped-00001"}
+    assert client.post("/api/entry", json=body).status_code == 200
+
+    def capped():
+        raise caps.CapExceeded("monthly cap reached")
+
+    monkeypatch.setattr(caps, "check", capped)
+    again = client.post("/api/entry", json=body)
+    assert again.status_code == 200 and again.json()["duplicate"]
+    assert again.headers["X-Entry-Saved"] == "1"
+    # a genuinely new save is still refused
+    assert client.post("/api/entry", json={"text": "new"}).status_code == 429
 
 
 def test_a_save_refused_before_storing_does_not_count(client, fresh):

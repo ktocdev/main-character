@@ -442,12 +442,19 @@ def current_view(collection) -> dict:
 
 
 def load_archives() -> list[dict]:
+    """Every readable archive. One that won't parse (a close torn by a crash
+    before archives were written atomically) is skipped with a warning, not
+    raised: startup and /api/status both read all of them, and one bad file
+    must not take the app down."""
     if not ARCHIVE_DIR.exists():
         return []
-    return [
-        json.loads(p.read_text(encoding="utf-8"))
-        for p in sorted(ARCHIVE_DIR.glob("*.json"))
-    ]
+    archives = []
+    for p in sorted(ARCHIVE_DIR.glob("*.json")):
+        try:
+            archives.append(json.loads(p.read_text(encoding="utf-8")))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            print(f"  skipping unreadable archive {p.name}: {exc}")
+    return archives
 
 
 def load_archive(archive_id: str) -> dict | None:

@@ -559,6 +559,14 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
         return {"ok": True, "entry_id": entry_id, "no_reply": True,
                 "duplicate": not saved}
 
+    # A retry of a save that already landed costs nothing, so it answers before
+    # the key and cap checks: the first attempt's reply may be what pushed spend
+    # over the cap, and refusing the retry would tell the author a stored entry
+    # failed. _persist_entry re-checks under the lock; this is only the fast path.
+    if entry_catalog.is_saved(entry_id, STATE["collection"]):
+        return JSONResponse({"ok": True, "entry_id": entry_id, "duplicate": True},
+                            headers=saved_headers)
+
     # Past the no_reply branch above on purpose: a no-reply save makes no
     # Claude call, so it needs no client and stays available. Only the reply
     # path below does.
