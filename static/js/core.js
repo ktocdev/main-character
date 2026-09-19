@@ -51,7 +51,12 @@ export async function refreshStatus() {
   // (CSS shows it on mock-mode, the seed class only makes it louder). The
   // seed message subsumes the canned-replies fact, so it wins the text.
   document.body.classList.toggle('seed-instance', !!s.seed_instance);
-  $('app-banner').textContent = s.seed_instance
+  // Only the in-browser backend of the published web demo sets this: there
+  // is no server, so base.css hides what only a server could do.
+  document.body.classList.toggle('web-demo', !!s.web_demo);
+  $('app-banner').textContent = s.web_demo
+    ? 'web demo — sample journal, canned replies. Reload to start over.'
+    : s.seed_instance
     ? 'demo journal — sample entries, and the replies are canned. Restart to go back to yours.'
     : 'mock mode — replies are canned, not from Claude. No API calls are being made.';
   // A server too old to report this sends nothing; `!== false` reads that
@@ -134,6 +139,29 @@ export async function installDemo(report) {
     clearTimeout(hold);
     if (timer) clearInterval(timer);
   }
+}
+
+// Save a file the server hands back. Through fetch rather than by pointing
+// window.location at the route, so it works the same whether the answer
+// comes from the server or from the web demo's in-page backend. The name the
+// response gives wins over `filename`.
+export async function download(url, filename) {
+  const res = await fetch(url, {cache: 'no-store'});
+  if (!res.ok) {
+    let msg = `download failed (${res.status})`;
+    try { const r = await res.json(); if (r && r.error) msg = r.error; } catch (e) {}
+    alert(msg);
+    return;
+  }
+  const named = /filename="?([^";]+)"?/i.exec(res.headers.get('content-disposition') || '');
+  const href = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = named ? named[1] : filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
 }
 
 export async function api(url, payload) {

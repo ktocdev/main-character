@@ -89,6 +89,12 @@ The demo is a separate journal with its own data directories. Nothing you type
 there can reach your own entries, and a restart returns you to your own
 journal. A banner stays visible the whole time you are in the demo.
 
+The same demo also builds as a static site that runs entirely in the browser,
+with no server behind it. `python scripts/build_web_demo.py` writes it to
+`dist/web-demo/`. The UI is the real one, and its API calls are answered from
+reads captured before and after the recorded close. The other tabs are
+read-only, and a reload starts it over.
+
 ## What it costs
 
 - **Reading, searching and browsing are free.** Embeddings are computed on your

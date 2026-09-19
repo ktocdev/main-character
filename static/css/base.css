@@ -71,3 +71,11 @@
      one id + one class + one type, so specificity is a tie and source order
      decides it. */
   body.seed-instance #app-banner { background: var(--accent); }
+  /* The published web demo has no server behind it (static/js/web-demo/).
+     Restarting, installing the demo, the API key and the data folder all
+     mean nothing in a browser tab, so their controls go. */
+  body.web-demo #settings-restart,
+  body.web-demo #settings-seed,
+  body.web-demo #settings-restart-info,
+  body.web-demo .set-group:has(#set-key),
+  body.web-demo .set-group:has(#set-export) { display: none; }

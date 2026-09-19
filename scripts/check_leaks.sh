@@ -15,10 +15,19 @@
 # That is why this is a pre-push gate as well as a CI job — CI proves the
 # patterns, only a local run proves the names.
 #
-# Usage:  bash scripts/check_leaks.sh
-# Exit:   0 clean, 1 findings, 2 not a git repo.
+# Usage:  bash scripts/check_leaks.sh          every tracked file
+#         bash scripts/check_leaks.sh DIR      every file under DIR instead --
+#                                              build output such as dist/web-demo/,
+#                                              which is published but never tracked
+# Exit:   0 clean, 1 findings, 2 not a git repo (or DIR missing).
 
 set -uo pipefail
+
+TARGET=""
+if [ $# -gt 0 ]; then
+    [ -d "$1" ] || { echo "not a directory: $1"; exit 2; }
+    TARGET="$(cd "$1" && pwd)"
+fi
 
 cd "$(git rev-parse --show-toplevel)" || exit 2
 
@@ -45,9 +54,13 @@ PATTERNS='sk-ant-[A-Za-z0-9_-]{10,}|C:[/\]Users|OneDrive'
 # Tracked files only: untracked local working docs are not shipping, and
 # including them would bury real findings under noise. Self-excluded —
 # this file contains every pattern it searches for.
-mapfile -d '' -t FILES < <(git ls-files -z | grep -zv "^${SELF}\$")
-
-echo "leak check: ${#FILES[@]} tracked file(s)"
+if [ -n "$TARGET" ]; then
+    mapfile -d '' -t FILES < <(find "$TARGET" -type f -print0)
+    echo "leak check: ${#FILES[@]} file(s) under $TARGET"
+else
+    mapfile -d '' -t FILES < <(git ls-files -z | grep -zv "^${SELF}\$")
+    echo "leak check: ${#FILES[@]} tracked file(s)"
+fi
 
 FOUND=0
 

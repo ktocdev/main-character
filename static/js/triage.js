@@ -154,7 +154,7 @@ async function triageKey(key) {
     case 't': $('triage-kind-row').style.display = 'flex'; break;
     case '1': case '2': case '3': {
       const row = $('triage-kind-row');
-      if (row.style.display !== 'none') {
+      if (getComputedStyle(row).display !== 'none') {
         row.querySelectorAll('button')[Number(key) - 1].click();
       }
       break;

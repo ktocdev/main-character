@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, api, esc, refreshStatus } from './core.js';
+import { $, api, download, esc, refreshStatus } from './core.js';
 import { state } from './state.js';
 import { addMsg, streamInto, composerBusy, anchorTop } from './conversation.js';
 import { renderSessionPart, addSessionBraid, loadHistory } from './history.js';
@@ -313,8 +313,10 @@ export function init() {
     $('reset').title = fresh ? resetTitle
       : 'nothing new in this chat yet — write or chat first';
   });
-  $('seed-download').onclick = () => { window.location = '/api/seed/download?which=current'; };
-  $('seed-banner-download').onclick = () => { window.location = '/api/seed/download?which=candidate'; };
+  $('seed-download').onclick = () =>
+    download('/api/seed/download?which=current', 'seed_summary.md');
+  $('seed-banner-download').onclick = () =>
+    download('/api/seed/download?which=candidate', 'seed_summary.candidate.md');
   $('seed-upload-btn').onclick = () => $('seed-upload-file').click();
   $('seed-banner-upload').onclick = () => $('seed-upload-file').click();
   $('seed-upload-file').onchange = async () => {
