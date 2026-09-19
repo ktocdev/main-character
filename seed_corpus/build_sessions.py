@@ -314,7 +314,9 @@ def run_session(spec, entries, collection, client, entity_index,
         print(f"  resuming: {len(done)} entries touched, {len(braid)} messages")
 
     def checkpoint():
-        sessions.save_current({"started": started, "base": [], "_api": api_msgs,
+        sessions.save_current({"started": started,
+                               "entry_schema": sessions.ENTRY_SCHEMA,
+                               "base": [], "_api": api_msgs,
                                "_done": done, "messages": braid})
 
     for e in days:
@@ -327,8 +329,14 @@ def run_session(spec, entries, collection, client, entity_index,
         if sent >= len(turns):
             continue
 
-        def say(text, label):
-            msg = {"role": "you", "text": text, "ts": stamp}
+        def say(text, label, saved=False):
+            # The entry file itself is Jordan's one **save entry** for the
+            # day; follow-ups and interjections are sends. The id is the
+            # file's stem, so a rebuild names the same entry the same way.
+            msg = {"role": "you", "kind": "chat", "text": text, "ts": stamp}
+            if saved:
+                msg.update(kind="entry",
+                           entry_id="demo-" + re.sub(r"[^A-Za-z0-9-]+", "-", e["stem"]))
             if e["dream"]:
                 msg["dream"] = True
             braid.append(msg)
@@ -339,7 +347,7 @@ def run_session(spec, entries, collection, client, entity_index,
             return reply
 
         for i in range(sent, len(turns)):
-            reply = say(turns[i], f"turn {i + 1}")
+            reply = say(turns[i], f"turn {i + 1}", saved=i == 0)
             # Jordan calls out the phrase before saying anything else
             line = interjection_for(reply)
             if line:

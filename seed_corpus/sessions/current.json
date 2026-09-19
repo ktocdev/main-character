@@ -1,9 +1,12 @@
 {
   "started": "2026-09-14 20:40",
+  "entry_schema": 2,
   "base": [],
   "messages": [
     {
       "role": "you",
+      "kind": "entry",
+      "entry_id": "demo-2026-09-15-Rebuilding-free-play",
       "text": "9/15 - spent most of the afternoon writing documentation for the analytics dashboard. screenshots, flow diagrams, the kind of thing nobody reads until the person who built it is gone. which may be me by October, or may not be. I'm writing it for whoever Priya assigns after the 21st, which is a person I haven't met, managed by a person I haven't met, for a site the company plans to replace.\n\nthe irony of spending my last good week at Meridian making sure my best work survives me is not lost. but the dashboard actually helps people and I'd rather it outlive my tenure than rot because nobody knows where the config lives.\n\nwent to Groundwork after. cortado, window table, laptop. finally rebuilt the free-play review screen. Dev's session on the 3rd broke something open and I've been carrying the fix around for twelve days without touching it - neutral marks instead of highlights, and the review step asks what a mark means instead of telling you. no more \"your best moments\" header. no more highlight reel. the mark is just a mark until you say what it is.\n\nit took two hours and I threw out more code than I wrote. the whole trophy-case framing was load-bearing in ways I didn't expect - the export naming, the share text, the summary card that said \"you played your best on Tuesday.\" all of it assumed the mark meant something good. ripping that assumption out was like pulling a thread and watching the sweater come apart, except the sweater was ugly and the yarn is better.\n\nit works now. I ran a test session, marked four spots, and the review asked me about each one. it felt like talking to someone who was actually curious instead of someone already proud of you.\n\nthe waiting part isn't hard the way I thought it would be. nine days until the onsite, six until Priya. I keep expecting the spiral to start and it doesn't. maybe that's just the delay. but I also keep coming back to what I wrote on the 14th - the thing that changed isn't the situation, it's the doors. and the doors are still open.\n\nPepper is on the back of the couch watching the window like she's expecting someone. nobody's coming, Pep. it's just the Tuesday bird.",
       "ts": "2026-09-15 21:15"
     },
@@ -14,6 +17,8 @@
     },
     {
       "role": "you",
+      "kind": "entry",
+      "entry_id": "demo-2026-09-16-Booking-the-open-mic",
       "text": "9/16 - went to Dev's place after work. they're three days out from the gig and running the setlist front to back, standing in the kitchen because the acoustics are better than the bedroom. I sat on the counter and listened to the whole thing twice.\n\nthey're good. I keep wanting to qualify that - good for someone who has a day job, good for a Wednesday night - but no. they're good. the transition they marked as worst on the 3rd is clean now. they played it without flinching.\n\nI told them I'd be there on the 19th. they said \"obviously\" like it had already been decided, which I guess it had.\n\nbrought the guitar picks Mom left. Dad's old ones, the heavy tortoiseshell set. Dev held one up to the light and said \"these are the real thing\" and put it in their case like it belonged there. I didn't expect that to hit me and it did.\n\nMika texted while I was on the train home. she'd seen a listing for an open mic at the Fern on the 27th and sent it with just a question mark. my first thought was the usual - I'm not ready, I haven't practiced enough, I'll do it next month. I caught it this time. it's the same voice that said I didn't have enough experience for Northlight, and that wasn't true either.\n\nI signed up before I got off the train. September 27th, the Fern, 8pm slot.\n\nPepper met me at the door, which she only does when she's hungry, but I'm choosing to believe it was moral support.",
       "ts": "2026-09-16 22:00"
     },
@@ -24,6 +29,7 @@
     },
     {
       "role": "you",
+      "kind": "chat",
       "text": "one more thing about the picks - Dev tried one on the low B string and said it changes the attack completely, warmer. and then they used it for the rest of practice. Dad would have liked that.",
       "ts": "2026-09-16 22:00"
     },
@@ -34,6 +40,8 @@
     },
     {
       "role": "you",
+      "kind": "entry",
+      "entry_id": "demo-2026-09-17-Building-the-presentation",
       "text": "9/17 - started building the portfolio presentation for the 24th. four interviews plus a presentation to the full design team. one week out.\n\nthe Meridian section wrote itself - dashboard metrics, user flow before and after, the stakeholder management section that is really a section about designing around Marcus without saying so. Ana already knows the honest version from the screen. the deck just needs to show the work.\n\nCoda is harder. I spent two hours going back through my own entries trying to find the thread. July 28th, the first night at Groundwork. August 4th, building the timer after the crash. the napkin at the Thai place with Dev. the nine days of missing my own blind spot. I was looking for a narrative arc for a slide deck and what I found is that I've been keeping a design log without knowing it.\n\nthe thing I didn't expect: re-reading the entries changed what I think the story is. in March I would have built a deck about the features - here's the practice log, here's the metronome, here's free play. today the story is about the blind spot. about using something every day and having someone else see it clearly in forty minutes. the presentation I'm building now is one I couldn't have built three months ago, not because the work didn't exist yet but because I hadn't written my way into understanding what the work was about.\n\nI don't know what to do with that exactly. the journal has been doing something I didn't design it to do - holding the thread while I was too busy living it to see the shape. I'm not going to say \"I keep a reflective journal and it changed how I think about my own design process\" in a job interview. but it's true, and that's a strange thing to owe a piece of software.\n\nLena texted asking if I need anything for the 24th. I said I'm good, which is the version of asking for help I'm capable of right now. she sent back a single thumbs up, no follow-up questions, which is why Lena is Lena.\n\ngot a calendar invite from Priya this afternoon. \"intro chat, Monday 9/21, 30 min.\" four days. the Northlight onsite is three days after that. I keep doing the math on what happens if I get an offer before Priya and I have had a real conversation, and then I stop because I'm doing the thing where I get attached to an outcome that hasn't happened.\n\nthe fear from the 11th is still right where I left it. a week out, I don't think it's going anywhere.\n\nPepper is asleep on the green rug again, same spot, same curl. some things don't need to change.",
       "ts": "2026-09-17 20:30"
     },
@@ -44,6 +52,7 @@
     },
     {
       "role": "you",
+      "kind": "chat",
       "text": "I just went back and read the Coda case study I wrote on the 9th and the version I'm putting in the deck is different. better. the 9th version was honest but defensive - 'I missed this but here's why it's not that bad.' the deck version is just 'I missed this and here's what I learned.' that's the whole difference and it took me eight days to get there.",
       "ts": "2026-09-17 20:30"
     },

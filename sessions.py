@@ -28,10 +28,21 @@ imported: user messages only), and kicks off the full memory pipeline.
 Layout (gitignored — personal data):
     sessions/current.json    the open session
     sessions/archive/        closed sessions, full braid + parts
+
+Provenance (entry schema 2). Every new `you` message says what it is:
+`kind: "entry"` with a stable `entry_id` for **save entry**, `kind: "chat"`
+for **send**. `dream: true` stays the realm marker. A message with no `kind`
+predates the schema and is unclassified: never assumed to be either. The
+saved-entry count (`entry_catalog.py`) is built from these fields, so they
+are carried unchanged into the archive at close.
 """
 
+import hashlib
 import json
+import os
 import re
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -41,6 +52,23 @@ from rag_journal import JOURNAL_DIR, extract_metadata
 ARCHIVE_DIR = SESSION_DIR / "archive"
 BRAID_DIR = SESSION_DIR / "braids"
 CURRENT_FILE = SESSION_DIR / "current.json"
+
+ENTRY_SCHEMA = 2
+
+# Every read-modify-write of current.json holds this. FastAPI runs sync
+# routes on a thread pool, so a save landing mid-close would otherwise be
+# read into neither the archive nor the fresh session and simply vanish.
+LOCK = threading.RLock()
+
+# Bumped on every write this process makes to the open session or the
+# archive. The entry catalog keys its cache on these as well as on file
+# stats: two quick writes can share an mtime tick, a counter cannot.
+WRITES = {"current": 0, "archive": 0}
+
+# What an entry_id may contain. It lands in a filename (the immediate
+# backup), so no separators, no dots -- and no underscore, which the backup
+# name uses as its field delimiter (see export.DRAFT).
+ENTRY_ID = re.compile(r"^[A-Za-z0-9-]{8,64}$")
 
 TITLE_PROMPT = (
     "Give this journal chat a short title — 3 to 6 words, plain text, "
@@ -57,7 +85,8 @@ def _stamp(when: datetime | None = None) -> str:
 
 
 def _fresh(base: list[dict] | None = None) -> dict:
-    return {"started": _stamp(), "base": base or [], "messages": []}
+    return {"started": _stamp(), "entry_schema": ENTRY_SCHEMA,
+            "base": base or [], "messages": []}
 
 
 def _initial_base(collection) -> list[dict]:
@@ -84,25 +113,103 @@ def _initial_base(collection) -> list[dict]:
 
 
 def load_current(collection=None) -> dict:
-    if CURRENT_FILE.exists():
-        cur = json.loads(CURRENT_FILE.read_text(encoding="utf-8"))
-        if isinstance(cur.get("base"), dict):  # migrate single-base format
-            cur["base"] = _initial_base(collection) if collection is not None \
-                else [cur["base"]]
-            save_current(cur)
+    with LOCK:
+        if CURRENT_FILE.exists():
+            cur = json.loads(CURRENT_FILE.read_text(encoding="utf-8"))
+            if isinstance(cur.get("base"), dict):  # migrate single-base format
+                cur["base"] = _initial_base(collection) if collection is not None \
+                    else [cur["base"]]
+                save_current(cur)
+            if cur.get("entry_schema") != ENTRY_SCHEMA:
+                _migrate_provenance(cur)
+            return cur
+        # first run: the open session continues the most recent chat
+        base = _initial_base(collection) if collection is not None else []
+        cur = _fresh(base=base)
+        save_current(cur)
         return cur
-    # first run: the open session continues the most recent chat
-    base = _initial_base(collection) if collection is not None else []
-    cur = _fresh(base=base)
-    save_current(cur)
-    return cur
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    """Write beside the target, then swap it in, so a crash mid-write leaves
+    the previous file rather than half of a new one."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    # Windows refuses the swap while any other handle has the target open (a
+    # reader elsewhere in the process, a virus scanner); those are brief.
+    for attempt in range(20):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(0.05)
 
 
 def save_current(cur: dict):
-    SESSION_DIR.mkdir(parents=True, exist_ok=True)
-    CURRENT_FILE.write_text(
-        json.dumps(cur, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    with LOCK:
+        _atomic_write(CURRENT_FILE, json.dumps(cur, indent=2, ensure_ascii=False))
+        WRITES["current"] += 1
+
+
+def _legacy_entry_id(msg: dict) -> str:
+    digest = hashlib.md5(f"{msg.get('ts', '')}\n{msg['text']}".encode()).hexdigest()
+    return f"legacy-{digest[:16]}"
+
+
+def _backup_body(path: Path) -> str | None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    return text.split("\n\n", 1)[1].strip() if "\n\n" in text else None
+
+
+def _migrate_provenance(cur: dict) -> None:
+    """One-time upgrade of an open session written before entry schema 2.
+
+    Old messages never recorded Save versus Send, and nothing in their prose
+    can tell them apart. The one unambiguous evidence is the immediate backup
+    a save wrote: an `entry_file` artifact whose file body is exactly one
+    message's text, stamped to that message's minute. Those messages become
+    `kind: "entry"`. Everything else stays unclassified -- kept, closed and
+    remembered as before, but not counted as a saved entry while open.
+
+    The pre-migration file is kept beside it, and the marker makes a rerun a
+    no-op, so an interrupted or repeated startup cannot count anything twice.
+    """
+    msgs = cur.get("messages") or []
+    if msgs:
+        keep = CURRENT_FILE.with_name("current.pre-entry-schema.json")
+        if not keep.exists():
+            _atomic_write(keep, json.dumps(cur, indent=2, ensure_ascii=False))
+
+    backups = {}
+    for art in cur.get("artifacts", []):
+        if art.get("kind") == "entry_file" and art.get("path"):
+            body = _backup_body(Path(art["path"]))
+            if body is not None:
+                backups[Path(art["path"]).name] = body
+
+    matches: dict[str, list[dict]] = {}
+    for m in msgs:
+        if m.get("role") != "you" or m.get("kind") or m.get("dream"):
+            continue
+        ts = m.get("ts") or ""
+        if len(ts) < 16:
+            continue
+        name = f"{ts[:10]}_{ts[11:13]}{ts[14:16]}_entry.md"
+        if backups.get(name) == m["text"].strip():
+            matches.setdefault(name, []).append(m)
+    for found in matches.values():
+        if len(found) == 1:        # two identical texts in one minute: ambiguous
+            found[0]["kind"] = "entry"
+            found[0]["entry_id"] = _legacy_entry_id(found[0])
+
+    cur["entry_schema"] = ENTRY_SCHEMA
+    save_current(cur)
 
 
 def discard_current(collection=None) -> None:
@@ -118,21 +225,24 @@ def discard_current(collection=None) -> None:
     the chat ever closes (see `record_artifact`). Discard has to undo those
     too, or the "no entry" promise is false: a rebuild or export would still
     pick up the file the discarded chat left behind."""
-    cur = load_current(collection)
-    for art in cur.get("artifacts", []):
-        _discard_artifact(art)
-    base = _initial_base(collection) if collection is not None else []
-    save_current(_fresh(base=base))
+    with LOCK:
+        cur = load_current(collection)
+        for art in cur.get("artifacts", []):
+            _discard_artifact(art)
+        base = _initial_base(collection) if collection is not None else []
+        save_current(_fresh(base=base))
 
 
 def record_artifact(art: dict, collection=None):
     """Track a write-mode side effect (a backup file, a dream collection id)
     against the open session, so `discard_current` can undo it. `art` is
     {"kind": "entry_file", "path": ...} or
-    {"kind": "dream", "path": ..., "entry_id": ...}."""
-    cur = load_current(collection)
-    cur.setdefault("artifacts", []).append(art)
-    save_current(cur)
+    {"kind": "dream", "path": ..., "entry_id": ...}; either may also carry
+    `saved_entry_id`, the message it belongs to."""
+    with LOCK:
+        cur = load_current(collection)
+        cur.setdefault("artifacts", []).append(art)
+        save_current(cur)
 
 
 def _discard_artifact(art: dict) -> None:
@@ -145,24 +255,60 @@ def _discard_artifact(art: dict) -> None:
 
 
 def append_message(role: str, text: str, dream: bool = False, collection=None,
-                   when: datetime | None = None):
-    """Record one turn of the open session ('you' or 'companion')."""
-    cur = load_current(collection)
-    msg = {"role": role, "text": text, "ts": _stamp(when), "tz": zone_name()}
-    if dream:
-        msg["dream"] = True
-    cur["messages"].append(msg)
-    save_current(cur)
+                   when: datetime | None = None, kind: str | None = None):
+    """Record one turn of the open session ('you' or 'companion'). A 'you'
+    turn passes `kind="chat"` for send; saves go through `save_entry`."""
+    with LOCK:
+        cur = load_current(collection)
+        msg = {"role": role, "text": text, "ts": _stamp(when), "tz": zone_name()}
+        if kind:
+            msg["kind"] = kind
+        if dream:
+            msg["dream"] = True
+        cur["messages"].append(msg)
+        save_current(cur)
 
 
-def backup_entry_text(text: str, when: datetime | None = None) -> Path:
+def has_entry(entry_id: str, collection=None) -> bool:
+    """Whether the open session already holds this saved entry."""
+    with LOCK:
+        cur = load_current(collection)
+        return any(m.get("entry_id") == entry_id for m in cur["messages"])
+
+
+def save_entry(text: str, entry_id: str, dream: bool = False, collection=None,
+               when: datetime | None = None, artifact: dict | None = None) -> None:
+    """Persist one **save entry**: the message, its provenance and the side
+    effect `discard_current` would have to undo, in a single write -- so a
+    crash can never leave the entry recorded without its artifact, or the
+    other way round. Replied and no-reply saves both come through here, which
+    is what keeps their counting from drifting apart."""
+    with LOCK:
+        cur = load_current(collection)
+        msg = {"role": "you", "kind": "entry", "entry_id": entry_id,
+               "text": text, "ts": _stamp(when), "tz": zone_name()}
+        if dream:
+            msg["dream"] = True
+        cur["messages"].append(msg)
+        if artifact:
+            cur.setdefault("artifacts", []).append(
+                {**artifact, "saved_entry_id": entry_id})
+        save_current(cur)
+
+
+def backup_entry_text(text: str, when: datetime | None = None,
+                      entry_id: str | None = None) -> Path:
     """Immediate markdown backup of a write-mode entry. The live copy is
     sessions/current.json; this file is the belt-and-suspenders copy so a
-    new entry never has a single point of failure before the chat closes."""
+    new entry never has a single point of failure before the chat closes.
+
+    Named with the entry id: minute resolution alone gave two saves in the
+    same minute one path, and the second silently overwrote the first."""
     now = when or now_local()
     date = now.strftime("%Y-%m-%d")
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
-    path = JOURNAL_DIR / f"{date}_{now.strftime('%H%M')}_entry.md"
+    ident = f"_{entry_id}" if entry_id else ""
+    path = JOURNAL_DIR / f"{date}_{now.strftime('%H%M')}{ident}_entry.md"
     path.write_text(
         f"# Journal entry — {date} {now.strftime('%H:%M')}\n_Date: {date}_\n\n{text}",
         encoding="utf-8",
@@ -172,18 +318,20 @@ def backup_entry_text(text: str, when: datetime | None = None) -> Path:
 
 def seed_messages(msgs: list[dict], collection=None) -> int:
     """One-time import of the pre-session chat log the browser kept in
-    localStorage. Only fills an empty session — never duplicates."""
-    cur = load_current(collection)
-    if cur["messages"]:
-        return 0
-    ts = _stamp()
-    for m in msgs:
-        role = "you" if m.get("role") == "you" else "companion"
-        text = (m.get("text") or "").strip()
-        if text and text != "…":
-            cur["messages"].append({"role": role, "text": text, "ts": ts})
-    save_current(cur)
-    return len(cur["messages"])
+    localStorage. Only fills an empty session — never duplicates. The log
+    never recorded Save versus Send, so these stay unclassified."""
+    with LOCK:
+        cur = load_current(collection)
+        if cur["messages"]:
+            return 0
+        ts = _stamp()
+        for m in msgs:
+            role = "you" if m.get("role") == "you" else "companion"
+            text = (m.get("text") or "").strip()
+            if text and text != "…":
+                cur["messages"].append({"role": role, "text": text, "ts": ts})
+        save_current(cur)
+        return len(cur["messages"])
 
 
 def conversation_messages(limit: int = 30) -> list[dict]:
@@ -294,12 +442,19 @@ def current_view(collection) -> dict:
 
 
 def load_archives() -> list[dict]:
+    """Every readable archive. One that won't parse (a close torn by a crash
+    before archives were written atomically) is skipped with a warning, not
+    raised: startup and /api/status both read all of them, and one bad file
+    must not take the app down."""
     if not ARCHIVE_DIR.exists():
         return []
-    return [
-        json.loads(p.read_text(encoding="utf-8"))
-        for p in sorted(ARCHIVE_DIR.glob("*.json"))
-    ]
+    archives = []
+    for p in sorted(ARCHIVE_DIR.glob("*.json")):
+        try:
+            archives.append(json.loads(p.read_text(encoding="utf-8")))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            print(f"  skipping unreadable archive {p.name}: {exc}")
+    return archives
 
 
 def load_archive(archive_id: str) -> dict | None:
@@ -395,7 +550,15 @@ def close_session(collection, client=None, title_hint: str = "",
 
     The base conversation (when the session continues an import) is
     never modified — the new material is its own dated entry, and the
-    archive stitches the two for display."""
+    archive stitches the two for display.
+
+    Holds the session lock throughout: a save that landed between reading
+    the session and opening the fresh one would be in neither."""
+    with LOCK:
+        return _close_locked(collection, client, title_hint, when)
+
+
+def _close_locked(collection, client, title_hint: str, when: datetime | None) -> dict:
     cur = load_current(collection)
     user_msgs = [
         m for m in cur["messages"]
@@ -422,12 +585,22 @@ def close_session(collection, client=None, title_hint: str = "",
 
     # store the new material exactly like an imported conversation:
     # one dated entry per local calendar day the user wrote (session
-    # timestamps are already local time)
+    # timestamps are already local time). Sent messages join memory exactly
+    # like saved entries -- what counts as an entry is accounting, not what
+    # the companion remembers. Each day part records which saved entries it
+    # holds, and whether it holds pre-schema writing nobody can classify
+    # (see entry_catalog).
     from bulk_import import chunk_entry, entry_chunk_id
     by_day: dict[str, list[str]] = {}
+    saved_by_day: dict[str, list[str]] = {}
+    legacy_days: set[str] = set()
     for m in user_msgs:
         day = (m.get("ts") or "")[:10] or date
         by_day.setdefault(day, []).append(m["text"])
+        if m.get("kind") == "entry" and m.get("entry_id"):
+            saved_by_day.setdefault(day, []).append(m["entry_id"])
+        elif not m.get("kind"):
+            legacy_days.add(day)
 
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
     safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in entry_title)[:50]
@@ -455,7 +628,9 @@ def close_session(collection, client=None, title_hint: str = "",
         (JOURNAL_DIR / f"{day}_{safe_title}.md").write_text(
             f"# {entry_title}\n_Date: {day}_\n\n{day_text}", encoding="utf-8"
         )
-        day_parts.append({"date": day, "title": entry_title})
+        day_parts.append({"date": day, "title": entry_title,
+                          "entry_ids": saved_by_day.get(day, []),
+                          "legacy": day in legacy_days})
 
     # archive the whole session: stitched parts + the full braid.
     # Base parts carry their text; the closing parts' content lives in
@@ -464,15 +639,21 @@ def close_session(collection, client=None, title_hint: str = "",
     key = conversation_cache_key({"date": date, "title": entry_title})
     parts = [_part_content(collection, p) for p in base]
     parts.extend(day_parts)
-    ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
-    (ARCHIVE_DIR / f"{key}.json").write_text(json.dumps({
+    # Written only after every day is in the index: the archive is what moves
+    # a saved entry from open to indexed. A crash before this line leaves the
+    # entries open and the close repeatable (the upserts are idempotent); a
+    # crash after it and before the fresh session leaves the same ids in both
+    # files, which the catalog counts once.
+    _atomic_write(ARCHIVE_DIR / f"{key}.json", json.dumps({
         "id": key,
+        "entry_schema": ENTRY_SCHEMA,
         "title": session_title,
         "started": cur["started"],
         "closed": now.strftime("%Y-%m-%d %H:%M"),
         "parts": parts,
         "messages": cur["messages"],
-    }, indent=2, ensure_ascii=False), encoding="utf-8")
+    }, indent=2, ensure_ascii=False))
+    WRITES["archive"] += 1
 
     save_current(_fresh())
     return {"key": key, "title": session_title, "entry_title": entry_title, "date": date}

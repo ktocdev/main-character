@@ -60,14 +60,16 @@ TITLE = re.compile(r"^#\s*(.+?)\s*$", re.M)
 DATE = re.compile(r"^_Date:\s*(\d{4}-\d{2}-\d{2})\s*_\s*$", re.M)
 REALM = re.compile(r"^_Realm:\s*(\w+)\s*_\s*$", re.M)
 
-# `2026-08-20_1013_entry.md` -- the immediate copy `sessions.backup_entry_text`
-# writes the moment an entry is submitted, before the chat is closed. It is a
+# `2026-08-20_1013_<entry id>_entry.md` (`2026-08-20_1013_entry.md` before
+# saves carried ids, and for CLI write-mode entries) -- the immediate copy
+# `sessions.backup_entry_text` writes the moment an entry is submitted,
+# before the chat is closed. It is a
 # safety copy, not an entry: closing the session writes the day's writing again
 # as `<date>_<Session title>.md` and *that* is what gets indexed. Both files
 # live here, and telling them apart matters to anyone reading this directory --
 # and matters more to `rebuild_index.py`, which would otherwise index the same
 # writing twice.
-DRAFT = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{4}_entry\.md$")
+DRAFT = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{4}(?:_[A-Za-z0-9-]+)?_entry\.md$")
 
 # `..._part2.md` -- `bulk_import.import_entry` writes one file per chunk and
 # numbers them from 1, so `_part2` was chunk index 1. The split is baked into
@@ -150,7 +152,8 @@ Everything in this folder is plain text. Nothing here needs the app to read.
   and realm parsed out.
 
 Some files are marked `"kind": "draft backup"` in `entries.json`
-(`<date>_<time>_entry.md`). Those are the immediate copy the app writes when
+(`<date>_<time>_<id>_entry.md`, or `<date>_<time>_entry.md` from older
+versions). Those are the immediate copy the app writes when
 you submit an entry, before the chat is closed. Once a chat closes, the same
 writing is saved again under the session's title — so for most days you will
 find the words twice, once as the backup and once as the finished entry. They

@@ -43,7 +43,10 @@ def main():
 
     with TestClient(server.app, base_url="http://127.0.0.1:8144") as client:
         check("before")
-        assert client.get("/api/status").json()["entries"] == 29
+        # the three open-chat entries are saved already, so they count now
+        status = client.get("/api/status").json()
+        assert (status["entries"], status["open_entries"],
+                status["indexed_entries"], status["journal_chunks"]) == (32, 3, 29, 29)
         assert not seed.status()["candidate_exists"]
         assert sessions.load_current()["messages"]
         original_seed = seed.load_seed()
@@ -60,7 +63,10 @@ def main():
         assert seed.load_seed() == original_seed
         assert sessions.load_current()["messages"] == []
         assert sessions.load_archive(result.json()["key"])["messages"]
-        assert client.get("/api/status").json()["entries"] == 32
+        # closing moves them into journal memory without counting them again
+        status = client.get("/api/status").json()
+        assert (status["entries"], status["open_entries"],
+                status["indexed_entries"], status["journal_chunks"]) == (32, 0, 32, 32)
         docs = server.STATE["collection"].get()
         new = [m for m in docs["metadatas"] if m["date"] >= "2026-09-15"]
         assert len(new) == 3

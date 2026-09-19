@@ -194,13 +194,12 @@ def test_a_no_reply_entry_still_works_while_unconfigured(client, monkeypatch):
     monkeypatch.setitem(server.STATE, "client", None)
     saved = {}
 
-    def backup(text, when=None):
+    def backup(text, when=None, entry_id=None):
         saved["text"] = text
         return Path("entry.md")
 
-    monkeypatch.setattr(server.sessions, "append_message", lambda *a, **k: None)
+    monkeypatch.setattr(server.sessions, "save_entry", lambda *a, **k: None)
     monkeypatch.setattr(server.sessions, "backup_entry_text", backup)
-    monkeypatch.setattr(server.sessions, "record_artifact", lambda *a, **k: None)
 
     r = client.post("/api/entry", json={"text": "kept anyway", "no_reply": True})
     assert r.status_code == 200

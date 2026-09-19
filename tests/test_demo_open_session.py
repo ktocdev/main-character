@@ -158,8 +158,9 @@ def test_search_cannot_find_unclosed_material(installed):
 
 
 def test_the_advertised_entry_count_is_unchanged(installed):
-    """/api/status reports the chroma count. The open week must not move it:
-    29 before these entries existed, 29 now."""
+    """The index -- /api/status `journal_chunks` -- must not hold the open
+    week: 29 records before these entries existed, 29 now. (The `entries`
+    total does include them: they are saved, just not closed yet.)"""
     assert installed.client.get_collection("journal_entries").count() == 29
 
 
