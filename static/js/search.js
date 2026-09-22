@@ -35,7 +35,7 @@ async function runSearch() {
     searchSort = 'relevance';
     renderSearchResults(q);
   } catch (e) {
-    $('search-status').textContent = 'search failed — is the server up?';
+    $('search-status').textContent = 'search failed; is the server up?';
   }
 }
 
@@ -66,7 +66,7 @@ function renderSearchResults(q) {
   status.innerHTML = '';
   if (!searchHits.length) {
     status.textContent = searchMode === 'exact'
-      ? 'no exact matches — try meaning mode for related passages'
+      ? 'no exact matches; try meaning mode for related passages'
       : 'nothing found';
     return;
   }
@@ -94,7 +94,7 @@ function renderSearchResults(q) {
     const d = document.createElement('div');
     d.className = 'search-hit';
     const h = document.createElement('h3');
-    h.textContent = `${fmtDate(hit.date)} — ${hit.title || '(untitled)'}`;
+    h.textContent = `${fmtDate(hit.date)} · ${hit.title || '(untitled)'}`;
     h.title = 'show the full entry';
     if (hit.hits > 1) {
       const n = document.createElement('span');
@@ -106,7 +106,7 @@ function renderSearchResults(q) {
       const rel = document.createElement('span');
       rel.className = 'related-tag';
       rel.textContent = 'related';
-      rel.title = "close in meaning — doesn't contain the exact words";
+      rel.title = "close in meaning; doesn't contain the exact words";
       h.appendChild(rel);
     }
     h.onclick = () => toggleEntryText(d, hit);

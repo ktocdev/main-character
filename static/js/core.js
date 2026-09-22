@@ -42,7 +42,7 @@ export async function refreshStatus() {
   $('status').textContent = `${s.entries} entries · ${s.entities} entities`;
   const open = s.open_entries || 0;
   $('status').title = open
-    ? `${open} ${open === 1 ? 'entry' : 'entries'} in this chat — added to journal memory when you close it`
+    ? `${open} ${open === 1 ? 'entry' : 'entries'} in this chat; added to journal memory when you close it`
     : '';
   // Mock mode is indistinguishable from real once a reply is on screen, so
   // the banner stays up for the whole session rather than appearing per-call.
@@ -55,10 +55,10 @@ export async function refreshStatus() {
   // is no server, so base.css hides what only a server could do.
   document.body.classList.toggle('web-demo', !!s.web_demo);
   $('app-banner').textContent = s.web_demo
-    ? 'web demo — sample journal, canned replies. Reload to start over.'
+    ? 'web demo... sample journal, canned replies.'
     : s.seed_instance
-    ? 'demo journal — sample entries, and the replies are canned. Restart to go back to yours.'
-    : 'mock mode — replies are canned, not from Claude. No API calls are being made.';
+    ? 'demo journal... sample journal, canned replies.'
+    : 'mock mode... replies are canned, not from Claude. No API calls are being made.';
   // A server too old to report this sends nothing; `!== false` reads that
   // as configured rather than as a fresh clone, so the wizard cannot open
   // over a journal that has been working for months.
@@ -117,7 +117,7 @@ export async function installDemo(report) {
   // the only honest progress available: the build is a child process with
   // no channel back, so a bar would be inventing a fraction it cannot know.
   const hold = setTimeout(() => {
-    const tick = () => report('building the demo journal — 32 entries and 1 dream entry; '
+    const tick = () => report('building the demo journal; 32 entries and 1 dream entry; '
       + 'the newest 3 will open in the chat (' + Math.round((Date.now() - started) / 1000)
       + 's). Expect ' + demoBuildWait() + '.');
     tick();
@@ -133,7 +133,7 @@ export async function installDemo(report) {
     if (body.built) report('demo journal built. Opening it…');
     return true;
   } catch (e) {
-    report('Could not build the demo — ' + (e.message || e), 'error');
+    report('Could not build the demo; ' + (e.message || e), 'error');
     return false;
   } finally {
     clearTimeout(hold);

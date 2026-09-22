@@ -14,7 +14,7 @@
   'use strict';
 
   const realFetch = window.fetch.bind(window);
-  const READ_ONLY = 'Not available in the web demo — this is a read-only preview.';
+  const READ_ONLY = 'Not available in the web demo: this is a read-only preview.';
   const REPLY_DELAY_MS = 1200;  // mock_client.DELAYS['companion._stream_turn']
   const CHUNK_MS = 35;          // mock_client.STREAM_CHUNK_DELAY
   const STEP_MS = 1600;         // one close-pipeline stage
@@ -222,7 +222,7 @@
         + 'running -- wait for it to finish before closing again.'}, 409);
     }
     const mine = current.messages.filter(m => m.role === 'you' && !m.dream);
-    if (!mine.length) return json({error: 'nothing new in this chat yet — write or chat first'}, 400);
+    if (!mine.length) return json({error: 'nothing new in this chat yet; write or chat first'}, 400);
 
     const first = closes === 0;
     let result;
@@ -296,7 +296,7 @@
   function seedUpload(body) {
     const text = String(body.text || '').trim();
     if (text.length < 200) {
-      return json({error: 'that file looks empty — not replacing the seed with it'}, 400);
+      return json({error: 'that file looks empty, not replacing the seed with it'}, 400);
     }
     seed.current = text + '\n';
     seed.updated = nowStamp();

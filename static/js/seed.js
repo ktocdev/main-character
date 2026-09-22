@@ -21,7 +21,7 @@ const DRAFT_KEY = 'mc_seed_draft';
 // carry a 15 KB seed (encoding roughly doubles it, past what gateways allow),
 // so this is copy-then-open, not a real prefill -- the button label says so.
 const CLAUDE_PROMPT =
-  'Below is my journal\'s "seed summary" — a rolling life summary my journaling '
+  'Below is my journal\'s "seed summary": a rolling life summary my journaling '
   + 'companion reads at the start of every conversation. Help me revise it: keep '
   + 'the same first-person voice and roughly the same length, and return only the '
   + 'updated summary document, nothing else.\n\n---\n\n';
@@ -75,12 +75,12 @@ function showSeedView() {
 function renderMeta(s) {
   const meta = $('seed-editor-meta');
   if (editorState.srcWhich === 'candidate') {
-    meta.textContent = `Editing the seed summary candidate — created ${s && s.candidate_updated || '—'}. `
+    meta.textContent = `Editing the seed summary candidate; created ${s && s.candidate_updated || 'date unknown'}. `
       + 'Saving makes it your live seed.';
   } else if (s && s.exists) {
-    meta.textContent = `Editing your live seed summary — last saved ${s.updated || '—'}.`;
+    meta.textContent = `Editing your live seed summary; last saved ${s.updated || 'date unknown'}.`;
   } else {
-    meta.textContent = 'Editing your seed summary — none saved yet; saving creates it.';
+    meta.textContent = 'Editing your seed summary; none saved yet; saving creates it.';
   }
 }
 
@@ -98,7 +98,7 @@ function renderDraftNote(s, hasDraft) {
   if (stale) {
     n.hidden = false;
     n.textContent = 'Heads up: the document this draft started from has changed since. '
-      + 'Your draft is kept as-is — discard it to load the current version.';
+      + 'Your draft is kept as-is; discard it to load the current version.';
   } else {
     n.hidden = true;
   }
@@ -120,7 +120,7 @@ export async function openSeedEditor() {
   ta.value = hasDraft ? draft.text : baseline;
   // Only true when nothing exists yet to load (no live seed, no candidate,
   // no draft) -- otherwise the box always ends up with text in it.
-  ta.placeholder = ta.value ? '' : 'nothing saved yet — write your first seed summary here';
+  ta.placeholder = ta.value ? '' : 'nothing saved yet; write your first seed summary here';
   renderMeta(s);
   renderDraftNote(s, hasDraft);
   ta.focus();
@@ -145,7 +145,7 @@ async function save() {
   const text = $('seed-editor-text').value;
   // Mirror the server's floor so the friendly note fires before the 400 alert.
   if (text.trim().length < 200) {
-    setNote('that looks too short to be a seed summary — nothing saved');
+    setNote('that looks too short to be a seed summary; nothing saved');
     return;
   }
   if (!confirm('Save this as your seed summary?\n\nEvery new chat will open with it. '
@@ -157,14 +157,14 @@ async function save() {
   clearDraft();
   await refreshSeedMenu();        // the candidate is gone; drop the banner
   await openSeedEditor();         // reload as the fresh live seed
-  setNote('saved — every new chat now opens with it');
+  setNote('saved; every new chat now opens with it');
 }
 
 async function copy() {
   try {
     await navigator.clipboard.writeText($('seed-editor-text').value);
     setNote('copied to the clipboard');
-  } catch (e) { setNote('could not copy — your browser blocked clipboard access'); }
+  } catch (e) { setNote('could not copy: your browser blocked clipboard access'); }
 }
 
 // The buffer, not the file on disk -- a half-finished edit is what lands in an
@@ -194,7 +194,7 @@ async function onUploadFile() {
   $('seed-editor-file').value = '';
   $('seed-editor-text').value = text;   // replace, don't commit -- Save is the one commit point
   scheduleDraftSave();
-  setNote(`loaded from ${f.name} — not saved yet`);
+  setNote(`loaded from ${f.name}, not saved yet`);
 }
 
 async function openWithClaude() {
@@ -204,9 +204,9 @@ async function openWithClaude() {
   window.open('https://claude.ai/new', '_blank', 'noopener');
   try {
     await navigator.clipboard.writeText(buf);
-    setNote('copied with a revise instruction — paste it into the new Claude tab');
+    setNote('copied with a revise instruction; paste it into the new Claude tab');
   } catch (e) {
-    setNote('opened Claude, but could not copy — copy the text here manually');
+    setNote('opened Claude, but could not copy; copy the text here manually');
   }
 }
 

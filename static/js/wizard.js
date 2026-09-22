@@ -88,14 +88,14 @@ function renderKey() {
     '     rel="noopener">Anthropic Console</a>. It is written to a',
     '  <code>.env</code> file on this computer and goes nowhere except to',
     '  Anthropic when you write. Checking it here makes one very small real',
-    '  call &mdash; a fraction of a cent &mdash; because that is the only way',
+    '  call, costing a fraction of a cent, because that is the only way',
     '  to find out whether a key actually works.</p>',
     '<div class="wiz-actions">',
     '  <button class="send" id="wiz-key-go">check this key</button>',
     '</div>',
     '<p class="wiz-aside">No key yet?',
     '  <a href="#" id="wiz-skip">look around the demo journal first</a>',
-    '  &mdash; 32 entries and 1 dream entry. The newest 3 are still in the open chat;',
+    '  (32 entries and 1 dream entry). The newest 3 are still in the open chat;',
     '  close it to add them to journal memory. The life is fictional and the replies are recorded.',
     '  Nothing is spent. Demo writing is stored locally until the next demo visit, when all demo data is reset.' + buildNote() + '</p>',
   ].join('\n');
@@ -158,7 +158,7 @@ function renderZone() {
     '<label class="wiz-label" for="wiz-tz">Time zone</label>',
     '<div id="wiz-tz-slot"></div>',
     '<p class="wiz-help">Changeable later in Settings. Stored dates never',
-    '  change with it &mdash; only how they are read.</p>',
+    '  change with it; only how they are read.</p>',
     '<div class="wiz-actions">',
     '  <button class="send" id="wiz-zone-go">continue</button>',
     '</div>',
@@ -207,7 +207,7 @@ function renderCategories() {
   body().innerHTML = [
     '<h2>What does your life have in it?</h2>',
     '<p class="wiz-lede">These are the tags the journal suggests on a new',
-    '  entry. They are all on &mdash; turn off any that do not apply, so they',
+    '  entry. They are all on by default. Turn off any that do not apply, so they',
     '  never show up as noise.</p>',
     '<div id="wiz-cats"></div>',
     '<h3 class="wiz-sub">Add your own</h3>',
@@ -236,7 +236,7 @@ function renderCategories() {
     cb.value = c.name;
     cb.checked = !off.has(c.name);
     const text = document.createElement('span');
-    text.innerHTML = '<strong>' + esc(c.name) + '</strong> &mdash; '
+    text.innerHTML = '<strong>' + esc(c.name) + '</strong>: '
       + esc(c.description || '');
     row.append(cb, text);
     box.appendChild(row);
@@ -254,7 +254,7 @@ function renderCategories() {
     // -- two screens later, with a validated key in hand -- would be a poor
     // place to learn it.
     if (boxes.length && disabled.length === boxes.length) {
-      say('Leave at least one category on — a journal that can tag '
+      say('Leave at least one category on: a journal that can tag '
           + 'nothing is worse off than one with a category it never uses.',
           'error');
       return;
@@ -273,7 +273,7 @@ function drawCustom() {
     const row = document.createElement('div');
     row.className = 'wiz-customrow';
     const label = document.createElement('span');
-    label.textContent = c.keywords ? c.name + ' — ' + c.keywords : c.name;
+    label.textContent = c.keywords ? c.name + '; ' + c.keywords : c.name;
     const drop = document.createElement('button');
     drop.className = 'quiet';
     drop.textContent = '×';
@@ -308,7 +308,7 @@ function renderFinish() {
   body().innerHTML = [
     '<h2>You are set up</h2>',
     '<p class="wiz-lede">Your key and settings are ready to write. Pick where',
-    '  to land &mdash; the journal restarts either way, and takes a',
+    '  to land. The journal restarts either way and takes a',
     '  moment.</p>',
     '<div class="wiz-doors">',
     '  <button class="send" id="wiz-write">start writing</button>',

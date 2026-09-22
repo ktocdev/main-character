@@ -66,7 +66,7 @@ function lockUnshowable(sel, controlId, stored, describe) {
 //     sends the reader to config.py to find out what they just agreed to.
 function capHelp(live) {
   if (!live || live.limit === undefined) {
-    return 'This journal has not said what it is enforcing — it is '
+    return 'This journal has not said what it is enforcing. It is '
       + 'running a build from before the spend caps. Restart it.';
   }
   if (!live.default) return 'Leave it blank for no ceiling at all.';
@@ -140,7 +140,7 @@ export async function loadSettings() {
       throw new Error((s && s.error) || 'the server did not return settings');
     }
   } catch (e) {
-    body.textContent = 'could not read settings — ' + (e.message || e);
+    body.textContent = 'could not read settings; ' + (e.message || e);
     return;
   }
   loaded = s;
@@ -150,7 +150,7 @@ export async function loadSettings() {
     <section class="set-group">
       <h3>Journal</h3>
       ${fieldRow('set-date', 'Date display',
-        'How dates are shown. What gets stored never changes — entries are '
+        'How dates are shown. What gets stored never changes; entries are '
         + 'always kept in ISO form, so switching back and forth is safe.')}
       ${fieldRow('set-tz', 'Time zone',
         'The zone your entries are stamped in, and the companion\'s sense of '
@@ -162,7 +162,7 @@ export async function loadSettings() {
       <div class="set-row">
         <label>Categories</label>
         <p class="set-help">The life-domain tags the companion suggests on new
-          entries. Turn off any that don’t fit your life &mdash; the
+          entries. Turn off any that don’t fit your life; the
           journal still grows its own categories from what you write. Entries
           you’ve already tagged keep their tags either way.</p>
         <div class="set-control" id="set-categories-control"></div>
@@ -176,7 +176,7 @@ export async function loadSettings() {
         + 'else.')}
       ${fieldRow('set-companion-effort', 'Companion effort',
         'How hard the companion thinks before answering. Higher is slower '
-        + 'and costs more. The choices come from the model above &mdash; '
+        + 'and costs more. The choices come from the model above; '
         + 'not every model offers the same ones.')}
       ${fieldRow('set-processing-model', 'Processing model',
         'Everything that happens in the background: tagging, entities, '
@@ -201,7 +201,7 @@ export async function loadSettings() {
         <label for="set-key">Anthropic API key</label>
         <div class="set-control">
           <input type="password" id="set-key" autocomplete="off"
-                 placeholder="${s.api_key_set ? 'a key is set — type a new one to replace it' : 'no key set'}">
+                 placeholder="${s.api_key_set ? 'a key is set; type a new one to replace it' : 'no key set'}">
         </div>
         <p class="set-help">Write-only: the key is never sent back to this
           page, not even partially. Leave it blank to keep the one you have.</p>
@@ -210,7 +210,7 @@ export async function loadSettings() {
     <section class="set-group">
       <h3>Data</h3>
       <p class="set-help">Your writing is plain markdown on this computer, and
-        these do not need saving first &mdash; they act straight away, on the
+        these do not need saving first. They act straight away on the
         journal as it is right now.</p>
       <div class="set-row">
         <label>Export</label>
@@ -227,7 +227,7 @@ export async function loadSettings() {
           <button class="quiet" id="set-backup">save a dated zip</button>
         </div>
         <p class="set-help">The same export as one file you can move. It lands
-          next to the journal, on the same disk &mdash; copy it somewhere that
+          next to the journal, on the same disk. Copy it somewhere that
           survives this machine.</p>
       </div>
       <div class="set-row">
@@ -236,7 +236,7 @@ export async function loadSettings() {
           <button class="quiet" id="set-rebuild">rebuild from my entries</button>
         </div>
         <p class="set-help">Rebuilds search from the markdown. Free and
-          offline &mdash; the embeddings are computed on this machine, so
+          offline; the embeddings are computed on this machine, so
           there is no key and nothing to spend. Slow on a long journal.</p>
       </div>
       <div id="set-data-note"></div>
@@ -313,7 +313,7 @@ export async function loadSettings() {
       cb.value = c.name;
       cb.checked = !off.has(c.name);
       const text = document.createElement('span');
-      text.innerHTML = '<strong>' + esc(c.name) + '</strong> — '
+      text.innerHTML = '<strong>' + esc(c.name) + '</strong>; '
         + esc(c.description || '');
       row.append(cb, text);
       catBox.appendChild(row);
@@ -547,7 +547,7 @@ export async function restartServer(note, saved = true, into = 'journal') {
   }
   note.className = 'set-note error';
   note.textContent = (saved ? 'saved, but ' : '')
-    + 'the journal did not come back — start it again the way you normally do.';
+    + 'the journal did not come back; start it again the way you normally do.';
 }
 
 // The restart the save flow already performs, reachable on its own. Item 7
@@ -811,7 +811,7 @@ async function runData(btn, label, url, describe) {
     note.textContent = describe(body);
   } catch (e) {
     note.className = 'set-feedback error';
-    note.textContent = 'That did not work — ' + (e.message || e);
+    note.textContent = 'That did not work; ' + (e.message || e);
   } finally {
     btn.textContent = was;
     all.forEach(b => { if (b) b.disabled = false; });
@@ -828,7 +828,7 @@ function wireData() {
   if (bak) bak.onclick = () => runData(bak, 'zipping…',
     '/api/data/backup',
     b => mb(b.bytes) + ' written to ' + b.path
-       + ' — move it somewhere that survives this machine.');
+       + '; move it somewhere that survives this machine.');
   if (reb) reb.onclick = () => runData(reb, 'rebuilding…',
     '/api/data/rebuild',
     b => 'search index rebuilt: '
