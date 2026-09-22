@@ -33,7 +33,9 @@ def test_boots_in_mock_mode_with_empty_data(client):
     response = client.get("/api/status")
     assert response.status_code == 200
     body = response.json()
-    assert body["mock"] is True, "the UI banner reads this — a canned reply must never look real"
+    # Not the banner any more (that keys on seed_instance since JRNL-43),
+    # but still the contract /api/cost and the cost panel's note read.
+    assert body["mock"] is True, "a canned reply must never be reported as real"
     assert body["entries"] == 0
     assert body["entities"] == 0
 

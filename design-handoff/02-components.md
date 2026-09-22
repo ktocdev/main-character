@@ -71,7 +71,7 @@ All eight share `background: var(--bg-raised)` — that line is the one thing ev
 
 One full-width, centered-text strip above the header, in the body's flex column (so it pushes content down rather than overlaying it):
 
-- **`#app-banner`** (`base.css:60`) — `--bg` text, `--font-xs`. Hidden by default; the markup lives in `index.html` unconditionally and JS decides the rest. `body.mock-mode` shows it with an `--accent-dim` fill; `body.seed-instance` (the demo, which is always mock) keeps it shown but swaps the fill to the louder `--accent`. Its copy is set in `core.js` from `/api/status`, not baked into the markup.
+- **`#app-banner`** (`base.css:64`) — `--bg` text, `--font-xs`. Hidden by default; the markup lives in `index.html` unconditionally and JS decides the rest. `body.seed-instance` shows it with an `--accent` fill. That one class is the whole condition: as of `JRNL-43` canned replies cannot run against a real journal, so the demo (and the published web demo, which sets the same flag) is the only state the bar has to announce. It previously had two tones, an `--accent-dim` fill for plain mock mode and `--accent` for the demo on top of it; the dim variant no longer has a state to belong to. Its copy is set in `core.js` from `/api/status`, not baked into the markup.
 
   The banner text is: **"demo journal — sample entries, and the replies are canned. Restart to go back to yours."** (`core.js` also holds a separate plain "mock mode…" string today, but mock-on-real-journal mode is planned for removal — so the demo copy above is the banner text going forward.)
 

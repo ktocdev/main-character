@@ -2,10 +2,14 @@
 """
 Mock client — a drop-in stand-in for `anthropic.Anthropic()`.
 
-Enabled by `MC_MOCK=1`. `config.get_client()` returns this instead of the
-real SDK client, so no call site knows the difference: the same
-`messages.create()` / `messages.stream()` surface, the same response shape
-(`.content` blocks, `.stop_reason`, `.usage`), and no network access.
+Enabled by `MC_MOCK=1` in the process environment, which in practice means
+the demo journal and nothing else: a `.env` cannot turn it on, so canned
+replies never run against a real journal (see `config.py`).
+
+`config.get_client()` returns this instead of the real SDK client, so no
+call site knows the difference: the same `messages.create()` /
+`messages.stream()` surface, the same response shape (`.content` blocks,
+`.stop_reason`, `.usage`), and no network access.
 
 Two things it deliberately does NOT do:
 
@@ -198,8 +202,8 @@ def _pick(key: str, prompt: str) -> str | None:
 MOCK_PROSE = (
     "[mock] This is placeholder text from mock mode, not a real model "
     "response. It exists so the UI has something of realistic length to "
-    "render, stream, and lay out. Set MC_MOCK=0 and provide an API key for "
-    "real output, or capture fixtures with capture_fixtures.py."
+    "render, stream, and lay out. Restart back to your own journal and add "
+    "an API key for real output, or capture fixtures with capture_fixtures.py."
 )
 
 
