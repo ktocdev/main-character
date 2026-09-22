@@ -44,21 +44,19 @@ export async function refreshStatus() {
   $('status').title = open
     ? `${open} ${open === 1 ? 'entry' : 'entries'} in this chat; added to journal memory when you close it`
     : '';
-  // Mock mode is indistinguishable from real once a reply is on screen, so
-  // the banner stays up for the whole session rather than appearing per-call.
-  document.body.classList.toggle('mock-mode', !!s.mock);
-  // The seed instance is always mock mode; both states share one banner
-  // (CSS shows it on mock-mode, the seed class only makes it louder). The
-  // seed message subsumes the canned-replies fact, so it wins the text.
+  // Canned replies only ever run against the demo, so the seed instance is
+  // the whole banner condition now -- there is no mode where the replies are
+  // canned and the journal is yours. `mock` is still reported by /api/status
+  // and still drives the cost panel's note, but it no longer shows a bar of
+  // its own. The bar stays up for the whole session rather than appearing
+  // per-call, because a reply on screen is indistinguishable from a real one.
   document.body.classList.toggle('seed-instance', !!s.seed_instance);
   // Only the in-browser backend of the published web demo sets this: there
   // is no server, so base.css hides what only a server could do.
   document.body.classList.toggle('web-demo', !!s.web_demo);
   $('app-banner').textContent = s.web_demo
     ? 'web demo... sample journal, canned replies.'
-    : s.seed_instance
-    ? 'demo journal... sample journal, canned replies.'
-    : 'mock mode... replies are canned, not from Claude. No API calls are being made.';
+    : 'demo journal... sample journal, canned replies.';
   // A server too old to report this sends nothing; `!== false` reads that
   // as configured rather than as a fresh clone, so the wizard cannot open
   // over a journal that has been working for months.

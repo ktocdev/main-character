@@ -15,11 +15,10 @@ private advisory instead, so the fix lands before the details are public.
 
 ## Which mode
 
-<!-- Mock mode (MC_MOCK=1, canned replies), the demo journal, or a real
-     journal against the API? The three fail in different places. -->
+<!-- The demo journal (canned replies, sample entries) or your own journal
+     against the API? The two fail in different places. -->
 
 - [ ] Real journal, real API key
-- [ ] Mock mode
 - [ ] Demo journal
 
 ## Environment

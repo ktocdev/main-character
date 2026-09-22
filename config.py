@@ -14,10 +14,20 @@ Settings UI read from — one place to update when a new model ships.
 """
 
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+# Mock mode is read here, before load_dotenv, and nowhere else: only the real
+# process environment can turn it on. Canned replies exist to serve the demo
+# journal, which sets this in the child environment it boots (server.SEED_ENV),
+# as do run_demo.sh, the test suite and CI. A .env cannot, because .env is the
+# real journal's config file and the pairing it used to allow -- canned replies
+# against your own entries, where storage is not mocked and the writes are
+# real -- is the one this is here to make unreachable.
+_ENV_MOCK = os.environ.get("MC_MOCK")
 
 load_dotenv()
 
@@ -240,7 +250,19 @@ MAX_INPUT_CHARS = int(_positive("MC_MAX_INPUT_CHARS", 100_000))
 # MISC
 # ---------------------------------------------------------------------------
 
-MOCK_MODE = os.getenv("MC_MOCK", "0").strip() == "1"
+MOCK_MODE = (_ENV_MOCK or "0").strip() == "1"
+
+# load_dotenv has just copied a .env MC_MOCK into os.environ, where the rest of
+# the app would find it. It is not honoured, and staying quiet about that is
+# the worst of the options: someone who wrote MC_MOCK=1 is expecting canned
+# replies, and the bill is the wrong place to learn otherwise.
+if _ENV_MOCK is None and os.environ.get("MC_MOCK", "0").strip() == "1":
+    os.environ.pop("MC_MOCK", None)
+    print("MC_MOCK in .env is ignored: canned replies are the demo "
+          "journal only. To look around without a key, run "
+          "`python seed_corpus/import_seed_corpus.py --demo`, then load "
+          "the demo journal from Settings.", file=sys.stderr)
+
 AUTHOR = os.getenv("MC_AUTHOR_NAME", "").strip() or "the journal author"
 
 
