@@ -71,7 +71,7 @@
   <section class="tab active" id="tab-write">
     <div id="write-log"></div>
     <div id="seed-banner" hidden>
-      <span>your seed summary candidate is ready — the life summary every chat opens with. Read it through and edit it before it goes live.</span>
+      <span>your seed summary candidate is ready: the life summary every chat opens with. Read it through and edit it before it goes live.</span>
       <button class="send" id="seed-banner-edit">edit seed summary</button>
       <button class="quiet" id="seed-banner-download">download</button>
       <button class="quiet" id="seed-banner-upload">upload edited seed</button>
@@ -90,19 +90,19 @@
       <textarea id="entry-text" rows="3" placeholder="write freely…"></textarea>
       <div class="write-controls">
         <button class="send" id="entry-send" title="save as a journal entry (markdown backup now, journal memory at close)">save entry</button>
-        <button class="send" id="chat-send" title="talk with the companion about it — part of the chat, becomes journal memory too">send</button>
-        <button class="quiet" id="reflect-btn" title="let the companion open — it connects a dot or two across time">reflect</button>
-        <label id="noreply-wrap" title="save this entry without a companion reply — no Claude call, no cost">
+        <button class="send" id="chat-send" title="talk with the companion about it; part of the chat, becomes journal memory too">send</button>
+        <button class="quiet" id="reflect-btn" title="let the companion open; it connects a dot or two across time">reflect</button>
+        <label id="noreply-wrap" title="save this entry without a companion reply; no Claude call, no cost">
           <input type="checkbox" id="entry-noreply"> no reply
         </label>
         <span class="saved-note" id="entry-saved"></span>
         <details id="write-actions">
           <summary title="chat actions">⋯</summary>
           <div class="menu">
-            <button class="quiet" id="reset" title="the summarize point — your side of this chat becomes a journal entry, memory updates in the background, a fresh chat opens">summarize &amp; close chat</button>
-            <button class="quiet" id="seed-edit" title="edit the seed summary in the app — the co-edited life summary that opens every chat">edit seed summary</button>
-            <button class="quiet" id="seed-download" title="download the live seed summary — the co-edited life summary that opens every chat" hidden>download current seed</button>
-            <button class="quiet" id="seed-upload-btn" title="upload your edited seed summary — it becomes the live seed for every new turn (the old one is backed up)">upload seed</button>
+            <button class="quiet" id="reset" title="the summarize point: your side of this chat becomes a journal entry, memory updates in the background, a fresh chat opens">summarize &amp; close chat</button>
+            <button class="quiet" id="seed-edit" title="edit the seed summary in the app: the co-edited life summary that opens every chat">edit seed summary</button>
+            <button class="quiet" id="seed-download" title="download the live seed summary: the co-edited life summary that opens every chat" hidden>download current seed</button>
+            <button class="quiet" id="seed-upload-btn" title="upload your edited seed summary; it becomes the live seed for every new turn (the old one is backed up)">upload seed</button>
             <input type="file" id="seed-upload-file" accept=".md,.txt,text/markdown,text/plain" hidden>
           </div>
         </details>
@@ -122,7 +122,7 @@
       </div>
       <textarea id="seed-editor-text" placeholder="loading…" spellcheck="true"></textarea>
       <div id="seed-editor-actions">
-        <button class="send" id="seed-save" title="make this the live seed — every new chat opens with it (the current one is backed up)">save seed summary</button>
+        <button class="send" id="seed-save" title="make this the live seed; every new chat opens with it (the current one is backed up)">save seed summary</button>
         <button class="quiet" id="seed-copy" title="copy the whole document to the clipboard">copy</button>
         <button class="quiet" id="seed-dl" title="download what's in the box right now, edits and all">download</button>
         <button class="quiet" id="seed-upload2" title="load a file from disk into the box (does not save)">upload</button>
@@ -161,12 +161,12 @@
       <div id="cat-paused">
         <b>Categories are paused.</b> Right now an “entry” is a whole week-long chat, so browsing a
         category shows a week's blob under one date instead of the individual days. This section
-        won't be trustworthy until entries are re-run split by date (Phase 3) — it's kept in the nav
+        won't be trustworthy until entries are re-run split by date (Phase 3). It's kept in the nav
         as a reminder. Everything here still works; it's just switched off on purpose.
       </div>
       <div id="cat-header">
         <span id="cat-status"></span>
-        <button class="quiet" id="cat-build" title="tag any untagged entries with Claude (incremental — already-tagged entries are free)">tag new entries</button>
+        <button class="quiet" id="cat-build" title="tag any untagged entries with Claude (incremental; already-tagged entries are free)">tag new entries</button>
         <button class="quiet" id="cat-scan" title="cluster places/projects by what happened around them and propose new categories (local embeddings + one Claude naming call)">scan for new categories</button>
       </div>
       <div id="cat-proposals"></div>
@@ -213,9 +213,9 @@
             <h2 id="session-title"></h2>
             <span class="dates" id="session-dates"></span>
             <button class="quiet" id="session-close-btn"
-              title="the summarize point — your side of this chat becomes a journal entry and a fresh chat opens">summarize &amp; start new chat</button>
+              title="the summarize point: your side of this chat becomes a journal entry and a fresh chat opens">summarize &amp; start new chat</button>
             <button class="quiet" id="refresh-summaries"
-              title="regenerate the weekly arcs + domain docs — a manual fallback; closing a chat does this automatically">refresh memory</button>
+              title="regenerate the weekly arcs + domain docs: a manual fallback; closing a chat does this automatically">refresh memory</button>
           </div>
           <div id="session-body"></div>
         </div>
@@ -249,15 +249,15 @@
         <b>a</b> alias · <b>t</b> retype · <b>d</b> delete · <b>s</b> skip · <b>u</b> undo
       </div>
       <div id="triage-btns">
-        <button class="quiet" data-tkey="k" title="keep (k) — mark reviewed ✓ and move to the next. Your default.">keep</button>
-        <button class="quiet" data-tkey="m" title="merge (m) — fold this into another entity; this name is kept as an alias">merge</button>
-        <button class="quiet" data-tkey="c" title="correct (c) — typo fix; this name is NOT kept as an alias (Dana → Dane)">correct</button>
-        <button class="quiet" data-tkey="r" title="rename (r) — fix the spelling or case of this entity's own name">rename</button>
-        <button class="quiet" data-tkey="a" title="alias (a) — add another name this entity goes by (stays matchable by both)">alias</button>
-        <button class="quiet" data-tkey="t" title="retype (t) — move to a different kind: person / project / place">retype</button>
-        <button class="quiet" data-tkey="d" title="delete (d) — remove this entity; no confirm, undo brings it back">delete</button>
-        <button class="quiet" data-tkey="s" title="skip (s) — decide later; stays in the queue for next time">skip</button>
-        <button class="quiet" data-tkey="u" title="undo (u) — undo the last change (50 deep, works across sessions)">undo</button>
+        <button class="quiet" data-tkey="k" title="keep (k); mark reviewed ✓ and move to the next. Your default.">keep</button>
+        <button class="quiet" data-tkey="m" title="merge (m); fold this into another entity; this name is kept as an alias">merge</button>
+        <button class="quiet" data-tkey="c" title="correct (c); typo fix; this name is NOT kept as an alias (Dana → Dane)">correct</button>
+        <button class="quiet" data-tkey="r" title="rename (r); fix the spelling or case of this entity's own name">rename</button>
+        <button class="quiet" data-tkey="a" title="alias (a); add another name this entity goes by (stays matchable by both)">alias</button>
+        <button class="quiet" data-tkey="t" title="retype (t); move to a different kind: person / project / place">retype</button>
+        <button class="quiet" data-tkey="d" title="delete (d); remove this entity; no confirm, undo brings it back">delete</button>
+        <button class="quiet" data-tkey="s" title="skip (s); decide later; stays in the queue for next time">skip</button>
+        <button class="quiet" data-tkey="u" title="undo (u); undo the last change (50 deep, works across sessions)">undo</button>
       </div>
       <div id="triage-toast"></div>
     </div>
@@ -275,13 +275,13 @@
             <button type="button" data-theme-choice="light">Light</button>
             <button type="button" data-theme-choice="dark">Dark</button>
           </div>
-          <p class="set-help">Saved in this browser and applied instantly — it is not part of your <code>.env</code> and is not shared with other devices. Auto follows the device.</p>
+          <p class="set-help">Saved in this browser and applied instantly. It is not part of your <code>.env</code> and is not shared with other devices. Auto follows the device.</p>
         </div>
       </div>
       <p id="settings-intro">These are the values in your <code>.env</code> file.
         Saving rewrites that file and leaves everything else in it alone. The
         journal reads its configuration once at startup, so saving restarts it
-        for you — the page reloads by itself once it is back.</p>
+        for you: the page reloads by itself once it is back.</p>
       <div id="settings-body"></div>
       <div id="settings-actions">
         <button class="send" id="settings-save" disabled>save</button>
@@ -322,71 +322,71 @@
       </nav>
 
       <details class="help-sec" open>
-      <summary id="h-write">write — the journal companion</summary>
-      <p>One chat stays open for as long as it feels right — about a week in practice. The write
+      <summary id="h-write">write: the journal companion</summary>
+      <p>One chat stays open for as long as it feels right; about a week in practice. The write
       screen is that whole conversation: the chat it continues, your entries, the companion's
       replies, and everything you say back. <b>save entry</b> stores a journal entry (backed up to
-      a markdown file the moment you save); <b>send</b> talks with the companion about it — both
+      a markdown file the moment you save); <b>send</b> talks with the companion about it; both
       join the same chat and both become journal memory at close. Your draft autosaves as you type
       and survives a refresh or closed tab; Enter just makes a new line, only the buttons send.</p>
       <p>When the chat feels finished, open the <b>⋯</b> menu next to the composer and hit
       <b>summarize &amp; close chat</b> (also available on the history tab). That's the
-      <em>summarize point</em>: your side of the chat becomes a journal entry — the same shape as
-      your imported conversations — and tagging, entity extraction, summaries, and dream scanning
+      <em>summarize point</em>: your side of the chat becomes a journal entry: the same shape as
+      your imported conversations, and tagging, entity extraction, summaries, and dream scanning
       all run in the background. A fresh empty chat opens. Until then, new entries live in the
       conversation (and their markdown backups), not yet in long-term memory.</p>
       <p>Dreams need no flag: write them the way you always have ("last night I had a dream…") and
       the dream extractor finds them at the summarize point, pulling each one into the dream realm
-      while the entry itself stays in waking memory — exactly how your imported history behaves.</p>
+      while the entry itself stays in waking memory; exactly how your imported history behaves.</p>
 
       </details>
       <details class="help-sec">
-      <summary id="h-chat">chat — look things up</summary>
+      <summary id="h-chat">chat: look things up</summary>
       <p>The chat screen is a tool, not the journal: ask it to pull things out of your history
       ("when did I last see Sam?", "what did I say about the move?"). It runs the same
-      retrieval + companion brain, but it's a <em>separate conversation</em> — lookups never join
+      retrieval + companion brain, but it's a <em>separate conversation</em>; lookups never join
       the open chat and never become journal memory. <b>clear</b> wipes it whenever you like.
       Note its honest limit: it sees retrieved excerpts, not the whole journal, so answers are
       representative rather than exhaustive.</p>
 
       </details>
       <details class="help-sec">
-      <summary id="h-search">search — every match, instantly</summary>
-      <p>The search screen sweeps your <em>entire</em> journal locally — free, instant, no API
+      <summary id="h-search">search: every match, instantly</summary>
+      <p>The search screen sweeps your <em>entire</em> journal locally; free, instant, no API
       calls. <b>meaning</b> mode ranks passages by how semantically close they are to whatever you
       describe, in your own words ("times I felt proud of my work"); <b>exact text</b> mode finds
       literal matches, newest first, with a ×N count when an entry contains several. Click any
       result to read the full entry in place. This is the exhaustive counterpart to the chat
       screen: chat retrieves a handful of excerpts and reasons about them, search shows you
-      <em>everything</em>. Dreams never appear here — they live in their own realm (dreams tab).
+      <em>everything</em>. Dreams never appear here; they live in their own realm (dreams tab).
       Two honest limits: highlighting is literal (a typo'd word won't light up even though
       meaning-search still finds the right passages), and dates are the <em>conversation's</em>
-      date — a passage written mid-week inside a week-long chat shows that chat's date until
+      date: a passage written mid-week inside a week-long chat shows that chat's date until
       the Phase 3 per-day split.</p>
 
       </details>
       <details class="help-sec">
-      <summary id="h-history">history — every chat, one at a time</summary>
+      <summary id="h-history">history: every chat, one at a time</summary>
       <p>Lands on the open chat: the conversation it continues (with Claude's replies interleaved,
       backfilled from your export), your entries, and the live thread. Every closed chat sits in
-      the sidebar — click one to read it in full. Closed chats keep both sides for reading, but
+      the sidebar; click one to read it in full. Closed chats keep both sides for reading, but
       only your side is journal memory.</p>
 
       </details>
       <details class="help-sec">
-      <summary id="h-entities">entities — curation workflow, the efficient order</summary>
+      <summary id="h-entities">entities: curation workflow, the efficient order</summary>
 
       <div class="help-step">
         <h3><span class="step-n">1</span> find duplicates first <span class="where">entities tab → "find duplicates (free)"</span></h3>
         <p>Runs locally in a few seconds, no API cost. Work through every pair: merge the real ones
-        (either direction — pick the name you actually use), hit <em>not duplicates</em> for the rest.
+        (either direction; pick the name you actually use), hit <em>not duplicates</em> for the rest.
         Dismissals are permanent, so this list only ever shrinks. Doing merges first matters because
         every merge shrinks the triage queue you're about to walk.</p>
       </div>
 
       <div class="help-step">
         <h3><span class="step-n">2</span> optional: ask claude <span class="where">entities tab → "ask claude: people / projects / places"</span></h3>
-        <p>Catches conceptual duplicates the local scan can't — long descriptive names that mean the
+        <p>Catches conceptual duplicates the local scan can't; long descriptive names that mean the
         same project, that kind of thing. Costs one API call per kind. Worth one pass on projects
         especially. Apply or dismiss each group; nothing merges without your click.</p>
       </div>
@@ -395,43 +395,43 @@
         <h3><span class="step-n">3</span> live in triage until the queue is empty <span class="where">triage tab</span></h3>
         <p>Entities come one at a time, junk first (1-mention entities lead). Keep your hands on the keyboard:</p>
         <table>
-          <tr><td><b>k</b></td><td>keep — marks reviewed ✓, next. Your default key.</td></tr>
-          <tr><td><b>d</b></td><td>delete — junk, noise, things that shouldn't exist. No confirm; <b>u</b> undoes.</td></tr>
+          <tr><td><b>k</b></td><td>keep; marks reviewed ✓, next. Your default key.</td></tr>
+          <tr><td><b>d</b></td><td>delete; junk, noise, things that shouldn't exist. No confirm; <b>u</b> undoes.</td></tr>
           <tr><td><b>m</b></td><td>merge into another entity (autocomplete; old name kept as alias)</td></tr>
-          <tr><td><b>c</b></td><td>correct — typo fix; old name is <em>not</em> kept as alias (Dana → Dane)</td></tr>
-          <tr><td><b>r</b></td><td>rename — fix spelling or case of this entity's own name</td></tr>
-          <tr><td><b>a</b></td><td>alias — add another name this entity goes by (keeps it matchable by both)</td></tr>
+          <tr><td><b>c</b></td><td>correct; typo fix; old name is <em>not</em> kept as alias (Dana → Dane)</td></tr>
+          <tr><td><b>r</b></td><td>rename; fix spelling or case of this entity's own name</td></tr>
+          <tr><td><b>a</b></td><td>alias; add another name this entity goes by (keeps it matchable by both)</td></tr>
           <tr><td><b>t</b> then <b>1/2/3</b></td><td>retype to person / project / place</td></tr>
-          <tr><td><b>s</b></td><td>skip — decide later, stays in queue for next time</td></tr>
+          <tr><td><b>s</b></td><td>skip; decide later, stays in queue for next time</td></tr>
           <tr><td><b>u</b></td><td>undo last change (50 deep, works across sessions)</td></tr>
         </table>
-        <p>Most entities are a 1-second <b>k</b> or <b>d</b>. Don't deliberate on skips — that's what
+        <p>Most entities are a 1-second <b>k</b> or <b>d</b>. Don't deliberate on skips; that's what
         <b>s</b> is for. Every key also has a matching on-screen button if you're mousing; the ones
         that need a target (merge, correct, rename, alias) open a field with <b>apply</b> / <b>cancel</b>
-        buttons — Enter and Esc still work. Undo/redo buttons live on the entities screen (they cover
+        buttons; Enter and Esc still work. Undo/redo buttons live on the entities screen (they cover
         triage actions too).</p>
       </div>
 
       <div class="help-step">
         <h3><span class="step-n">4</span> deep fixes on the tricky ones <span class="where">entities tab → click entity → hover an observation</span></h3>
-        <p>For entities that are <em>conflations</em> — two Sams in one node, "karaoke bar" that's really
-        two different bars — use the observation tools: <em>move</em> reassigns a single memory to the right
+        <p>For entities that are <em>conflations</em>: two Sams in one node, "karaoke bar" that's really
+        two different bars; use the observation tools: <em>move</em> reassigns a single memory to the right
         entity (type <code>person:Sam (work)</code> to create a new one), <em>edit</em> fixes wrong facts,
-        <em>×</em> removes them. These are the slow, careful fixes — save them for after the fast passes
+        <em>×</em> removes them. These are the slow, careful fixes; save them for after the fast passes
         so you're not context-switching.</p>
       </div>
 
       <div class="help-step">
         <h3><span class="step-n">5</span> ongoing habit</h3>
-        <p>Memory now updates at the <em>summarize point</em> — closing a chat tags it, extracts
+        <p>Memory now updates at the <em>summarize point</em>; closing a chat tags it, extracts
         its entities, refreshes the week's arc, its summary, and the domain documents, scans it
-        for dreams, and integrates the chat into a <em>seed summary candidate</em> — the rolling
+        for dreams, and integrates the chat into a <em>seed summary candidate</em>: the rolling
         co-edited life summary. A banner on the write tab announces it: download the candidate there, read it
         fully, edit it, and upload it back: the uploaded file is the seed every chat opens with,
         and nothing automatic ever overwrites it. <em>detect patterns</em> in the
         patterns tab still re-reads everything for new recurring shapes when you ask. Closed chats
         create new entities that arrive <em>unreviewed</em>, so an occasional minute in triage keeps
-        the graph clean forever. You never redo work — reviewed marks persist, and category fixes
+        the graph clean forever. You never redo work; reviewed marks persist, and category fixes
         (× a wrong tag in the categories tab) stick the same way entity merges do.</p>
       </div>
 
@@ -439,7 +439,7 @@
       <details class="help-sec">
       <summary id="h-fixes">which fix do i want?</summary>
       <table class="decision">
-        <tr><td>Two names, same real thing, both names legit</td><td><b>merge</b> (keeps alias — still matchable by either name)</td></tr>
+        <tr><td>Two names, same real thing, both names legit</td><td><b>merge</b> (keeps alias; still matchable by either name)</td></tr>
         <tr><td>Misspelling/typo that shouldn't be remembered</td><td><b>correct</b> (no alias)</td></tr>
         <tr><td>Right entity, wrong spelling or capitalization</td><td><b>rename</b></td></tr>
         <tr><td>Right entity, wrong category (person vs place)</td><td><b>retype</b></td></tr>
@@ -450,20 +450,20 @@
       </details>
       <details class="help-sec">
       <summary id="h-categories">categories</summary>
-      <p>Every entry gets tagged with categories (work, relationships, health…) — automatically when a
+      <p>Every entry gets tagged with categories (work, relationships, health…); automatically when a
       chat closes; <em>tag new entries</em> re-runs it manually for anything untagged (already-tagged
       entries are cached and free). Click a category chip to browse its entries and read its
-      <em>domain document</em> — a living ~500-word summary of that area of life. × a wrong tag or
+      <em>domain document</em>: a living ~500-word summary of that area of life. × a wrong tag or
       + a missing one; your fixes are permanent overrides. <em>scan for new categories</em> clusters
-      your places/projects and proposes organic categories — nothing is created without your
+      your places/projects and proposes organic categories; nothing is created without your
       confirm. You can also hand-seed a category with keywords. Entry categories are deliberately
-      flat — broad and scannable — so there's no sub-category nesting here.</p>
+      flat; broad and scannable, so there's no sub-category nesting here.</p>
 
       </details>
       <details class="help-sec">
       <summary id="h-patterns">patterns</summary>
       <p><em>detect patterns</em> re-reads the weekly arcs + domain documents and names recurring
-      shapes — emotional cycles, behavioral pipelines, relationship dynamics — each with dated
+      shapes; emotional cycles, behavioral pipelines, relationship dynamics; each with dated
       instances and a confidence level. Patterns are injected into the companion's context only
       when the conversation genuinely rhymes with one. <em>dismiss</em> hides a pattern; it only
       returns if new evidence shows up.</p>
@@ -473,22 +473,22 @@
       <summary id="h-dreams">dreams</summary>
       <p>Dreams live in their own realm: a separate collection that waking questions can never
       accidentally surface. The extractor finds dreams inside your entries (at the summarize point,
-      or via <em>extract dreams from history</em>), keeping the narrative, cast, tones, and — only
-      if you gave one — your own interpretation. Recent dream tone shows up as the
+      or via <em>extract dreams from history</em>), keeping the narrative, cast, tones, and; only
+      if you gave one: your own interpretation. Recent dream tone shows up as the
       <em>dream weather</em> line. Asking the companion about dreams crosses the boundary
       explicitly.</p>
 
       </details>
       <details class="help-sec">
       <summary id="h-safety">safety notes</summary>
-      <p>Everything is undoable — ↺/↻ in the nav cover every curation and observation change, 50 steps back.
+      <p>Everything is undoable; ↺/↻ in the nav cover every curation and observation change, 50 steps back.
       All your decisions live in <code>entity_graph/curation.json</code> and re-apply on every rebuild, so
       nothing you do here is ever lost by the system regenerating docs. One exception to know:
       a <code>--force</code> re-extraction (a from-scratch API re-read of all entries, only ever run deliberately)
-      rebuilds the raw memory files and would discard <em>observation-level</em> edits — merges, renames and
+      rebuilds the raw memory files and would discard <em>observation-level</em> edits; merges, renames and
       the rest survive even that. Removed aliases keep their historical "as ‘name’" data; removal only
       stops name-matching. And your journal is these local folders: <code>chroma_data</code>,
-      <code>journal_entries</code>, <code>entity_graph</code>, <code>summaries</code> — back them up.</p>
+      <code>journal_entries</code>, <code>entity_graph</code>, <code>summaries</code>; back them up.</p>
       </details>
     </div>
   </section>

@@ -61,7 +61,7 @@ function addSessionPart(container, label, text, date, carried) {
 // chat it opened with, not something written into it. Only the current-session
 // views pass it; an archive renders its own parts as itself.
 export function renderSessionPart(container, p, carried) {
-  const label = `${fmtDate(p.date)} — ${p.title}`;
+  const label = `${fmtDate(p.date)} · ${p.title}`;
   if (p.summary) addPartSummary(container, p);
   if (p.messages) {
     const l = document.createElement('div');
@@ -79,7 +79,7 @@ export function renderSessionPart(container, p, carried) {
 function addPartSummary(container, p) {
   const s = document.createElement('div');
   s.className = 'cat-summary';
-  s.textContent = `${fmtDate(p.date)} — ${p.summary}`;
+  s.textContent = `${fmtDate(p.date)} · ${p.summary}`;
   s.dataset.tocDate = p.date;
   s.dataset.tocKind = 'summary';
   container.appendChild(s);
@@ -105,7 +105,7 @@ export function addSessionBraid(container, msgs, daySummaries, withStamps) {
       const stamp = fmtDate(m.ts);
       if (stamp) d.dataset.stamp = stamp;
     }
-    if (m.dream) d.title = 'dream entry — lives in the dream realm';
+    if (m.dream) d.title = 'dream entry; lives in the dream realm';
     if (day && day !== lastDay) {
       d.dataset.tocDate = day;
       d.dataset.tocKind = 'entry';
@@ -168,7 +168,7 @@ async function showSession(key) {
     for (const p of r.parts) renderSessionPart(body, p, true);
     addSessionBraid(body, r.messages);
     if (!r.parts.length && !r.messages.length) {
-      body.textContent = 'nothing here yet — chat or write to begin.';
+      body.textContent = 'nothing here yet; chat or write to begin.';
     } else if (hasNewMaterial(r.messages)) {
       // the server refuses a close with nothing new in it, so only offer one
       // when there is — a carried-forward part is not new material

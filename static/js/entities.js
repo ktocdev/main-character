@@ -83,7 +83,7 @@ export function renderEntityList() {
       const keep = document.createElement('button');
       keep.className = 'ent-keep' + (reviewed ? ' on' : '');
       keep.textContent = reviewed ? '✓' : 'keep';
-      keep.title = reviewed ? 'reviewed — click to unmark' : 'mark reviewed';
+      keep.title = reviewed ? 'reviewed; click to unmark' : 'mark reviewed';
       keep.onclick = async e => {
         e.stopPropagation();
         const next = !reviewed;
@@ -328,7 +328,7 @@ export function init() {
   $('correct-btn').onclick = async () => {
     const target = $('merge-target').value.trim();
     if (!state.selected || !target) return;
-    if (!confirm(`Correct "${state.selected}" to "${target}"?\n(typo fix — "${state.selected}" is NOT kept as an alias)`)) return;
+    if (!confirm(`Correct "${state.selected}" to "${target}"?\n(typo fix; "${state.selected}" is NOT kept as an alias)`)) return;
     const r = await api('/api/entities/correct', {source: state.selected, target});
     if (r) clearDetail(`corrected to ${r.into}`);
   };
@@ -394,7 +394,7 @@ async function askSuggest(kind) {
   const r = await api('/api/entities/suggest', {kind});
   if (!r) { panel.style.display = 'none'; return; }
   panel.innerHTML = '';
-  if (!r.groups.length) { panel.textContent = 'no confident suggestions — looks clean.'; return; }
+  if (!r.groups.length) { panel.textContent = 'no confident suggestions; looks clean.'; return; }
   for (const g of r.groups) {
     const div = document.createElement('div');
     div.className = 'sg';
