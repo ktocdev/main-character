@@ -133,7 +133,7 @@ function renderGroupBrowser() {
     const btn = document.createElement('button');
     btn.className = 'grp-btn';
     btn.innerHTML = `${esc(g.name)} <span class="n">${memberSet.size}</span>`;
-    btn.title = 'open this group; list its entities on the right';
+    btn.title = 'open this group to list its entities on the right';
     btn.onclick = () => showGroup(g.name);
     row.appendChild(btn);
 

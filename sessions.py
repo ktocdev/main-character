@@ -521,7 +521,7 @@ def _close_locked(collection, client, title_hint: str, when: datetime | None) ->
         if m["role"] == "you" and not m.get("dream")
     ]
     if not user_msgs:
-        raise ValueError("nothing new in this chat yet — write or chat first")
+        raise ValueError("nothing new in this chat yet. Write or chat first")
 
     # The close is dated by the last thing written, not by the wall clock:
     # a chat closed the morning after a late entry belongs with that entry,

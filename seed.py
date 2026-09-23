@@ -160,7 +160,7 @@ def save_seed(text: str) -> dict:
     retired into the backups alongside it — see _retire_candidate."""
     text = text.strip()
     if len(text) < 200:
-        raise ValueError("that file looks empty — not replacing the seed with it")
+        raise ValueError("that file looks empty, so the seed was not replaced")
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
     if SEED_FILE.exists():
         BACKUP_DIR.mkdir(parents=True, exist_ok=True)

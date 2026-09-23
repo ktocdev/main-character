@@ -42,7 +42,7 @@ export async function refreshStatus() {
   $('status').textContent = `${s.entries} entries · ${s.entities} entities`;
   const open = s.open_entries || 0;
   $('status').title = open
-    ? `${open} ${open === 1 ? 'entry' : 'entries'} in this chat; added to journal memory when you close it`
+    ? `${open} ${open === 1 ? 'entry' : 'entries'} in this chat, added to journal memory when you close it`
     : '';
   // Canned replies only ever run against the demo, so the seed instance is
   // the whole banner condition now -- there is no mode where the replies are
@@ -115,8 +115,8 @@ export async function installDemo(report) {
   // the only honest progress available: the build is a child process with
   // no channel back, so a bar would be inventing a fraction it cannot know.
   const hold = setTimeout(() => {
-    const tick = () => report('building the demo journal; 32 entries and 1 dream entry; '
-      + 'the newest 3 will open in the chat (' + Math.round((Date.now() - started) / 1000)
+    const tick = () => report('building the demo journal of 32 entries and 1 dream entry. '
+      + 'The newest 3 will open in the chat (' + Math.round((Date.now() - started) / 1000)
       + 's). Expect ' + demoBuildWait() + '.');
     tick();
     timer = setInterval(tick, 1000);
@@ -131,7 +131,7 @@ export async function installDemo(report) {
     if (body.built) report('demo journal built. Opening it…');
     return true;
   } catch (e) {
-    report('Could not build the demo; ' + (e.message || e), 'error');
+    report('Could not build the demo. ' + (e.message || e), 'error');
     return false;
   } finally {
     clearTimeout(hold);

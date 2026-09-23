@@ -39,7 +39,7 @@ async function show() {
     if (c.mock) {
       const mock = document.createElement('div');
       mock.className = 'cost-note cost-mock';
-      mock.textContent = 'mock mode; canned replies, nothing real is spent';
+      mock.textContent = 'mock mode, so replies are canned and nothing real is spent';
       panel.append(mock);
     }
   } catch {
