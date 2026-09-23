@@ -77,8 +77,8 @@ function render() {
 function renderKey() {
   body().innerHTML = [
     '<h2>Welcome to Main Character</h2>',
-    '<p class="wiz-lede">A journal that remembers everything you have ever',
-    '  written in it. It runs on this computer, against your own Anthropic',
+    '<p class="wiz-lede">A journal that knows where to look. It runs on this',
+    '  computer, against your own Anthropic',
     '  API key.</p>',
     '<label class="wiz-label" for="wiz-key">Anthropic API key</label>',
     '<input type="password" id="wiz-key" autocomplete="off" spellcheck="false"',

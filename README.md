@@ -2,16 +2,20 @@
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-**A journal that remembers everything you have ever written in it.**
+**A journal that knows where to look.**
 
 You write an entry. Something you wrote three months ago is relevant, and the
 journal finds it. You never tagged it. The journal went and looked.
 
-Everything else in this project supports that one feature. A local vector store
-makes search work by meaning instead of keyword. An entity graph gives the
-people in your life a history. Rolling summaries give the journal a picture of
-your life at the week, month and year scale. A companion reads all of it before
-it answers.
+Everything else in this project supports that one feature. Before the companion
+answers, it searches in three ways: your entries, by meaning rather than
+keyword; a separate index of summaries (entries, weeks, life areas, and the
+people and places in them), so a question can land on a whole stretch of time
+as well as a sentence; and anyone you name, by name, so their history comes
+with them. When it only has the summary, it can still tell you when you wrote
+something, so you can read it in full in History.
+[How it works](HOW-IT-WORKS.md) walks through what runs when you write, close a
+chat or ask a question.
 
 ![The history tab, showing a chat braid with its entry summary and the entries it continued](assets/mc-history.png)
 
@@ -29,21 +33,17 @@ people will not have one, and the journal works fine without it.
 ```bash
 git clone https://github.com/ktocdev/main-character.git
 cd main-character
-python -m venv .venv
-.venv/bin/pip install -r requirements.lock      # Windows: .venv\Scripts\pip
+./journal install                            # Windows: .\journal install
 ```
 
-Python 3.12 or newer. The install is large and slow because it pulls in
+This creates `.venv`, installs from the lock file and copies `.env.example`
+to `.env`. It is safe to run again. Python 3.12 or newer. The install is large and slow because it pulls in
 ChromaDB's full dependency tree, including onnxruntime and tokenizers, so that
 embeddings run on your machine instead of over the network. Install from the
 lock file. `requirements.txt` lists the same dependencies unpinned, for
 reference only.
 
 ### 2. Add a key
-
-```bash
-cp .env.example .env
-```
 
 Uncomment `ANTHROPIC_API_KEY` in `.env` and paste a key from the
 [Anthropic Console](https://console.anthropic.com/). Everything else in that
@@ -52,14 +52,20 @@ file has a working default.
 ### 3. Run it
 
 ```bash
-.venv/bin/python server.py                   # Windows: .venv\Scripts\python.exe server.py
+./journal start                              # Windows: .\journal start
 ```
 
 The journal opens at **http://127.0.0.1:8144**. Write something in the box and
 press *save entry*.
 
-Stop it with `Ctrl+C`. A browser refresh picks up UI changes. Python changes
-need a restart.
+Stop it with `Ctrl+C`. After pulling a new version, run `./journal restart`
+(Windows: `.\journal restart`) so the running journal picks it up.
+
+To restart, use `journal restart` instead of `Ctrl+C` and starting again.
+`Ctrl+C` stops the journal at once, even while a companion reply or the
+background work that follows an entry is still running, and that work is
+lost after you have already paid for it. `journal restart` refuses until
+nothing is running, so you can try again a moment later without losing it.
 
 ## Try it without a key
 
@@ -73,11 +79,13 @@ pipeline run. Each trip into the demo starts from that same point, so anything
 you write there lasts only until you leave.
 
 ```bash
-python seed_corpus/import_seed_corpus.py --demo   # one-time, no key, free
-.venv/bin/python server.py
+./journal start                              # Windows: .\journal start
 ```
 
-Then open **Settings → load demo journal**.
+Then open **Settings → load demo journal**, or choose the demo on the
+first-run screen if you have not added a key yet. The first visit builds the
+demo's search index, which takes about twenty seconds, or a few minutes if
+the embedding model still has to download.
 
 The demo costs nothing because embeddings are computed locally and the replies
 are real Claude output, captured once and committed to this repo. Nothing calls
@@ -98,8 +106,9 @@ read-only, and a reload starts it over.
 
 - **Reading, searching and browsing are free.** Embeddings are computed on your
   machine with all-MiniLM-L6-v2. Semantic search never calls an API.
-- **Writing costs money.** Each entry triggers the companion's reply and a
-  background pass that tags the entry, extracts entities and updates summaries.
+- **Writing costs money.** Each entry gets the companion's reply. Closing a
+  chat triggers a background pass that tags what you wrote, extracts entities
+  and updates summaries, so a close costs more than any one reply.
 - **Two models, so you can trade down.** The companion is the voice you read,
   and it defaults to Opus. Background processing is mechanical, runs in bulk,
   and uses most of the tokens. It defaults to Sonnet. Both can be changed in
@@ -135,7 +144,7 @@ Where it all sits:
 | `journal_entries/` | Your entries and dreams, as markdown |
 | `chroma_data/` | The search index. Derived and rebuildable |
 | `entity_graph/` | Extracted people, projects and places, with profiles |
-| `summaries/` | Entry summaries, weekly arcs, domain docs, the rolling snapshot |
+| `summaries/` | Entry summaries, weekly arcs, domain docs, the seed summary |
 | `categories/`, `patterns/`, `dreams/`, `sessions/` | The rest of the pipeline's output |
 
 All of these directories are gitignored. Nothing leaves your machine except the
@@ -168,8 +177,8 @@ If you want a journal several people can use, start from a different codebase.
 
 ### Memory
 - **Semantic retrieval.** Context is assembled in layers: recent entries and
-  the current snapshot first, then semantically matched chunks, then entity
-  docs, then the pattern library.
+  the seed summary first, then semantically matched chunks, matching summaries,
+  entity docs, then the pattern library.
 - **Sessions.** One chat stays open for days. Entries, replies and follow-ups
   braid into it and survive restarts. Closing the session triggers
   summarization: your side becomes a journal entry, the braid is archived, and
@@ -191,9 +200,9 @@ If you want a journal several people can use, start from a different codebase.
 - **Entry summaries.** Two or three sentences per entry, cached incrementally.
 - **Weekly arcs.** A short narrative per week, stitched from entry summaries.
 - **Domain summaries.** A roughly 500-word doc per category, updated over time.
-- **Status snapshot.** One paragraph on where life is right now, updated with
-  every entry.
 - **Seed summary.** A rolling life summary you co-edit, which opens every chat.
+  Each close drafts an update for you to review. It never replaces yours on
+  its own.
 
 ### Categories
 - **Automatic tagging** against ten built-in categories. Each can be turned
@@ -206,8 +215,9 @@ If you want a journal several people can use, start from a different codebase.
 ### Patterns
 Recurring emotional cycles, behavioural pipelines and relationship dynamics,
 each tracked with dated instances and a confidence score. Dismissed patterns
-resurface only with new evidence. A pattern enters the companion's context only
-when it is relevant to the question.
+resurface only with new evidence. The companion sees the pattern library on
+every turn, one line per pattern, and is told to bring one up only when the
+conversation genuinely echoes it.
 
 ### Dreams
 - **Realm isolation.** Dreams live in their own vector collection, so a waking
@@ -216,8 +226,8 @@ when it is relevant to the question.
   or you can mark one with a checkbox as you write.
 - **Cast.** Dream people and places are spelled to match the waking entity
   graph.
-- **Dream weather.** A one-line tone signal from recent dreams, appended to the
-  snapshot.
+- **Dream weather.** A one-line tone signal from recent dreams, included in
+  the companion's context.
 - **Interpretations.** Your own interpretations are recorded. The app does not
   invent any.
 
@@ -234,7 +244,8 @@ become entries. Claude's replies are never stored as journal memory.
 
 Python and FastAPI on the backend, ChromaDB for local vector storage, the Claude
 API for generation, and plain HTML and vanilla JavaScript on the frontend. There
-is no build step and there are no frontend dependencies.
+is no build step and there are no frontend dependencies. See
+[HOW-IT-WORKS.md](HOW-IT-WORKS.md) for how the pieces fit together.
 
 ## Contributing
 
