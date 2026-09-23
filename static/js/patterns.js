@@ -10,7 +10,7 @@ export async function loadPatterns() {
 function renderPatterns(r) {
   $('pat-status').textContent = r.generated
     ? `detected ${r.generated.replace('T', ' ')} · ${r.patterns.length} pattern${r.patterns.length === 1 ? '' : 's'}`
-    : 'nothing detected yet; hit detect patterns';
+    : 'nothing detected yet. Hit detect patterns to look';
   const el = $('pat-list');
   el.innerHTML = '';
   for (const p of r.patterns) {
@@ -25,7 +25,7 @@ function renderPatterns(r) {
     const x = document.createElement('button');
     x.className = 'quiet pat-dismiss';
     x.textContent = 'dismiss';
-    x.title = 'not a real pattern; hide it, stays hidden across re-detections';
+    x.title = 'not a real pattern. Hide it, and it stays hidden across re-detections';
     x.onclick = async () => {
       if (await api('/api/patterns/dismiss', {name: p.name})) d.remove();
     };

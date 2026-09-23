@@ -70,9 +70,9 @@ function renderProposals() {
       };
       row.appendChild(b);
     };
-    act('confirm', 'confirm', 'create this category; entries mentioning these members get the tag');
-    act('not now', 'not_now', 'defer; re-surfaces when the cluster gains a new member');
-    act('dismiss', 'dismiss', 'not a real category; stays hidden unless new members appear');
+    act('confirm', 'confirm', 'create this category and tag the entries that mention these members');
+    act('not now', 'not_now', 'defer until the cluster gains a new member');
+    act('dismiss', 'dismiss', 'not a real category. It stays hidden unless new members appear');
     d.appendChild(row);
     el.appendChild(d);
   }
@@ -155,7 +155,7 @@ function renderCatEntries() {
   const el = $('cat-entries');
   el.innerHTML = '';
   if (!catSelected) {
-    el.innerHTML = '<p class="cat-hint">pick a category to browse its entries; click a title for the full text, × a wrong tag to remove it (your fixes stick)</p>';
+    el.innerHTML = '<p class="cat-hint">pick a category to browse its entries. Click a title for the full text, or × a wrong tag to remove it (your fixes stick)</p>';
     return;
   }
   // a custom category shows its definition (keywords + members)

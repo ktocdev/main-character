@@ -35,7 +35,7 @@ async function runSearch() {
     searchSort = 'relevance';
     renderSearchResults(q);
   } catch (e) {
-    $('search-status').textContent = 'search failed; is the server up?';
+    $('search-status').textContent = 'search failed. Is the server up?';
   }
 }
 
@@ -66,7 +66,7 @@ function renderSearchResults(q) {
   status.innerHTML = '';
   if (!searchHits.length) {
     status.textContent = searchMode === 'exact'
-      ? 'no exact matches; try meaning mode for related passages'
+      ? 'no exact matches. Try meaning mode for related passages'
       : 'nothing found';
     return;
   }
@@ -106,7 +106,7 @@ function renderSearchResults(q) {
       const rel = document.createElement('span');
       rel.className = 'related-tag';
       rel.textContent = 'related';
-      rel.title = "close in meaning; doesn't contain the exact words";
+      rel.title = "close in meaning, though it doesn't contain the exact words";
       h.appendChild(rel);
     }
     h.onclick = () => toggleEntryText(d, hit);
