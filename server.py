@@ -1497,25 +1497,53 @@ def restart_server(body: RestartIn | None = None):
     srv.should_exit = True      # uvicorn drains, run() returns, __main__ execs
     return {"ok": True, "restarting": True, "into": into}
 
+# Where a journal keeps its data, when something other than the defaults put
+# it there -- the sandbox launcher sets all eight. These are the author's own
+# location, not the demo's, so outside a seed instance a restart keeps them:
+# dropping them moved a restarted sandbox onto whatever the repo-root default
+# dirs held, the wizard's own save-and-restart included.
+DATA_DIR_KEYS = [k for k in SEED_ENV if k.endswith("_DIR")]
+# Crossing into the seed overwrites those keys with the demo's, so the child
+# carries the journal's own values here, and the way home puts them back.
+HOME_DIRS_KEY = "MC_HOME_DIRS"
+
+
 def restart_env() -> dict:
     """The environment the replacement process starts with.
 
-    Two subtractions, one addition:
+    Two subtractions, then additions:
 
       - the keys a save just wrote, because `load_dotenv()` does not override
         what is already set and the child would inherit this process's stale
         values instead of reading the file it just changed;
-      - every `SEED_ENV` key, *always*, so a seed instance is one restart deep
-        and any restart is the way home. This also means a journal started
-        from a shell that exported these by hand (`run_demo.sh`) restarts onto
-        real data -- which is the same rule stated from the other side, and
-        the reason the button exists rather than a second script;
-      - then `SEED_ENV` back, only when the seed was asked for by name.
+      - every `SEED_ENV` key in a seed instance, *always*, so a seed instance
+        is one restart deep and any restart is the way home. This also means a
+        journal started from a shell that exported these by hand
+        (`run_demo.sh`) restarts onto real data -- which is the same rule
+        stated from the other side, and the reason the button exists rather
+        than a second script. Outside a seed instance only the non-directory
+        keys go: the data dirs there are the journal's own (DATA_DIR_KEYS);
+      - on the way home, the data dirs the journal had before it crossed;
+      - `SEED_ENV` back, only when the seed was asked for by name, with the
+        journal's own data dirs stashed for that way home.
     """
-    dropped = RESTART["keys"] | set(SEED_ENV)
+    seed_keys = set(SEED_ENV) | {HOME_DIRS_KEY}
+    if not SEED_INSTANCE:
+        seed_keys -= set(DATA_DIR_KEYS)
+    dropped = RESTART["keys"] | seed_keys
     env = {k: v for k, v in os.environ.items() if k not in dropped}
+    if SEED_INSTANCE:
+        try:
+            home = json.loads(os.environ.get(HOME_DIRS_KEY) or "{}")
+        except ValueError:
+            home = {}
+        env.update({k: v for k, v in home.items()
+                    if k in DATA_DIR_KEYS and k not in RESTART["keys"]})
     if RESTART["into"] == "seed":
+        home = {k: env[k] for k in DATA_DIR_KEYS if k in env}
         env.update(SEED_ENV)
+        if home:
+            env[HOME_DIRS_KEY] = json.dumps(home)
     return env
 
 

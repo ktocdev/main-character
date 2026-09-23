@@ -466,14 +466,54 @@ def test_a_plain_restart_always_leaves_the_seed_instance(env, monkeypatch):
     """The way home is any restart at all. The keys are dropped
     unconditionally and only put back when the seed is asked for by name, so a
     demo is one restart deep and cannot be wandered into permanently."""
+    monkeypatch.setattr(server, "SEED_INSTANCE", True)
     monkeypatch.setitem(server.os.environ, "MC_SEED_INSTANCE", "1")
     monkeypatch.setitem(server.os.environ, "MC_JOURNAL_DIR",
                         "seed_corpus/install/journal_entries")
+    monkeypatch.delitem(server.os.environ, server.HOME_DIRS_KEY, raising=False)
     monkeypatch.setitem(server.RESTART, "into", "journal")
 
     child = server.restart_env()
     assert "MC_SEED_INSTANCE" not in child
     assert "MC_JOURNAL_DIR" not in child
+
+
+def test_a_plain_restart_keeps_a_journal_s_own_data_dirs(env, monkeypatch):
+    """The sandbox launcher points all eight data dirs somewhere of its own.
+    Dropping them on restart moved the journal onto the repo-root defaults
+    mid-test -- the wizard's own save-and-restart included."""
+    monkeypatch.setattr(server, "SEED_INSTANCE", False)
+    monkeypatch.setitem(server.os.environ, "MC_JOURNAL_DIR", "/sandbox/_d/j")
+    monkeypatch.setitem(server.RESTART, "into", "journal")
+    monkeypatch.setitem(server.RESTART, "keys", set())
+
+    child = server.restart_env()
+    assert child["MC_JOURNAL_DIR"] == "/sandbox/_d/j"
+
+
+def test_the_way_home_from_the_seed_restores_the_journal_s_data_dirs(
+        env, monkeypatch):
+    """Into the seed and back again lands on the journal it left, not on the
+    defaults: the child carries the dirs the seed's own overwrote."""
+    monkeypatch.setitem(server.RESTART, "keys", set())
+    monkeypatch.setattr(server, "SEED_INSTANCE", False)
+    for k in server.DATA_DIR_KEYS:
+        monkeypatch.delitem(server.os.environ, k, raising=False)
+    monkeypatch.setitem(server.os.environ, "MC_JOURNAL_DIR", "/sandbox/_d/j")
+    monkeypatch.setitem(server.RESTART, "into", "seed")
+    seed = server.restart_env()
+    assert seed["MC_JOURNAL_DIR"] == server.SEED_ENV["MC_JOURNAL_DIR"]
+
+    monkeypatch.setattr(server, "SEED_INSTANCE", True)
+    for k in [*server.SEED_ENV, server.HOME_DIRS_KEY]:
+        monkeypatch.setitem(server.os.environ, k, seed[k])
+    monkeypatch.setitem(server.RESTART, "into", "journal")
+    home = server.restart_env()
+    assert home["MC_JOURNAL_DIR"] == "/sandbox/_d/j"
+    assert "MC_SEED_INSTANCE" not in home
+    assert server.HOME_DIRS_KEY not in home
+    # a dir the journal never set stays unset, rather than keeping the seed's
+    assert "MC_CHROMA_DIR" not in home
 
 
 def test_an_uninstalled_seed_corpus_is_refused_not_booted_empty(

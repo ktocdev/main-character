@@ -1,2 +1,6 @@
 # Shell scripts run on Linux in CI; CRLF would break the interpreter.
 *.sh text eol=lf
+# The POSIX front door runs under sh; the Windows one under cmd.exe,
+# which misreads labels and gotos in LF-only batch files.
+journal text eol=lf
+*.cmd text eol=crlf
