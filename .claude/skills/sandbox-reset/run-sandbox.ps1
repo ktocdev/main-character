@@ -6,7 +6,15 @@
 # the wizard opens and the demo build is paid for again. Pass -Keep to leave
 # the last run in place, which is what you want when what you are testing
 # takes two sittings (build the demo once, then test switching back to it).
-param([switch]$Keep)
+#
+# -CopyJournal replaces the sandbox's journal with a copy of the real one,
+# for testing search and replies on real entries without touching them. It
+# copies every data dir except chroma_data, then rebuilds the index there
+# (local, free). Leaving the index behind is what makes the copy safe to take
+# while the real journal on 8144 is running: only a running server's Chroma
+# files are locked. The sandbox keeps its own .env, so the key is entered
+# again in the first-run screen (or kept, with -Keep).
+param([switch]$Keep, [switch]$CopyJournal)
 
 $ErrorActionPreference = "Stop"
 
@@ -31,7 +39,7 @@ if ((Split-Path $Sandbox -Leaf) -ne "mc-wizard" -or
   throw "refusing to reset $Sandbox -- this script only resets the mc-wizard sandbox under TEMP"
 }
 
-if (-not $Keep) {
+if (-not $Keep -or $CopyJournal) {
   # The port one: a running server holds its Chroma files open, so a wipe
   # underneath it half-succeeds -- it takes the markdown and leaves the
   # locked index, and what is left is a journal reporting 29 entries with
@@ -40,6 +48,9 @@ if (-not $Keep) {
   if ($live) {
     throw "8145 is still serving (PID $($live.OwningProcess)). Stop it first (stop-sandbox.ps1) -- a wipe under a running server deletes the entries and leaves the locked index."
   }
+}
+
+if (-not $Keep) {
   foreach ($path in @("$Sandbox\.env", "$Sandbox\_d", "$Sandbox\seed_corpus\install")) {
     if (Test-Path $path) {
       Write-Host "reset: removing $path"
@@ -84,6 +95,42 @@ $env:MC_CATEGORY_DIR = Join-Path $Data "categories"
 $env:MC_PATTERN_DIR  = Join-Path $Data "patterns"
 $env:MC_DREAM_DIR    = Join-Path $Data "dreams"
 $env:MC_SESSION_DIR  = Join-Path $Data "sessions"
+
+if ($CopyJournal) {
+  # The real journal's dirs: .env can move each one, as config.py allows;
+  # otherwise they sit at the repo root.
+  $real = @{}
+  $envFile = Join-Path $Repo ".env"
+  if (Test-Path $envFile) {
+    foreach ($line in Get-Content $envFile) {
+      if ($line -match '^\s*(MC_[A-Z]+_DIR)\s*=\s*"?([^"]*)"?\s*$') { $real[$Matches[1]] = $Matches[2] }
+    }
+  }
+  if (Test-Path $Data) {
+    Write-Host "copy: removing the sandbox journal at $Data"
+    Remove-Item -Recurse -Force $Data
+  }
+  New-Item -ItemType Directory -Force $Data | Out-Null
+  $dirs = [ordered]@{
+    MC_JOURNAL_DIR = "journal_entries"; MC_ENTITY_DIR = "entity_graph"
+    MC_SUMMARY_DIR = "summaries";       MC_CATEGORY_DIR = "categories"
+    MC_PATTERN_DIR = "patterns";        MC_DREAM_DIR = "dreams"
+    MC_SESSION_DIR = "sessions"
+  }
+  foreach ($key in $dirs.Keys) {
+    $src = if ($real[$key]) { $real[$key] } else { Join-Path $Repo $dirs[$key] }
+    if (-not (Test-Path $src)) { Write-Host "copy: no $src, skipped"; continue }
+    Copy-Item -Recurse $src (Get-Item "Env:$key").Value
+    $n = (Get-ChildItem -Recurse -File (Get-Item "Env:$key").Value).Count
+    Write-Host "copy: $($dirs[$key]) ($n files)"
+  }
+  # A fresh index loses each chunk's `source`, which only decides which
+  # conversation an open chat continues -- rebuild_index says so as well.
+  Write-Host "copy: rebuilding the index (local, free)"
+  Push-Location $Sandbox
+  try { & $Python rebuild_index.py; if ($LASTEXITCODE) { throw "rebuild_index.py failed" } }
+  finally { Pop-Location }
+}
 
 # The whole point: no key, so the journal boots unconfigured and the wizard
 # opens. Scoped to this script's own process, so nothing leaks back into the
