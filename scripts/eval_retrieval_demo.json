@@ -1,0 +1,96 @@
+{
+  "about": "Retrieval test set for the demo journal (Jordan). Every fact is an exact substring of one entry, after that entry's first 1,000 characters -- past where the embedder stops reading. `questions` are chat-screen style; `entry_replies` are long new entries whose link to an older entry comes after their own first 1,000 characters. See scripts/eval_retrieval.py.",
+  "questions": [
+    {"id": "q01", "date": "2026-08-03", "question": "When did Pepper sleep on my chest?", "fact": "Pepper slept on my chest"},
+    {"id": "q02", "date": "2026-08-04", "question": "When did Mika send me a selfie from the gym?", "fact": "she sent back a selfie from the gym"},
+    {"id": "q03", "date": "2026-08-07", "question": "What did Pepper do while Mom and I were on the phone?", "fact": "Pepper sat on the kitchen counter for the entire call"},
+    {"id": "q04", "date": "2026-08-08", "question": "When was I trying not to put a label on things with Dev?", "fact": "I'm trying not to label it too fast"},
+    {"id": "q05", "date": "2026-08-11", "question": "Where did I write that noticing the withdrawal doesn't stop it?", "fact": "recognizing it doesn't break it"},
+    {"id": "q06", "date": "2026-08-12", "question": "When did I write out the whole cycle step by step, from a bad day at work to feeling human again?", "fact": "bad thing at work → shut down → isolate"},
+    {"id": "q07", "date": "2026-08-14", "question": "When did I admit the restructuring was getting to me more than I'd let on?", "fact": "I think the restructuring is getting to me more than I've been admitting"},
+    {"id": "q08", "date": "2026-08-14", "question": "When did I sit on the park bench watching joggers?", "fact": "sat on the bench and watched joggers go by"},
+    {"id": "q09", "date": "2026-08-15", "question": "When did Dev send me a Radiohead cover?", "fact": "bass cover of a Radiohead song"},
+    {"id": "q10", "date": "2026-08-17", "question": "Where did I say I always forget how much I like singing?", "fact": "I always forget that I like it until I do it"},
+    {"id": "q11", "date": "2026-08-18", "question": "Did I decide whether Coda needs an AI recommendation engine for the first version?", "fact": "probably overkill for v1"},
+    {"id": "q12", "date": "2026-08-20", "question": "When did I feel like I had my life approximately together?", "fact": "life approximately together"},
+    {"id": "q13", "date": "2026-08-21", "question": "Who bought me a drink after I sang at the open mic?", "fact": "Dev bought me a celebratory drink"},
+    {"id": "q14", "date": "2026-08-21", "question": "How did the bridge go when I performed Fast Car?", "fact": "the bridge was rough and I lost the rhythm"},
+    {"id": "q15", "date": "2026-08-24", "question": "Who did I say is the person who pulls me back out when I withdraw?", "fact": "Mika is that person"},
+    {"id": "q16", "date": "2026-08-24", "question": "When did Mika tell me I have fans?", "fact": "you have fans, Jordan"},
+    {"id": "q17", "date": "2026-08-25", "question": "When did Mika want to plan another open mic?", "fact": "she wanted to plan another open mic"},
+    {"id": "q18", "date": "2026-08-25", "question": "When did I say the job is just one thread and not the whole fabric?", "fact": "the job is one thread"},
+    {"id": "q19", "date": "2026-08-27", "question": "How did Mika get around me pretending I was fine?", "fact": "refusing to believe me"},
+    {"id": "q20", "date": "2026-08-27", "question": "When was Pepper watching me chop garlic?", "fact": "watching me chop garlic"},
+    {"id": "q21", "date": "2026-08-28", "question": "When did I notice some part of me talking me out of opportunities before I could take them?", "fact": "gets to the microphone first"},
+    {"id": "q22", "date": "2026-08-28", "question": "What did I say about how quiet work would be without Lena?", "fact": "the floor is going to be so quiet on Monday"},
+    {"id": "q23", "date": "2026-09-01", "question": "When did the dark-couch withdrawal only last twenty minutes?", "fact": "tonight it was twenty minutes and my own two legs"},
+    {"id": "q24", "date": "2026-09-01", "question": "What did Lena call legacy marketing?", "fact": "that's the holding pen"},
+    {"id": "q25", "date": "2026-09-03", "question": "What crutch did Dev notice in their own playing?", "fact": "I do that same run every time I don't know what to play"},
+    {"id": "q26", "date": "2026-09-03", "question": "When did Pepper leave the room because of the slap bass?", "fact": "Pepper left the room at the high slapped notes"},
+    {"id": "q27", "date": "2026-09-06", "question": "When did Pepper sleep on Mom's lap?", "fact": "slept on Mom's lap for an hour"},
+    {"id": "q28", "date": "2026-09-06", "question": "When did I realize I'd kept Mom in the dark for weeks?", "fact": "five-week information blackout"},
+    {"id": "q29", "date": "2026-09-09", "question": "What time did I submit the Northlight application?", "fact": "submitted at 11:20pm"},
+    {"id": "q30", "date": "2026-09-11", "question": "How many interviews are in the Northlight onsite?", "fact": "four interviews back to back"},
+    {"id": "q31", "date": "2026-09-11", "question": "Who did I tell about the phone screen, and in what order?", "fact": "told Lena, Mika, Dev, and Mom, in that order"},
+    {"id": "q32", "date": "2026-09-14", "question": "What day is the Northlight onsite interview?", "fact": "onsite interview is the 24th"},
+    {"id": "q33", "date": "2026-09-14", "question": "When was Pepper asleep on the green rug with her feet curled up?", "fact": "white feetsies curled blissfully"}
+  ],
+  "entry_replies": [
+    {
+      "id": "e01",
+      "link": "found the little tin",
+      "date": "2026-09-06",
+      "fact": "a box of Dad's old guitar picks",
+      "query": "9/22 - second day under Priya. she's fine. she's actually more than fine, which is almost worse, because I walked in braced for a Marcus and she opened our one-on-one by asking what I'd want to fix first if nobody told me what to fix. I said the template system for the legacy pages is held together with tape and she said 'great, then that's yours.' the other two people on the team, Theo and Ruth, looked at me like I'd been handed a live grenade. maybe I have. the templates are a mess of copy-pasted components with slightly different paddings and nobody knows which version is canonical.\n\nspent the afternoon making an inventory. forty-one variants of what is supposed to be one card. I made a spreadsheet and color-coded it and felt a very specific kind of calm that I only get from sorting chaos into rows. Ruth came over and looked at it for a long time and said 'I've wanted someone to do this for two years.' that was nice. I'm not going to get attached. the onsite is Thursday.\n\nat night I got the guitar out for the first time in a week. couldn't find a pick anywhere, dug through the drawer by the couch and found the little tin with the ones Dad used to play with, the ones Mom brought. I'd been saving them like they were too precious to use, but tonight I just took the worn tortoiseshell one and played with it. it's thinner than I like and it has a groove worn into it from his thumb, and my thumb fit into the groove. I played for an hour. I kept thinking about him not being able to play anymore and me not calling him enough. I should call him this weekend and tell him I'm using them."
+    },
+    {
+      "id": "e02",
+      "link": "there was the heron again",
+      "date": "2026-08-08",
+      "fact": "Dev pointed out a heron standing completely still in the shallows",
+      "query": "9/20 - Saturday. slept in until almost ten, which I never do, and woke up feeling like I'd been underwater. cleaned the kitchen, did the thing where you clean one shelf of the fridge and suddenly it's an hour later and everything is out on the counter. threw away a jar of something I bought in June for a recipe I never made. Pepper helped by lying in the exact middle of the floor where I needed to stand.\n\ngot a text from Theo from the new team asking if I wanted to grab lunch Monday with him and Ruth before I officially start. I said yes before I could overthink it, which is new. I'm trying to say yes to things faster and figure out whether I want them afterwards, which is apparently how everyone else lives.\n\nprepped some notes for the onsite. the portfolio presentation is twenty minutes plus questions and I keep trimming it and then adding things back. I think the Coda section is too long and I also think it's the only good part. printed it out to read it on paper, which helps me see the pacing.\n\nin the late afternoon I walked to the park to clear my head and went around the pond instead of up the hill. and there was the heron again, in the shallows by the reeds, not moving at all, the same stillness. I stood there and watched it for probably ten minutes. the last time I saw it I was sitting on that bench with someone I barely knew yet, trying not to label anything. now I know them a lot better. I texted Dev a blurry photo of it and they sent back three exclamation points and 'our bird.'"
+    },
+    {
+      "id": "e03",
+      "link": "note on my door from maintenance",
+      "date": "2026-08-07",
+      "fact": "a stain on the ceiling from the upstairs neighbor's leak",
+      "query": "9/23 - the night before the onsite. I have my outfit laid out on the chair Mom brought, which feels symbolic in a way I'm choosing not to examine. I did one full run-through of the presentation out loud to Pepper, who fell asleep during the dashboard section, which is fair, the dashboard section is the least interesting one.\n\nPriya asked me today how things were going and I almost told her I was taking tomorrow off for an interview. I didn't. I just said it's a personal day. she said 'take care of yourself' and meant it, and I felt a little guilty, because she's been decent to me for three days and I'm already halfway out the door. but I'm not going to stay somewhere because the new manager is nice. that's the kind of reasoning that keeps people in the holding pen for years.\n\nMika called and made me say my intro out loud twice. she said I talk faster when I'm nervous, which I knew, and that I should pause after the part about the trophy case, which I didn't think of. Lena texted 'Ana already likes you. tomorrow is a formality. eat breakfast.'\n\nand then, the best surprise of the week: when I got home there was a note on my door from maintenance saying they'd come in and repaired and painted the ceiling. I looked up and the brown water mark over the bedroom door is just gone. the one from the upstairs leak that I emailed them about with a photo back in August, the one that was still there when Mom visited. months of it and it's gone the night before I might be leaving. I stood there laughing at the ceiling."
+    },
+    {
+      "id": "e04",
+      "link": "they finally caught the lunch thief",
+      "date": "2026-07-31",
+      "fact": "new coworker who keeps stealing her lunch from the fridge",
+      "query": "9/18 - worked on Coda's export tonight. the free-play sessions now export as a folder: the audio, a text file of the marks with their notes, and the clips cut out as separate files. it took forever because the audio library I'm using wants everything in a format nobody else wants. I ended up writing a little converter and felt like a real engineer for about fifteen minutes before I found the bug that made every clip start half a second late.\n\nfixed it. tested with one of Dev's sessions they sent me - their setlist run-through from the week before the gig. the marks are all neutral now, per the redesign, and the review step asks what each one is. Dev tagged eight as 'fix' and two as 'keep.' I like that the app doesn't decide for them anymore.\n\nat Groundwork the barista asked what I'm always working on and I told her. she said she plays cello and would try it. that's three people now who would use it who aren't my friends. or two and a half. she might have been being polite.\n\nMika came by at nine with ice cream because her week was terrible. the big news: they finally caught the lunch thief at her office. it's the guy she's been complaining about since the summer, the new one who kept taking her food out of the fridge. HR got involved. there was a meeting. she told the whole saga with hand gestures and I laughed so hard Pepper left the room. then we watched half a movie and she fell asleep on the green rug."
+    },
+    {
+      "id": "e05",
+      "link": "the woman with the ukulele",
+      "date": "2026-08-21",
+      "fact": "a woman who played ukulele and sang something original",
+      "query": "9/19 - Dev's gig tonight. the one they practiced toward with Coda for two weeks. it was at a bar across town with a stage too small for a five-piece band, so the keyboard player was half in the hallway. I got there early and stood near the back because I didn't want Dev to see me and get nervous, and then they saw me immediately and waved with the bass neck.\n\nthe set was tight. the transition they kept flubbing in the living room - the one they marked as the worst - came around in the third song and they just played it. clean. I don't think anyone in that room knew that was a moment except me and Dev, and they looked right at me when it went past. that was one of the best feelings I've had all year, and it wasn't even my own music.\n\nafterwards the band hung around and the bandleader, a tall guy named Otis, asked what the app was that Dev kept talking about. I showed him on my phone. he said he'd want it for the whole band, with shared marks, which is a whole new feature I will not be building this month.\n\nwalking out, I realized the opening act was someone I recognized: the woman with the ukulele from The Lantern open mic, the one who sang the original song that made me tear up that night. she played it again tonight and it got me again. I went up and told her. she said most people don't remember her and I said I'd written about it. I didn't say where."
+    },
+    {
+      "id": "e06",
+      "link": "Dev came over with a record",
+      "date": "2026-08-15",
+      "fact": "reminded me of Thundercat",
+      "query": "9/21 - first official day on legacy marketing. the desk is by the window at least. Priya had a welcome note on my keyboard, handwritten, which nobody has ever done for me at this company. the onboarding doc is from 2023 and links to three tools we no longer pay for. Ruth walked me through the deploy process, which involves a checklist, a prayer and a Slack message to someone named Gus who may or may not still work here.\n\nat lunch with Theo and Ruth I learned they both applied for other internal roles last year and neither got an interview. Ruth said it matter-of-factly, like the weather. I didn't mention Thursday. it felt wrong to be sitting there with a door when they don't have one.\n\nthe afternoon was just reading templates, page after page of them, some with three different header components stacked on top of each other because someone was afraid to delete the old ones. I found a comment in the CSS from 2019 that just says 'sorry' and I've never related to a line of code more.\n\nin the evening Dev came over with a record for me - an actual vinyl, even though I don't own a turntable. they said it was the one they'd been telling me about since our first dinner, the album they said their own instrumental was chasing, the one I compared it to at the Thai place without knowing it was their hero. it's Thundercat. they wrote a note on the sleeve: 'for when you own a record player. you will.' I put it on the shelf facing out."
+    },
+    {
+      "id": "e07",
+      "link": "Motown documentary",
+      "date": "2026-08-19",
+      "fact": "documentary about Motown",
+      "query": "9/17 - long day of meetings, most of them about a project that will be cancelled in October. Marcus's last week as my manager, and he's being oddly warm, stopping by my desk to ask about my weekend like we've been doing that all along. I answered politely. I don't hold a grudge exactly, but I don't need to pretend the last six months were fine either.\n\nthe dashboard I rebuilt three times is being handed to a team in another building, and I wrote them a handoff doc longer than anything Marcus ever wrote me. worked on the presentation at lunch. Lena looked at a draft and said to cut the first three slides entirely, which I did, and it's better. she's right about most things. it's annoying.\n\nafter work I did the run at Greenwood Park, the full loop plus the hill trail. my legs are so much better at the climb than they were in August. at the top the skyline was orange and I stood there long enough that a guy with a dog asked if I was okay.\n\ncame home, stretched, ordered from the Thai place again, and finally watched the second half of that Motown documentary I started the night I decided to renew the lease. I'd paused it at the part about the Funk Brothers, the session musicians nobody knew by name who played on almost every hit. I texted Dev about them because it felt like their kind of story, the people underneath the famous songs. they called instead of texting back and we talked for an hour."
+    },
+    {
+      "id": "e08",
+      "link": "the dream from last week",
+      "date": "2026-08-14",
+      "fact": "the elevator was gone",
+      "query": "9/16 - booked the open mic slot with Mika for next month. we're doing a duet this time, which was her idea and which I agreed to at a moment of weakness at Groundwork. she wants to do something by Fleetwood Mac. I want to do something where I don't have to hit the high parts. negotiations continue.\n\nwork was quiet. everyone on internal tools is packing up their channels and archiving docs, like clearing out a house before a move. I archived the dashboard project and felt weirdly sentimental about it, three rounds of Marcus feedback and it's just a folder now.\n\nTheo from legacy marketing messaged to say welcome in advance and sent me a list of the templates nobody has touched since 2021, with a little skull emoji next to the worst ones. I appreciated the honesty. I told him I like a mess I can sort, which is true, and which I have apparently never said out loud to a coworker before.\n\ncooked a real dinner. the white bean and kale soup, big pot. Pepper supervised from the counter.\n\nI keep coming back to the dream from last week, when I finally found the stairs. I went back through and reread the first one tonight, the very first office dream from August, the one where every desk was cleared and there was just the sticky note that said we moved, and when I tried to leave there was no way out, just a smooth wall where the doors should have been. I'd forgotten how trapped that one felt. reading it now is strange, because at the time I didn't know the building was going to be the reorg, and now it's obvious."
+    }
+  ]
+}
