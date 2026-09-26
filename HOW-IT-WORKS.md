@@ -152,7 +152,7 @@ The steps run one after another, and a failed step does not stop the rest.
 | Categories | Tag the new entry | `categories.build` |
 | Entities | Extract people, places and projects from the new entry. Entries already processed are cached and skipped | `entities.build` |
 | Summaries | Write the new entry's summary, and regenerate weekly arcs and domain docs whose entries changed. Then embed the new and changed summaries and entity profiles into the summary index, locally | `summarizer.build` |
-| Dreams | Scan the new entry for dreams | `dreams.extract` |
+| Dreams | Scan the new entry for dreams. Then embed new and changed dreams into the dream index, locally | `dreams.extract` |
 
 The write screen shows these steps as they run (`/api/sessions/close/progress`).
 
@@ -166,6 +166,21 @@ tokens.
 own conversation. Lookups never join the open chat and never become journal
 memory. It is the place to ask things like "when did I last mention…", then
 go to History to read the entry in full.
+
+## The search tab
+
+`GET /api/search` in `server.py`, `search_journal`. It is local and free, and
+has two modes:
+
+- **By meaning** ranks every passage in the passage index and lists each entry
+  once, by its best passage. An entry that contains the words you typed is
+  always listed. Other entries are listed only while they are close to the
+  best match, up to 12, and each shows the passage that matched. Until the
+  passage index is built, it ranks the journal chunks instead.
+- **Exact** finds the words in the journal's full text, ignoring case and
+  accents, newest first, with a count per entry.
+
+Dreams never appear here.
 
 ## When the companion speaks first
 

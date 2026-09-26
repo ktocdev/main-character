@@ -1,6 +1,6 @@
 # Handoff: make lookup find exact text, not just summaries
 
-Written 2026-09-23. Step 0 done 2026-09-25 (results under step 0). Step 1 done 2026-09-25 on branch `JRNL-47`: results under steps 1 and 1a, and in "Step 1 finished". The passage index is in `cef2a55`, the switch to arctic-embed-s in `55445c8`, and the rest of step 1 in the commit after. **Where to pick up: [Next steps](#next-steps).**
+Written 2026-09-23. Step 0 done 2026-09-25 (results under step 0). Step 1 done 2026-09-25 on branch `JRNL-47`: results under steps 1 and 1a, and in "Step 1 finished". The passage index is in `cef2a55`, the switch to arctic-embed-s in `55445c8`, and the rest of step 1 in `5c9ed67`. **Where to pick up: [Next steps](#next-steps).**
 
 ## Next steps
 
@@ -9,7 +9,7 @@ As of 2026-09-25, stopped here:
 1. **Decided 2026-09-25: switch to `snowflake/snowflake-arctic-embed-s`,** with 120-token passages and 1 neighbour. On the real set it finds 30/38 in the top 6, against 20 with MiniLM and 2 at baseline (step 1a results).
 2. **Switch the model: done 2026-09-25** (see "The switch, as built" under step 1a). Through the real code path it finds 30/38 in the top 6 and 31 in the top 12, with MRR 0.628, which matches the comparison exactly. Entry replies are 3/8 in both the top 6 and top 12; MiniLM got 3/8 and 5/8.
 3. **Finish step 1: done 2026-09-25** (see "Step 1 finished" under step 1a).
-   - **The search ceiling is 64, decided by the owner 2026-09-25** (`passages.MAX_QUERY_PIECES`, was 26). It was sized for 254-token pieces, which add ~224 new tokens each, so 26 covered twice the longest entry. At 120 tokens each piece adds ~90, so 26 cover ~2,340 tokens. On the real journal, 5 of 395 entries need more (27–32 pieces, up to 2,824 tokens). Those are still searched end to end, by 26 pieces spread evenly, but some text between them is skipped. Measured on the copy, the longest chunk (11,697 characters, 31 pieces) takes 394 ms to search at 26 and 502 ms at 64, and its whole context block 1.3 s and 1.6 s. At 64 every entry is covered twice over, for about 0.1 s of search and 0.3 s of context block on the longest entries only.
+   - **The search ceiling is 64, decided by the owner 2026-09-25** (`passages.MAX_QUERY_PIECES`, was 26). It was sized for 254-token pieces, which add ~224 new tokens each, so 26 covered twice the longest entry. At 120 tokens each piece adds ~90, so 26 cover ~2,340 tokens. On the real journal, 5 of 395 entries need more (27–32 pieces, up to 2,824 tokens). At 26 those were searched end to end by 26 pieces spread evenly, with some text between them skipped. Measured on the copy, the longest chunk (11,697 characters, 31 pieces) takes 394 ms to search at 26 and 502 ms at 64, and its whole context block 1.3 s and 1.6 s. At 64 every entry is covered twice over, for about 0.1 s of search and 0.3 s of context block on the longest entries only.
 4. **Step 1b** (the companion's prompt), then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`.
 5. **Holdout.** The owner is writing their own questions in `my-questions.txt` at the repo root, which is untracked. Move it to `docs/retrieval-eval/` (gitignored) and convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
 6. **Final check,** then the real journal: stop 8144, `python backup.py`, then `rebuild_index.py`.
@@ -67,7 +67,7 @@ Leave the existing journal collection exactly as it is. It remains the stored co
   Either way: split between paragraphs first, then between sentences within long paragraphs. Each piece overlaps the one before it by about 30 tokens, and the overlap counts toward the limit. Overlap is safe here because nothing rebuilds entries from this index.
 - **Search small, read bigger.** Matching works best on small passages, but the companion needs context to understand a match. The alternative to test: match on the passage, then show the companion that passage together with its neighbours in the same entry (the passage before and after, found by `source_id` and position). The step 0 test decides this too. Measure hits on what the companion is shown.
 - **Metadata on each passage:** `date`, `title`, `source_id` (the id of the journal chunk it came from) and the passage's position in the entry. This is enough to show it, to go back to the entry it came from, and to delete or rebuild it.
-- **Fallback:** if the passage index is empty, search the old collection as it does today. Existing installs keep working until they rebuild.
+- **Fallback:** if the passage index is empty, search the old collection as it does today. Existing installs keep working until they rebuild. *As built: the fallback applies when the index is absent or was built by another model, and the write paths keep the index complete or absent (see "Step 1 finished").*
 
 Rejected alternative: changing `chunk_entry` and making `get_conversations` rebuild entries from the original separators. That changes the pipeline's input, risks the demo replay, and touches every reader of the journal collection, for no extra benefit.
 
@@ -202,7 +202,7 @@ Things the switch must handle, found during the test:
 - **The query prefix** for arctic-embed-s (as for bge) is `Represent this sentence for searching relevant passages: `. Passages get no prefix.
 - Write passages wherever journal chunks are written today: `sessions._close_locked`, `rebuild_index.py`, `bulk_import.py`, `seed_corpus/import_seed_corpus.py`, and the old CLI save in `companion.py` (the upsert near `ids=[entry_id]`). Remove stale passages wherever `rebuild_index.py` removes stale chunks.
 - Switch `rag_journal.query_journal`, which feeds `build_context_block`, to the passage index, with the fallback above.
-- **Split long queries.** When the query is longer than one passage (an entry reply, or the reflection query), split it with the same splitter, run one search per piece, then merge, remove duplicates and keep the best matches. Search the **whole** entry, not only its first few pieces: the 90th-percentile entry is about 6,000 characters, and its ending matters as much as its opening. The ceiling is **26 searches per query**, which covers an entry twice as long as the journal's longest on 2026-09-23 (11,777 characters, 2,824 tokens; each piece adds about 224 new tokens after the overlap). Every entry written so far is searched in full. If a longer one comes along, pick 26 pieces spread evenly across it so the ending is still searched. The ceiling applies separately to the passage search and to `get_summary_hits`. Do the same for `get_summary_hits`. This is local and free. There is no summary step and no extra Claude call: the reply prompt still contains the full entry, and only the choice of past passages changes. Without this, step 1 helps chat-screen questions but not entry replies.
+- **Split long queries.** When the query is longer than one passage (an entry reply, or the reflection query), split it with the same splitter, run one search per piece, then merge, remove duplicates and keep the best matches. Search the **whole** entry, not only its first few pieces: the 90th-percentile entry is about 6,000 characters, and its ending matters as much as its opening. The ceiling is **26 searches per query** (*raised to 64 on 2026-09-25, for 120-token pieces*), which covers an entry twice as long as the journal's longest on 2026-09-23 (11,777 characters, 2,824 tokens; each piece adds about 224 new tokens after the overlap). Every entry written so far is searched in full. If a longer one comes along, pick 26 pieces spread evenly across it so the ending is still searched. The ceiling applies separately to the passage search and to `get_summary_hits`. Do the same for `get_summary_hits`. This is local and free. There is no summary step and no extra Claude call: the reply prompt still contains the full entry, and only the choice of past passages changes. Without this, step 1 helps chat-screen questions but not entry replies.
 - Once passages are small, stop trimming at `EXCERPT_CHARS`, and raise `N_SEMANTIC` from 6 to about 12. The total size of the context stays roughly the same. If neighbours are added when shown, each result is about three passages, so check the context size with `show_context.py` and lower `N_SEMANTIC` if needed. Merge overlapping neighbour windows from the same entry so no text is shown twice.
 - Move the search tab's by-meaning mode (`server.search_journal`, `mode=semantic`) to the new index too. It has the same problem. Smaller passages mean more results per entry, so check how the tab lists them, and group by entry if it doesn't already. The exact mode stays on the journal collection, which already searches full text.
 - **Dreams too.** Each dream is indexed as one document (`dreams.build_index`), so a long dream is cut off the same way. Use the same splitter there, with each passage pointing back to its dream. Most dreams are short and stay whole.
@@ -226,11 +226,11 @@ Things the switch must handle, found during the test:
 - **Known gap until step 1 is finished:** a chapter close wrote only the journal chunks. *Closed when step 1 was finished: every write path now writes passages (below).*
 - **Entry replies:** arctic finds 3/8 in the top 12, against MiniLM's 5/8. The set is too small to decide on. Step 4b's re-ranker is the next lever there, and the owner's holdout will add evidence.
 
-Done when: the step 0 test shows a clear improvement on the deep-fact questions, the context viewer shows the deep passages on the sandbox copy of the real journal, the search time stays a small fraction of the reply time, the full test suite passes, and `tests/test_demo_close_replay.py` passes without re-recording.
+Done when: the step 0 test shows a clear improvement on the deep-fact questions, the context viewer shows the deep passages on the sandbox copy of the real journal, the search time stays a small fraction of the reply time, the full test suite passes, and `tests/test_demo_close_replay.py` passes without re-recording. *All met on 2026-09-25; see "Step 1 finished".*
 
 #### Step 1 finished (2026-09-25)
 
-- **Defaults:** `PASSAGE_TOKENS` 120, `PASSAGE_NEIGHBORS` 1, `N_SEMANTIC` 12 (`config.py`, `.env.example`).
+- **Defaults:** `PASSAGE_TOKENS` 120, `PASSAGE_NEIGHBORS` 1, `N_SEMANTIC` 12 (`config.py`, `.env.example`). The search ceiling, `MAX_QUERY_PIECES`, is 64 (Next steps, item 3).
 - **The passage index is complete or absent.** Search falls back to the journal chunks only when the index is absent, so an index missing an entry would hide it instead. `passages.index_chunks` therefore:
   - adds to an index built for this model;
   - builds a missing one only when the journal holds nothing but the chunks just written (a new journal's first entry), since that is the whole journal. An install that hasn't run `rebuild_index.py` since the passage index arrived stays on the fallback, rather than get an index of only its newest entry;
@@ -268,12 +268,14 @@ Done when: the step 0 test shows a clear improvement on the deep-fact questions,
   - The context block now takes 72 ms median for a question (it was ~500 ms) and 222 ms for an entry reply. Summary search no longer reloads MiniLM.
   - Text shown for the top 12 is a median of ~12,000 characters, the same as 6 chunks trimmed to 2,000.
   - `rebuild_index.py` took 76 s the first time (summaries and dreams converted) and 15 s after that.
+  - A fresh demo build takes ~16 s with both models already downloaded, so the UI's "around twenty seconds" still holds.
   - Search tab: the answer's quote is visible in a snippet for 25/38 test questions, against 0/38 on the old path. It keeps a median of 7.5 related entries per question, against 12 on the old path, and takes ~390 ms against ~300 ms.
 - **Tests:**
   - `tests/test_passages.py` (26), covering the splitter, turns, neighbour windows, fallback, each write-path rule, the close, the context block's dedup and trimming, `mirror` and the legacy search, dream entries and long dreams, and the search tab.
   - The demo installer's boundary test also checks `journal_passages`.
   - The accounting tests with fake collections stub `index_chunks`.
   - Full suite: 232 passed, 2 skipped. The demo close replay passes without re-recording.
+- **Docs updated:** `README.md` (models, retrieval, dreams, bulk import, demo download), `HOW-IT-WORKS.md` (the models, the context block's layers and counts, the close steps, and a new search tab section), `.env.example` and `config.py` comments.
 - **Not done here:** splitting long summary documents (the follow-up below); step 4b's re-ranker for entry replies.
 
 ### Step 1b: tell the companion how it works
@@ -411,4 +413,4 @@ Decided on 2026-09-25:
 - Adding `fastembed` as a dependency needs the owner's approval once it's shown to install cleanly. *Tested 2026-09-25: it installs cleanly. Approved the same day.*
 - The embedding model is `snowflake/snowflake-arctic-embed-s`, via `fastembed`. Passages are 120 tokens with 1 neighbour shown, and 12 results. This replaces the provisional MiniLM choice.
 
-If step 0's timing shows 26 searches slowing replies noticeably, bring the ceiling back to the owner rather than lowering it quietly.
+If the timing ever shows the search ceiling (64 searches) slowing replies noticeably, bring it back to the owner rather than lowering it quietly.

@@ -108,7 +108,7 @@ If you want a journal several people can use, start from a different codebase.
 <summary><b>The full feature list</b></summary>
 
 ### Memory
-- **Semantic retrieval.** Context is assembled in layers: recent entries and the seed summary first, then semantically matched chunks, matching summaries, entity docs, then the pattern library.
+- **Semantic retrieval.** Context is assembled in layers: recent entries and the seed summary first, then passages matched by meaning from anywhere in an entry, matching summaries, entity docs, then the pattern library. A whole new entry is searched piece by piece, so its ending finds connections as well as its opening.
 - **Sessions.** One chat stays open for days. Entries, replies and follow-ups braid into it and survive restarts. Closing the session triggers summarization: your side becomes a journal entry, the braid is archived, and the memory pipeline runs in the background.
 - **Reflection.** The companion opens a conversation by connecting threads across your history instead of waiting to be asked.
 
@@ -135,7 +135,7 @@ If you want a journal several people can use, start from a different codebase.
 Recurring emotional cycles, behavioural pipelines and relationship dynamics, each tracked with dated instances and a confidence score. Dismissed patterns resurface only with new evidence. The companion sees the pattern library on every turn, one line per pattern, and is told to bring one up only when the conversation genuinely echoes it.
 
 ### Dreams
-- **Realm isolation.** Dreams live in their own vector collection, so a waking query can never surface one by accident.
+- **Realm isolation.** Dreams live in their own vector collection, so a waking query can never surface one by accident. A long dream is split into passages, so it can be found by any part of it.
 - **Extraction and flagging.** Dreams are found in the journal automatically, or you can mark one with a checkbox as you write.
 - **Cast.** Dream people and places are spelled to match the waking entity graph.
 - **Dream weather.** A one-line tone signal from recent dreams, included in the companion's context.
@@ -145,7 +145,7 @@ Recurring emotional cycles, behavioural pipelines and relationship dynamics, eac
 
 ## Importing a Claude export
 
-Optional, and only useful if you already have one. `python bulk_import.py` reads a Claude conversation export, chunks it, embeds it and writes markdown backups, so the journal has a history to work with from day one. Your messages become entries. Claude's replies are never stored as journal memory.
+Optional, and only useful if you already have one. `python bulk_import.py` reads a Claude conversation export, chunks it, embeds it, splits it into search passages and writes markdown backups, so the journal has a history to work with from day one. Your messages become entries. Claude's replies are never stored as journal memory.
 
 ## Stack
 
