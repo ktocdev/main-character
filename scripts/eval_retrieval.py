@@ -11,7 +11,8 @@ Each test pairs a query with a fact: an exact quote from one entry, placed
 after that entry's first 1,000 characters, which is past where the embedder
 stops reading (LOOKUP-UPGRADE-HANDOFF.md). A test passes at k when a passage
 containing the fact is among the first k the search returns, as the companion
-would see it (trimmed to EXCERPT_CHARS).
+would see it: passages whole, and the fallback's whole chunks trimmed to
+EXCERPT_CHARS, as build_context_block shows them.
 
 Two sets, both in the questions file:
 
@@ -100,8 +101,10 @@ def run_one(t: dict, collection, entity_index: dict) -> dict:
     search_ms = (time.perf_counter() - started) * 1000
 
     rank = None
-    for i, m in enumerate(matches, 1):
-        if fact in _norm(m["text"][:EXCERPT_CHARS]):
+    shown = [m["text"] if "source_id" in m["metadata"] else m["text"][:EXCERPT_CHARS]
+             for m in matches]
+    for i, text in enumerate(shown, 1):
+        if fact in _norm(text):
             rank = i
             break
 
@@ -110,7 +113,11 @@ def run_one(t: dict, collection, entity_index: dict) -> dict:
     context_ms = (time.perf_counter() - started) * 1000
 
     return {"id": t["id"], "rank": rank, "search_ms": round(search_ms, 1),
-            "context_ms": round(context_ms, 1)}
+            "context_ms": round(context_ms, 1),
+            # How much the companion reads for this search, so a setting that
+            # finds more by showing more can be told apart from one that finds
+            # more by ranking better.
+            "chars": {k: sum(len(s) for s in shown[:k]) for k in KS}}
 
 
 def _ms(values: list[float]) -> str:
@@ -142,6 +149,9 @@ def report(name: str, results: list[dict], before: dict) -> dict:
                       and before[r["id"]]["rank"] <= k)
             line += f"   (was {was}/{n})"
         print(line)
+    for k in KS:
+        chars = statistics.median(r["chars"][k] for r in results)
+        print(f"  text shown, top {k:<2}: median {chars:,.0f} chars")
     mrr = sum(1 / r["rank"] for r in results if r["rank"]) / n
     summary["mrr"] = round(mrr, 3)
     print(f"  mean reciprocal rank: {mrr:.3f}")
@@ -180,8 +190,8 @@ def main() -> int:
 
     collection = get_collection()
     entity_index = companion.load_entity_index()
-    # The first search loads the embedder; keep that out of the timings.
-    query_journal("warm up", n_results=1)
+    # The first search loads the embedders; keep that out of the timings.
+    companion.build_context_block("warm up", collection, entity_index)
 
     print(f"{WHICH} journal, {collection.count()} chunks in the journal "
           f"collection, EXCERPT_CHARS={EXCERPT_CHARS}")

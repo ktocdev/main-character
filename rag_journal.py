@@ -43,22 +43,15 @@ def get_collection():
     )
 
 
-def get_summary_collection():
-    """
-    The zoomed-out sibling of the main collection: entry summaries, weekly
-    arcs, domain documents, and entity docs, each embedded whole. Chunks
-    answer "find me that moment"; these answer "what was going on".
-    Kept separate so whole-collection reads of journal_entries (entity
-    extraction, conversation reassembly) never see summary documents.
-    """
-    import chromadb
-
-    CHROMA_DIR.mkdir(parents=True, exist_ok=True)
-    client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    return client.get_or_create_collection(
-        name="journal_summaries",
-        metadata={"hnsw:space": "cosine"},
-    )
+# The zoomed-out sibling of the main collection: entry summaries, weekly
+# arcs, domain documents, and entity docs, each embedded whole. Chunks
+# answer "find me that moment"; these answer "what was going on".
+# Kept separate so whole-collection reads of journal_entries (entity
+# extraction, conversation reassembly) never see summary documents.
+# Embedded by the passage index's model, not chroma's: written by
+# summarizer.sync_summary_embeddings through passages.mirror(), searched
+# through passages.search_documents().
+SUMMARY_COLLECTION = "journal_summaries"
 
 
 # ---------------------------------------------------------------------------
@@ -293,11 +286,31 @@ def extract_metadata(text: str) -> dict:
 
 def query_journal(question: str, n_results: int = 5) -> list[dict]:
     """
-    Semantic search over the journal. Returns the most relevant entries,
+    Semantic search over the journal. Returns the most relevant passages,
     each with its text, metadata, and similarity distance (lower = closer).
+
+    Searches the passage index (passages.py), where every part of an entry
+    is findable. Until that index has been built for the configured model --
+    an install that has not run rebuild_index.py since it arrived, or since
+    the model changed -- or while the model can't be downloaded, it falls
+    back to the journal chunks, whose embeddings only cover each chunk's
+    opening.
     """
+    import passages
+    try:
+        hits = passages.search(question, n_results)
+    except passages.ModelUnavailable as exc:
+        print(f"  [search] {exc}")
+        hits = []
+    if hits:
+        return hits
+
     collection = get_collection()
-    results = collection.query(query_texts=[question], n_results=n_results)
+    if collection.count() == 0:
+        return []
+    # Chroma's own embedder: the one these chunks were embedded with.
+    results = collection.query(query_texts=[question],
+                               n_results=min(n_results, collection.count()))
 
     matches = []
     for i, doc in enumerate(results["documents"][0]):

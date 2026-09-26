@@ -454,6 +454,10 @@ def main():
     write_day_braids(matches, manifest)
     update_session_base(manifest)
     write_manifest(manifest)
+    import passages
+    stats = passages.sync(collection)
+    print(f"  search passages: {stats['documents']} ({stats['embedded']} embedded, "
+          f"{stats['removed']} removed)")
     print(f"\n  MIGRATION COMPLETE — {collection.count()} chunks in store")
 
     if not args.migrate_only:

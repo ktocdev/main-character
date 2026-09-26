@@ -561,32 +561,40 @@ def _close_locked(collection, client, title_hint: str, when: datetime | None) ->
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
     safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in entry_title)[:50]
     day_parts = []
+    written = ([], [], [])     # ids, documents, metadatas: for the passages
     for day in sorted(by_day):
         day_text = "\n\n".join(by_day[day])
         for chunk in chunk_entry({"text": day_text, "date": day, "title": entry_title}):
             text = chunk["text"]
             idx = chunk.get("chunk_index", 0)
             meta = extract_metadata(text)
-            collection.upsert(
-                ids=[entry_chunk_id(day, entry_title, text, idx)],
-                documents=[text],
-                metadatas=[{
-                    "date": day,
-                    "title": entry_title,
-                    "people": ", ".join(meta.get("people", [])),
-                    "topics": ", ".join(meta.get("topics", [])),
-                    "mood": meta.get("mood", "unknown"),
-                    "key_events": " | ".join(meta.get("key_events", [])),
-                    "is_summary": "False",
-                    "source": "session_close",
-                }],
-            )
+            chunk_id = entry_chunk_id(day, entry_title, text, idx)
+            chunk_meta = {
+                "date": day,
+                "title": entry_title,
+                "people": ", ".join(meta.get("people", [])),
+                "topics": ", ".join(meta.get("topics", [])),
+                "mood": meta.get("mood", "unknown"),
+                "key_events": " | ".join(meta.get("key_events", [])),
+                "is_summary": "False",
+                "source": "session_close",
+            }
+            collection.upsert(ids=[chunk_id], documents=[text],
+                              metadatas=[chunk_meta])
+            for column, value in zip(written, (chunk_id, text, chunk_meta)):
+                column.append(value)
         (JOURNAL_DIR / f"{day}_{safe_title}.md").write_text(
             f"# {entry_title}\n_Date: {day}_\n\n{day_text}", encoding="utf-8"
         )
         day_parts.append({"date": day, "title": entry_title,
                           "entry_ids": saved_by_day.get(day, []),
                           "legacy": day in legacy_days})
+
+    # The search-only passages of what was just written, so search by
+    # meaning finds it (passages.py). Never fails the close: at worst the
+    # passage index is dropped and search falls back to these chunks.
+    import passages
+    passages.index_chunks(*written, journal=collection)
 
     # archive the whole session: stitched parts + the full braid.
     # Base parts carry their text; the closing parts' content lives in

@@ -90,20 +90,20 @@ export async function refreshStatus() {
 // mention it can drop into their own sentence. One source, because they used
 // to disagree, and because the estimate is the part most likely to change.
 //
-// The reason there is more than one answer: chroma fetches its embedding
-// model (about 90MB) at the first embed on the machine, not at install and
-// not per journal. From the wizard that is almost always this build, since a
+// The reason there is more than one answer: the two local embedding models
+// (about 220MB together; see passages.py) are fetched at the first embed on
+// the machine, not at install and not per journal. From the wizard that is almost always this build, since a
 // fresh clone has embedded nothing yet. From Settings it usually is not,
 // because writing a single entry already paid for it. Saying which one the
 // reader is in beats listing both and leaving them to work it out.
 export function demoBuildWait() {
   if (state.embedderCached === false) {
-    return 'a few minutes, while the 90MB embedding model downloads '
+    return 'a few minutes, while the embedding models (about 220MB) download '
       + '(once per machine, not once per journal)';
   }
   if (state.embedderCached === true) return 'around twenty seconds';
-  return 'around twenty seconds, or a few minutes if the embedding model '
-    + 'still has to download';
+  return 'around twenty seconds, or a few minutes if the embedding models '
+    + 'still have to download';
 }
 
 export async function installDemo(report) {

@@ -400,6 +400,12 @@ def run_import(
         print(f"  IMPORT COMPLETE — {len(results)} entries stored")
         collection = get_collection()
         print(f"  Total entries in vector store: {collection.count()}")
+        # One reconcile at the end rather than a write per entry: many small
+        # writes weaken the passage index's search (passages.py).
+        import passages
+        print("  Updating the search passages (local, free)...")
+        stats = passages.sync(collection)
+        print(f"  {stats['documents']} passages, {stats['embedded']} embedded")
     print(f"{'=' * 60}\n")
 
 

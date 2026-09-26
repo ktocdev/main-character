@@ -1,5 +1,6 @@
 # Core
 chromadb>=0.5          # local vector store (bundles all-MiniLM-L6-v2 embeddings)
+fastembed>=0.8         # the passage index's embedder, run locally (passages.py)
 anthropic>=0.40        # Claude API — companion + metadata extraction
 python-dotenv>=1.0     # .env config
 tzdata>=2024.1         # IANA zone database — zoneinfo ships none on

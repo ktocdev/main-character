@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import config
 import env_file
+import passages
 import server
 
 # TrustedHostMiddleware refuses TestClient's default "testserver" host
@@ -125,11 +126,29 @@ def test_status_says_whether_the_embedding_model_is_already_here(
     fake = SimpleNamespace(ONNXMiniLM_L6_V2=SimpleNamespace(
         DOWNLOAD_PATH=str(tmp_path), EXTRACTED_FOLDER_NAME="onnx"))
     monkeypatch.setitem(sys.modules, EF_MODULE, fake)
+    monkeypatch.setattr(passages, "model_cached", lambda: True)
     assert client.get("/api/status").json()["embedder_cached"] is False
 
     (tmp_path / "onnx").mkdir()
     (tmp_path / "onnx" / "model.onnx").touch()
     assert client.get("/api/status").json()["embedder_cached"] is True
+
+
+def test_the_passage_model_counts_too(client, monkeypatch, tmp_path):
+    """The demo build also embeds its search passages with the passage
+    index's own model (passages.py), a download of its own. MiniLM on disk
+    is not "twenty seconds" while that one is missing."""
+    (tmp_path / "onnx").mkdir()
+    (tmp_path / "onnx" / "model.onnx").touch()
+    fake = SimpleNamespace(ONNXMiniLM_L6_V2=SimpleNamespace(
+        DOWNLOAD_PATH=str(tmp_path), EXTRACTED_FOLDER_NAME="onnx"))
+    monkeypatch.setitem(sys.modules, EF_MODULE, fake)
+    monkeypatch.setattr(passages, "model_cached", lambda: False)
+    assert client.get("/api/status").json()["embedder_cached"] is False
+
+    # ...and one that can't be told for either leaves the answer unknown.
+    monkeypatch.setattr(passages, "model_cached", lambda: None)
+    assert client.get("/api/status").json()["embedder_cached"] is None
 
 
 def test_a_chroma_that_moved_its_cache_makes_the_answer_unknown(
@@ -141,6 +160,7 @@ def test_a_chroma_that_moved_its_cache_makes_the_answer_unknown(
     would be worse than an honest vague one.
     """
     monkeypatch.setitem(sys.modules, EF_MODULE, SimpleNamespace())  # no class
+    monkeypatch.setattr(passages, "model_cached", lambda: True)
     assert server._embedder_cached() is None
     r = client.get("/api/status")
     assert r.status_code == 200

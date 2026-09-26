@@ -19,7 +19,7 @@ export const state = {
                          // Optimistic for the same shape of reason -- warning
                          // about a twenty-second build that then doesn't
                          // happen is worse than not warning.
-  embedderCached: null,  // /api/status: whether the 90MB embedding model is
+  embedderCached: null,  // /api/status: whether both embedding models are
                          // already on this machine. null = couldn't tell, and
                          // the wait wording hedges rather than guessing.
 };
