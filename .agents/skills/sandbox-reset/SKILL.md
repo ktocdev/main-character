@@ -61,7 +61,8 @@ Both exist because of real incidents; don't work around them.
 
 ## Known limit
 
-The embedding model cache lives in the user's home (`~/.cache/chroma`), not the
-sandbox, so a reset doesn't clear it. On a machine that has ever embedded
+The embedding model caches live in the user's home (`~/.cache/chroma` for
+MiniLM, `~/.cache/main-character` for the passage index's model), not the
+sandbox, so a reset doesn't clear them. On a machine that has ever embedded
 anything, the demo build shows the "around twenty seconds" wording, never the
 first-download one.

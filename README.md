@@ -24,7 +24,7 @@ cd main-character
 ./journal install                            # Windows: .\journal install
 ```
 
-This creates `.venv`, installs from the lock file and copies `.env.example` to `.env`. It is safe to run again. Python 3.12 or newer. The install is large and slow because it pulls in ChromaDB's full dependency tree, including onnxruntime and tokenizers, so that embeddings run on your machine instead of over the network. Install from the lock file. `requirements.txt` lists the same dependencies unpinned, for reference only.
+This creates `.venv`, installs from the lock file and copies `.env.example` to `.env`. It is safe to run again. Python 3.12 or newer. The install is large and slow because it pulls in ChromaDB's full dependency tree, including onnxruntime and tokenizers, plus fastembed, so that embeddings run on your machine instead of over the network. Install from the lock file. `requirements.txt` lists the same dependencies unpinned, for reference only.
 
 ### 2. Add a key
 
@@ -62,7 +62,7 @@ The same demo also builds as a static site that runs entirely in the browser, wi
 
 ## What it costs
 
-- **Reading, searching and browsing are free.** Embeddings are computed on your machine with all-MiniLM-L6-v2. Semantic search never calls an API.
+- **Reading, searching and browsing are free.** Embeddings are computed on your machine by two small local models. Search by meaning uses snowflake-arctic-embed-s, over entries split into short passages so that every part of a long entry can be found. The other indexes use all-MiniLM-L6-v2. Search never calls an API.
 - **Writing costs money.** Each entry gets the companion's reply. Closing a chat triggers a background pass that tags what you wrote, extracts entities and updates summaries, so a close costs more than any one reply.
 - **Two models, so you can trade down.** The companion is the voice you read, and it defaults to Opus. Background processing is mechanical, runs in bulk, and uses most of the tokens. It defaults to Sonnet. Both can be changed in Settings.
 - **Two spend caps,** one per session and one per calendar month, checked before each call. They exist to catch runaway spending, not to set a budget, so the defaults sit above what a heavy month of ordinary writing would cost.
@@ -74,7 +74,7 @@ Everything lives in files on your disk. Three commands, also available under Set
 
 - `python export.py` writes the whole journal to a folder: every entry as markdown, one `entries.json` containing all of them, and everything the pipeline inferred. You do not need this app to read any of it.
 - `python backup.py` writes the same export as a single dated zip. The zip lands next to the journal on the same disk, so copy it somewhere that will outlive the machine.
-- `python rebuild_index.py` rebuilds the search index from the markdown, offline and for free. The export leaves the index out because the index can be rebuilt from what the export already contains.
+- `python rebuild_index.py` rebuilds the search index from the markdown, for free. The first time, it downloads the search model (about 130 MB, once per machine, to `~/.cache/main-character`). After that it works offline. For a journal of a few hundred entries it takes a few minutes. The export leaves the index out because the index can be rebuilt from what the export already contains.
 
 Where it all sits:
 

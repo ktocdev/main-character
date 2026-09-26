@@ -1656,7 +1656,8 @@ def data_backup():
 def data_rebuild():
     """Rebuild the search index from the journal files. Local embeddings, so
     this costs nothing and needs no key -- but it is the slowest thing in
-    Settings by a wide margin on a large journal."""
+    Settings by a wide margin on a large journal, and the first run on a
+    machine downloads the passage index's model (about 130 MB)."""
     import rebuild_index
     if not _INDEX_LOCK.acquire(blocking=False):
         return JSONResponse(

@@ -23,6 +23,7 @@ distro==1.9.0
 docstring_parser==0.18.0
 durationpy==0.10
 fastapi==0.140.0
+fastembed==0.8.1
 filelock==3.32.0
 flatbuffers==25.12.19
 frozenlist==1.8.0
@@ -41,6 +42,7 @@ jiter==0.16.0
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 kubernetes==36.0.3
+loguru==0.7.3
 markdown-it-py==4.2.0
 mdurl==0.1.2
 mmh3==5.2.1
@@ -57,8 +59,10 @@ opentelemetry-semantic-conventions==0.65b0
 orjson==3.11.9
 overrides==7.7.0
 packaging==26.2
+pillow==12.3.0
 propcache==0.5.2
 protobuf==7.35.1
+py_rust_stemmers==0.1.8
 pybase64==1.4.3
 pydantic==2.13.4
 pydantic-settings==2.14.2
@@ -90,4 +94,5 @@ uvicorn==0.51.0
 watchfiles==1.2.0
 websocket-client==1.9.0
 websockets==16.1.1
+win32_setctime==1.2.0
 yarl==1.24.5

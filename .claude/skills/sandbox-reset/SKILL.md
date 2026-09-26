@@ -48,8 +48,9 @@ only. The wizard opens and the demo has to be built again.
 
 For testing search or replies on real entries, add `-CopyJournal`: it replaces
 the sandbox's journal with a copy of the real one (every data dir except
-`chroma_data`) and rebuilds the index there, locally and free, in under a
-minute. Safe while 8144 runs. Combine with `-Keep` to keep the sandbox's key.
+`chroma_data`) and rebuilds the index there, locally and free, in a few
+minutes (the passage index is most of it; the first run on a machine also
+downloads its model, about 130 MB). Safe while 8144 runs. Combine with `-Keep` to keep the sandbox's key.
 `scripts/show_context.py --sandbox` and `scripts/eval_retrieval.py --sandbox`
 read that copy.
 
@@ -68,7 +69,8 @@ Both exist because of real incidents; don't work around them.
 
 ## Known limit
 
-The embedding model cache lives in the user's home (`~/.cache/chroma`), not the
-sandbox, so a reset doesn't clear it. On a machine that has ever embedded
+The embedding model caches live in the user's home (`~/.cache/chroma` for
+MiniLM, `~/.cache/main-character` for the passage index's model), not the
+sandbox, so a reset doesn't clear them. On a machine that has ever embedded
 anything, the demo build shows the "around twenty seconds" wording, never the
 first-download one.

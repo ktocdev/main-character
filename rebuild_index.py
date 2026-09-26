@@ -8,16 +8,20 @@ Put the search index back from the files it was built out of.
 `chroma_data/` is the one directory `export.py` deliberately leaves behind:
 it is derived, it is binary, and it is large. This is what makes leaving it
 behind safe -- everything in it can be recomputed from `journal_entries/`
-and the derived stores, on the local MiniLM embeddings ChromaDB ships with.
-**No API key, no network, no cost.** Run it after restoring an export, after
-a corrupted index, or to find out whether the round trip really works.
+and the derived stores, on local embedding models: the MiniLM ChromaDB
+ships with, and the passage index's model (`passages.py`), which is
+downloaded once per machine the first time it is needed. **No API key, no
+cost.** Run it after restoring an export, after a corrupted index, after
+changing `MC_EMBED_MODEL`, or to find out whether the round trip really
+works.
 
 Four collections come back, from three file-backed sources:
 
   - **`journal_entries`** -- the waking chunks, re-split and re-tagged from
     the markdown by the same `bulk_import` functions that wrote them.
   - **`journal_passages`** -- the search-only passages, split from those
-    chunks by `passages.sync()`. Only new or changed passages are embedded.
+    chunks by `passages.sync()`. Only new or changed passages are embedded,
+    unless the index was embedded by another model; then all of them are.
   - **`journal_dreams`** -- dream *entries* from their markdown, plus every
     dream the pipeline extracted, via `dreams.build_index()`.
   - **`journal_summaries`** -- entry summaries, weekly arcs, domain docs and

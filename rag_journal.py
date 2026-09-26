@@ -297,19 +297,26 @@ def query_journal(question: str, n_results: int = 5) -> list[dict]:
     each with its text, metadata, and similarity distance (lower = closer).
 
     Searches the passage index (passages.py), where every part of an entry
-    is findable. Until that index has been built -- an install that has not
-    run rebuild_index.py since it arrived -- it falls back to the journal
-    chunks, whose embeddings only cover each chunk's opening.
+    is findable. Until that index has been built for the configured model --
+    an install that has not run rebuild_index.py since it arrived, or since
+    the model changed -- or while the model can't be downloaded, it falls
+    back to the journal chunks, whose embeddings only cover each chunk's
+    opening.
     """
     import passages
-    hits = passages.search(question, n_results)
+    try:
+        hits = passages.search(question, n_results)
+    except passages.ModelUnavailable as exc:
+        print(f"  [search] {exc}")
+        hits = []
     if hits:
         return hits
 
     collection = get_collection()
     if collection.count() == 0:
         return []
-    results = collection.query(query_embeddings=passages.embed([question]),
+    # Chroma's own embedder: the one these chunks were embedded with.
+    results = collection.query(query_texts=[question],
                                n_results=min(n_results, collection.count()))
 
     matches = []

@@ -3,10 +3,11 @@
 The search-only passage index: every part of every entry, findable by meaning.
 
 The journal collection stores entries in chunks of up to ~6,000 characters,
-but the embedder (all-MiniLM-L6-v2) reads only the first 256 tokens of what
-it is given -- about 1,000 characters -- and drops the rest without a word.
-A detail on page two of an entry is stored, but search by meaning can never
-reach it. See LOOKUP-UPGRADE-HANDOFF.md.
+but an embedder reads only so many tokens of what it is given -- Chroma's
+all-MiniLM-L6-v2, which embeds that collection, stops at 256, about 1,000
+characters -- and drops the rest without a word. A detail on page two of an
+entry is stored, but search by meaning can never reach it. See
+LOOKUP-UPGRADE-HANDOFF.md.
 
 This module keeps a second collection, `journal_passages`, of pieces small
 enough that the embedder reads every token of each one. It is derived from
@@ -20,58 +21,165 @@ search all read that.
     sync()                  -> reconcile the whole index with the journal
     search(query, n)        -> the best passages, shaped like query_journal's
 
-Sizes are counted with the embedder's own tokenizer, so a passage's count is
-exactly what the embedder sees. Embeddings are computed here with one
-long-lived embedder rather than by Chroma: Chroma's default reloads the model
-on every query (~190 ms), which a long query split into 26 searches cannot
-afford. Both are the same model, all-MiniLM-L6-v2, so the vectors agree.
+The embedder is config.EMBED_MODEL, run locally by fastembed: a model trained
+to match a question to the passage that answers it, which found half again
+as many of the test set's quotes as MiniLM (the handoff's step 1a). Sizes are
+counted with the model's own tokenizer, so a passage's count is exactly what
+the model sees. One long-lived instance does every embedding: a long query
+split into 26 searches cannot afford a model load per search.
+
+The collection records which model embedded it. A collection embedded by
+another model is never searched or added to -- its vectors mean nothing to
+this one -- and sync() replaces it whole.
 """
 
 import math
 import re
+import sys
+import time
+import warnings
 from functools import lru_cache
 
-from config import PASSAGE_NEIGHBORS, PASSAGE_TOKENS
+from config import EMBED_MODEL, MODEL_CACHE, PASSAGE_NEIGHBORS, PASSAGE_TOKENS
 
 COLLECTION_NAME = "journal_passages"
-LIMIT = 254            # the embedder's 256, less the [CLS] and [SEP] it adds
 OVERLAP = 30           # tokens repeated from the end of the previous passage
 MAX_QUERY_PIECES = 26  # searches per query; see the handoff for the sizing
-_BATCH = 64            # passages embedded per upsert
+_BATCH = 64            # passages per embedding call
+_UPSERT = 1000         # passages per write; small writes degrade the index
+# The nearest-neighbour index's settings, wider than chroma's defaults.
+# At the defaults, searches of the real journal's 4,117 passages missed 46
+# of the true top-12 lists' members across the test set's 46 queries -- one
+# question's best passage among them. These miss 1, and a query still takes
+# ~10 ms (the handoff's step 1a notes).
+_HNSW = {"space": "cosine", "ef_construction": 400, "ef_search": 400,
+         "max_neighbors": 48}
+_DOWNLOAD_TRIES = 5
+
+# The models this index can use, and how each marks a search query. Both were
+# trained with this instruction on queries and nothing on passages; leaving
+# it off, or putting it on passages, quietly costs accuracy.
+_RETRIEVAL_PREFIX = "Represent this sentence for searching relevant passages: "
+MODELS = {
+    "snowflake/snowflake-arctic-embed-s": {"query_prefix": _RETRIEVAL_PREFIX},
+    "BAAI/bge-small-en-v1.5": {"query_prefix": _RETRIEVAL_PREFIX},
+}
+
+
+class ModelUnavailable(RuntimeError):
+    """The embedding model is not on this machine and could not be fetched."""
 
 
 # ---------------------------------------------------------------------------
 # THE EMBEDDER AND ITS TOKENIZER
 # ---------------------------------------------------------------------------
 
+def _model_files() -> tuple[str, list[str]]:
+    """(Hugging Face repo, files to fetch) for EMBED_MODEL, from fastembed's
+    own description of it."""
+    from fastembed import TextEmbedding
+    if EMBED_MODEL not in MODELS:
+        raise ModelUnavailable(
+            f"MC_EMBED_MODEL={EMBED_MODEL!r} is not one of: {', '.join(MODELS)}")
+    desc = next(d for d in TextEmbedding._list_supported_models()
+                if d.model == EMBED_MODEL)
+    return desc.sources.hf, ["config.json", "tokenizer.json", "tokenizer_config.json",
+                             "special_tokens_map.json", desc.model_file,
+                             *desc.additional_files]
+
+
+def _local_copy() -> str | None:
+    from huggingface_hub import snapshot_download
+    repo, files = _model_files()
+    try:
+        return snapshot_download(repo, allow_patterns=files,
+                                 cache_dir=str(MODEL_CACHE), local_files_only=True)
+    except Exception:
+        return None
+
+
+def model_cached() -> bool | None:
+    """Whether the model is already downloaded, so using it fetches nothing.
+    None when that can't be told."""
+    try:
+        return _local_copy() is not None
+    except Exception:
+        return None
+
+
+def _download() -> str:
+    """The model's folder, fetched first if need be.
+
+    One file at a time, with retries: on some connections Hugging Face resets
+    the parallel downloader every time, and a retried file resumes where it
+    stopped. About 130 MB, once per machine.
+    """
+    from huggingface_hub import snapshot_download
+    found = _local_copy()
+    if found:
+        return found
+    repo, files = _model_files()
+    print(f"Downloading the search model {EMBED_MODEL} (about 130 MB, once "
+          f"per machine) to {MODEL_CACHE}", file=sys.stderr, flush=True)
+    for attempt in range(1, _DOWNLOAD_TRIES + 1):
+        try:
+            with warnings.catch_warnings():
+                # Windows without Developer Mode can't make the cache's
+                # symlinks, so it keeps plain copies: fine for five files.
+                warnings.filterwarnings("ignore", message=".*symlinks.*")
+                return snapshot_download(repo, allow_patterns=files,
+                                         cache_dir=str(MODEL_CACHE), max_workers=1)
+        except Exception as exc:
+            if attempt == _DOWNLOAD_TRIES:
+                raise ModelUnavailable(
+                    f"Could not download the search model {EMBED_MODEL} "
+                    f"({exc.__class__.__name__}: {exc}). Search uses the older "
+                    f"index until it can; check the connection and run "
+                    f"rebuild_index.py.") from exc
+            print(f"  download interrupted ({exc.__class__.__name__}), "
+                  f"retrying ({attempt}/{_DOWNLOAD_TRIES - 1})",
+                  file=sys.stderr, flush=True)
+            time.sleep(2 * attempt)
+
+
 @lru_cache(maxsize=1)
 def _embedder():
-    from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
-    ef = ONNXMiniLM_L6_V2()
-    ef._download_model_if_not_exists()
-    return ef
+    from fastembed import TextEmbedding
+    return TextEmbedding(EMBED_MODEL, cache_dir=str(MODEL_CACHE),
+                         specific_model_path=_download())
 
 
 @lru_cache(maxsize=1)
 def _tokenizer():
-    """The embedder's tokenizer without its truncation and padding, so a
+    """The model's tokenizer without its truncation and padding, so a
     count is the true length rather than a capped one."""
-    import os
     from tokenizers import Tokenizer
-    ef = _embedder()
-    tok = Tokenizer.from_file(os.path.join(
-        ef.DOWNLOAD_PATH, ef.EXTRACTED_FOLDER_NAME, "tokenizer.json"))
+    tok = Tokenizer.from_str(_embedder().model.tokenizer.to_str())
     tok.no_truncation()
     tok.no_padding()
     return tok
 
 
-def embed(texts: list[str]) -> list:
-    return list(_embedder()(texts)) if texts else []
+@lru_cache(maxsize=1)
+def limit() -> int:
+    """The most tokens a passage or query piece can have and still be read
+    whole: the model's window, less the two markers it adds and the prefix a
+    query carries."""
+    window = _embedder().model.tokenizer.truncation["max_length"]
+    return window - 2 - count_tokens(MODELS[EMBED_MODEL]["query_prefix"])
+
+
+def embed(texts: list[str], query: bool = False) -> list:
+    """Vectors for passages, or with `query`, for search queries."""
+    if not texts:
+        return []
+    if query:
+        texts = [MODELS[EMBED_MODEL]["query_prefix"] + t for t in texts]
+    return list(_embedder().embed(texts, batch_size=_BATCH))
 
 
 def count_tokens(text: str) -> int:
-    """Tokens the embedder reads from `text`, not counting its two markers."""
+    """Tokens the model reads from `text`, not counting its two markers."""
     return len(_tokenizer().encode(text, add_special_tokens=False).ids)
 
 
@@ -137,14 +245,15 @@ def _place_cuts(n: int, k: int, budget: int, scores: list[int]) -> list[int] | N
 
 
 def split(text: str, target: int | None = None) -> list[dict]:
-    """Split `text` into passages of about `target` tokens, none over LIMIT.
+    """Split `text` into passages of about `target` tokens, none over limit().
 
     Returns [{"start", "end", "text"}], character spans into `text`. After
     the first, each passage also carries the last ~OVERLAP tokens of the one
     before it, counted within the limit. The new material of the passages
     covers the text end to end, so nothing falls between two of them.
     """
-    target = min(LIMIT, max(OVERLAP * 2, target or PASSAGE_TOKENS))
+    cap = limit()
+    target = min(cap, max(OVERLAP * 2, target or PASSAGE_TOKENS))
     enc = _tokenizer().encode(text, add_special_tokens=False)
     offsets = enc.offsets
     n = len(offsets)
@@ -157,11 +266,11 @@ def split(text: str, target: int | None = None) -> list[dict]:
     scores = _cut_scores(text, offsets)
     k = math.ceil(n / (target - OVERLAP))
     while True:
-        budget = min(LIMIT - OVERLAP, math.ceil(n / k) + OVERLAP)
+        budget = min(cap - OVERLAP, math.ceil(n / k) + OVERLAP)
         cuts = _place_cuts(n, k, budget, scores)
         if cuts is not None:
             pieces = _materialize(text, offsets, [0] + cuts + [n])
-            if all(count_tokens(p["text"]) <= LIMIT for p in pieces):
+            if all(count_tokens(p["text"]) <= cap for p in pieces):
                 return pieces
         k += 1
 
@@ -192,13 +301,26 @@ def _materialize(text: str, offsets, bounds: list[int]) -> list[dict]:
 # THE INDEX
 # ---------------------------------------------------------------------------
 
-def get_passage_collection():
+def get_passage_collection(replace_stale: bool = False):
+    """The passage collection, or None if another model embedded it (or,
+    before this was recorded, nothing says which did). With
+    `replace_stale`, such a collection is deleted and an empty one made in
+    its place -- sync() fills it again."""
     import chromadb
     from config import CHROMA_DIR
     CHROMA_DIR.mkdir(parents=True, exist_ok=True)
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    return client.get_or_create_collection(
-        name=COLLECTION_NAME, metadata={"hnsw:space": "cosine"})
+    # No embedding function: every vector is supplied from embed(), and
+    # chroma's default would be MiniLM, which must never touch this index.
+    kwargs = {"metadata": {"embed_model": EMBED_MODEL},
+              "configuration": {"hnsw": _HNSW}, "embedding_function": None}
+    col = client.get_or_create_collection(name=COLLECTION_NAME, **kwargs)
+    if (col.metadata or {}).get("embed_model") == EMBED_MODEL:
+        return col
+    if not replace_stale:
+        return None
+    client.delete_collection(COLLECTION_NAME)
+    return client.create_collection(name=COLLECTION_NAME, **kwargs)
 
 
 def passages_for_chunk(chunk_id: str, text: str, meta: dict) -> list[tuple[str, str, dict]]:
@@ -219,8 +341,8 @@ def passages_for_chunk(chunk_id: str, text: str, meta: dict) -> list[tuple[str, 
 
 
 def _upsert(col, rows: list[tuple[str, str, dict]]) -> None:
-    for i in range(0, len(rows), _BATCH):
-        batch = rows[i:i + _BATCH]
+    for i in range(0, len(rows), _UPSERT):
+        batch = rows[i:i + _UPSERT]
         col.upsert(ids=[r[0] for r in batch],
                    documents=[r[1] for r in batch],
                    metadatas=[r[2] for r in batch],
@@ -232,8 +354,8 @@ def index_chunks(ids: list[str], docs: list[str], metas: list[dict],
     """Passages for journal chunks that were just written. Replaces any a
     chunk had before. Returns the number of passages written."""
     col = collection or get_passage_collection()
-    if not ids:
-        return 0
+    if not ids or col is None:
+        return 0      # embedded by another model: sync() rebuilds it whole
     old = col.get(where={"source_id": {"$in": list(ids)}}, include=[])["ids"]
     if old:
         col.delete(ids=old)
@@ -245,9 +367,9 @@ def index_chunks(ids: list[str], docs: list[str], metas: list[dict],
 
 def remove_chunks(ids: list[str], collection=None) -> None:
     """Drop the passages of journal chunks that were deleted."""
-    if not ids:
-        return
     col = collection or get_passage_collection()
+    if not ids or col is None:
+        return
     old = col.get(where={"source_id": {"$in": list(ids)}}, include=[])["ids"]
     if old:
         col.delete(ids=old)
@@ -255,17 +377,19 @@ def remove_chunks(ids: list[str], collection=None) -> None:
 
 def sync(journal=None, dry_run: bool = False) -> dict:
     """Make the passage index match the journal collection. Only passages
-    that are new or changed are embedded; the rest are left alone."""
+    that are new or changed are embedded; the rest are left alone. An index
+    embedded by another model is replaced, so everything is embedded."""
     from rag_journal import get_collection
     journal = journal or get_collection()
-    col = get_passage_collection()
+    col = get_passage_collection(replace_stale=not dry_run)
 
     got = journal.get(include=["documents", "metadatas"])
     want = {pid: (doc, meta)
             for cid, text, m in zip(got["ids"], got["documents"], got["metadatas"])
             for pid, doc, meta in passages_for_chunk(cid, text, m)}
 
-    have = col.get(include=["documents", "metadatas"])
+    have = (col.get(include=["documents", "metadatas"]) if col is not None
+            else {"ids": [], "documents": [], "metadatas": []})
     have = {pid: (doc, meta) for pid, doc, meta in
             zip(have["ids"], have["documents"], have["metadatas"])}
 
@@ -305,13 +429,13 @@ def search(query: str, n: int, where: dict | None = None,
     windows touch are merged, so no text is shown twice.
     """
     col = collection or get_passage_collection()
-    total = col.count()
+    total = col.count() if col is not None else 0
     if total == 0:
         return []
     neighbors = PASSAGE_NEIGHBORS if neighbors is None else neighbors
     pieces = query_pieces(query)
     kwargs = {"where": where} if where else {}
-    res = col.query(query_embeddings=embed(pieces), n_results=min(n, total),
+    res = col.query(query_embeddings=embed(pieces, query=True), n_results=min(n, total),
                     include=["documents", "metadatas", "distances"], **kwargs)
 
     # Pieces take turns: every piece's best match comes before any piece's
@@ -335,10 +459,10 @@ def search(query: str, n: int, where: dict | None = None,
     if neighbors <= 0:
         return [{"text": doc, "metadata": meta, "distance": dist}
                 for dist, doc, meta in ranked]
-    return _with_neighbors(ranked, neighbors)
+    return _with_neighbors(ranked, neighbors, col)
 
 
-def _with_neighbors(ranked, neighbors: int) -> list[dict]:
+def _with_neighbors(ranked, neighbors: int, col) -> list[dict]:
     """Widen each hit to its neighbours' span of the source chunk, merging
     hits from the same chunk whose windows touch. The window text is cut
     from the journal chunk itself, so overlap is never shown twice."""
@@ -356,7 +480,6 @@ def _with_neighbors(ranked, neighbors: int) -> list[dict]:
             windows.append({"source_id": src, "lo": lo, "hi": hi,
                             "distance": dist, "metadata": meta})
 
-    col = get_passage_collection()
     want = [f"{w['source_id']}_p{i}" for w in windows for i in (w["lo"], w["hi"])]
     spans = dict(zip(*[col.get(ids=list(set(want)), include=["metadatas"])[k]
                        for k in ("ids", "metadatas")]))

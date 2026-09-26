@@ -23,7 +23,8 @@ would rather not walk a directory of markdown.
 
   - **`chroma_data/`** -- derived, large, and a binary format that says
     nothing to a human reader. `rebuild_index.py` regenerates it from the
-    markdown for free, on local embeddings. Copying it would roughly double
+    markdown for free, on local embeddings (the first run on a machine
+    downloads the search model, about 130 MB). Copying it would roughly double
     the size of the export to preserve something no one can read.
   - **`.env` and `spend_ledger.json`** -- an API key and a spend history are
     not journal content, and an export is the single most likely thing to get
@@ -171,7 +172,8 @@ matching directory, then:
     python rebuild_index.py
 
 That rebuilds the search index from the markdown, on local embeddings — no
-API key, no cost. The index is not in this export because it is derived from
+API key, no cost. On a machine that has never run it, it first downloads the
+search model (about 130 MB). The index is not in this export because it is derived from
 what is.
 
 ## What is not here

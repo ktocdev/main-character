@@ -1,6 +1,33 @@
 # Handoff: make lookup find exact text, not just summaries
 
-Written 2026-09-23. Step 0 done 2026-09-25 (results under step 0). Step 1 in progress on branch `JRNL-47`: `passages.py` is built and the size experiment has run (results under step 1). Next is the embedding model comparison (step 1a). Nothing from step 1 is committed yet.
+Written 2026-09-23. Step 0 done 2026-09-25 (results under step 0). Step 1 in progress on branch `JRNL-47`: `passages.py`, the size experiment and the embedding model comparison are done, with results under steps 1 and 1a. The first part is committed (`cef2a55`). The switch to arctic-embed-s was done 2026-09-25 and is not committed yet. **Where to pick up: [Next steps](#next-steps).**
+
+## Next steps
+
+As of 2026-09-25, stopped here:
+
+1. **Decided 2026-09-25: switch to `snowflake/snowflake-arctic-embed-s`,** with 120-token passages and 1 neighbour. On the real set it finds 30/38 in the top 6, against 20 with MiniLM and 2 at baseline (step 1a results).
+2. **Switch the model: done 2026-09-25** (see "The switch, as built" under step 1a). Through the real code path it finds 30/38 in the top 6 and 31 in the top 12, with MRR 0.628, which matches the comparison exactly. Entry replies are 3/8 in both the top 6 and top 12; MiniLM got 3/8 and 5/8.
+3. **Finish step 1:**
+   - set the defaults to `PASSAGE_TOKENS=120` and `PASSAGE_NEIGHBORS=1` in `config.py` (they are still 254/0; the eval sets them with `MC_PASSAGE_TOKENS` / `MC_PASSAGE_NEIGHBORS`);
+   - write passages at chapter close and on the other write paths. The demo build (`import_seed_corpus.py`) then needs the model too, so `server._embedder_cached` must also check `passages.model_cached()`, and its test must follow;
+   - in `build_context_block`, skip passages already shown as recent entries, stop trimming at `EXCERPT_CHARS`, and set `N_SEMANTIC` to 12;
+   - move `get_summary_hits` to the shared embedder with query splitting (that also fixes the slower context block);
+   - move the search tab's by-meaning mode and dreams to passages;
+   - **ask the owner about the 26-search ceiling.** It was sized for 254-token pieces, which add ~224 new tokens each, so 26 covered twice the longest entry. At 120 tokens each piece adds ~90, so 26 cover ~2,340 tokens. On the real journal, 5 of 395 entries need more (27–32 pieces, up to 2,824 tokens). Those are still searched end to end, by 26 pieces spread evenly, but some text between them is skipped. Raising the ceiling to 64 would cover every entry twice over. A 5-piece entry reply searches in ~90 ms, so 32 pieces should take roughly 0.5 s; measure before proposing;
+   - unit tests for the splitter and search, the full suite, and the demo replay without re-recording.
+4. **Step 1b** (the companion's prompt), then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`.
+5. **Holdout.** The owner is writing their own questions in `my-questions.txt` at the repo root, which is untracked. Move it to `docs/retrieval-eval/` (gitignored) and convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
+6. **Final check,** then the real journal: stop 8144, `python backup.py`, then `rebuild_index.py`.
+7. **Step 5** (Smart Search), and the "close chapter" side task at any point.
+
+Where things live:
+
+- **In `docs/retrieval-eval/`** (local, not committed): `real.json` (the real-journal test set), `baseline-real.json`, `real-t{120,254}-n{0,1}.json` (the size runs), `model_compare.py` and `compare.out` (the model comparison: in memory, never touches a Chroma index).
+- **In `docs/retrieval-eval/`**, also `real-arctic-t120-n1.json`: the switched model through the real code path, which is the baseline to `--compare` against from here.
+- **Session scratch,** likely gone in a new session: a copy of the real journal with its passage index (arctic, 120 tokens), and the throwaway venv with `fastembed`. Recreate the copy with `run-sandbox.ps1 -CopyJournal`, and run the eval against it with `--sandbox`. The app's own `.venv` now has `fastembed`.
+- **The model** is downloaded to `~/.cache/main-character` (128 MB, `MC_MODEL_CACHE`).
+- **`%TEMP%\mcfe`:** the five downloaded test models, about 1 GB. Only `model_compare.py` uses it; delete it when that's no longer needed.
 
 ## The problem
 
@@ -37,8 +64,8 @@ These rule out the obvious fix of making `chunk_entry` smaller.
 
 Leave the existing journal collection exactly as it is. It remains the stored copy of each entry that the pipeline, entry counts, category tags and exact search rely on. Add a second Chroma collection, for example `journal_passages`, that is used **only for search by meaning**.
 
-- **Passages are measured in tokens, not characters,** with the embedder's own tokenizer (the one Chroma's `ONNXMiniLM_L6_V2` loads), so the count is exactly what the embedder sees. Characters per token vary too much, with names, numbers and punctuation, for a character limit to be safe.
-- **The hard limit is 254 tokens:** the embedder's 256 minus the two marker tokens it adds itself. No passage may exceed it.
+- **Passages are measured in tokens, not characters,** with the embedder's own tokenizer (the one Chroma's `ONNXMiniLM_L6_V2` loads; *since the model switch on 2026-09-25, arctic-embed-s's own*), so the count is exactly what the embedder sees. Characters per token vary too much, with names, numbers and punctuation, for a character limit to be safe.
+- **The hard limit is 254 tokens:** the embedder's 256 minus the two marker tokens it adds itself. No passage may exceed it. *Since the model switch it is `passages.limit()`, the model's window less the markers and the query prefix: 502 for arctic-embed-s.*
 - **The target size is a setting, and the step 0 test picks it** (revised 2026-09-25). The model averages every token into one vector, so a passage that mixes several topics matches each of them weakly. Smaller passages hold fewer topics and match more sharply, but a passage that is too small carries too little meaning. Two ways of splitting to compare on the real journal:
   - **Fewest pieces** (the original plan). An entry that fits in 254 tokens stays whole. A longer entry is split into the fewest pieces that fit, **all about the same size**: a 300-token entry becomes two of about 150, not one of 254 and a 46-token scrap. That is about 1,000 characters, or 3–4 of the owner's paragraphs, per piece.
   - **Paragraph-sized.** The owner's paragraphs average about 470 characters (about 110 tokens). Aim for about 120 tokens per piece: a paragraph near that size is its own passage, a very short one is merged with its neighbour, and a long one is split at sentences.
@@ -117,7 +144,7 @@ So step 1 should embed queries itself with one module-level embedder and pass `q
 
 #### Step 1 so far (2026-09-25)
 
-Built, not committed: `passages.py` (splitter, one long-lived embedder, the `journal_passages` index with `index_chunks` / `remove_chunks` / `sync`, and `search` with query splitting and neighbours), `PASSAGE_TOKENS` / `PASSAGE_NEIGHBORS` in `config.py`, `rag_journal.query_journal` switched to passages with the fallback, `rebuild_index.py` building the passage index, and a "text shown" column in `eval_retrieval.py`. On all 395 real entry files, the splitter produced no passage over 254 tokens and left no character uncovered.
+Built and committed in `cef2a55`: `passages.py` (splitter, one long-lived embedder, the `journal_passages` index with `index_chunks` / `remove_chunks` / `sync`, and `search` with query splitting and neighbours), `PASSAGE_TOKENS` / `PASSAGE_NEIGHBORS` in `config.py`, `rag_journal.query_journal` switched to passages with the fallback, `rebuild_index.py` building the passage index, and a "text shown" column in `eval_retrieval.py`. On all 395 real entry files, the splitter produced no passage over 254 tokens and left no character uncovered.
 
 The size experiment on a copy of the real journal (all-MiniLM-L6-v2):
 
@@ -151,6 +178,34 @@ all-MiniLM-L6-v2 dates from 2021, is one of the smallest embedding models, and r
 - **The window follows the model.** `LIMIT` and the tokenizer used for counting come from the chosen model, not from Chroma's MiniLM. For a 512-token model, rerun the size experiment with that window (at least 120 and 254 targets, with and without a neighbour).
 - **One model for every collection that is searched this way.** Passages, and in this step summaries and dreams, have to be embedded by the same model their queries are. Record the model name in each collection's metadata. When it doesn't match the configured model, search falls back and `rebuild_index.py` re-embeds, locally and at no cost. An existing install switching models must never mix vectors from two models in one collection.
 - **Measure:** hits and MRR on the real set, the time to embed a query and to rebuild, and the download size. Show the owner the table. Keep MiniLM unless a candidate wins clearly: the swap has a real cost in download size and rebuild time.
+
+#### Step 1a results (2026-09-25)
+
+Run in memory by `docs/retrieval-eval/model_compare.py` in a throwaway venv, on the copy of the real journal (397 chunks). It uses the same splitter, turn-taking and neighbour logic as `passages.search`. As a check, its MiniLM at 120 tokens matched the production run exactly (20/24). `e5-small` isn't offered by fastembed, so `bge-base-en-v1.5` and `nomic-embed-text-v1.5` were tested instead. Best setting per model:
+
+| model | setting | questions top 6 | top 12 | MRR | entry replies top 6 / 12 | embed the journal | download |
+|---|---|---|---|---|---|---|---|
+| baseline | whole chunks | 2 | 2 | 0.012 | 0 / 0 | – | – |
+| MiniLM (current) | 120 + 1 neighbour | 20 | 24 | 0.424 | 3 / 5 | ~40 s | 90 MB |
+| bge-small-en-v1.5 | 120 + 1 | 28 | 28 | 0.563 | 2 / 3 | ~2 min | 67 MB |
+| **snowflake-arctic-embed-s** | **120 + 1** | **30** | **31** | **0.628** | 3 / 3 | ~2 min | 130 MB |
+| bge-base-en-v1.5 | 120 + 1 | 25 | 31 | 0.544 | **5 / 6** | ~3.5 min | 210 MB |
+| nomic-embed-text-v1.5 | 254, no neighbours | 28 | 31 | 0.435 | 3 / 4 | ~6.5 min | 520 MB |
+
+The full grid (every model at 120, 254 and 480 tokens, with and without neighbours) is in `docs/retrieval-eval/compare.out`.
+
+- **Small passages win for every model.** At 480 tokens, every model that can read that far did worst. The 120-token size stands.
+- **Neighbours help every model.**
+- **arctic-embed-s is recommended:** most hits, best ranking, and a moderate size. The entry-reply set is still too small to decide on (bge-base's 5/8 is suggestive, not conclusive).
+- **Embedding a question takes 5–20 ms** for the small models.
+- **fastembed installs cleanly** next to `requirements.lock`: it adds 5 small packages and changes none of the pinned ones (`onnxruntime` stays 1.28.0).
+
+Things the switch must handle, found during the test:
+
+- **fastembed's all-MiniLM-L6-v2 truncates at 128 tokens,** not 256, so its 254-token rows were invalid and are left out of the table. The other models are set to 512 (nomic 8,192). If MiniLM is ever used through fastembed, set its max length explicitly.
+- **Downloads:** on this connection, Hugging Face resets the parallel downloader (8 connections) every time. `snapshot_download(..., max_workers=1)` with retries works. The first-run download in the app has to do the same, and report progress and failure plainly.
+- **Windows' 260-character path limit:** Hugging Face's cache layout under a long folder went over it (`FileNotFoundError` on a `.incomplete` blob). Keep the model cache at a short path.
+- **The query prefix** for arctic-embed-s (as for bge) is `Represent this sentence for searching relevant passages: `. Passages get no prefix.
 - Write passages wherever journal chunks are written today: `sessions._close_locked`, `rebuild_index.py`, `bulk_import.py`, `seed_corpus/import_seed_corpus.py`, and the old CLI save in `companion.py` (the upsert near `ids=[entry_id]`). Remove stale passages wherever `rebuild_index.py` removes stale chunks.
 - Switch `rag_journal.query_journal`, which feeds `build_context_block`, to the passage index, with the fallback above.
 - **Split long queries.** When the query is longer than one passage (an entry reply, or the reflection query), split it with the same splitter, run one search per piece, then merge, remove duplicates and keep the best matches. Search the **whole** entry, not only its first few pieces: the 90th-percentile entry is about 6,000 characters, and its ending matters as much as its opening. The ceiling is **26 searches per query**, which covers an entry twice as long as the journal's longest on 2026-09-23 (11,777 characters, 2,824 tokens; each piece adds about 224 new tokens after the overlap). Every entry written so far is searched in full. If a longer one comes along, pick 26 pieces spread evenly across it so the ending is still searched. The ceiling applies separately to the passage search and to `get_summary_hits`. Do the same for `get_summary_hits`. This is local and free. There is no summary step and no extra Claude call: the reply prompt still contains the full entry, and only the choice of past passages changes. Without this, step 1 helps chat-screen questions but not entry replies.
@@ -158,6 +213,24 @@ all-MiniLM-L6-v2 dates from 2021, is one of the smallest embedding models, and r
 - Move the search tab's by-meaning mode (`server.search_journal`, `mode=semantic`) to the new index too. It has the same problem. Smaller passages mean more results per entry, so check how the tab lists them, and group by entry if it doesn't already. The exact mode stays on the journal collection, which already searches full text.
 - **Dreams too.** Each dream is indexed as one document (`dreams.build_index`), so a long dream is cut off the same way. Use the same splitter there, with each passage pointing back to its dream. Most dreams are short and stay whole.
 - Follow-up in the same shape: split long summary-index documents (domain docs, entity profiles) into passages, and map each hit back to its document.
+
+#### The switch, as built (2026-09-25)
+
+- **`config.py`:** `EMBED_MODEL` (`MC_EMBED_MODEL`, default arctic-embed-s) and `MODEL_CACHE` (`MC_MODEL_CACHE`, default `~/.cache/main-character`). It is deliberately not named `MC_*_DIR`, so the sandbox's copy loop, which copies every `MC_*_DIR`, leaves it alone.
+- **`passages.py`:**
+  - `MODELS` lists the allowed models and their query prefix (arctic-embed-s and bge-small).
+  - `embed(texts, query=True)` adds the prefix.
+  - The window comes from the model's own tokenizer: `limit()` is 512 − 2 markers − 8 prefix tokens = 502.
+  - `_download()` fetches only the 5 files needed, one at a time, with 5 tries, and prints what it is doing. A final failure raises `ModelUnavailable`, and `query_journal` falls back to the journal chunks.
+- **Collection metadata** records `embed_model`. A passage collection from another model, or from before this (no key), is never searched or written to. `sync()` deletes and rebuilds it, so every existing install falls back to the chunks until `rebuild_index.py` runs. The fallback now queries with `query_texts` (Chroma's MiniLM, the model those chunks were embedded with), not `passages.embed`.
+- **Chroma's approximate index lost real matches.** At its defaults (`ef_search` 100, 16 links per point), and after upserts of 64 at a time, searches of the 4,117 passages missed 46 of the true top-12 across the 46 test queries. In one case, a passage at distance 0.287 was missing while one at 0.419 was returned. Changing `ef_search` on an existing collection had no effect. Built fresh with `ef_construction` 400, `ef_search` 400, 48 links, and written 1,000 at a time, it misses 1, and a search still takes ~30 ms. Those are now the collection's settings (`_HNSW`, `_UPSERT`). This was the whole gap between the first real-path run (29/30, entry replies 2/2) and the comparison (30/31, 3/3).
+- **Timing on the copy:**
+  - rebuilding all 4,117 passages takes ~2 min;
+  - one search takes ~30 ms, or ~90 ms for an entry reply's 4–5 pieces;
+  - the context block takes ~0.5 s. It is still dominated by `get_summary_hits` reloading MiniLM. With the laptop busy, one run measured 1.3 s median, with a 16 s outlier.
+- **Docs updated for the switch:** `README.md`, `HOW-IT-WORKS.md` (the two models, the passage index, and the gap below), `.env.example` (`MC_PASSAGE_TOKENS`, `MC_PASSAGE_NEIGHBORS`, `MC_EMBED_MODEL`, `MC_MODEL_CACHE`), both `sandbox-reset/SKILL.md` copies (the model cache and `-CopyJournal`'s time), the export's README text in `export.py`, and the rebuild route's docstring in `server.py`.
+- **Known gap until step 1 is finished:** a chapter close writes only the journal chunks. On a journal whose passage index has been built, a new entry can't be found by meaning until the next `rebuild_index.py`. So don't rebuild the real journal's index before the write paths are done. The plan already orders it that way, and `HOW-IT-WORKS.md` says so.
+- **Entry replies:** arctic finds 3/8 in the top 12, against MiniLM's 5/8. The set is too small to decide on. Step 4b's re-ranker is the next lever there, and the owner's holdout will add evidence.
 
 Done when: the step 0 test shows a clear improvement on the deep-fact questions, the context viewer shows the deep passages on the sandbox copy of the real journal, the search time stays a small fraction of the reply time, the full test suite passes, and `tests/test_demo_close_replay.py` passes without re-recording.
 
@@ -283,7 +356,7 @@ None. Decided on 2026-09-23:
 
 - Passages are split evenly under the 254-token limit. *Revised 2026-09-25:* the target size is a setting chosen by the step 0 test on the real journal, between fewest pieces (up to 254) and paragraph-sized (about 120), with and without neighbouring passages added when shown.
 - Step 1 covers dreams.
-- Query splitting searches the whole entry, up to 26 searches: twice the longest entry at the time.
+- Query splitting searches the whole entry, up to 26 searches: twice the longest entry at the time. *At 120-token pieces that no longer holds (see Next steps, item 3); the owner decides whether to raise it.*
 - Step 5 is an option called Smart Search, off by default.
 
 Decided on 2026-09-25:
@@ -293,6 +366,7 @@ Decided on 2026-09-25:
 - Step 3 becomes full keyword search (BM25), with word normalization and fuzzy matching for spelling, merged with search by meaning.
 - Add a cross-encoder re-ranker (step 4b), behind a setting until it proves itself.
 - The owner writes a small holdout set of their own questions for the final check.
-- Adding `fastembed` as a dependency needs the owner's approval once it's shown to install cleanly.
+- Adding `fastembed` as a dependency needs the owner's approval once it's shown to install cleanly. *Tested 2026-09-25: it installs cleanly. Approved the same day.*
+- The embedding model is `snowflake/snowflake-arctic-embed-s`, via `fastembed`. Passages are 120 tokens with 1 neighbour shown, and 12 results. This replaces the provisional MiniLM choice.
 
 If step 0's timing shows 26 searches slowing replies noticeably, bring the ceiling back to the owner rather than lowering it quietly.
