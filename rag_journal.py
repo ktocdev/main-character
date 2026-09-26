@@ -293,11 +293,24 @@ def extract_metadata(text: str) -> dict:
 
 def query_journal(question: str, n_results: int = 5) -> list[dict]:
     """
-    Semantic search over the journal. Returns the most relevant entries,
+    Semantic search over the journal. Returns the most relevant passages,
     each with its text, metadata, and similarity distance (lower = closer).
+
+    Searches the passage index (passages.py), where every part of an entry
+    is findable. Until that index has been built -- an install that has not
+    run rebuild_index.py since it arrived -- it falls back to the journal
+    chunks, whose embeddings only cover each chunk's opening.
     """
+    import passages
+    hits = passages.search(question, n_results)
+    if hits:
+        return hits
+
     collection = get_collection()
-    results = collection.query(query_texts=[question], n_results=n_results)
+    if collection.count() == 0:
+        return []
+    results = collection.query(query_embeddings=passages.embed([question]),
+                               n_results=min(n_results, collection.count()))
 
     matches = []
     for i, doc in enumerate(results["documents"][0]):

@@ -1,6 +1,6 @@
 # Handoff: make lookup find exact text, not just summaries
 
-Written 2026-09-23. Step 0 done 2026-09-25 (results under step 0); steps 1–5 not started.
+Written 2026-09-23. Step 0 done 2026-09-25 (results under step 0). Step 1 in progress on branch `JRNL-47`: `passages.py` is built and the size experiment has run (results under step 1). Next is the embedding model comparison (step 1a). Nothing from step 1 is committed yet.
 
 ## The problem
 
@@ -114,6 +114,43 @@ So step 1 should embed queries itself with one module-level embedder and pass `q
 
 - Add the passage splitter, next to `chunk_entry` or in a new `passages.py`, with the target size as a parameter. Unit tests: under the fewest-pieces setting an entry under the limit stays whole, long paragraphs split at sentence boundaries, very short paragraphs are merged rather than left as passages of their own, pieces of one entry are close in size, no passage is over 254 tokens by the embedder's tokenizer at any setting, and every character of the entry is covered.
 - **Choose the size before wiring it in everywhere.** Build the passage index on the sandbox copy of the real journal with each candidate (fewest pieces up to 254, and paragraph-sized at about 120), each with and without neighbours added when shown. Run `eval_retrieval.py --compare` against the real baseline for each, and keep the winner as the default. Each run is a local rebuild of about a minute. Show the owner the table before deciding.
+
+#### Step 1 so far (2026-09-25)
+
+Built, not committed: `passages.py` (splitter, one long-lived embedder, the `journal_passages` index with `index_chunks` / `remove_chunks` / `sync`, and `search` with query splitting and neighbours), `PASSAGE_TOKENS` / `PASSAGE_NEIGHBORS` in `config.py`, `rag_journal.query_journal` switched to passages with the fallback, `rebuild_index.py` building the passage index, and a "text shown" column in `eval_retrieval.py`. On all 395 real entry files, the splitter produced no passage over 254 tokens and left no character uncovered.
+
+The size experiment on a copy of the real journal (all-MiniLM-L6-v2):
+
+| variant | questions top 6 | top 12 | MRR | entry replies top 6 | top 12 | text shown, top 6 |
+|---|---|---|---|---|---|---|
+| baseline | 2/38 | 2 | 0.012 | 0/8 | 0 | ~12,000 chars |
+| 254 tokens | 17 | 22 | 0.336 | 3 | 4 | 5,500 |
+| 254 + 1 neighbour | 20 | 24 | 0.372 | 3 | 4 | 13,600 |
+| 120 tokens | 19 | 24 | 0.366 | 2 | 3 | 2,800 |
+| 120 + 1 neighbour | 20 | 24 | **0.424** | 3 | **5** | 7,300 |
+
+Findings:
+
+- **The long-query pieces take turns** (`passages.search`): every piece's best match comes before any piece's second best. The original merge ranked by distance alone. With it, a long opening about work took every slot and the link in an entry's last paragraph never got one: 120 tokens scored 0/8 on entry replies. Taking turns raised that to 2/8.
+- **Search is 25–90 ms**, down from ~160 ms, because the embedder is loaded once.
+- The context block is currently slower than the baseline (~460 ms against ~350). Summary search still goes through Chroma's reloading embedder. Moving it to the shared embedder in this step fixes that.
+- 8 entry-reply tests are too few to separate the variants. A difference of one is noise.
+- **Provisional choice: 120 tokens with 1 neighbour, `N_SEMANTIC` 12.** Showing 12 results comes to roughly today's context size, with 24/38 hits instead of 2. It is provisional because the embedding model (step 1a) sets the window, and the size is re-run for the chosen model.
+
+**Why the other 14 questions miss** (120-token index): 10 name a rare word that only 1–4 passages contain ("Begonia", "Margarita", "karaoke", "kratom"). Search by meaning ranks those low, and step 3 targets them. 5 are ranked 13–30, just outside what is shown, which is what step 4b targets. 2 give a time ("around Christmas", "in March") with otherwise generic words, which step 4 targets. 2 have the word that ties question to answer in the passage just before, which step 3 plus neighbours targets. These groups overlap.
+
+**The questions were written from the entries**, so they may be phrased more helpfully than the owner's own would be. Before the final comparison, the owner writes about 10 questions of their own into an untracked holdout file (`docs/retrieval-eval/holdout.json`). No setting is tuned against it; it only confirms the final result.
+
+### Step 1a: choose the embedding model (before the size is final)
+
+all-MiniLM-L6-v2 dates from 2021, is one of the smallest embedding models, and reads 256 tokens. Newer small models are trained specifically to match a question to the passage that answers it, and some read 512 tokens. The owner wants this tested. It is **not fine-tuning**: every candidate is used as published. Only which model is used changes.
+
+- **Candidates:** `BAAI/bge-small-en-v1.5` (384 dimensions, 512 tokens), `snowflake/snowflake-arctic-embed-s`, and `intfloat/e5-small-v2`, against MiniLM as the control. Optionally one "base"-sized model (768 dimensions, e.g. `bge-base-en-v1.5`) to see whether size buys enough to be worth it.
+- **Runtime:** `fastembed` runs these as ONNX without PyTorch, which keeps the install from growing by gigabytes. It also provides the cross-encoder for step 4b, so one new dependency covers both. Check that it installs cleanly next to chromadb's pinned `onnxruntime` on Windows before relying on it. Ask the owner before adding it to `requirements.lock`.
+- **Query and passage prefixes:** bge and e5 expect the question and the passage to be embedded differently. bge prefixes the query with an instruction; e5 uses `query: ` and `passage: `. Getting this wrong quietly costs accuracy. `passages.embed` needs a query/passage flag.
+- **The window follows the model.** `LIMIT` and the tokenizer used for counting come from the chosen model, not from Chroma's MiniLM. For a 512-token model, rerun the size experiment with that window (at least 120 and 254 targets, with and without a neighbour).
+- **One model for every collection that is searched this way.** Passages, and in this step summaries and dreams, have to be embedded by the same model their queries are. Record the model name in each collection's metadata. When it doesn't match the configured model, search falls back and `rebuild_index.py` re-embeds, locally and at no cost. An existing install switching models must never mix vectors from two models in one collection.
+- **Measure:** hits and MRR on the real set, the time to embed a query and to rebuild, and the download size. Show the owner the table. Keep MiniLM unless a candidate wins clearly: the swap has a real cost in download size and rebuild time.
 - Write passages wherever journal chunks are written today: `sessions._close_locked`, `rebuild_index.py`, `bulk_import.py`, `seed_corpus/import_seed_corpus.py`, and the old CLI save in `companion.py` (the upsert near `ids=[entry_id]`). Remove stale passages wherever `rebuild_index.py` removes stale chunks.
 - Switch `rag_journal.query_journal`, which feeds `build_context_block`, to the passage index, with the fallback above.
 - **Split long queries.** When the query is longer than one passage (an entry reply, or the reflection query), split it with the same splitter, run one search per piece, then merge, remove duplicates and keep the best matches. Search the **whole** entry, not only its first few pieces: the 90th-percentile entry is about 6,000 characters, and its ending matters as much as its opening. The ceiling is **26 searches per query**, which covers an entry twice as long as the journal's longest on 2026-09-23 (11,777 characters, 2,824 tokens; each piece adds about 224 new tokens after the overlap). Every entry written so far is searched in full. If a longer one comes along, pick 26 pieces spread evenly across it so the ending is still searched. The ceiling applies separately to the passage search and to `get_summary_hits`. Do the same for `get_summary_hits`. This is local and free. There is no summary step and no extra Claude call: the reply prompt still contains the full entry, and only the choice of past passages changes. Without this, step 1 helps chat-screen questions but not entry replies.
@@ -157,13 +194,34 @@ Testing: this changes the companion's voice, so only real replies show whether i
 
 In `companion.get_summary_hits`, when a hit's level is `entry summary`, its metadata already carries `date` and `title`. Query the passage index again, limited to that entry (`where={"date": ..., "title": ...}`), for the one or two passages that best match the question, and add them under the summary. A summary hit then brings the actual text with it.
 
-### Step 3: exact-word search alongside search by meaning
+### Step 3: keyword search alongside search by meaning
 
-Search by meaning is weak on names, numbers and rare words. Pull candidate terms from the question: quoted phrases, capitalized words that aren't at the start of a sentence, and known entity names and aliases (`entity_index`, which `match_entities` already uses). Look for them as exact substrings, reusing the search tab's exact mode (`_fold`, `_snippet_around` in `server.py`), and add a few matching passages. A full scan of the collection on each turn is fine at this size, but check the time it takes.
+Search by meaning is weak on names, numbers and rare words, and 10 of the 14 questions step 1 misses name such a word. *Revised 2026-09-25:* the original plan looked up only quoted phrases, capitalized words and entity names. Many of the misses are ordinary rare words ("karaoke", "puppets", "kratom"), so this is now full keyword search:
+
+- **Rank every passage by keyword relevance with BM25,** the standard scoring behind most search engines. It rewards a passage for containing the question's words, and rare words count for much more than common ones. Build it over the passage index's text. At about 4,000 passages it fits in memory and scores in milliseconds; rebuild it when the passage index changes. The `rank_bm25` package, or a short implementation, both work. Drop stopwords.
+- **Normalize words the same way on both sides:** lowercase, fold accents (reuse `_fold` from `server.py`), drop possessive `'s`, and reduce plurals and simple verb endings, so "Luisa's" matches "luisa" and "puppets" matches "puppet".
+- **Fuzzy matching for spelling.** The journal has typos and variant spellings ("tazmanian", "trigylerides"), and a question won't spell them the same way. For a question word with no exact match in the vocabulary, also match words within a small edit distance, or with high character-trigram overlap, at a lower weight. Only for words of 5 or more letters, so short words don't match everything.
+- **Merge the two lists by taking turns,** the same way long-query pieces merge. Reciprocal rank fusion is the standard form: a passage's score is the sum of 1/(60 + rank) over the lists it appears in. The rank is what counts, not the raw score, because BM25 scores and distances aren't on the same scale.
+- **Long queries:** run BM25 on each query piece, like the vector search, so an entry's ending gets its own keyword matches.
+- Known entity names and aliases (`entity_index`) are a cheap extra: a question word that matches an alias can be expanded to the entity's name.
+
+Measure on the real set, with and without fuzzy matching, and check that the short-question hits from step 1 don't drop.
 
 ### Step 4: date filters
 
 When a question names a month, a date or a range ("in March", "last summer", "2026-04-12"), limit the passage search to entries in that range. Dates are stored as `YYYY-MM-DD` strings. Use a `$in` filter over the dates that exist in the range, or filter in Python. Start with explicit dates and month names, and add relative phrases later.
+
+Two of the real-set misses are this case: "around Christmas" and "in March", with otherwise generic words. Seasons and holidays ("Christmas", "last summer", "Labor Day") map to ranges. When the question names a range, keep searching outside it too, at a lower weight, so a wrong guess about the range doesn't hide the answer.
+
+### Step 4b: re-rank the candidates
+
+Added 2026-09-25. Vector search compares the question and a passage as two separate lists of numbers. A **cross-encoder** is a second small model that reads the question and a passage *together* and scores how well the passage answers it. That is much more precise, but too slow to run over every passage. So: gather the top ~50 candidates from steps 1–4 cheaply, re-score them with the cross-encoder, and keep the best 12.
+
+- Five of the real-set misses rank 13–30, just outside what is shown. That is the case this fixes.
+- Candidates: `Xenova/ms-marco-MiniLM-L-6-v2` (about 80 MB) or `BAAI/bge-reranker-base` (larger, usually better). Both are available through `fastembed` (step 1a), so no second new dependency.
+- Local and free. Measure the time: 50 pairs should take roughly 0.2–0.5 s on this machine, which is acceptable next to a reply that takes seconds. If it isn't, re-rank fewer candidates.
+- For a long query (an entry reply), score each candidate against the query piece that retrieved it, not the whole entry. The cross-encoder has the same kind of length limit.
+- Keep it behind a setting until the real set shows it helps.
 
 ### Step 5: Smart Search on the chat screen (a setting, costs more)
 
@@ -227,5 +285,14 @@ None. Decided on 2026-09-23:
 - Step 1 covers dreams.
 - Query splitting searches the whole entry, up to 26 searches: twice the longest entry at the time.
 - Step 5 is an option called Smart Search, off by default.
+
+Decided on 2026-09-25:
+
+- Passage size, provisionally: 120 tokens with 1 neighbour shown on each side, and 12 results. Re-run once the embedding model is chosen.
+- Test newer embedding models (step 1a) before the size is final. Not fine-tuning: published models, used as they are.
+- Step 3 becomes full keyword search (BM25), with word normalization and fuzzy matching for spelling, merged with search by meaning.
+- Add a cross-encoder re-ranker (step 4b), behind a setting until it proves itself.
+- The owner writes a small holdout set of their own questions for the final check.
+- Adding `fastembed` as a dependency needs the owner's approval once it's shown to install cleanly.
 
 If step 0's timing shows 26 searches slowing replies noticeably, bring the ceiling back to the owner rather than lowering it quietly.

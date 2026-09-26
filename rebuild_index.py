@@ -12,10 +12,12 @@ and the derived stores, on the local MiniLM embeddings ChromaDB ships with.
 **No API key, no network, no cost.** Run it after restoring an export, after
 a corrupted index, or to find out whether the round trip really works.
 
-Three collections come back, from three file-backed sources:
+Four collections come back, from three file-backed sources:
 
   - **`journal_entries`** -- the waking chunks, re-split and re-tagged from
     the markdown by the same `bulk_import` functions that wrote them.
+  - **`journal_passages`** -- the search-only passages, split from those
+    chunks by `passages.sync()`. Only new or changed passages are embedded.
   - **`journal_dreams`** -- dream *entries* from their markdown, plus every
     dream the pipeline extracted, via `dreams.build_index()`.
   - **`journal_summaries`** -- entry summaries, weekly arcs, domain docs and
@@ -289,9 +291,18 @@ def build_summaries(dry_run: bool) -> dict:
             "removed": 0}
 
 
+def build_passages(dry_run: bool) -> dict:
+    """The search-only passage index, derived from journal_entries -- so it
+    runs after build_entries, and a dry run reports against the journal
+    collection as it stands."""
+    import passages
+    return passages.sync(dry_run=dry_run)
+
+
 def rebuild(dry_run: bool = False) -> dict:
     return {
         "journal_entries": build_entries(dry_run),
+        "journal_passages": build_passages(dry_run),
         "journal_dreams": build_dreams(dry_run),
         "journal_summaries": build_summaries(dry_run),
     }
@@ -320,6 +331,8 @@ def main() -> int:
             line += f", {r['skipped']} pre-close backups skipped"
         if r.get("extracted"):
             line += f", {r['extracted']} extracted dreams"
+        if "embedded" in r:
+            line += f", {r['embedded']} embedded"
         print(line)
 
     orphans = result["journal_entries"]["unprovenanced"]

@@ -100,8 +100,9 @@ def run_one(t: dict, collection, entity_index: dict) -> dict:
     search_ms = (time.perf_counter() - started) * 1000
 
     rank = None
-    for i, m in enumerate(matches, 1):
-        if fact in _norm(m["text"][:EXCERPT_CHARS]):
+    shown = [m["text"][:EXCERPT_CHARS] for m in matches]
+    for i, text in enumerate(shown, 1):
+        if fact in _norm(text):
             rank = i
             break
 
@@ -110,7 +111,11 @@ def run_one(t: dict, collection, entity_index: dict) -> dict:
     context_ms = (time.perf_counter() - started) * 1000
 
     return {"id": t["id"], "rank": rank, "search_ms": round(search_ms, 1),
-            "context_ms": round(context_ms, 1)}
+            "context_ms": round(context_ms, 1),
+            # How much the companion reads for this search, so a setting that
+            # finds more by showing more can be told apart from one that finds
+            # more by ranking better.
+            "chars": {k: sum(len(s) for s in shown[:k]) for k in KS}}
 
 
 def _ms(values: list[float]) -> str:
@@ -142,6 +147,9 @@ def report(name: str, results: list[dict], before: dict) -> dict:
                       and before[r["id"]]["rank"] <= k)
             line += f"   (was {was}/{n})"
         print(line)
+    for k in KS:
+        chars = statistics.median(r["chars"][k] for r in results)
+        print(f"  text shown, top {k:<2}: median {chars:,.0f} chars")
     mrr = sum(1 / r["rank"] for r in results if r["rank"]) / n
     summary["mrr"] = round(mrr, 3)
     print(f"  mean reciprocal rank: {mrr:.3f}")

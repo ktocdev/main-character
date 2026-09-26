@@ -182,6 +182,11 @@ SESSION_DIR = Path(os.getenv("MC_SESSION_DIR", _PROJECT_ROOT / "sessions"))
 N_SEMANTIC = int(os.getenv("MC_N_SEMANTIC", "6"))     # semantically similar chunks per question
 N_RECENT = int(os.getenv("MC_N_RECENT", "3"))         # most recent chunks always included
 EXCERPT_CHARS = int(os.getenv("MC_EXCERPT_CHARS", "2000"))
+# The search-only passage index (passages.py). Target passage size in the
+# embedder's tokens, capped at its 254-token window; and how many passages on
+# each side of a hit are shown with it ("search small, read bigger").
+PASSAGE_TOKENS = int(os.getenv("MC_PASSAGE_TOKENS", "254"))
+PASSAGE_NEIGHBORS = int(os.getenv("MC_PASSAGE_NEIGHBORS", "0"))
 MAX_TOKENS = int(os.getenv("MC_MAX_TOKENS", "8000"))  # companion reply budget
 
 # ---------------------------------------------------------------------------
