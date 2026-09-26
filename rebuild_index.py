@@ -23,9 +23,12 @@ Four collections come back, from three file-backed sources:
     chunks by `passages.sync()`. Only new or changed passages are embedded,
     unless the index was embedded by another model; then all of them are.
   - **`journal_dreams`** -- dream *entries* from their markdown, plus every
-    dream the pipeline extracted, via `dreams.build_index()`.
+    dream the pipeline extracted, via `dreams.sync_collection()`.
   - **`journal_summaries`** -- entry summaries, weekly arcs, domain docs and
     entity docs, via `summarizer.sync_summary_embeddings()`.
+
+The passages, dreams and summaries are embedded by the search model
+(`passages.py`); each is replaced whole if another model embedded it.
 
 **It reconciles rather than wipes.** Everything the files describe is upserted
 and anything else in the collection is deleted, which lands in the same place
@@ -226,56 +229,13 @@ def build_entries(dry_run: bool) -> dict:
 
 
 def build_dreams(dry_run: bool) -> dict:
-    """Dream entries from markdown, then the extracted dreams from raw.
-
-    Two populations in one collection, and only the first is rebuilt here:
-    `dreams.build_index()` owns the `dream:` ids and does its own stale
-    sweep, so this reconciles only what it wrote.
-    """
-    from dreams import get_dream_collection
-
-    collection = get_dream_collection()
-    known = _existing(collection)
-    ids, docs, metas = [], [], []
-
-    for entry in export.read_entries():
-        if entry["realm"] != "dream":
-            continue
-        text = entry["text"]
-        # the id `dreams.store_dream_entry` would have written
-        digest = hashlib.md5(text[:200].encode()).hexdigest()[:8]
-        cid = f"dreamentry_{entry['date']}_{digest}"
-        was = known.get(cid, {})
-        ids.append(cid)
-        docs.append(text)
-        metas.append({
-            "date": entry["date"],
-            "time": was.get("time", ""),
-            "realm": "dream",
-            "title": entry["title"],
-            "source": was.get("source", "write_mode"),
-        })
-
-    # Only entry documents are this function's to reconcile. Anything with a
-    # `dream:` id belongs to build_index() below and must survive.
-    keep = {i for i in known if i.startswith("dream:")}
-    stale = sorted(set(known) - set(ids) - keep)
+    """Dream entries from markdown, and the dreams the pipeline extracted.
+    `dreams.sync_collection()` owns the whole collection; this refreshes
+    `dreams/index.json` first, as every processing run does."""
+    import dreams
     if not dry_run:
-        if stale:
-            collection.delete(ids=stale)
-        if ids:
-            collection.upsert(ids=ids, documents=docs, metadatas=metas)
-
-    extracted = 0
-    if not dry_run:
-        import dreams
-        extracted = len(dreams.build_index()["dreams"])
-    else:
-        raw = Path(config.DREAM_DIR) / "raw"
-        extracted = len(list(raw.glob("*.json"))) if raw.exists() else 0
-
-    return {"documents": len(ids), "removed": len(stale),
-            "extracted": extracted}
+        dreams.write_index()
+    return dreams.sync_collection(dry_run=dry_run)
 
 
 # ---------------------------------------------------------------------------

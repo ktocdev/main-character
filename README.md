@@ -52,7 +52,7 @@ It opens mid-week, three days after the author last closed a chat. You can read 
 ./journal start                              # Windows: .\journal start
 ```
 
-Then open **Settings → load demo journal**, or choose the demo on the first-run screen if you have not added a key yet. The first visit builds the demo's search index, which takes about twenty seconds, or a few minutes if the embedding model still has to download.
+Then open **Settings → load demo journal**, or choose the demo on the first-run screen if you have not added a key yet. The first visit builds the demo's search index, which takes about twenty seconds, or a few minutes if the embedding models still have to download.
 
 The demo costs nothing because embeddings are computed locally and the replies are real Claude output, captured once and committed to this repo. Nothing calls the API. In demo mode the Anthropic SDK is never constructed, and the test suite checks this.
 
@@ -62,7 +62,7 @@ The same demo also builds as a static site that runs entirely in the browser, wi
 
 ## What it costs
 
-- **Reading, searching and browsing are free.** Embeddings are computed on your machine by two small local models. Search by meaning uses snowflake-arctic-embed-s, over entries split into short passages so that every part of a long entry can be found. The other indexes use all-MiniLM-L6-v2. Search never calls an API.
+- **Reading, searching and browsing are free.** Embeddings are computed on your machine by two small local models. Search by meaning, for the companion and in the search tab, uses snowflake-arctic-embed-s, over entries split into short passages so that every part of a long entry can be found; summaries and dreams use it too. The journal's own index of whole entries uses all-MiniLM-L6-v2. Search never calls an API.
 - **Writing costs money.** Each entry gets the companion's reply. Closing a chat triggers a background pass that tags what you wrote, extracts entities and updates summaries, so a close costs more than any one reply.
 - **Two models, so you can trade down.** The companion is the voice you read, and it defaults to Opus. Background processing is mechanical, runs in bulk, and uses most of the tokens. It defaults to Sonnet. Both can be changed in Settings.
 - **Two spend caps,** one per session and one per calendar month, checked before each call. They exist to catch runaway spending, not to set a budget, so the defaults sit above what a heavy month of ordinary writing would cost.

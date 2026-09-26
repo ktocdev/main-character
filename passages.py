@@ -18,15 +18,19 @@ search all read that.
 
     split(text)             -> spans of one text, each within the window
     index_chunks(...)       -> passages for journal chunks just written
+    remove_chunks(ids)      -> ...and for chunks just deleted
     sync()                  -> reconcile the whole index with the journal
     search(query, n)        -> the best passages, shaped like query_journal's
+
+The summaries and dreams are searched with the same model, through
+mirror() (their owners rewrite them whole) and search_documents().
 
 The embedder is config.EMBED_MODEL, run locally by fastembed: a model trained
 to match a question to the passage that answers it, which found half again
 as many of the test set's quotes as MiniLM (the handoff's step 1a). Sizes are
 counted with the model's own tokenizer, so a passage's count is exactly what
 the model sees. One long-lived instance does every embedding: a long query
-split into 26 searches cannot afford a model load per search.
+split into dozens of searches cannot afford a model load per search.
 
 The collection records which model embedded it. A collection embedded by
 another model is never searched or added to -- its vectors mean nothing to
@@ -44,7 +48,10 @@ from config import EMBED_MODEL, MODEL_CACHE, PASSAGE_NEIGHBORS, PASSAGE_TOKENS
 
 COLLECTION_NAME = "journal_passages"
 OVERLAP = 30           # tokens repeated from the end of the previous passage
-MAX_QUERY_PIECES = 26  # searches per query; see the handoff for the sizing
+# Searches per query: at 120-token passages each piece adds ~90 new tokens,
+# so 64 cover ~5,800 tokens, twice the journal's longest entry (2,824 tokens,
+# 31 pieces) in September 2026. Longer entries are sampled evenly.
+MAX_QUERY_PIECES = 64
 _BATCH = 64            # passages per embedding call
 _UPSERT = 1000         # passages per write; small writes degrade the index
 # The nearest-neighbour index's settings, wider than chroma's defaults.
@@ -298,30 +305,121 @@ def _materialize(text: str, offsets, bounds: list[int]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# THE INDEX
+# COLLECTIONS ON THIS MODEL
 # ---------------------------------------------------------------------------
+# The passage index, the summaries and the dreams are all searched with this
+# model, so each records it (`embed_model` in the collection's metadata) and
+# is opened without an embedding function: every vector comes from embed().
+# Chroma's default would be MiniLM, whose vectors have the same 384
+# dimensions -- a document it embedded would be searchable, and wrong. With
+# none, a write that brings no vectors fails instead.
 
-def get_passage_collection(replace_stale: bool = False):
-    """The passage collection, or None if another model embedded it (or,
-    before this was recorded, nothing says which did). With
-    `replace_stale`, such a collection is deleted and an empty one made in
-    its place -- sync() fills it again."""
+def _open(name: str = COLLECTION_NAME):
+    """(client, collection, state): state is "current", "stale" (another
+    model embedded it, or nothing says which) or "missing"."""
     import chromadb
+    from chromadb.errors import NotFoundError
     from config import CHROMA_DIR
     CHROMA_DIR.mkdir(parents=True, exist_ok=True)
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    # No embedding function: every vector is supplied from embed(), and
-    # chroma's default would be MiniLM, which must never touch this index.
-    kwargs = {"metadata": {"embed_model": EMBED_MODEL},
-              "configuration": {"hnsw": _HNSW}, "embedding_function": None}
-    col = client.get_or_create_collection(name=COLLECTION_NAME, **kwargs)
-    if (col.metadata or {}).get("embed_model") == EMBED_MODEL:
-        return col
-    if not replace_stale:
-        return None
-    client.delete_collection(COLLECTION_NAME)
-    return client.create_collection(name=COLLECTION_NAME, **kwargs)
+    try:
+        col = client.get_collection(name, embedding_function=None)
+    except NotFoundError:
+        return client, None, "missing"
+    state = "current" if (col.metadata or {}).get("embed_model") == EMBED_MODEL else "stale"
+    return client, col, state
 
+
+def model_collection(name: str, create: bool = False):
+    """Collection `name` if this model embedded it, else None. With
+    `create`, a missing one is made and one from another model replaced,
+    empty -- for a caller about to fill it (mirror())."""
+    client, col, state = _open(name)
+    if state == "current":
+        return col
+    if not create:
+        return None
+    if col is not None:
+        client.delete_collection(name)
+    return client.create_collection(
+        name=name, metadata={"embed_model": EMBED_MODEL},
+        configuration={"hnsw": _HNSW}, embedding_function=None)
+
+
+def get_passage_collection(create: bool = False):
+    """The passage collection if it can be searched and added to, else None:
+    it can't if it was never built or another model embedded it."""
+    return model_collection(COLLECTION_NAME, create)
+
+
+def drop(name: str = COLLECTION_NAME) -> None:
+    """Delete a collection. For the passage index, search then falls back
+    to the journal chunks until rebuild_index.py builds it again."""
+    client, col, _ = _open(name)
+    if col is not None:
+        client.delete_collection(name)
+
+
+def mirror(name: str, rows: list[tuple[str, str, dict]],
+           dry_run: bool = False) -> dict:
+    """Make collection `name` hold exactly `rows`, [(id, text, metadata)].
+    Only rows that are new or changed are embedded; ids not among them are
+    deleted. A missing collection is made, and one from another model
+    replaced, so then everything is embedded."""
+    col = model_collection(name, create=not dry_run)
+    want = {rid: (doc, meta) for rid, doc, meta in rows}
+    have = (col.get(include=["documents", "metadatas"]) if col is not None
+            else {"ids": [], "documents": [], "metadatas": []})
+    have = {rid: (doc, meta) for rid, doc, meta in
+            zip(have["ids"], have["documents"], have["metadatas"])}
+
+    stale = [rid for rid in have if rid not in want]
+    fresh = [(rid, *want[rid]) for rid in want if have.get(rid) != want[rid]]
+    if not dry_run:
+        if stale:
+            col.delete(ids=stale)
+        _upsert(col, fresh)
+    return {"documents": len(want), "removed": len(stale), "embedded": len(fresh)}
+
+
+def split_documents(rows: list[tuple[str, str, dict]],
+                    target: int | None = None) -> list[tuple[str, str, dict]]:
+    """Each document as its passages, [(id, text, metadata)]: ids
+    `<document id>_p<n>`, and metadata the document's plus where the passage
+    sits in it (`source_id`, `position`, `count`, `start`, `end`)."""
+    out = []
+    for doc_id, text, meta in rows:
+        pieces = split(text, target)
+        for i, p in enumerate(pieces):
+            out.append((f"{doc_id}_p{i}", p["text"], {
+                **meta, "source_id": doc_id, "position": i, "count": len(pieces),
+                "start": p["start"], "end": p["end"]}))
+    return out
+
+
+def search_documents(name: str, query: str, n: int,
+                     where: dict | None = None) -> list[tuple[str, dict, float]]:
+    """The n best documents of collection `name` for `query`, as
+    [(text, metadata, distance)], with the query split as search() splits
+    it. A collection from before the model switch -- chroma's MiniLM
+    embedded it, and nothing is recorded -- is searched with MiniLM until
+    its owner rewrites it; one from another model, not at all."""
+    client, col, state = _open(name)
+    if col is None or col.count() == 0:
+        return []
+    if state == "current":
+        return [(doc, meta, dist) for _, doc, meta, dist in ranked(col, query, n, where)]
+    if "embed_model" in (col.metadata or {}):
+        return []
+    legacy = client.get_collection(name)      # chroma's default: MiniLM
+    kwargs = {"where": where} if where else {}
+    res = legacy.query(query_texts=[query], n_results=min(n, legacy.count()), **kwargs)
+    return list(zip(res["documents"][0], res["metadatas"][0], res["distances"][0]))
+
+
+# ---------------------------------------------------------------------------
+# THE PASSAGE INDEX
+# ---------------------------------------------------------------------------
 
 def passages_for_chunk(chunk_id: str, text: str, meta: dict) -> list[tuple[str, str, dict]]:
     """(id, text, metadata) for each passage of one journal chunk."""
@@ -340,66 +438,94 @@ def passages_for_chunk(chunk_id: str, text: str, meta: dict) -> list[tuple[str, 
     return out
 
 
-def _upsert(col, rows: list[tuple[str, str, dict]]) -> None:
+def _upsert(col, rows: list[tuple[str, str, dict]], vectors=None) -> None:
     for i in range(0, len(rows), _UPSERT):
         batch = rows[i:i + _UPSERT]
         col.upsert(ids=[r[0] for r in batch],
                    documents=[r[1] for r in batch],
                    metadatas=[r[2] for r in batch],
-                   embeddings=embed([r[1] for r in batch]))
+                   embeddings=(vectors[i:i + _UPSERT] if vectors is not None
+                               else embed([r[1] for r in batch])))
 
 
 def index_chunks(ids: list[str], docs: list[str], metas: list[dict],
-                 collection=None) -> int:
-    """Passages for journal chunks that were just written. Replaces any a
-    chunk had before. Returns the number of passages written."""
-    col = collection or get_passage_collection()
-    if not ids or col is None:
-        return 0      # embedded by another model: sync() rebuilds it whole
-    old = col.get(where={"source_id": {"$in": list(ids)}}, include=[])["ids"]
-    if old:
-        col.delete(ids=old)
-    rows = [r for cid, doc, meta in zip(ids, docs, metas)
-            for r in passages_for_chunk(cid, doc, meta)]
-    _upsert(col, rows)
-    return len(rows)
+                 journal=None) -> int:
+    """Passages for journal chunks that were just written, replacing any the
+    chunks had before. Returns the number of passages written.
+
+    For the write paths, which call it right after writing the chunks. The
+    index is kept complete or absent: search falls back to the journal chunks
+    only when it is absent, so an index missing an entry would hide that
+    entry instead. So the passages are added only to an index built for this
+    model. A missing index is built when the journal holds nothing but these
+    chunks (a new journal's first write), since that is the whole journal;
+    otherwise it waits for rebuild_index.py. And if adding fails -- the model
+    deleted from its cache and no connection, say -- the index is dropped,
+    and search falls back to the chunks, which do hold the new entry.
+    """
+    if not ids:
+        return 0
+    try:
+        _, col, state = _open()
+        if state == "missing":
+            from rag_journal import get_collection
+            journal = journal or get_collection()
+            if set(journal.get(include=[])["ids"]) <= set(ids):
+                return sync(journal)["embedded"]
+            return 0
+        if state == "stale":
+            return 0          # rebuild_index.py replaces it whole
+        rows = [r for cid, doc, meta in zip(ids, docs, metas)
+                for r in passages_for_chunk(cid, doc, meta)]
+        vectors = embed([r[1] for r in rows])   # before anything is deleted
+        _delete_sources(col, ids)
+        _upsert(col, rows, vectors)
+        return len(rows)
+    except Exception as exc:
+        _give_up(exc)
+        return 0
 
 
-def remove_chunks(ids: list[str], collection=None) -> None:
+def remove_chunks(ids: list[str]) -> None:
     """Drop the passages of journal chunks that were deleted."""
-    col = collection or get_passage_collection()
-    if not ids or col is None:
+    if not ids:
         return
+    try:
+        col = get_passage_collection()
+        if col is not None:
+            _delete_sources(col, ids)
+    except Exception as exc:
+        _give_up(exc)
+
+
+def _delete_sources(col, ids: list[str]) -> None:
     old = col.get(where={"source_id": {"$in": list(ids)}}, include=[])["ids"]
     if old:
         col.delete(ids=old)
+
+
+def _give_up(exc: Exception) -> None:
+    print(f"  [passages] could not update the passage index "
+          f"({exc.__class__.__name__}: {exc}). Search uses the journal "
+          f"chunks until `python rebuild_index.py` builds it again.",
+          file=sys.stderr, flush=True)
+    try:
+        drop()
+    except Exception:
+        pass
 
 
 def sync(journal=None, dry_run: bool = False) -> dict:
-    """Make the passage index match the journal collection. Only passages
-    that are new or changed are embedded; the rest are left alone. An index
-    embedded by another model is replaced, so everything is embedded."""
+    """Make the passage index match the journal collection, building it if
+    it is missing. Only passages that are new or changed are embedded; the
+    rest are left alone. An index embedded by another model is replaced, so
+    everything is embedded."""
     from rag_journal import get_collection
     journal = journal or get_collection()
-    col = get_passage_collection(replace_stale=not dry_run)
-
     got = journal.get(include=["documents", "metadatas"])
-    want = {pid: (doc, meta)
-            for cid, text, m in zip(got["ids"], got["documents"], got["metadatas"])
-            for pid, doc, meta in passages_for_chunk(cid, text, m)}
-
-    have = (col.get(include=["documents", "metadatas"]) if col is not None
-            else {"ids": [], "documents": [], "metadatas": []})
-    have = {pid: (doc, meta) for pid, doc, meta in
-            zip(have["ids"], have["documents"], have["metadatas"])}
-
-    stale = [pid for pid in have if pid not in want]
-    fresh = [(pid, *want[pid]) for pid in want if have.get(pid) != want[pid]]
-    if not dry_run:
-        if stale:
-            col.delete(ids=stale)
-        _upsert(col, fresh)
-    return {"documents": len(want), "removed": len(stale), "embedded": len(fresh)}
+    rows = [r for cid, text, m in zip(got["ids"], got["documents"], got["metadatas"])
+            for r in passages_for_chunk(cid, text, m)]
+    return mirror(COLLECTION_NAME, rows, dry_run)
 
 
 # ---------------------------------------------------------------------------
@@ -417,49 +543,62 @@ def query_pieces(query: str) -> list[str]:
     return pieces
 
 
-def search(query: str, n: int, where: dict | None = None,
-           neighbors: int | None = None, collection=None) -> list[dict]:
-    """The n best passages for `query`, as [{"text", "metadata", "distance"}],
-    best first -- the shape `rag_journal.query_journal` returns.
+def ranked(col, query: str, n: int,
+           where: dict | None = None) -> list[tuple[str, str, dict, float]]:
+    """The n best records of `col` for `query`, as [(id, text, metadata,
+    distance)], best first.
 
     Each piece of the query is searched, and the pieces take turns filling
-    the n slots (see below). A short query is one piece, so this is plain
-    nearest-first. With `neighbors`, each hit is shown with that
-    many passages on either side from the same chunk, and hits whose
-    windows touch are merged, so no text is shown twice.
+    the n slots: every piece's best match comes before any piece's second
+    best. Merging on distance alone lets whichever part of a long entry the
+    journal has the most to say about crowd out the rest -- a long opening
+    about work fills every slot, and the connection in the last paragraph
+    never gets one. Within a turn, closer comes first. A short query is one
+    piece, so this is plain nearest-first.
     """
-    col = collection or get_passage_collection()
-    total = col.count() if col is not None else 0
+    total = col.count()
     if total == 0:
         return []
-    neighbors = PASSAGE_NEIGHBORS if neighbors is None else neighbors
     pieces = query_pieces(query)
     kwargs = {"where": where} if where else {}
     res = col.query(query_embeddings=embed(pieces, query=True), n_results=min(n, total),
                     include=["documents", "metadatas", "distances"], **kwargs)
-
-    # Pieces take turns: every piece's best match comes before any piece's
-    # second best. Merging on distance alone lets whichever part of a long
-    # entry the journal has the most to say about crowd out the rest -- a
-    # long opening about work fills every slot, and the connection in the
-    # last paragraph never gets one. Within a turn, closer comes first.
     per_piece = [list(zip(ids, docs, metas, dists)) for ids, docs, metas, dists
                  in zip(res["ids"], res["documents"], res["metadatas"], res["distances"])]
-    ranked, seen = [], set()
-    for turn in range(max(len(p) for p in per_piece)):
+    out, seen = [], set()
+    for turn in range(max((len(p) for p in per_piece), default=0)):
         row = sorted((p[turn] for p in per_piece if turn < len(p)), key=lambda h: h[3])
-        for pid, doc, meta, dist in row:
-            if pid not in seen:
-                seen.add(pid)
-                ranked.append((dist, doc, meta))
-        if len(ranked) >= n:
+        for hit in row:
+            if hit[0] not in seen:
+                seen.add(hit[0])
+                out.append(hit)
+        if len(out) >= n:
             break
-    ranked = ranked[:n]
+    return out[:n]
 
+
+def search(query: str, n: int, where: dict | None = None,
+           neighbors: int | None = None, collection=None) -> list[dict]:
+    """The n best passages for `query`, as [{"text", "metadata", "distance"}],
+    best first -- the shape `rag_journal.query_journal` returns. The
+    metadata's `source_id`, `start` and `end` say which span of which
+    journal chunk the text is.
+
+    The query is split and its pieces take turns (ranked()). With
+    `neighbors`, each hit is shown with that many passages on either side
+    from the same chunk, and hits whose windows touch are merged, so no text
+    is shown twice.
+    """
+    col = collection or get_passage_collection()
+    hits = ranked(col, query, n, where) if col is not None else []
+    if not hits:
+        return []
+    neighbors = PASSAGE_NEIGHBORS if neighbors is None else neighbors
     if neighbors <= 0:
         return [{"text": doc, "metadata": meta, "distance": dist}
-                for dist, doc, meta in ranked]
-    return _with_neighbors(ranked, neighbors, col)
+                for _, doc, meta, dist in hits]
+    return _with_neighbors([(dist, doc, meta) for _, doc, meta, dist in hits],
+                           neighbors, col)
 
 
 def _with_neighbors(ranked, neighbors: int, col) -> list[dict]:
@@ -494,6 +633,9 @@ def _with_neighbors(ranked, neighbors: int, col) -> list[dict]:
         text = source_text.get(w["source_id"])
         if not (first and last and text):
             continue
+        # start/end become the window's, so they describe the text shown.
         out.append({"text": text[first["start"]:last["end"]].strip(),
-                    "metadata": w["metadata"], "distance": w["distance"]})
+                    "metadata": {**w["metadata"], "start": first["start"],
+                                 "end": last["end"]},
+                    "distance": w["distance"]})
     return out

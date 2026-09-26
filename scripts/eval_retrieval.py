@@ -11,7 +11,8 @@ Each test pairs a query with a fact: an exact quote from one entry, placed
 after that entry's first 1,000 characters, which is past where the embedder
 stops reading (LOOKUP-UPGRADE-HANDOFF.md). A test passes at k when a passage
 containing the fact is among the first k the search returns, as the companion
-would see it (trimmed to EXCERPT_CHARS).
+would see it: passages whole, and the fallback's whole chunks trimmed to
+EXCERPT_CHARS, as build_context_block shows them.
 
 Two sets, both in the questions file:
 
@@ -100,7 +101,8 @@ def run_one(t: dict, collection, entity_index: dict) -> dict:
     search_ms = (time.perf_counter() - started) * 1000
 
     rank = None
-    shown = [m["text"][:EXCERPT_CHARS] for m in matches]
+    shown = [m["text"] if "source_id" in m["metadata"] else m["text"][:EXCERPT_CHARS]
+             for m in matches]
     for i, text in enumerate(shown, 1):
         if fact in _norm(text):
             rank = i
@@ -188,8 +190,8 @@ def main() -> int:
 
     collection = get_collection()
     entity_index = companion.load_entity_index()
-    # The first search loads the embedder; keep that out of the timings.
-    query_journal("warm up", n_results=1)
+    # The first search loads the embedders; keep that out of the timings.
+    companion.build_context_block("warm up", collection, entity_index)
 
     print(f"{WHICH} journal, {collection.count()} chunks in the journal "
           f"collection, EXCERPT_CHARS={EXCERPT_CHARS}")

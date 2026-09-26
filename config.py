@@ -179,17 +179,19 @@ SESSION_DIR = Path(os.getenv("MC_SESSION_DIR", _PROJECT_ROOT / "sessions"))
 # RETRIEVAL TUNING
 # ---------------------------------------------------------------------------
 
-N_SEMANTIC = int(os.getenv("MC_N_SEMANTIC", "6"))     # semantically similar chunks per question
+N_SEMANTIC = int(os.getenv("MC_N_SEMANTIC", "12"))    # passages found by meaning per question
 N_RECENT = int(os.getenv("MC_N_RECENT", "3"))         # most recent chunks always included
 EXCERPT_CHARS = int(os.getenv("MC_EXCERPT_CHARS", "2000"))
 # The search-only passage index (passages.py). Target passage size in the
 # embedder's tokens, capped at what the model reads; and how many passages on
-# each side of a hit are shown with it ("search small, read bigger").
-PASSAGE_TOKENS = int(os.getenv("MC_PASSAGE_TOKENS", "254"))
-PASSAGE_NEIGHBORS = int(os.getenv("MC_PASSAGE_NEIGHBORS", "0"))
-# The model that embeds the passage index, one of passages.MODELS. Changing
-# it makes the next rebuild_index.py re-embed every passage; until then,
-# search falls back to the journal chunks rather than mix two models.
+# each side of a hit are shown with it ("search small, read bigger"). Chosen
+# on the real journal's test set (the handoff's steps 1 and 1a).
+PASSAGE_TOKENS = int(os.getenv("MC_PASSAGE_TOKENS", "120"))
+PASSAGE_NEIGHBORS = int(os.getenv("MC_PASSAGE_NEIGHBORS", "1"))
+# The model that embeds the passage index, the summaries and dreams, one of
+# passages.MODELS. Changing it makes the next rebuild_index.py re-embed all
+# three; until then, search falls back to the journal chunks rather than mix
+# two models.
 EMBED_MODEL = os.getenv("MC_EMBED_MODEL", "snowflake/snowflake-arctic-embed-s").strip()
 # Where that model is downloaded to: once per machine, like chroma's own
 # model under ~/.cache/chroma. Kept short -- Hugging Face's cache layout

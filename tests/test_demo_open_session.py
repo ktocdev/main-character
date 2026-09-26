@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import env_file
+import passages
 import server
 import sessions
 import seed
@@ -85,6 +86,8 @@ def test_close_session_accepts_the_shipped_session(monkeypatch, tmp_path):
     monkeypatch.setattr(sessions, "ARCHIVE_DIR", tmp_path / "archive")
     monkeypatch.setattr(sessions, "JOURNAL_DIR", tmp_path / "journal_entries")
     monkeypatch.setattr(sessions, "SESSION_DIR", tmp_path)
+    # The search passages are test_passages.py's; this fake only upserts.
+    monkeypatch.setattr(passages, "index_chunks", lambda *a, **k: 0)
 
     col = _Collection()
     r = sessions.close_session(col, client=None, title_hint="demo week")
@@ -141,7 +144,7 @@ def test_open_entries_are_backed_up_but_not_embedded(installed):
         assert backup.read_text(encoding="utf-8") == \
             f.read_text(encoding="utf-8")
 
-    for name in ("journal_entries", "journal_dreams"):
+    for name in ("journal_entries", "journal_passages", "journal_dreams"):
         dates = [m["date"] for m in
                  installed.client.get_collection(name).get()["metadatas"]]
         assert dates, f"{name} is empty -- the closed corpus went missing"

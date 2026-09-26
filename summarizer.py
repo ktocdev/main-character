@@ -358,10 +358,14 @@ def sync_summary_embeddings(quiet: bool = False) -> int:
     """Multi-granularity embeddings: mirror every summary layer into the
     journal_summaries collection (local embeddings, no API cost) so the
     companion can retrieve at entry / week / domain / entity zoom levels,
-    not just chunk level. Returns the number of documents in the mirror."""
-    from rag_journal import get_summary_collection
+    not just chunk level. Returns the number of documents in the mirror.
 
-    collection = get_summary_collection()
+    Embedded with the passage index's model (passages.py), and only what is
+    new or changed. A collection from before that -- or from another
+    model -- is replaced, so the first run after a switch embeds it all."""
+    import passages
+    from rag_journal import SUMMARY_COLLECTION
+
     ids, docs, metas = [], [], []
 
     for e in load_entry_summaries():
@@ -390,13 +394,10 @@ def sync_summary_embeddings(quiet: bool = False) -> int:
             docs.append(doc_path.read_text(encoding="utf-8")[:EMBED_DOC_CHARS])
             metas.append({"level": "entity doc", "name": name, "type": info["type"]})
 
-    stale = set(collection.get()["ids"]) - set(ids)
-    if stale:
-        collection.delete(ids=list(stale))
-    if ids:
-        collection.upsert(ids=ids, documents=docs, metadatas=metas)
+    stats = passages.mirror(SUMMARY_COLLECTION, list(zip(ids, docs, metas)))
     if not quiet:
-        print(f"  summary embeddings: {len(ids)} documents ({len(stale)} stale removed)")
+        print(f"  summary embeddings: {len(ids)} documents ({stats['embedded']} "
+              f"embedded, {stats['removed']} stale removed)")
     return len(ids)
 
 

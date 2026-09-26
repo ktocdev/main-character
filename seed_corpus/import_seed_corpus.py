@@ -4,9 +4,9 @@ Import the seed corpus into the local data stores.
 
 Reads the markdown entries from journal_entries/ and the dream entry from
 its _Realm: dream_ marker, then populates:
-  - chroma_data/  (journal_entries + journal_dreams collections) -- only
-    entries dated before OPEN_SESSION_FROM; the rest belong to the open
-    session and are never embedded here
+  - chroma_data/  (journal_entries, its search passages and journal_dreams
+    collections) -- only entries dated before OPEN_SESSION_FROM; the rest
+    belong to the open session and are never embedded here
   - journal_entries/  (markdown backups of every entry, open ones included)
   - sessions/archive/  (the three closed sessions, both-sided braids)
   - sessions/current.json  (the open session: the days written since the
@@ -22,10 +22,10 @@ Usage:
     python seed_corpus/import_seed_corpus.py --dry-run
     python seed_corpus/import_seed_corpus.py --wipe
 
---wipe clears the journal_entries, journal_dreams and journal_summaries
-collections, the journal_entries/ dir, and the entity_graph/, categories/,
-patterns/ and dreams/ dirs before importing (the clean-slate path for
-capture_fixtures.py). Because it deletes outright, it
+--wipe clears the journal_entries, journal_passages, journal_dreams and
+journal_summaries collections, the journal_entries/ dir, and the
+entity_graph/, categories/, patterns/ and dreams/ dirs before importing (the
+clean-slate path for capture_fixtures.py). Because it deletes outright, it
 refuses to run unless the data dirs point somewhere under seed_corpus/ —
 use `bash seed_corpus/run_capture.sh --wipe`, which sets them for you.
 
@@ -101,7 +101,8 @@ def wipe():
     print("wiping local data stores...")
     import chromadb
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    for name in ["journal_entries", "journal_dreams", "journal_summaries"]:
+    for name in ["journal_entries", "journal_passages", "journal_dreams",
+                 "journal_summaries"]:
         try:
             client.delete_collection(name)
             print(f"  deleted collection: {name}")
@@ -121,26 +122,22 @@ def wipe():
 
 
 def import_dream(entry: dict):
-    from dreams import get_dream_collection, DREAM_DIR
-    import hashlib, json
+    from dreams import put_entry
+    import hashlib
     date = entry["date"]
     text = entry["text"]
     entry_id = f"dreamentry_{date}_{hashlib.md5(text[:200].encode()).hexdigest()[:8]}"
 
-    get_dream_collection().upsert(
-        ids=[entry_id],
-        documents=[text],
-        metadatas=[{
-            "date": date, "time": "03:15", "realm": "dream",
-            "title": entry["title"], "source": "seed_corpus",
-        }],
-    )
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
     filepath = JOURNAL_DIR / f"{date}_dream.md"
     filepath.write_text(
         f"# {entry['title']}\n_Date: {date}_\n_Realm: dream_\n\n{text}",
         encoding="utf-8",
     )
+    put_entry(entry_id, text, {
+        "date": date, "time": "03:15", "realm": "dream",
+        "title": entry["title"], "source": "seed_corpus",
+    })
     return entry_id
 
 
@@ -351,8 +348,10 @@ def main():
     if not args.dry_run:
         # The demo ships every summary layer, not just the rolling seed.
         # Populate retrieval locally from these captured docs (no API calls).
+        import passages
         import summarizer
         import dreams as dream_store
+        passages.sync(collection)
         summarizer.sync_summary_embeddings(quiet=True)
         dream_store.build_index()
         marker.touch()

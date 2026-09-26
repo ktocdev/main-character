@@ -947,31 +947,38 @@ _DEMO_LOCK = threading.Lock()
 
 
 def _embedder_cached():
-    """Whether the local embedding model is already on this machine.
+    """Whether both local embedding models are already on this machine.
 
     Chroma downloads all-MiniLM-L6-v2 (about 90 MB) on the first embed it is
     ever asked for -- not at startup, not when a collection is opened -- and
-    caches it under the *user's* home rather than the project. So it is paid
-    once per machine, by whatever embeds first. For someone who clones the
-    repo and looks at the demo before writing anything, that is the demo
-    build, which turns twenty seconds into a few minutes. Reported only so
-    the two doors into the demo can name the wait they are about to impose
-    instead of listing both possibilities and leaving the reader to guess
-    which one they are in.
+    the passage index's model (`passages.py`, about 130 MB) is fetched the
+    same way. Both are cached under the *user's* home rather than the
+    project, so each is paid once per machine, by whatever embeds first. For
+    someone who clones the repo and looks at the demo before writing
+    anything, that is the demo build, which turns twenty seconds into a few
+    minutes. Reported only so the two doors into the demo can name the wait
+    they are about to impose instead of listing both possibilities and
+    leaving the reader to guess which one they are in.
 
-    The path is read off the embedding function's own class attributes, so a
-    chroma release that moves its cache moves this with it. None when the
-    class cannot be found at all -- a rough estimate is a small thing to get
-    wrong, a confident wrong one is not, and None is what the UI falls back
-    to its hedged wording on.
+    False if either is missing, since either one is the few minutes. MiniLM's
+    path is read off the embedding function's own class attributes, so a
+    chroma release that moves its cache moves this with it. None when that
+    can't be told for one and the other is here -- a rough estimate is a
+    small thing to get wrong, a confident wrong one is not, and None is what
+    the UI falls back to its hedged wording on.
     """
     try:
         from chromadb.utils.embedding_functions.onnx_mini_lm_l6_v2 import (
             ONNXMiniLM_L6_V2 as ef)
-        return (Path(ef.DOWNLOAD_PATH) / ef.EXTRACTED_FOLDER_NAME
-                / "model.onnx").exists()
+        minilm = (Path(ef.DOWNLOAD_PATH) / ef.EXTRACTED_FOLDER_NAME
+                  / "model.onnx").exists()
     except Exception:
-        return None
+        minilm = None
+    import passages
+    both = (minilm, passages.model_cached())
+    if False in both:
+        return False
+    return None if None in both else True
 
 
 def _demo_built() -> bool:
@@ -2173,13 +2180,56 @@ def _snippet_around(doc: str, q: str, before: int = 150, after: int = 300) -> st
     return ("…" if start else "") + doc[start:end] + ("…" if end < len(doc) else "")
 
 
+def _ranked_by_meaning(col, q: str) -> list[tuple[str, dict, float, str | None]]:
+    """Every entry ranked by meaning, best first, as (text, metadata,
+    distance, passage): the entry's text (its chunks joined), and the
+    passage that matched best -- None when ranked by whole chunks.
+
+    Ranked by the passage index (passages.py), so a match anywhere in an
+    entry counts, and an entry takes the rank of its best passage. Until
+    that index is built, by whole chunks, whose embeddings only cover their
+    openings.
+    """
+    import passages
+    data = col.get(include=["documents", "metadatas"])
+    if not data["ids"]:
+        return []
+    chunks = dict(zip(data["ids"], zip(data["documents"], data["metadatas"])))
+    entries: dict[tuple, list[str]] = {}
+    for cid in sorted(chunks):
+        meta = chunks[cid][1]
+        entries.setdefault((meta.get("date", ""), meta.get("title", "")), []).append(cid)
+
+    def key(meta):
+        return meta.get("date", ""), meta.get("title", "")
+
+    pcol = passages.get_passage_collection()
+    if pcol is not None and pcol.count():
+        order = [(key(m), dist, text) for _, text, m, dist
+                 in passages.ranked(pcol, q, pcol.count())]
+    else:
+        r = col.query(query_texts=[q], n_results=len(chunks))
+        order = [(key(m), dist, None) for m, dist
+                 in zip(r["metadatas"][0], r["distances"][0])]
+
+    out, seen = [], set()
+    for k, dist, passage in order:
+        if k in seen or k not in entries:
+            continue
+        seen.add(k)
+        text = "\n\n".join(chunks[cid][0] for cid in entries[k])
+        out.append((text, chunks[entries[k][0]][1], dist, passage))
+    return out
+
+
 @app.get("/api/search")
 def search_journal(q: str, mode: str = "semantic", limit: int = 100):
     """Exhaustive search over the whole waking journal — local embeddings
     and plain text scanning, no API calls. Dreams never appear here: they
     live in their own collection (realm isolation).
 
-    mode=semantic  passages ranked by meaning-similarity to the query
+    mode=semantic  entries ranked by meaning-similarity to the query, each
+                   by its best passage (passages.py)
     mode=exact     literal substring matches, newest first, with counts"""
     q = q.strip()
     if not q:
@@ -2207,32 +2257,38 @@ def search_journal(q: str, mode: str = "semantic", limit: int = 100):
                 }
         results = sorted(merged.values(), key=lambda r: r["date"], reverse=True)
     else:
-        # Rank every chunk, then keep only what's worth reading: literal
+        # Rank every entry, then keep only what's worth reading: literal
         # matches always stay (however far down the ranking), and
         # non-literal neighbors stay only while they're close to the best
         # hit — and never more than a handful. When nothing matches
         # literally, the whole corpus sits inside the margin (weak best
         # hit), so the hard cap is what keeps a no-match query short.
-        RELATED_MARGIN = 0.12
+        # The margin is a share of the best distance, because models spread
+        # distances differently: on the real journal, arctic-embed-s puts
+        # the 12th entry ~0.05 behind the best, MiniLM ~0.15, from bests of
+        # ~0.3 and ~0.55. A fixed 0.12 kept a tail of 1-12 with MiniLM and
+        # always 12 with arctic; 20% of the best is ~0.11 and ~0.06.
+        RELATED_MARGIN = 0.2
         RELATED_MAX = 12
-        n = col.count()
-        if n:
-            r = col.query(query_texts=[q], n_results=n)
+        ranked = _ranked_by_meaning(col, q)
+        if ranked:
             needle = _fold(q)
-            best = r["distances"][0][0]
+            best = ranked[0][2]
             related_kept = 0
-            for doc, meta, dist in zip(
-                r["documents"][0], r["metadatas"][0], r["distances"][0]
-            ):
-                literal = needle in _fold(doc)
+            for text, meta, dist, passage in ranked:
+                literal = needle in _fold(text)
                 if not literal:
-                    if dist > best + RELATED_MARGIN or related_kept >= RELATED_MAX:
+                    if dist > best * (1 + RELATED_MARGIN) or related_kept >= RELATED_MAX:
                         continue
                     related_kept += 1
                 results.append({
                     "date": meta.get("date", ""),
                     "title": meta.get("title", ""),
-                    "snippet": _snippet_around(doc, q),
+                    # a related entry shows the passage that matched, whole:
+                    # it is sized to be read, and its start is often the
+                    # overlap carried from the passage before
+                    "snippet": (passage if passage is not None and not literal
+                                else _snippet_around(text, q)),
                     "distance": round(dist, 3),
                     "match": "exact" if literal else "related",
                 })

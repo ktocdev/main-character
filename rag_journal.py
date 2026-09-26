@@ -43,22 +43,15 @@ def get_collection():
     )
 
 
-def get_summary_collection():
-    """
-    The zoomed-out sibling of the main collection: entry summaries, weekly
-    arcs, domain documents, and entity docs, each embedded whole. Chunks
-    answer "find me that moment"; these answer "what was going on".
-    Kept separate so whole-collection reads of journal_entries (entity
-    extraction, conversation reassembly) never see summary documents.
-    """
-    import chromadb
-
-    CHROMA_DIR.mkdir(parents=True, exist_ok=True)
-    client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    return client.get_or_create_collection(
-        name="journal_summaries",
-        metadata={"hnsw:space": "cosine"},
-    )
+# The zoomed-out sibling of the main collection: entry summaries, weekly
+# arcs, domain documents, and entity docs, each embedded whole. Chunks
+# answer "find me that moment"; these answer "what was going on".
+# Kept separate so whole-collection reads of journal_entries (entity
+# extraction, conversation reassembly) never see summary documents.
+# Embedded by the passage index's model, not chroma's: written by
+# summarizer.sync_summary_embeddings through passages.mirror(), searched
+# through passages.search_documents().
+SUMMARY_COLLECTION = "journal_summaries"
 
 
 # ---------------------------------------------------------------------------

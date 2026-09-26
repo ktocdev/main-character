@@ -28,6 +28,7 @@ import pytest
 from starlette.testclient import TestClient
 
 import entry_catalog
+import passages
 import sessions
 
 BASE = "http://127.0.0.1:8144"
@@ -62,6 +63,8 @@ def col(tmp_path, monkeypatch):
     monkeypatch.setattr(sessions, "ARCHIVE_DIR", tmp_path / "sessions" / "archive")
     monkeypatch.setattr(sessions, "JOURNAL_DIR", tmp_path / "journal_entries")
     monkeypatch.setattr(entry_catalog, "_CACHE", dict.fromkeys(entry_catalog._CACHE))
+    # The search passages are test_passages.py's; the fake has no documents.
+    monkeypatch.setattr(passages, "index_chunks", lambda *a, **k: 0)
     sessions.save_current(sessions._fresh())
     return FakeCollection()
 

@@ -51,7 +51,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from config import AUTHOR, CHROMA_DIR, DREAM_DIR, JOURNAL_DIR, MC_PROCESSING_MODEL as MODEL, get_client, processing_thinking_kwargs
+from config import AUTHOR, DREAM_DIR, JOURNAL_DIR, MC_PROCESSING_MODEL as MODEL, get_client, processing_thinking_kwargs
 from entities import get_conversations, conversation_cache_key, known_people_hint
 
 RAW_DIR = DREAM_DIR / "raw"
@@ -172,17 +172,7 @@ def run_extraction(force: bool = False, quiet: bool = False) -> int:
 # FLAGGED DREAM ENTRIES (write mode, "this was a dream")
 # ---------------------------------------------------------------------------
 
-def get_dream_collection():
-    """Dreams live in their own collection so waking queries can never
-    surface one by accident. Crossing realms is always explicit."""
-    import chromadb
-
-    CHROMA_DIR.mkdir(parents=True, exist_ok=True)
-    client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    return client.get_or_create_collection(
-        name="journal_dreams",
-        metadata={"hnsw:space": "cosine"},
-    )
+DREAM_COLLECTION = "journal_dreams"
 
 
 def store_dream_entry(text: str, when=None) -> tuple[str, Path]:
@@ -195,21 +185,37 @@ def store_dream_entry(text: str, when=None) -> tuple[str, Path]:
     time_of_day = now.strftime("%H:%M")
     entry_id = f"dreamentry_{date}_{hashlib.md5(text[:200].encode()).hexdigest()[:8]}"
 
-    get_dream_collection().upsert(
-        ids=[entry_id],
-        documents=[text],
-        metadatas=[{
-            "date": date, "time": time_of_day, "realm": "dream",
-            "title": f"Dream {date} {time_of_day}", "source": "write_mode",
-        }],
-    )
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
     filepath = JOURNAL_DIR / f"{date}_{now.strftime('%H%M')}_dream.md"
     filepath.write_text(
         f"# Dream — {date} {time_of_day}\n_Date: {date}_\n_Realm: dream_\n\n{text}",
         encoding="utf-8",
     )
+    put_entry(entry_id, text, {
+        "date": date, "time": time_of_day, "realm": "dream",
+        "title": f"Dream {date} {time_of_day}", "source": "write_mode",
+    })
     return entry_id, filepath
+
+
+def put_entry(entry_id: str, text: str, meta: dict) -> None:
+    """One flagged dream entry into the collection, its markdown already
+    written. A collection embedded by the search model (passages.py) takes
+    it as it is; otherwise -- none yet, or one from before that model --
+    sync_collection() rebuilds the whole collection, and reads this entry
+    back from its markdown."""
+    import passages
+    col = passages.model_collection(DREAM_COLLECTION)
+    if col is None:
+        sync_collection(known={entry_id: meta})
+        return
+    old = col.get(where={"source_id": entry_id}, include=[])["ids"]
+    if old:
+        col.delete(ids=old)
+    rows = passages.split_documents([(entry_id, text, meta)], passages.limit())
+    col.upsert(ids=[r[0] for r in rows], documents=[r[1] for r in rows],
+               metadatas=[r[2] for r in rows],
+               embeddings=passages.embed([r[1] for r in rows]))
 
 
 def ingest_dream_entry(text: str, entry_id: str, when=None):
@@ -239,9 +245,8 @@ def ingest_dream_entry(text: str, entry_id: str, when=None):
 # INDEX + REALM COLLECTION SYNC
 # ---------------------------------------------------------------------------
 
-def build_index() -> dict:
-    """Flatten the raw caches into dreams/index.json and mirror each dream
-    into the journal_dreams collection (local embeddings, free)."""
+def collect() -> list[dict]:
+    """Every extracted dream, from the raw caches, newest first."""
     dreams = []
     for path in sorted(RAW_DIR.glob("*.json")) if RAW_DIR.exists() else []:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -252,7 +257,12 @@ def build_index() -> dict:
                 **d,
             })
     dreams.sort(key=lambda d: d["date"], reverse=True)
+    return dreams
 
+
+def write_index() -> dict:
+    """Flatten the raw caches into dreams/index.json."""
+    dreams = collect()
     by_entity = defaultdict(list)
     for d in dreams:
         for name in d["people"] + d["places"]:
@@ -267,30 +277,79 @@ def build_index() -> dict:
     INDEX_FILE.write_text(
         json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+    return index
 
-    collection = get_dream_collection()
-    ids, docs, metas = [], [], []
+
+def build_index() -> dict:
+    """Flatten the raw caches into dreams/index.json and mirror every dream
+    into the journal_dreams collection (local embeddings, free)."""
+    index = write_index()
+    sync_collection(index["dreams"])
+    return index
+
+
+def _entry_documents(was: dict) -> list[tuple[str, str, dict]]:
+    """The flagged dream entries, from their markdown. `time` and `source`
+    are kept from what the collection had, since no file records them."""
+    import export
+    rows = []
+    for entry in export.read_entries():
+        if entry["realm"] != "dream":
+            continue
+        text = entry["text"]
+        # the id store_dream_entry would have written
+        digest = hashlib.md5(text[:200].encode()).hexdigest()[:8]
+        eid = f"dreamentry_{entry['date']}_{digest}"
+        known = was.get(eid, {})
+        rows.append((eid, text, {
+            "date": entry["date"],
+            "time": known.get("time", ""),
+            "realm": "dream",
+            "title": entry["title"],
+            "source": known.get("source", "write_mode"),
+        }))
+    return rows
+
+
+def _dream_documents(dreams: list[dict]) -> list[tuple[str, str, dict]]:
+    rows = []
     for d in dreams:
-        ids.append(f"dream:{d['id']}")
         cast = ", ".join(d["people"] + d["places"])
         doc = f"[{d['date']}] dream ({'/'.join(d['tones'])}): {d['narrative']}"
         if cast:
             doc += f"\nCast: {cast}"
         if d["interpretation"]:
             doc += f"\n{AUTHOR}'s read: {d['interpretation']}"
-        docs.append(doc)
-        metas.append({
+        rows.append((f"dream:{d['id']}", doc, {
             "date": d["date"], "realm": "dream",
             "tones": "/".join(d["tones"]),
             "cast": cast[:250], "source": d["source"][:100],
-        })
-    existing = collection.get()["ids"]
-    stale = [i for i in existing if i.startswith("dream:") and i not in set(ids)]
-    if stale:
-        collection.delete(ids=stale)
-    if ids:
-        collection.upsert(ids=ids, documents=docs, metadatas=metas)
-    return index
+        }))
+    return rows
+
+
+def sync_collection(dreams: list[dict] | None = None, known: dict | None = None,
+                    dry_run: bool = False) -> dict:
+    """Make the journal_dreams collection hold every flagged dream entry
+    (from markdown) and every extracted dream, embedded by the search model
+    (passages.py). Each is split with the passage splitter at the model's
+    full window, so a long dream is read to its end; most stay whole. Only
+    what is new or changed is embedded, and a collection from before that
+    model is replaced. `known` adds entry metadata the collection doesn't
+    have yet (put_entry)."""
+    import passages
+    dreams = collect() if dreams is None else dreams
+    _, col, _ = passages._open(DREAM_COLLECTION)
+    was = {}
+    if col is not None:
+        got = col.get(include=["metadatas"])
+        for rid, meta in zip(got["ids"], got["metadatas"]):
+            was.setdefault(meta.get("source_id", rid), meta)
+    was.update(known or {})
+    rows = _entry_documents(was) + _dream_documents(dreams)
+    stats = passages.mirror(
+        DREAM_COLLECTION, passages.split_documents(rows, passages.limit()), dry_run)
+    return {**stats, "documents": len(rows), "extracted": len(dreams)}
 
 
 def load_index() -> dict:

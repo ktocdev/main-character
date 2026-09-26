@@ -33,7 +33,7 @@ from config import (
     N_RECENT, N_SEMANTIC, SUMMARY_DIR, companion_effort_kwargs, get_client,
 )
 from rag_journal import (
-    JOURNAL_DIR, extract_metadata, get_collection, get_summary_collection,
+    JOURNAL_DIR, SUMMARY_COLLECTION, extract_metadata, get_collection,
     query_journal,
 )
 
@@ -181,10 +181,12 @@ def load_latest_arc() -> str:
 
 
 def get_recent_chunks(collection, n: int = N_RECENT) -> list[tuple[str, dict]]:
-    """Return the n most recent chunks (document, metadata), oldest first."""
+    """Return the n most recent chunks (document, metadata), oldest first.
+    Each metadata carries the chunk's id as `_id`."""
     data = collection.get(include=["documents", "metadatas"])
     pairs = sorted(
-        zip(data["documents"], data["metadatas"]),
+        ((doc, {**meta, "_id": cid}) for cid, doc, meta
+         in zip(data["ids"], data["documents"], data["metadatas"])),
         key=lambda p: p[1].get("date", ""),
     )
     return pairs[-n:]
@@ -193,19 +195,17 @@ def get_recent_chunks(collection, n: int = N_RECENT) -> list[tuple[str, dict]]:
 def get_summary_hits(question: str, skip_entities: set[str]) -> list[tuple[str, str]]:
     """Zoomed-out retrieval: query the summary collection (entry summaries,
     week arcs, domain docs, entity docs) for documents matching the
-    question. Entity docs already loaded by name-match are skipped."""
+    question. Entity docs already loaded by name-match are skipped.
+    A long question -- a whole entry -- is searched piece by piece, the
+    same way as the passages (passages.ranked)."""
+    import passages
     try:
-        col = get_summary_collection()
-        if col.count() == 0:
-            return []
-        result = col.query(
-            query_texts=[question],
-            n_results=min(N_SUMMARY_HITS + len(skip_entities), col.count()),
-        )
+        found = passages.search_documents(
+            SUMMARY_COLLECTION, question, N_SUMMARY_HITS + len(skip_entities))
     except Exception:
         return []  # summaries are a bonus layer — never break the turn
     hits = []
-    for doc, meta in zip(result["documents"][0], result["metadatas"][0]):
+    for doc, meta, _ in found:
         if meta.get("level") == "entity doc" and meta.get("name") in skip_entities:
             continue
         hits.append((meta.get("level", "summary"), doc[:SUMMARY_HIT_CHARS]))
@@ -215,17 +215,32 @@ def get_summary_hits(question: str, skip_entities: set[str]) -> list[tuple[str, 
 def get_dream_hits(question: str) -> list[str]:
     """Explicit realm crossing: dream memories related to the question.
     Only called when the question mentions dreams (or the turn is itself
-    a dream entry) — waking queries never see these."""
+    a dream entry) — waking queries never see these.
+
+    A long dream is stored in passages (dreams.sync_collection), so one
+    dream can match more than once: each is shown once, from its best
+    passage, and a passage past the dream's opening says whose date it is.
+    Passages are shown whole, as the model's window already bounds them;
+    whole dreams from before the passages are trimmed."""
+    import passages
     try:
-        from dreams import get_dream_collection
-        col = get_dream_collection()
-        if col.count() == 0:
-            return []
-        result = col.query(query_texts=[question],
-                           n_results=min(N_DREAM_HITS, col.count()))
+        from dreams import DREAM_COLLECTION
+        found = passages.search_documents(DREAM_COLLECTION, question, N_DREAM_HITS * 2)
     except Exception:
         return []
-    return [doc[:DREAM_HIT_CHARS] for doc in result["documents"][0]]
+    hits, seen = [], set()
+    for doc, meta, _ in found:
+        source = meta.get("source_id")
+        if source is None:
+            hits.append(doc[:DREAM_HIT_CHARS])
+            continue
+        if source in seen:
+            continue
+        seen.add(source)
+        if meta.get("position", 0) > 0:
+            doc = f"[{meta.get('date', '?')}] dream, continued: …{doc}"
+        hits.append(doc)
+    return hits[:N_DREAM_HITS]
 
 
 def build_context_block(question: str, collection, entity_index: dict,
@@ -235,6 +250,9 @@ def build_context_block(question: str, collection, entity_index: dict,
 
     recent = get_recent_chunks(collection)
     recent_texts = {doc for doc, _ in recent}
+    # Recent chunks by id, so a passage from the part of one already shown
+    # below isn't shown twice. Past that part, the passage is new.
+    recent_by_id = {meta["_id"]: doc for doc, meta in recent if "_id" in meta}
 
     lines = [f"<current_time>{now}</current_time>", ""]
 
@@ -260,12 +278,29 @@ def build_context_block(question: str, collection, entity_index: dict,
 
     lines.append("")
     lines.append("<related_history>")
-    for match in query_journal(question, n_results=N_SEMANTIC):
-        if match["text"] in recent_texts:
-            continue
+    matches = query_journal(question, n_results=N_SEMANTIC)
+    if matches and "source_id" not in matches[0]["metadata"]:
+        # The fallback's whole chunks, before the passage index is built:
+        # the old count, since twelve of them would double the block.
+        matches = matches[:N_SEMANTIC // 2]
+    for match in matches:
         meta = match["metadata"]
+        if "source_id" in meta:
+            # A passage, shown whole: it is already sized to be read.
+            text = match["text"]
+            doc = recent_by_id.get(meta["source_id"])
+            if doc is not None:
+                shown = min(len(doc), EXCERPT_CHARS)
+                if meta["end"] <= shown:
+                    continue
+                if meta["start"] < shown:
+                    text = doc[shown:meta["end"]].strip()
+        else:
+            if match["text"] in recent_texts:
+                continue
+            text = match["text"][:EXCERPT_CHARS]
         lines.append(f"[{meta.get('date', '?')}] {meta.get('title', 'Untitled')}")
-        lines.append(match["text"][:EXCERPT_CHARS])
+        lines.append(text)
         lines.append("")
     lines.append("</related_history>")
 
@@ -436,21 +471,20 @@ def store_entry(collection, text: str) -> str:
     content_hash = hashlib.md5(text[:200].encode()).hexdigest()[:8]
     entry_id = f"{date}_{content_hash}_c0"
 
-    collection.upsert(
-        ids=[entry_id],
-        documents=[text],
-        metadatas=[{
-            "date": date,
-            "time": time_of_day,
-            "title": f"Journal entry {date} {time_of_day}",
-            "people": ", ".join(meta.get("people", [])),
-            "topics": ", ".join(meta.get("topics", [])),
-            "mood": meta.get("mood", "unknown"),
-            "key_events": " | ".join(meta.get("key_events", [])),
-            "is_summary": "False",
-            "source": "write_mode",
-        }],
-    )
+    chunk_meta = {
+        "date": date,
+        "time": time_of_day,
+        "title": f"Journal entry {date} {time_of_day}",
+        "people": ", ".join(meta.get("people", [])),
+        "topics": ", ".join(meta.get("topics", [])),
+        "mood": meta.get("mood", "unknown"),
+        "key_events": " | ".join(meta.get("key_events", [])),
+        "is_summary": "False",
+        "source": "write_mode",
+    }
+    collection.upsert(ids=[entry_id], documents=[text], metadatas=[chunk_meta])
+    import passages
+    passages.index_chunks([entry_id], [text], [chunk_meta], journal=collection)
 
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
     filepath = JOURNAL_DIR / f"{date}_{now.strftime('%H%M')}_entry.md"
