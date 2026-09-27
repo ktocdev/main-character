@@ -7,6 +7,9 @@
      header never scrolls; content panes scroll. */
 
   * { box-sizing: border-box; margin: 0; }
+  /* `hidden` always wins: several components set display on their own
+     class, and a hidden control that still shows is the worse failure. */
+  [hidden] { display: none !important; }
 
   /* scrollbars: thin, low-contrast, matching the lamp palette */
   * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }

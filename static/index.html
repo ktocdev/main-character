@@ -506,82 +506,100 @@
   </section>
 
   <section class="tab" id="tab-entities">
-    <div id="entities-pane">
-      <div id="entity-list">
-        <div id="curation-tools">
-          <button class="quiet" id="undo-btn" title="undo last entity change">↺ undo</button>
-          <button class="quiet" id="redo-btn" title="redo">↻ redo</button>
-        </div>
-        <input type="text" id="search" placeholder="filter…">
-        <div id="type-chips">
-          <button class="quiet chip-toggle" data-type="person" title="show only people">people</button>
-          <button class="quiet chip-toggle" data-type="project" title="show only projects">projects</button>
-          <button class="quiet chip-toggle" data-type="place" title="show only places">places</button>
-        </div>
-        <div id="filter-chips">
-          <button class="quiet chip-toggle" id="flt-unreviewed">unreviewed</button>
-          <button class="quiet chip-toggle" id="flt-single">1 mention</button>
-          <button class="quiet chip-toggle" id="sort-az" title="sort each group A–Z instead of by most mentions">A–Z</button>
-          <button class="quiet chip-toggle" id="flt-select" title="check entities to add several to a group at once">select</button>
-        </div>
-        <div id="batch-bar">
-          <span id="batch-count">0 selected</span>
-          <input type="text" id="batch-group" list="group-names" placeholder="group name…">
-          <button class="quiet" id="batch-add" title="add all checked entities to this group (new group if the name doesn't exist)">add to group</button>
-          <button class="quiet" id="batch-clear" title="uncheck everything">clear</button>
-        </div>
-        <div id="suggest-btns">
-          <button class="quiet" id="find-dups">find duplicates (free)</button>
-          <select class="quiet" id="suggest-kind" title="ask claude to suggest merges for a type (uses the API)">
-            <option value="">ask claude…</option>
-            <option value="person">people</option>
-            <option value="project">projects</option>
-            <option value="place">places</option>
-          </select>
-        </div>
-        <div id="group-browser">
-          <div id="group-header">groups
-            <button class="quiet" id="group-new-btn" title="create a group">+ new</button>
+    <div id="entities-pane" class="split">
+      <aside id="entity-list">
+        <div class="side-tools">
+          <div class="row" id="curation-tools">
+            <button class="quiet sm" id="undo-btn" title="undo last entity change">↺ undo</button>
+            <button class="quiet sm" id="redo-btn" title="redo">↻ redo</button>
           </div>
-          <div id="group-newform">
-            <input type="text" id="group-new-name" placeholder="group name…">
-            <button class="quiet" id="group-new-save">create</button>
+          <input type="text" id="search" class="input-sm" placeholder="filter…" autocomplete="off">
+          <div id="type-chips" class="chip-row">
+            <button class="chip-toggle" data-type="person" aria-pressed="false" title="show only people">people</button>
+            <button class="chip-toggle" data-type="project" aria-pressed="false" title="show only projects">projects</button>
+            <button class="chip-toggle" data-type="place" aria-pressed="false" title="show only places">places</button>
           </div>
-          <div id="group-list"></div>
+          <div id="filter-chips" class="chip-row">
+            <button class="chip-toggle" id="flt-unreviewed" aria-pressed="false" title="only entities you haven't confirmed yet">unreviewed</button>
+            <button class="chip-toggle" id="flt-single" aria-pressed="false" title="entities that appear in only one entry, which is usually noise">1 mention</button>
+            <button class="chip-toggle" id="sort-az" aria-pressed="false" title="sort each group A–Z instead of by most mentions">A–Z</button>
+            <button class="chip-toggle" id="flt-select" aria-pressed="false" title="check entities to add several to a group at once">select</button>
+          </div>
+          <div id="batch-bar" hidden>
+            <span id="batch-count">0 selected</span>
+            <input type="text" id="batch-group" class="input-2xs" list="group-names" placeholder="group name…">
+            <button class="quiet sm" id="batch-add" title="add all checked entities to this group (new group if the name doesn't exist)">add to group</button>
+            <button class="quiet sm" id="batch-clear" title="uncheck everything">clear</button>
+          </div>
+          <div id="suggest-btns">
+            <button class="quiet sm" id="find-dups">find duplicates (free)</button>
+            <select class="quiet-select sm" id="suggest-kind" title="ask claude to suggest merges for a type (uses the API)">
+              <option value="">ask claude…</option>
+              <option value="person">people</option>
+              <option value="project">projects</option>
+              <option value="place">places</option>
+            </select>
+          </div>
+          <div id="group-browser">
+            <div id="group-header"><span class="eyebrow">groups</span>
+              <button class="quiet xs" id="group-new-btn" title="create a group">+ new</button>
+            </div>
+            <div id="group-newform">
+              <input type="text" id="group-new-name" class="input-2xs" placeholder="group name…">
+              <button class="quiet sm" id="group-new-save">create</button>
+            </div>
+            <div id="group-list"></div>
+          </div>
         </div>
-        <div id="entity-groups"></div>
-      </div>
-      <div id="entity-detail">
-        <div id="suggest-panel"></div>
-        <h2 id="entity-name">select an entity</h2>
-        <div id="entity-meta"></div>
-        <div class="ent-actions" id="entity-actions">
-          <input type="text" id="merge-target" list="entity-names" placeholder="target name…">
-          <button class="quiet" id="merge-btn" title="combine, keeping this name as an alias">merge into</button>
-          <button class="quiet" id="correct-btn" title="fix a typo without keeping this name as an alias">correct to</button>
-          <button class="quiet" id="rename-btn" title="change spelling/case of this entity's name">rename</button>
-          <select id="retype-kind">
-            <option value="">retype…</option>
-            <option value="person">person</option>
-            <option value="project">project</option>
-            <option value="place">place</option>
-          </select>
-          <button class="quiet" id="delete-btn">delete</button>
+        <div id="entity-groups" class="side-list"></div>
+      </aside>
+      <section id="entity-detail" class="detail">
+        <div class="detail-col" id="suggest-wrap" hidden>
+          <button class="text back-link" id="suggest-back">‹ all entities</button>
+          <div id="suggest-panel"></div>
         </div>
-        <div class="ent-actions" id="alias-row">
-          <span class="alias-label">aliases:</span>
-          <span id="alias-chips"></span>
-          <input type="text" id="alias-new" placeholder="add alias…">
-          <button class="quiet" id="alias-add-btn">add</button>
+        <div class="detail-col" id="entity-detail-col" hidden>
+          <button class="text back-link" id="entity-back">‹ all entities</button>
+          <div class="title-row">
+            <h2 class="title" id="entity-name"></h2>
+            <button class="quiet sm" id="entity-edit-toggle" aria-expanded="false" style="margin-left:auto" hidden>edit ▾</button>
+          </div>
+          <div class="title-meta" id="entity-meta"></div>
+          <div id="entity-chips" class="chip-row"></div>
+          <div id="entity-notice" class="notice-line"></div>
+          <div id="entity-edit" class="edit-box" hidden>
+            <div class="ent-actions" id="entity-actions">
+              <input type="text" id="merge-target" class="input-xs" list="entity-names" placeholder="target name…">
+              <button class="quiet" id="merge-btn" title="combine, keeping this name as an alias">merge into</button>
+              <button class="quiet" id="correct-btn" title="fix a typo without keeping this name as an alias">correct to</button>
+              <button class="quiet" id="rename-btn" title="change spelling/case of this entity's name">rename</button>
+              <select id="retype-kind" class="quiet-select" title="change the kind of this entity">
+                <option value="">retype…</option>
+                <option value="person">person</option>
+                <option value="project">project</option>
+                <option value="place">place</option>
+              </select>
+              <button class="quiet danger" id="delete-btn" title="remove this entity. Undo brings it back">delete</button>
+            </div>
+            <div class="ent-actions" id="alias-row">
+              <span class="lbl">aliases:</span>
+              <span id="alias-chips" class="tag-editor"></span>
+              <input type="text" id="alias-new" class="input-xs" placeholder="add alias…">
+              <button class="quiet" id="alias-add-btn">add</button>
+            </div>
+            <div class="ent-actions" id="group-row">
+              <span class="lbl">groups:</span>
+              <span id="group-chips" class="tag-editor"></span>
+              <input type="text" id="group-add-input" class="input-xs" list="group-names" placeholder="add to group…">
+              <button class="quiet" id="group-add-btn">add</button>
+            </div>
+          </div>
+          <div id="entity-doc"></div>
         </div>
-        <div class="ent-actions" id="group-row">
-          <span class="alias-label">groups:</span>
-          <span id="group-chips"></span>
-          <input type="text" id="group-add-input" list="group-names" placeholder="add to group…">
-          <button class="quiet" id="group-add-btn">add</button>
+        <div class="none" id="entity-none">
+          <p>Pick a person, place or project on the left. Everything the companion has noted about them, gathered in one place.</p>
         </div>
-        <div id="entity-doc"></div>
-      </div>
+      </section>
     </div>
   </section>
 </main>

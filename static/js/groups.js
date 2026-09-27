@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, esc } from './core.js';
 import { state, filters } from './state.js';
-import { loadEntities, renderEntityList, showEntity, reloadEntity } from './entities.js';
+import { loadEntities, renderEntityList, showEntity, reloadEntity, showGroupPane } from './entities.js';
 
 // ---- entity groups (viewing & associating; nestable via parent) ----
 let groupsData = [];
@@ -165,11 +165,10 @@ export function showGroup(name) {
   renderGroupBrowser();   // move the row highlight to this group
   renderEntityList();     // drop any entity-row highlight
 
-  // this pane is shared with the entity view — hide its entity-only controls
-  $('suggest-panel').style.display = 'none';
-  $('entity-actions').style.display = 'none';
-  $('alias-row').style.display = 'none';
-  $('group-row').style.display = 'none';
+  // this pane is shared with the entity view; entities.js hides the
+  // entity-only controls when it is told a group is showing
+  $('suggest-wrap').hidden = true;
+  showGroupPane();
 
   const byName = (a, b) => a.toLowerCase().localeCompare(b.toLowerCase());
   const kids = groupsData
@@ -206,7 +205,7 @@ export function showGroup(name) {
 
   const section = label => {
     const s = document.createElement('div');
-    s.className = 'gp-section';
+    s.className = 'gp-section rule eyebrow';
     s.textContent = label;
     page.appendChild(s);
   };
@@ -222,7 +221,7 @@ export function showGroup(name) {
     const gd = grid();
     for (const k of kids) {
       const b = document.createElement('button');
-      b.className = 'gp-sub';
+      b.className = 'chip gp-sub';
       b.innerHTML = `${esc(k.name)} <span class="n">${k.members.length}</span>`;
       b.title = 'open this subgroup';
       b.onclick = () => showGroup(k.name);
@@ -235,7 +234,7 @@ export function showGroup(name) {
     const gd = grid();
     for (const m of members) {
       const b = document.createElement('button');
-      b.className = 'gp-ent';
+      b.className = 'chip gp-ent';
       b.textContent = m;
       b.title = 'open entity';
       b.onclick = () => showEntity(m);
@@ -253,7 +252,7 @@ export function showGroup(name) {
     const gd = grid();
     for (const m of dormant) {
       const s = document.createElement('span');
-      s.className = 'gp-ent dim';
+      s.className = 'chip gp-ent dim';
       s.textContent = m;
       s.title = 'this name no longer matches an entity';
       gd.appendChild(s);
@@ -311,7 +310,7 @@ function groupEditor(g) {
   chips.className = 'chips';
   const mkChip = (m, dim) => {
     const c = document.createElement('span');
-    c.className = 'kw-chip member' + (dim ? ' dim' : '');
+    c.className = 'tag' + (dim ? ' dim' : '');
     const t = document.createElement('span');
     t.textContent = m;
     if (dim) t.title = 'no longer matches an entity';
@@ -322,6 +321,7 @@ function groupEditor(g) {
     }
     c.appendChild(t);
     const x = document.createElement('button');
+    x.className = 'x';
     x.textContent = '×';
     x.title = 'remove from group';
     x.onclick = async () => {
@@ -339,10 +339,11 @@ function groupEditor(g) {
   addRow.className = 'grp-ops';
   const inp = document.createElement('input');
   inp.type = 'text';
+  inp.className = 'input-2xs';
   inp.setAttribute('list', 'entity-names');
   inp.placeholder = 'add entity…';
   const addB = document.createElement('button');
-  addB.className = 'quiet';
+  addB.className = 'quiet sm';
   addB.textContent = 'add';
   const doAdd = async () => {
     const v = inp.value.trim();
@@ -374,7 +375,7 @@ function groupEditor(g) {
   ops.appendChild(roll);
 
   const ren = document.createElement('button');
-  ren.className = 'quiet';
+  ren.className = 'quiet sm';
   ren.textContent = 'rename';
   ren.onclick = async () => {
     const v = prompt('Rename group:', g.name);
@@ -388,6 +389,7 @@ function groupEditor(g) {
   ops.appendChild(ren);
 
   const sel = document.createElement('select');
+  sel.className = 'quiet-select sm';
   sel.title = 'nest this group under another';
   const own = groupSetDeep(g.name);
   const optRoot = document.createElement('option');
@@ -408,7 +410,7 @@ function groupEditor(g) {
   ops.appendChild(sel);
 
   const del = document.createElement('button');
-  del.className = 'quiet';
+  del.className = 'quiet sm danger';
   del.textContent = 'delete';
   del.onclick = async () => {
     if (!confirm(`Delete group "${g.name}"?\n(entities are not affected; nested groups move up a level)`)) return;

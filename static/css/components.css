@@ -200,12 +200,12 @@
     flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; text-align: center;
   }
   .detail .none p { max-width: 22rem; color: var(--text-dim); text-wrap: pretty; }
-  .back-link { display: none; margin: 0 0 .6rem; padding-left: 0; font-size: .85rem; min-height: 2.2rem; }
+  button.text.back-link { display: none; margin: 0 0 .6rem; padding-left: 0; font-size: .85rem; min-height: 2.2rem; }
   @media (max-width: 719.98px) {
     .split > aside { width: 100%; border-right: 0; }
     .split.drilled > aside { display: none; }
     .split:not(.drilled) > .detail { display: none; }
-    .back-link { display: inline-flex; }
+    button.text.back-link { display: inline-flex; }
   }
 
   /* ---- Inputs ---- */
