@@ -247,7 +247,9 @@ MAIN_SCRIPT = '<script type="module" src="js/main.js"></script>'
 
 def write_site(out: Path):
     """static/ with its URLs made relative, so it works from any subpath."""
-    shutil.copytree(STATIC, out, ignore=shutil.ignore_patterns("__pycache__"))
+    # design/ is the token reference page, which has its own <style> block
+    # and is for whoever works on the app, not for the published demo.
+    shutil.copytree(STATIC, out, ignore=shutil.ignore_patterns("__pycache__", "design"))
 
     index = out / "index.html"
     html = index.read_text(encoding="utf-8").replace('"/static/', '"')

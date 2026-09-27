@@ -112,11 +112,11 @@ function renderProposal(p) {
   const col = $('cat-detail-col');
   col.innerHTML = '<button class="text back-link">‹ all categories</button>'
     + '<div class="eyebrow">proposed category</div>'
-    + '<div class="title-row" style="margin-top:.3rem"><h2 class="title"></h2><span class="title-meta" style="margin:0"></span></div>'
+    + '<div class="title-row prop-title"><h2 class="title"></h2><span class="title-meta"></span></div>'
     + '<div class="prop-members"></div><p class="prop-reason"></p>'
     + '<div class="prop-actions"></div>'
     + '<div id="cat-notice" class="notice-line"></div>'
-    + '<p class="footnote" style="margin-top:1.2rem">confirm makes this a category of yours, seeded with the names above as keywords. not now keeps it in the list; dismiss forgets it unless new members appear.</p>';
+    + '<p class="footnote prop-foot">confirm makes this a category of yours, seeded with the names above as keywords. not now keeps it in the list; dismiss forgets it unless new members appear.</p>';
   col.querySelector('.back-link').onclick = undrill;
   col.querySelector('h2').textContent = p.name;
   col.querySelector('.title-meta').textContent = `${p.confidence} confidence · ${p.weeks} weeks`;

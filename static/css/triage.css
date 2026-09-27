@@ -32,7 +32,7 @@
   #triage-mode-label, #triage-kind-row .lbl { color: var(--accent); }
   #triage-input { flex: 1 1 12rem; min-width: 0; }
   #triage-input-row .btns, #triage-kind-row .btns { display: flex; gap: .4rem; flex-wrap: wrap; }
-  #triage-suggest { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
+  #triage-suggest { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
   #triage-suggest:empty { display: none; }
   #triage-suggest .chip { height: 1.7rem; font-size: .78rem; }
   #triage-suggest .chip:hover { color: var(--accent); border-color: var(--accent-dim); background: transparent; }

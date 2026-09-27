@@ -47,6 +47,9 @@
   .cat-entry .tag-editor { margin-top: .55rem; }
   .cat-none { margin: 1rem 0 0; color: var(--text-dim); font-style: italic; text-wrap: pretty; }
   /* a proposal's detail */
+  .prop-title { margin-top: .3rem; }
+  .prop-title .title-meta { margin: 0; }
+  .prop-foot { margin-top: 1.2rem; }
   .prop-members { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1rem; }
   .prop-members .chip { color: var(--text-dim); }
   .prop-reason { margin: 1.2rem 0 0; color: var(--text-dim); font-style: italic; text-wrap: pretty; }

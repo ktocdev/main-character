@@ -76,6 +76,7 @@
 
   /* ---- detail ---- */
   #entity-detail-col[hidden], #entity-none[hidden] { display: none; }
+  #entity-edit-toggle { margin-left: auto; }
   #entity-chips { margin-top: .6rem; gap: .3rem; }
   #entity-chips .tag { color: var(--text-dim); height: 1.7rem; padding: 0 .7rem; font-size: .8rem; }
   #entity-chips .tag .k { font-size: .7rem; opacity: .7; }
