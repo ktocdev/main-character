@@ -6,7 +6,7 @@
 
 You write an entry. Something you wrote three months ago is relevant, and the journal finds it. You never tagged it. The journal went and looked.
 
-Everything else in this project supports that one feature. Before the companion answers, it searches in three ways: your entries, by meaning rather than keyword; a separate index of summaries (entries, weeks, life areas, and the people and places in them), so a question can land on a whole stretch of time as well as a sentence; and anyone you name, by name, so their history comes with them. When it only has the summary, it can still tell you when you wrote something, so you can read it in full in History. [How it works](HOW-IT-WORKS.md) walks through what runs when you write, close a chat or ask a question.
+Everything else in this project supports that one feature. Before the companion answers, it searches in three ways: your entries, by meaning and by keyword; a separate index of summaries (entries, weeks, life areas, and the people and places in them), so a question can land on a whole stretch of time as well as a sentence; and anyone you name, by name, so their history comes with them. When it only has the summary, it can still tell you when you wrote something, so you can read it in full in History. [How it works](HOW-IT-WORKS.md) walks through what runs when you write, close a chat or ask a question.
 
 ![The history tab, showing a chat braid with its entry summary and the entries it continued](assets/mc-history.png)
 
@@ -108,7 +108,7 @@ If you want a journal several people can use, start from a different codebase.
 <summary><b>The full feature list</b></summary>
 
 ### Memory
-- **Semantic retrieval.** Context is assembled in layers: recent entries and the seed summary first, then passages matched by meaning from anywhere in an entry, matching summaries, entity docs, then the pattern library. A whole new entry is searched piece by piece, so its ending finds connections as well as its opening.
+- **Semantic retrieval.** Context is assembled in layers: recent entries and the seed summary first, then passages matched by meaning and by keyword from anywhere in an entry, matching summaries, entity docs, then the pattern library. A whole new entry is searched piece by piece, so its ending finds connections as well as its opening.
 - **Sessions.** One chat stays open for days. Entries, replies and follow-ups braid into it and survive restarts. Closing the session triggers summarization: your side becomes a journal entry, the braid is archived, and the memory pipeline runs in the background.
 - **Reflection.** The companion opens a conversation by connecting threads across your history instead of waiting to be asked.
 

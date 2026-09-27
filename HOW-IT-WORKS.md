@@ -48,6 +48,10 @@ calls an API. Two small models do it:
   given, which is why search by meaning moved off them. Search uses them only
   until the passage index is built.
 
+Keyword search needs no model: its index is built in memory from the passage
+index's text on the first search, in under a second, and again whenever the
+passage index changes.
+
 Each of those indexes records which model built it, and is never mixed with
 another model's. After a model change, or on an install from before the
 passage index, search uses the journal chunks until `python rebuild_index.py`
@@ -103,7 +107,7 @@ The call has three parts.
 | Dream weather | Always, if there are dreams | One line |
 | This week's arc | Always, the most recent weekly arc | 1 |
 | Recent entries | Always, the newest entries by date, each up to 2,000 characters | 3 |
-| Related history | Search by meaning over the passage index. A long query, such as a whole new entry, is searched piece by piece, and each piece gets its turn at the results, so the ending of an entry counts as much as its opening. Each passage is shown whole, with the passage on either side of it, and one already shown under recent entries is skipped | 12 passages |
+| Related history | Search by meaning and by keyword over the passage index, the two lists merged. Keyword search (BM25, `keywords.py`) finds names and rare words that search by meaning misses; it matches a word's other forms ("Robin's", "lanterns") and, for a longer word the journal never uses, near spellings of it. A long query, such as a whole new entry, is searched piece by piece, and each piece gets its turn at the results, so the ending of an entry counts as much as its opening. Each passage is shown whole, with the passage on either side of it, and one already shown under recent entries is skipped | 12 passages |
 | Related summaries | Search by meaning over the summary index: entry summaries, weekly arcs, domain docs, entity profiles. A long query is searched piece by piece here too. An entry summary brings that entry's best-matching passage (with its neighbours) under it, marked as your words, unless that part is already shown above | 3, plus one passage per entry summary |
 | People and places | Anyone the entry names, matched by name or alias | Up to 3 profiles |
 | Dreams | Only when the entry is a dream or mentions dreaming | 4 |
@@ -128,7 +132,9 @@ in full in History.
 
 The passage index is what narrows this gap. Before it, search by meaning read
 only the opening of each chunk, so a detail on page two of an entry could not
-be found at all. `LOOKUP-UPGRADE-HANDOFF.md` has the measurements and the
+be found at all. Keyword search narrows it further: a question about a film
+title or a medication by name finds the passage that names it,
+where search by meaning found a dozen passages about the same person. `LOOKUP-UPGRADE-HANDOFF.md` has the measurements and the
 rest of the plan.
 
 ## When you close a chapter
