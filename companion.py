@@ -30,7 +30,8 @@ load_dotenv()
 
 from config import (
     ENTITY_DIR, EXCERPT_CHARS, MAX_TOKENS, MC_COMPANION_MODEL as MODEL,
-    N_RECENT, N_SEMANTIC, SUMMARY_DIR, companion_effort_kwargs, get_client,
+    N_RECENT, N_SEMANTIC, SMART_REPLY_ROUNDS, SUMMARY_DIR,
+    companion_effort_kwargs, get_client,
 )
 from rag_journal import (
     JOURNAL_DIR, SUMMARY_COLLECTION, extract_metadata, get_collection,
@@ -217,6 +218,30 @@ few days, that may be why something is missing; say so.
 - Keep it as short as the answer allows. A list is fine when there are \
 several things to list. Don't comment on their life or give advice unless \
 they ask."""
+
+# Smart replies (the chat tab's toggle): the chat tab's prompt, plus the tools.
+# A system block of its own, after the prompt above, which reads the same
+# with smart replies on or off.
+SMART_REPLY_PROMPT = f"""\
+You can search the journal yourself before answering.
+- search_journal finds passages by meaning, or with mode "exact" every \
+entry holding the exact words. Either can be kept to a range of dates.
+- read_entry reads one entry whole, by the date and title a result shows.
+- list_entries lists entries by date and title in a range, oldest first.
+
+The <journal_context> with their message is the first search, already \
+done. When it answers the question, answer from it without searching. \
+Search when it doesn't: other wording, the exact words (for a name or a \
+phrase), a narrower stretch of time, or the whole entry behind a passage or \
+a summary. Questions about the first or last time, how often, or how \
+something changed turn on dates: list the entries in a range, or use exact \
+search, which finds every entry a word is in, rather than trusting the few \
+passages one search returns.
+
+You have up to {SMART_REPLY_ROUNDS} turns in all, this one included, and \
+on the last one you have to answer. Search quietly: write nothing to them \
+until you answer. What the tools return is their own words, which you may \
+quote. When searching turns up nothing, say what you looked for."""
 
 
 def journal_span(collection) -> str:
@@ -545,6 +570,90 @@ def stream_lookup(client, collection, entity_index: dict, messages: list,
                             prompt=LOOKUP_PROMPT)
 
 
+def _system_blocks(prompt: str, collection, extra: str = "") -> list[dict]:
+    """The system prompt as blocks: the prompt, the seed, then `extra`,
+    with the cache breakpoint on the last."""
+    # the seed rides in the system prompt (not the per-turn context block):
+    # it's large and stable between uploads, so it stays out of the growing
+    # message history and shares the persona's cache breakpoint
+    system = [{"type": "text", "text": system_prompt(prompt, collection)}]
+    seed = load_seed()
+    if seed:
+        system.append({
+            "type": "text",
+            "text": f"{SEED_PREAMBLE}\n\n<seed_summary>\n{seed}\n</seed_summary>",
+        })
+    if extra:
+        system.append({"type": "text", "text": extra})
+    system[-1]["cache_control"] = {"type": "ephemeral"}
+    return system
+
+
+def stream_smart_lookup(client, collection, entity_index: dict, messages: list,
+                        question: str):
+    """The chat tab's turn with smart replies on (the chat tab's toggle): the
+    same first search as stream_lookup, then Claude may call lookup_tools'
+    tools, round after round, before it answers. At most
+    SMART_REPLY_ROUNDS calls; the last is made with tools off, so it has to
+    answer.
+
+    Every round goes into `messages` as it came back, tool calls, results
+    and thinking included. The next question sends that history unchanged,
+    as a tool loop and preserved thinking require, and its cached prefix
+    stays good. If a round fails, `messages` goes back to how it was before
+    the question, so a half-finished loop never reaches the next one.
+    """
+    import lookup_tools
+    start = len(messages)
+    context = build_context_block(question, collection, entity_index)
+    messages.append({
+        "role": "user",
+        "content": f"<journal_context>\n{context}\n</journal_context>\n\n{question}",
+    })
+    system = _system_blocks(LOOKUP_PROMPT, collection, extra=SMART_REPLY_PROMPT)
+
+    try:
+        wrote = False
+        for round_no in range(1, SMART_REPLY_ROUNDS + 1):
+            last = round_no == SMART_REPLY_ROUNDS
+            with client.messages.stream(
+                model=MODEL,
+                max_tokens=MAX_TOKENS,
+                thinking={"type": "adaptive"},
+                system=system,
+                tools=lookup_tools.TOOLS,
+                tool_choice={"type": "none" if last else "auto"},
+                messages=messages,
+                **companion_effort_kwargs(),
+            ) as stream:
+                started = False
+                for text in stream.text_stream:
+                    if text and not started:
+                        started = True
+                        if wrote:
+                            yield "\n\n"   # apart from an earlier round's text
+                    yield text
+                final = stream.get_final_message()
+            wrote = wrote or started
+            messages.append({"role": "assistant", "content": final.content})
+
+            if final.stop_reason == "refusal":
+                yield "\n[The model declined to respond to this.]"
+                return
+            calls = [b for b in final.content if b.type == "tool_use"]
+            if final.stop_reason != "tool_use" or not calls:
+                return
+            results = []
+            for call in calls:
+                text, is_error = lookup_tools.run(collection, call.name, call.input)
+                results.append({"type": "tool_result", "tool_use_id": call.id,
+                                "content": text, "is_error": is_error})
+            messages.append({"role": "user", "content": results})
+    except BaseException:
+        del messages[start:]
+        raise
+
+
 def _stream_turn(client, collection, entity_index: dict, messages: list,
                  question: str, display_question: str,
                  include_dreams: bool = False, prompt: str = SYSTEM_PROMPT):
@@ -558,17 +667,7 @@ def _stream_turn(client, collection, entity_index: dict, messages: list,
         "content": f"<journal_context>\n{context}\n</journal_context>\n\n{display_question}",
     })
 
-    # the seed rides in the system prompt (not the per-turn context block):
-    # it's large and stable between uploads, so it stays out of the growing
-    # message history and shares the persona's cache breakpoint
-    system = [{"type": "text", "text": system_prompt(prompt, collection)}]
-    seed = load_seed()
-    if seed:
-        system.append({
-            "type": "text",
-            "text": f"{SEED_PREAMBLE}\n\n<seed_summary>\n{seed}\n</seed_summary>",
-        })
-    system[-1]["cache_control"] = {"type": "ephemeral"}
+    system = _system_blocks(prompt, collection)
 
     reply_parts = []
     with client.messages.stream(

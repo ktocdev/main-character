@@ -185,6 +185,18 @@ open chapter and never become journal memory, and the open chapter isn't searche
 until it is closed. It is the place to ask things like "when did I last
 mention…", then go to History to read the entry in full.
 
+**Smart replies**, a toggle by the chat screen's send button (off by default,
+sent with each question, remembered in the browser), makes the chat screen a
+tool-use loop: `companion.stream_smart_lookup`. The first search and context
+block are the same, but Claude also gets three tools
+(`lookup_tools.py`): `search_journal` (by meaning or by exact words, within
+dates if asked), `read_entry` (one entry whole) and `list_entries` (dates and
+titles in a range). It can search, read and search again before it answers,
+up to 5 calls per question, the last with tools off so it has to answer. The
+tools are local and free; the calls are not, so a question can cost several
+times what it does without. Every call goes through the same metering and
+caps. It never runs in the demo, whose canned client can't use tools.
+
 ## The search tab
 
 `GET /api/search` in `server.py`, `search_journal`. It is local and free, and

@@ -54,6 +54,8 @@ export async function refreshStatus() {
   // Only the in-browser backend of the published web demo sets this: there
   // is no server, so base.css hides what only a server could do.
   document.body.classList.toggle('web-demo', !!s.web_demo);
+  // Smart replies need a real client: canned replies can't use tools
+  $('lookup-smart').hidden = !!s.mock;
   $('app-banner').textContent = s.web_demo
     ? 'web demo... sample journal, canned replies.'
     : 'demo journal... sample journal, canned replies.';

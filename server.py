@@ -351,8 +351,13 @@ def chat(body: ChatIn):
                              media_type="text/plain; charset=utf-8")
 
 
+class LookupIn(ChatIn):
+    # smart replies, the chat tab's own toggle, per question
+    smart: bool = False
+
+
 @app.post("/api/lookup")
-def lookup(body: ChatIn):
+def lookup(body: LookupIn):
     """The chat screen: pull information out of the journal. Its own
     conversation, separate from the journal companion — lookups never
     join the open session and never become journal memory."""
@@ -367,8 +372,13 @@ def lookup(body: ChatIn):
     except caps.CapExceeded as exc:
         return _refused(exc)
 
+    # Smart replies need tool use, which the mock client can't do, so the
+    # demo keeps the one-search lookup even if a request asks for it
+    turn = (companion.stream_smart_lookup if body.smart and not config.MOCK_MODE
+            else companion.stream_lookup)
+
     def gen():
-        yield from companion.stream_lookup(
+        yield from turn(
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["lookup"], body.message,
         )

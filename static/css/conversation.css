@@ -132,6 +132,8 @@
     display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;
   }
   #seed-discard-draft[hidden] { display: none; }
+  #lookup-smart { flex-shrink: 0; white-space: nowrap; }
+  #lookup-smart[hidden] { display: none; }
 
   /* lamp-warm thinking pulse */
   @keyframes lamp-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
