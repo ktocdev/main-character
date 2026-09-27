@@ -373,12 +373,15 @@ export function init() {
   $('refresh-summaries').onclick = async () => {
     const b = $('refresh-summaries');
     b.disabled = true;
-    b.textContent = 'refreshing…';
+    b.innerHTML = 'refreshing <span class="dots">···</span>';
     try {
       const r = await api('/api/summaries/refresh', {});
-      if (r) b.textContent = `memory current (${r.arcs} weeks)`;
+      if (r) {
+        const n = $('session-notice');
+        if (n) n.textContent = `weekly arcs and domain documents regenerated (${r.arcs} weeks).`;
+      }
     } finally {
-      setTimeout(() => { b.textContent = 'refresh memory'; b.disabled = false; }, 4000);
+      b.textContent = 'refresh memory'; b.disabled = false;
     }
   };
 

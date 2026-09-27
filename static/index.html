@@ -243,24 +243,35 @@
   </section>
 
   <section class="tab" id="tab-history">
-    <div id="history-pane">
-      <div id="session-list">
+    <div id="history-pane" class="split">
+      <aside id="session-list">
         <div id="session-list-items"></div>
-      </div>
-      <div id="session-view">
-        <div id="session-view-inner">
-          <div class="session-head">
-            <h2 id="session-title"></h2>
-            <span class="dates" id="session-dates"></span>
-            <button class="quiet" id="session-close-btn"
+      </aside>
+      <section id="session-view" class="detail">
+        <div class="detail-col">
+          <button class="text back-link" id="session-back">‹ all chapters</button>
+          <div class="title-row">
+            <h2 class="title" id="session-title"></h2>
+            <span id="session-dates"></span>
+          </div>
+          <div class="session-actions">
+            <button class="filled" id="session-close-btn" hidden
               title="this is the summarize point. Your side of this chapter becomes a journal entry and the next chapter opens">close chapter &amp; start the next</button>
             <button class="quiet" id="refresh-summaries"
               title="regenerate the weekly arcs + domain docs by hand. Closing a chapter already does this automatically">refresh memory</button>
+            <button class="quiet" id="session-continue" hidden>continue in write ›</button>
           </div>
+          <div id="session-notice" class="notice-line"></div>
+          <div id="session-jumps"></div>
+          <div id="session-loading" hidden>reading <span class="dots">···</span></div>
           <div id="session-body"></div>
+          <div id="session-empty" class="notice-card" hidden>
+            <div class="eyebrow">nothing written yet</div>
+            <p>This chapter is open but empty. Anything you write in write lands here until you close it.</p>
+          </div>
         </div>
-      </div>
-      <div id="session-toc"></div>
+      </section>
+      <aside id="session-toc"></aside>
     </div>
   </section>
 
