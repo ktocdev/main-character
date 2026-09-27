@@ -331,34 +331,36 @@
   </section>
 
   <section class="tab" id="tab-settings">
-    <div id="settings">
-      <h2>Settings</h2>
-      <div class="set-group" id="appearance">
-        <h3>Appearance</h3>
-        <div class="set-row">
-          <label>Theme</label>
-          <div id="theme-toggle" role="group" aria-label="theme">
-            <button type="button" data-theme-choice="auto" title="follow this device's light/dark setting">Auto</button>
-            <button type="button" data-theme-choice="light">Light</button>
-            <button type="button" data-theme-choice="dark">Dark</button>
+    <div id="settings" class="pane jumpy">
+      <div class="jump-pills"><div class="pills" id="settings-jumps"></div></div>
+      <div id="settings-scroll">
+        <section class="set-group" data-set="appearance">
+          <div class="rule eyebrow">appearance</div>
+          <div class="set-row">
+            <span class="set-label" id="set-theme-label">Theme</span>
+            <div id="theme-toggle" class="segmented" role="group" aria-labelledby="set-theme-label">
+              <button type="button" data-theme-choice="auto" aria-pressed="false" title="follow this device's light/dark setting">Auto</button>
+              <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+              <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+            </div>
+            <p class="set-help">Saved in this browser and applied instantly. It is not part of your <code>.env</code> and is not shared with other devices. Auto follows the device.</p>
           </div>
-          <p class="set-help">Saved in this browser and applied instantly. It is not part of your <code>.env</code> and is not shared with other devices. Auto follows the device.</p>
-        </div>
+        </section>
+        <p id="settings-intro">Everything below lives in your <code>.env</code> file.
+          Saving rewrites that file and leaves the rest of it alone. The
+          journal reads its configuration once at startup, so saving restarts it
+          for you, and the page reloads by itself once it is back.</p>
+        <div id="settings-body"></div>
       </div>
-      <p id="settings-intro">These are the values in your <code>.env</code> file.
-        Saving rewrites that file and leaves everything else in it alone. The
-        journal reads its configuration once at startup, so saving restarts it
-        for you, and the page reloads by itself once it is back.</p>
-      <div id="settings-body"></div>
       <div id="settings-actions">
-        <button class="send" id="settings-save" disabled>save</button>
+        <button class="quiet" id="settings-save" disabled>save</button>
         <span class="set-with-info">
           <button class="quiet" id="settings-restart">restart the journal</button>
-        <button class="quiet" id="settings-seed">load demo journal</button>
           <button class="set-info" type="button" id="settings-restart-info"
                   popovertarget="settings-restart-help"
                   aria-label="when to restart the journal">?</button>
         </span>
+        <button class="quiet" id="settings-seed">load demo journal</button>
         <span id="settings-note" class="set-note"></span>
       </div>
       <div id="settings-restart-help" class="set-popover" popover>
