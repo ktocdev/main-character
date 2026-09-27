@@ -272,11 +272,11 @@ function renderCatEntries() {
 
 // also search.js's: a hit expands into its full entry the same way
 export async function toggleEntryText(row, c) {
-  const existing = row.querySelector('.cat-full');
+  const existing = row.querySelector('.entry-full');
   if (existing) { existing.remove(); return; }
   const d = document.createElement('div');
-  d.className = 'cat-full';
-  d.textContent = 'loading…';
+  d.className = 'entry-full';
+  d.innerHTML = '<span>reading</span> <span class="dots">···</span>';
   row.appendChild(d);
   const r = await (await fetch(
     `/api/entry?date=${encodeURIComponent(c.date)}&title=${encodeURIComponent(c.title)}`
@@ -285,7 +285,7 @@ export async function toggleEntryText(row, c) {
   d.textContent = '';
   if (r.summary) {
     const s = document.createElement('div');
-    s.className = 'cat-summary';
+    s.className = 'summary';
     s.textContent = r.summary;
     d.appendChild(s);
   }

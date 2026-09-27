@@ -147,17 +147,15 @@
   </section>
 
   <section class="tab" id="tab-search">
-    <p class="tab-intro"><b>Search</b> lists every entry that matches, across your whole journal, for
-      you to read. It runs on this computer, so it is free and instant and never calls Claude.
-      <b>meaning</b> finds passages about what you type, in any words; <b>exact text</b> finds those
-      exact words. To ask a question and get an answer, use chat.</p>
-    <div id="search-pane">
-      <div id="search-bar">
-        <input type="text" id="search-q" placeholder="search your whole journal…">
-        <button class="quiet chip-toggle" id="search-mode"
-          title="meaning: passages ranked by similarity to what you describe · exact text: literal matches, newest first">meaning</button>
-        <button class="send" id="search-go">search</button>
-      </div>
+    <div id="search-pane" class="pane">
+      <form id="search-bar" role="search">
+        <input type="text" id="search-q" placeholder="search your whole journal…" autocomplete="off">
+        <div class="controls">
+          <button type="button" class="chip-toggle" id="search-mode" aria-pressed="false"
+            title="meaning: passages ranked by similarity to what you describe · exact text: literal matches, newest first">meaning</button>
+          <button type="submit" class="send pill" id="search-go">search <span class="ret">↵</span></button>
+        </div>
+      </form>
       <div id="search-status"></div>
       <div id="search-results"></div>
     </div>
