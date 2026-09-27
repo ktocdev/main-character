@@ -21,6 +21,10 @@ Two sets, both in the questions file:
                  searches. Its link to the older entry (`link`, a quote from
                  the query) sits after its own first 1,000 characters.
 
+It also reports whether the fact is anywhere in the whole context block
+("in block"), which counts what related history misses but another layer
+brings, such as the entry passages shown under an entry summary (step 2).
+
 It also times each query: the search alone, and the whole context block
 (passages, summaries, entity docs and the rest) that build_context_block
 assembles before a reply. No Claude calls, nothing written.
@@ -109,11 +113,13 @@ def run_one(t: dict, collection, entity_index: dict) -> dict:
             break
 
     started = time.perf_counter()
-    companion.build_context_block(query, collection, entity_index)
+    block = companion.build_context_block(query, collection, entity_index)
     context_ms = (time.perf_counter() - started) * 1000
 
     return {"id": t["id"], "rank": rank, "search_ms": round(search_ms, 1),
             "context_ms": round(context_ms, 1),
+            "in_block": fact in _norm(block),
+            "block_chars": len(block),
             # How much the companion reads for this search, so a setting that
             # finds more by showing more can be told apart from one that finds
             # more by ranking better.
@@ -130,14 +136,17 @@ def _ms(values: list[float]) -> str:
 def report(name: str, results: list[dict], before: dict) -> dict:
     n = len(results)
     print(f"\n{name} ({n})")
-    print(f"  {'id':<5} {'rank':>5} {'was':>5}  {'search':>8} {'context':>8}")
+    print(f"  {'id':<5} {'rank':>5} {'was':>5} {'block':>6} {'was':>4}  "
+          f"{'search':>8} {'context':>8}")
+    mark = lambda v: "-" if v is None else ("yes" if v else "no")
     for r in results:
         rank = r["rank"] or "-"
-        was = ""
+        was, was_block = "", ""
         if r["id"] in before:
             was = before[r["id"]]["rank"] or "-"
-        print(f"  {r['id']:<5} {rank!s:>5} {was!s:>5}  "
-              f"{r['search_ms']:7.0f}ms {r['context_ms']:7.0f}ms")
+            was_block = mark(before[r["id"]].get("in_block"))
+        print(f"  {r['id']:<5} {rank!s:>5} {was!s:>5} {mark(r['in_block']):>6} "
+              f"{was_block:>4}  {r['search_ms']:7.0f}ms {r['context_ms']:7.0f}ms")
     summary = {}
     for k in KS:
         hits = sum(1 for r in results if r["rank"] and r["rank"] <= k)
@@ -149,6 +158,15 @@ def report(name: str, results: list[dict], before: dict) -> dict:
                       and before[r["id"]]["rank"] <= k)
             line += f"   (was {was}/{n})"
         print(line)
+    in_block = sum(1 for r in results if r["in_block"])
+    summary["in_block"] = in_block
+    line = f"  in the context block: {in_block:>2}/{n}"
+    if before and any("in_block" in b for b in before.values()):
+        was = sum(1 for r in results if before.get(r["id"], {}).get("in_block"))
+        line += f"   (was {was}/{n})"
+    print(line)
+    print(f"  context block size: median "
+          f"{statistics.median(r['block_chars'] for r in results):,.0f} chars")
     for k in KS:
         chars = statistics.median(r["chars"][k] for r in results)
         print(f"  text shown, top {k:<2}: median {chars:,.0f} chars")

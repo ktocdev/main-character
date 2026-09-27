@@ -42,6 +42,7 @@ ENTITY_DOC_CHARS = 4000
 SUMMARY_CHARS = 3500
 N_SUMMARY_HITS = 3      # zoomed-out documents (entry/arc/domain/entity) per question
 SUMMARY_HIT_CHARS = 1500
+SUMMARY_PASSAGES = 1    # an entry summary's own best passage, with neighbours
 N_DREAM_HITS = 4        # dream memories when the question crosses realms
 DREAM_HIT_CHARS = 1200
 DREAM_WORDS = re.compile(
@@ -60,7 +61,9 @@ of recent dreams, nothing more.
 each under its date and title. A passage is a piece of an entry with a \
 little of the text around it, not the whole entry.
 - <related_summaries>: the app's summaries of an entry, a week, an area of \
-life, or a person, place or project, each labelled by its level.
+life, or a person, place or project, each labelled by its level. Under an \
+entry summary there may be a passage headed "From the entry itself, in \
+their words": the part of that entry that best matches the message.
 - <entity_context>: the app's profiles of people, places and projects the \
 message names.
 - <dream_context>: only when dreams come up. Their dream entries and dreams \
@@ -68,8 +71,9 @@ the app retold from the journal. A separate realm: a dream about someone \
 is not an event with them.
 - <pattern_library>: recurring patterns the app found, with dated instances.
 
-Only <recent_entries> and <related_history> are their own words. Everything \
-else in the context was written by the app: an outline with dates that \
+Only <recent_entries>, <related_history> and the passages headed "From the \
+entry itself" are their own words. Everything else in the context was \
+written by the app: an outline with dates that \
 tells you what happened and when. Never quote it or present its wording as \
 theirs. It describes them in the third person; you always talk to them as \
 "you"."""
@@ -199,8 +203,8 @@ How to answer:
 - Answer the question first, plainly, with exact dates from the excerpts. \
 Add the entry's title when it would help them find it.
 - When you have the passage, quote the words that answer the question \
-exactly, in quotation marks. Quote only from <recent_entries> and \
-<related_history>.
+exactly, in quotation marks. Quote only their own words: <recent_entries>, \
+<related_history>, and the passages headed "From the entry itself".
 - When you have only a summary, a profile or a date, say so plainly, give \
 what it tells you, and say where to read the entry: {WHERE_TO_READ}.
 - Always make clear whether you're quoting their entry or going from a \
@@ -297,12 +301,20 @@ def get_recent_chunks(collection, n: int = N_RECENT) -> list[tuple[str, dict]]:
     return pairs[-n:]
 
 
-def get_summary_hits(question: str, skip_entities: set[str]) -> list[tuple[str, str]]:
+def get_summary_hits(question: str, skip_entities: set[str]
+                     ) -> list[tuple[str, str, list[dict]]]:
     """Zoomed-out retrieval: query the summary collection (entry summaries,
     week arcs, domain docs, entity docs) for documents matching the
     question. Entity docs already loaded by name-match are skipped.
     A long question -- a whole entry -- is searched piece by piece, the
-    same way as the passages (passages.ranked)."""
+    same way as the passages (passages.ranked).
+
+    Each hit is (level, text, passages). An entry summary brings the
+    entry's own words with it: the passage index is searched again, only
+    within that entry (its date and title), for the SUMMARY_PASSAGES that
+    best match the question, each with its neighbours. So a summary match
+    comes with the text, not only an outline and a date. Other levels, and
+    any entry without passages, carry none."""
     import passages
     try:
         found = passages.search_documents(
@@ -313,8 +325,20 @@ def get_summary_hits(question: str, skip_entities: set[str]) -> list[tuple[str, 
     for doc, meta, _ in found:
         if meta.get("level") == "entity doc" and meta.get("name") in skip_entities:
             continue
-        hits.append((meta.get("level", "summary"), doc[:SUMMARY_HIT_CHARS]))
-    return hits[:N_SUMMARY_HITS]
+        hits.append((meta.get("level", "summary"), doc[:SUMMARY_HIT_CHARS], meta))
+    out = []
+    for level, doc, meta in hits[:N_SUMMARY_HITS]:
+        from_entry = []
+        if level == "entry summary" and meta.get("date") and meta.get("title"):
+            try:
+                from_entry = passages.search(
+                    question, SUMMARY_PASSAGES,
+                    where={"$and": [{"date": {"$eq": meta["date"]}},
+                                    {"title": {"$eq": meta["title"]}}]})
+            except Exception:
+                from_entry = []
+        out.append((level, doc, from_entry))
+    return out
 
 
 def get_dream_hits(question: str) -> list[str]:
@@ -383,6 +407,10 @@ def build_context_block(question: str, collection, entity_index: dict,
 
     lines.append("")
     lines.append("<related_history>")
+    # (source_id, start, end) of every part of an entry shown so far, so the
+    # entry passages under a summary below don't repeat one.
+    shown_spans = [(cid, 0, min(len(doc), EXCERPT_CHARS))
+                   for cid, doc in recent_by_id.items()]
     matches = query_journal(question, n_results=N_SEMANTIC)
     if matches and "source_id" not in matches[0]["metadata"]:
         # The fallback's whole chunks, before the passage index is built:
@@ -400,6 +428,7 @@ def build_context_block(question: str, collection, entity_index: dict,
                     continue
                 if meta["start"] < shown:
                     text = doc[shown:meta["end"]].strip()
+            shown_spans.append((meta["source_id"], meta["start"], meta["end"]))
         else:
             if match["text"] in recent_texts:
                 continue
@@ -415,10 +444,20 @@ def build_context_block(question: str, collection, entity_index: dict,
     if summary_hits:
         lines.append("")
         lines.append("<related_summaries>")
-        for level, doc in summary_hits:
+        for level, doc, from_entry in summary_hits:
             lines.append(f"({level})")
             lines.append(doc)
             lines.append("")
+            for hit in from_entry:
+                meta = hit["metadata"]
+                if any(src == meta["source_id"] and start < meta["end"]
+                       and meta["start"] < end for src, start, end in shown_spans):
+                    continue  # already shown above, in their words
+                shown_spans.append((meta["source_id"], meta["start"], meta["end"]))
+                lines.append("From the entry itself, in their words: "
+                             f"[{meta.get('date', '?')}] {meta.get('title', 'Untitled')}")
+                lines.append(hit["text"])
+                lines.append("")
         lines.append("</related_summaries>")
 
     if mentioned:

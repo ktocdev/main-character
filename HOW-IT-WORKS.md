@@ -104,7 +104,7 @@ The call has three parts.
 | This week's arc | Always, the most recent weekly arc | 1 |
 | Recent entries | Always, the newest entries by date, each up to 2,000 characters | 3 |
 | Related history | Search by meaning over the passage index. A long query, such as a whole new entry, is searched piece by piece, and each piece gets its turn at the results, so the ending of an entry counts as much as its opening. Each passage is shown whole, with the passage on either side of it, and one already shown under recent entries is skipped | 12 passages |
-| Related summaries | Search by meaning over the summary index: entry summaries, weekly arcs, domain docs, entity profiles. A long query is searched piece by piece here too | 3 |
+| Related summaries | Search by meaning over the summary index: entry summaries, weekly arcs, domain docs, entity profiles. A long query is searched piece by piece here too. An entry summary brings that entry's best-matching passage (with its neighbours) under it, marked as your words, unless that part is already shown above | 3, plus one passage per entry summary |
 | People and places | Anyone the entry names, matched by name or alias | Up to 3 profiles |
 | Dreams | Only when the entry is a dream or mentions dreaming | 4 |
 | Patterns | Always, the whole pattern library up to a size budget | One line per pattern |

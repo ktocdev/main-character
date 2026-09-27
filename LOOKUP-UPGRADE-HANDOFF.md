@@ -10,7 +10,7 @@ As of 2026-09-25, stopped here:
 2. **Switch the model: done 2026-09-25** (see "The switch, as built" under step 1a). Through the real code path it finds 30/38 in the top 6 and 31 in the top 12, with MRR 0.628, which matches the comparison exactly. Entry replies are 3/8 in both the top 6 and top 12; MiniLM got 3/8 and 5/8.
 3. **Finish step 1: done 2026-09-25** (see "Step 1 finished" under step 1a).
    - **The search ceiling is 64, decided by the owner 2026-09-25** (`passages.MAX_QUERY_PIECES`, was 26). It was sized for 254-token pieces, which add ~224 new tokens each, so 26 covered twice the longest entry. At 120 tokens each piece adds ~90, so 26 cover ~2,340 tokens. On the real journal, 5 of 395 entries need more (27–32 pieces, up to 2,824 tokens). At 26 those were searched end to end by 26 pieces spread evenly, with some text between them skipped. Measured on the copy, the longest chunk (11,697 characters, 31 pieces) takes 394 ms to search at 26 and 502 ms at 64, and its whole context block 1.3 s and 1.6 s. At 64 every entry is covered twice over, for about 0.1 s of search and 0.3 s of context block on the longest entries only.
-4. **Step 1b** (the companion's prompt): built 2026-09-26 on branch `JRNL-48` (see "Step 1b as built"). Real replies checked the same day. Then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`.
+4. **Step 1b** (the companion's prompt): built 2026-09-26 on branch `JRNL-48` (see "Step 1b as built"). Real replies checked the same day. Then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`. Step 2 built 2026-09-26 (see "Step 2 as built").
 5. **Opus 5.5** (side task): done 2026-09-26 on `JRNL-49`, voice comparison included (see "Opus 5.5 as built").
 6. **Holdout.** The owner's own questions are in `docs/retrieval-eval/my-questions.txt` (gitignored, moved there 2026-09-26). Convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
 7. **Final check,** then the real journal: stop 8144, `python backup.py`, then `rebuild_index.py`.
@@ -331,6 +331,30 @@ Testing: this changes the companion's voice, so only real replies show whether i
 ### Step 2: go from a summary to the entry it summarizes
 
 In `companion.get_summary_hits`, when a hit's level is `entry summary`, its metadata already carries `date` and `title`. Query the passage index again, limited to that entry (`where={"date": ..., "title": ...}`), for the one or two passages that best match the question, and add them under the summary. A summary hit then brings the actual text with it.
+
+#### Step 2 as built (2026-09-26, branch `JRNL-49`)
+
+- **`companion.get_summary_hits`** returns `(level, text, passages)`. For an entry summary it runs `passages.search` with `where` on the summary's `date` and `title`, for `SUMMARY_PASSAGES` (1) hit with its neighbours.
+- **`build_context_block`** shows that passage under the summary, headed "From the entry itself, in their words: [date] title", unless it overlaps a span already shown in recent entries or related history (tracked as `shown_spans`).
+- **The prompt:** `CONTEXT_SECTIONS` describes the new passage and counts it among the person's own words; the chat prompt's quote rule names it too.
+- **`eval_retrieval.py`** gains "in block": whether the fact is anywhere in the whole context block, plus the block's size, so a layer other than related history can be measured. The before run is `real-step2-before.json`, the after `real-step2.json`.
+- **Tests:** two in `tests/test_passages.py` (a summary brings its entry's words; a passage already shown isn't repeated).
+
+Measured on the sandbox copy of the real journal:
+
+| | before | after |
+|---|---|---|
+| questions: fact in the block | 31/38 | 31/38 |
+| entry replies: fact in the block | 4/8 | 4/8 |
+| entry summaries shown with none of their entry's words (56 shown over the 46 tests) | 35 | 0 |
+| context block, median | 29,700 / 39,200 chars | 30,200 / 41,100 chars |
+| context block time, median | 68 / 193 ms | 105 / 376 ms |
+
+(Pairs are questions / entry replies.)
+
+- **It does what it was for:** a summary no longer arrives without the entry's words. 35 of the 56 entry summaries had none before; all 35 now carry about 1,000 characters of the entry.
+- **It doesn't reach the eval's misses,** because the right entry's summary almost never ranks in the top 3. For 7 of the 11 misses it isn't in the top 40. The questions ask about details ("Begonia", "kratom", "the Tasmanian devil") that a summary leaves out. When the entry *is* known, a search inside it finds the fact at rank 1 or 2 for r03, r17, r32, r38 and e01, so the gap is finding the entry, which is what steps 3 (rare words) and 4 (dates) are for.
+- **Cost:** about 200 more tokens per turn on average, and up to three more searches (~40 ms for a question, ~180 ms for an entry reply). Small next to a reply.
 
 ### Step 3: keyword search alongside search by meaning
 
