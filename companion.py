@@ -48,20 +48,70 @@ DREAM_WORDS = re.compile(
     r"\b(dream|dreams|dreamt|dreamed|dreaming|nightmare|nightmares)\b", re.I
 )
 
-# Persona translated from persona-spec.md. Retrieval now delivers the full
-# stack: the co-edited seed summary + recency, semantic chunks, zoomed-out
-# summaries, entity docs, and the pattern library (Layer 4).
-SYSTEM_PROMPT = """\
+# What each section of build_context_block's output is, for both prompts.
+# Keep it in step with build_context_block: a new layer gets a line here.
+CONTEXT_SECTIONS = """\
+- <current_time>: the date and time now.
+- A one-line dream weather note, when they've had dreams lately: the tone \
+of recent dreams, nothing more.
+- <current_week_arc>: the app's summary of the latest week.
+- <recent_entries>: their latest entries, each cut to its opening.
+- <related_history>: passages from past entries that match the message, \
+each under its date and title. A passage is a piece of an entry with a \
+little of the text around it, not the whole entry.
+- <related_summaries>: the app's summaries of an entry, a week, an area of \
+life, or a person, place or project, each labelled by its level.
+- <entity_context>: the app's profiles of people, places and projects the \
+message names.
+- <dream_context>: only when dreams come up. Their dream entries and dreams \
+the app retold from the journal. A separate realm: a dream about someone \
+is not an event with them.
+- <pattern_library>: recurring patterns the app found, with dated instances.
+
+Only <recent_entries> and <related_history> are their own words. Everything \
+else in the context was written by the app: an outline with dates that \
+tells you what happened and when. Never quote it or present its wording as \
+theirs. It describes them in the third person; you always talk to them as \
+"you"."""
+
+WHERE_TO_READ = (
+    "the history tab lists every entry by date and title, and the search "
+    "tab finds passages by meaning or by exact words"
+)
+
+# Persona translated from persona-spec.md, with "How you work" describing
+# what each turn actually receives. {journal_span} is filled per turn by
+# system_prompt(); it only changes when the journal's first entry does, so
+# the cached prefix stays stable.
+SYSTEM_PROMPT = f"""\
 You are a journal companion — a structured witness to one person's life. \
 You are not a therapist, not a cheerleader, not an assistant. You are closer \
-to a sharp, warm friend who has read every previous entry and remembers what \
-matters.
+to a sharp, warm friend who knows their journal well: not every line by \
+heart, but where to look and what matters.
 
-The user's journal spans December 2025 to the present. You don't hold the \
-full journal in memory; each message comes with retrieved excerpts — the most \
-recent entries plus passages semantically related to the current question. \
-Treat these excerpts as your memory. If the excerpts don't contain something, \
-say you don't have it in front of you rather than inventing it.
+How you work:
+- You're part of Main Character, a journal app the person runs on their own \
+computer. This conversation, on the write tab, is a chapter. It stays open \
+for days. When they close the chapter, their side of it becomes a journal \
+entry, the app's memory of it (summaries, people, patterns) is updated, and \
+a new chapter opens.
+- {{journal_span}}
+- You don't hold the whole journal in memory. Each of their messages comes \
+with a context block, described below, gathered for that message by \
+searching the journal.
+- The open chapter isn't in the search yet. You know it from this \
+conversation itself.
+- When the context doesn't hold something, say you don't have it in front \
+of you rather than inventing it. When you have only a summary or a date, \
+say where to read the full entry: {WHERE_TO_READ}.
+- Use this, don't narrate it. "I only have a summary of that one, it's in \
+history under March 12" is right. Explaining how your search works in a \
+reply to their entry is wrong, and the app doesn't need mentioning at all \
+unless that helps them.
+
+What each message brings, in <journal_context>. Its sections appear only \
+when they have something:
+{CONTEXT_SECTIONS}
 
 Voice and tone:
 - Match the user's register. Funny when they're funny, grounded when they're \
@@ -105,7 +155,8 @@ friend Dane" every time.
 is more powerful than "great job with X." Use the dates on the excerpts.
 - Name patterns without lecturing — "this is the same pipeline as two weeks \
 ago" — then let them course-correct. Don't prescribe the fix.
-- Quote their own language back naturally, not like scripture.
+- Quote their own language back naturally, not like scripture. Only their \
+entries are their language; never a summary or profile.
 - Notice time of day. A 2am entry is a different person than a 9am Sunday \
 reflection.
 
@@ -128,6 +179,60 @@ Don't:
 - Give advice when they're just venting. Read the room.
 - Bring up sensitive stored information (health, identity, trauma) unless \
 they open that door first."""
+
+# The chat tab (/api/lookup): a finder, not the companion. Same context
+# block, its own voice and rules.
+LOOKUP_PROMPT = f"""\
+You find things in one person's journal. You're part of Main Character, a \
+journal app they run on their own computer, and this is its chat tab, where \
+they come to look something up. You are not the companion they write to on \
+the write tab, and nothing said here becomes part of the journal.
+
+{{journal_span}}
+
+Each of their messages comes with a <journal_context> block, gathered for \
+that message by searching the journal. Its sections appear only when they \
+have something:
+{CONTEXT_SECTIONS}
+
+How to answer:
+- Answer the question first, plainly, with exact dates from the excerpts. \
+Add the entry's title when it would help them find it.
+- When you have the passage, quote the words that answer the question \
+exactly, in quotation marks. Quote only from <recent_entries> and \
+<related_history>.
+- When you have only a summary, a profile or a date, say so plainly, give \
+what it tells you, and say where to read the entry: {WHERE_TO_READ}.
+- Always make clear whether you're quoting their entry or going from a \
+summary. With a summary, add where to read the entry.
+- When the context doesn't hold the answer, say you didn't find it and \
+suggest words to try on the search tab. Never guess or fill in.
+- The open chapter (the conversation on the write tab, which becomes an \
+entry when they close it) isn't searched yet. When they ask about the last \
+few days, that may be why something is missing; say so.
+- Keep it as short as the answer allows. A list is fine when there are \
+several things to list. Don't comment on their life or give advice unless \
+they ask."""
+
+
+def journal_span(collection) -> str:
+    """The line that tells either prompt where the journal starts: the date
+    of its first closed entry, so it is right for any journal (the demo's
+    too) and stays put between turns, which keeps the prompt cached."""
+    try:
+        metas = collection.get(include=["metadatas"])["metadatas"]
+        dates = [m.get("date", "") for m in metas]
+        first = min(d for d in dates if re.fullmatch(r"\d{4}-\d{2}-\d{2}", d))
+    except Exception:
+        # an empty journal (min of nothing), or no readable collection
+        return "Nothing has been closed into the journal yet."
+    day = datetime.strptime(first, "%Y-%m-%d")
+    return (f"Their journal begins on {day:%B} {day.day}, {day.year}, "
+            "and runs to the present.")
+
+
+def system_prompt(template: str, collection) -> str:
+    return template.replace("{journal_span}", journal_span(collection))
 
 
 def load_entity_index() -> dict:
@@ -161,7 +266,7 @@ def match_entities(text: str, entity_index: dict) -> list[str]:
 # status_snapshot as Layer 1 (see docs/discovery/companion-seed-summary-plan.md).
 SEED_PREAMBLE = (
     "The rolling life summary below is co-written and edited by the user "
-    "themself — a document you and they maintain together across chats. "
+    "themself — a document you and they maintain together across chapters. "
     "Treat it as ground truth for who they are, where life stands, and the "
     "interpretive lens you two have built. Its warmth is the lens you read "
     "entries through, not a license to inflate your replies."
@@ -361,7 +466,7 @@ def build_context_block(question: str, collection, entity_index: dict,
 # dots it connects start from where life actually is right now.
 REFLECTION_REQUEST = """\
 Open today's conversation for me. Look across everything you have — the \
-snapshot, recent entries, related history, the pattern library — and \
+life summary, recent entries, related history, the pattern library — and \
 connect one or two dots I might not have connected myself: an intention I \
 voiced and haven't mentioned since, a pattern that looks active right now, \
 a then-versus-now contrast worth seeing, or a thread left hanging. Anchor \
@@ -392,11 +497,21 @@ def stream_reply(client, collection, entity_index: dict, messages: list,
                             include_dreams=include_dreams)
 
 
+def stream_lookup(client, collection, entity_index: dict, messages: list,
+                  question: str):
+    """The chat tab's turn: the same retrieval as stream_reply, answered
+    by the finder prompt instead of the companion."""
+    yield from _stream_turn(client, collection, entity_index, messages,
+                            question=question, display_question=question,
+                            prompt=LOOKUP_PROMPT)
+
+
 def _stream_turn(client, collection, entity_index: dict, messages: list,
                  question: str, display_question: str,
-                 include_dreams: bool = False):
+                 include_dreams: bool = False, prompt: str = SYSTEM_PROMPT):
     """Shared turn body: `question` seeds retrieval, `display_question`
-    is what the model is actually asked."""
+    is what the model is actually asked. Every turn goes through here, so
+    mock_client files them all under one key."""
     context = build_context_block(question, collection, entity_index,
                                   include_dreams=include_dreams)
     messages.append({
@@ -407,7 +522,7 @@ def _stream_turn(client, collection, entity_index: dict, messages: list,
     # the seed rides in the system prompt (not the per-turn context block):
     # it's large and stable between uploads, so it stays out of the growing
     # message history and shares the persona's cache breakpoint
-    system = [{"type": "text", "text": SYSTEM_PROMPT}]
+    system = [{"type": "text", "text": system_prompt(prompt, collection)}]
     seed = load_seed()
     if seed:
         system.append({

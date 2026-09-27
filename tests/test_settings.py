@@ -405,7 +405,7 @@ def test_a_streaming_reply_holds_the_restart_off(env, client, monkeypatch):
         seen.append(server._BUSY["count"])
         yield "a reply, arriving"
 
-    monkeypatch.setattr(server.companion, "stream_reply", fake)
+    monkeypatch.setattr(server.companion, "stream_lookup", fake)
 
     r = client.post("/api/lookup", json={"message": "when did I last write?"})
     assert r.status_code == 200
@@ -421,7 +421,7 @@ def test_the_count_is_given_back_when_a_stream_dies(env, client, monkeypatch):
         yield "half a "
         raise RuntimeError("the model call failed mid-stream")
 
-    monkeypatch.setattr(server.companion, "stream_reply", fake)
+    monkeypatch.setattr(server.companion, "stream_lookup", fake)
 
     before = server._BUSY["count"]
     with pytest.raises(RuntimeError):

@@ -368,7 +368,7 @@ def lookup(body: ChatIn):
         return _refused(exc)
 
     def gen():
-        yield from companion.stream_reply(
+        yield from companion.stream_lookup(
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["lookup"], body.message,
         )
