@@ -686,8 +686,17 @@ def list_sessions():
 
 @app.get("/api/sessions/current")
 def current_session():
-    """The open session: base conversation text + the live braid."""
-    return sessions.current_view(STATE["collection"])
+    """The open session: base conversation text + the live braid, and
+    whether it has grown long enough to ask about closing it."""
+    col = STATE["collection"]
+    return {**sessions.current_view(col), "close_prompt": sessions.close_prompt(col)}
+
+
+@app.post("/api/sessions/close/not-yet")
+def close_not_yet():
+    """The author answered "not yet" to closing a long chapter: wait for it
+    to grow before asking again (sessions.decline_close)."""
+    return sessions.decline_close(STATE["collection"])
 
 
 @app.get("/api/sessions/archive")
@@ -1079,7 +1088,7 @@ SETTINGS_KEYS = {
     "MC_DATE_FORMAT", "MC_TIMEZONE", "MC_LANGUAGE",
     "MC_COMPANION_MODEL", "MC_COMPANION_EFFORT", "MC_PROCESSING_MODEL",
     "MC_MAX_SESSION_SPEND", "MC_MAX_MONTHLY_SPEND",
-    "MC_DISABLED_CATEGORIES",
+    "MC_DISABLED_CATEGORIES", "MC_CHAPTER_CLOSE_CHARS",
     "ANTHROPIC_API_KEY",
 }
 
@@ -1144,8 +1153,11 @@ def get_settings():
                             # someone ends up believing they have a ceiling.
                             "MC_MAX_SESSION_TOKENS")}
     return {
+        # Blank means the default here, as with the caps, so the file's
+        # line goes back as written and `chapter_close` says what is in force.
         "values": {**{k: stored.get(k, v) for k, v in active.items()},
-                   **cap_values},
+                   **cap_values,
+                   "MC_CHAPTER_CLOSE_CHARS": stored.get("MC_CHAPTER_CLOSE_CHARS", "")},
         "active": active,
         "options": {
             "date_formats": [
@@ -1185,6 +1197,8 @@ def get_settings():
         # prevent.
         "spend_caps_enforced": True,
         "caps": caps.status(),
+        "chapter_close": {"limit": config.CHAPTER_CLOSE_CHARS,
+                          "default": config.DEFAULT_CHAPTER_CLOSE_CHARS},
         # what the clock is actually doing, which is not always what
         # MC_TIMEZONE says — see config.zone_name
         "resolved_timezone": zone_name(),
@@ -1271,6 +1285,13 @@ def _validate_settings(values: dict) -> dict[str, str]:
                     raise ValueError
             except ValueError:
                 raise ValueError(f"{key} must be a positive number or blank")
+        if key == "MC_CHAPTER_CLOSE_CHARS" and value:
+            value = value.replace(",", "").replace("_", "")
+            if not value.isdigit():
+                raise ValueError(
+                    "the chapter length must be a whole number of characters, "
+                    "0 to never ask, or blank for the default")
+            value = str(int(value))
         if key == "ANTHROPIC_API_KEY" and not value:
             # clearing it would lock the app out of every call, and the UI
             # has no way to show what was lost

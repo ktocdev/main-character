@@ -114,6 +114,37 @@ function capField(id, key, values, live, fmt) {
   }
 }
 
+// The chapter length at which the write tab asks to close. Blank means the
+// default, as with the caps, so the placeholder names it; and a saved figure
+// isn't the one in force until a restart, so say which one is. An older
+// server sends no `chapter_close`: the row then has nothing to offer.
+function chapterField(values, live) {
+  const box = $('set-chapter-control');
+  if (!box) return;
+  if (!live) {
+    box.parentElement.remove();
+    return;
+  }
+  const chars = n => Number(n).toLocaleString() + ' characters';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = 'set-chapter';
+  input.inputMode = 'numeric';
+  input.autocomplete = 'off';
+  input.value = values.MC_CHAPTER_CLOSE_CHARS || '';
+  input.placeholder = 'default: ' + chars(live.default);
+  box.appendChild(input);
+  const stored = (values.MC_CHAPTER_CLOSE_CHARS || '').replace(/[,_\s]/g, '');
+  const effective = stored ? Number(stored) : Number(live.default);
+  if (effective !== Number(live.limit)) {
+    const p = document.createElement('p');
+    p.className = 'set-warn';
+    p.textContent = 'Saved. This journal is still asking at '
+      + (live.limit ? chars(live.limit) : 'no length (never)') + ' until you restart it.';
+    box.appendChild(p);
+  }
+}
+
 // "used of limit" for one ceiling, or "used, no limit set".
 const money = n => '$' + Number(n).toFixed(2);
 
@@ -159,6 +190,11 @@ export async function loadSettings() {
       ${fieldRow('set-lang', 'Language',
         'English is the only option today. The setting exists so adding '
         + 'another later is a configuration change, not a rebuild.')}
+      ${fieldRow('set-chapter', 'Ask to close a chapter at',
+        'Characters of your own writing in the open chapter. Past this, the '
+        + 'write tab asks whether to close it, since nothing in it can be '
+        + 'searched until then and every reply resends all of it. Say not yet, '
+        + 'and it asks again after 10,000 more. Blank uses the default; 0 never asks.')}
       <div class="set-row">
         <label>Categories</label>
         <p class="set-help">The life-domain tags the companion suggests on new
@@ -320,6 +356,8 @@ export async function loadSettings() {
     }
     markPending('set-categories-control', 'MC_DISABLED_CATEGORIES', describeCats);
   }
+
+  chapterField(v, s.chapter_close);
 
   // ---- models ----
   // Both pickers offer the same lineup: nothing is restricted by bucket. The
@@ -648,6 +686,7 @@ async function save() {
     ['MC_PROCESSING_MODEL', 'set-processing-model'],
     ['MC_MAX_SESSION_SPEND', 'set-max-session'],
     ['MC_MAX_MONTHLY_SPEND', 'set-max-spend'],
+    ['MC_CHAPTER_CLOSE_CHARS', 'set-chapter'],
   ];
   for (const [key, id] of pairs) {
     const el = $(id);

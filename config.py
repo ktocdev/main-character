@@ -270,6 +270,14 @@ MAX_MONTHLY_SPEND = _positive("MC_MAX_MONTHLY_SPEND", DEFAULT_MONTHLY_SPEND)
 # like the others -- it holds one number per month and nothing else.
 SPEND_FILE = Path(os.getenv("MC_SPEND_FILE", _PROJECT_ROOT / "spend_ledger.json"))
 
+# When the open chapter holds this many characters of your own writing (what
+# a close turns into journal entries, dreams aside), the write tab asks
+# whether to close it. Until a close, nothing in the chapter can be searched,
+# and every reply resends all of it. 30,000 is a little over the median
+# chapter the author had closed by hand. Blank uses the default; 0 never asks.
+DEFAULT_CHAPTER_CLOSE_CHARS = 30_000
+CHAPTER_CLOSE_CHARS = int(_positive("MC_CHAPTER_CLOSE_CHARS", DEFAULT_CHAPTER_CLOSE_CHARS))
+
 # The longest text a single entry, chat turn or lookup may carry. A rejection
 # is the point: silently truncating a journal entry loses writing the author
 # believes was saved, which is worse than the paste that prompted it. Sized so

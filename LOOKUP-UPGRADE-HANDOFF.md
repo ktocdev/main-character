@@ -514,6 +514,16 @@ t1b.py` did this; it's scratch, so recreate it if it's gone), once on 4.6 and on
   - **4.6 better:** shorter, lighter entry replies. 5.5's e01 went through nearly every item in six paragraphs, against the persona's "react to one detail, skip the rest", and it ended every write-tab reply with a question.
   - **Outcome:** Opus 5.5 kept as the default. Watch entry-reply length in real use; if it drags, try a persona line or `medium` effort (neither tested).
 
+### Side task: ask to close a long chapter (2026-09-27, branch `JRNL-54`)
+
+Asked for by the owner before step 5. The open chapter is resent whole with every reply and can't be searched until it's closed, so a long one is worth closing. Owner's decisions: count the author's own writing only (what a close turns into entries, dreams aside), ask at 30,000 characters (a little over the median of the 8 chapters closed by hand, 27k), and after "not yet" ask again once it has grown by 10,000 more.
+
+- **Server:** `config.CHAPTER_CLOSE_CHARS` (`MC_CHAPTER_CLOSE_CHARS`, blank for the default, 0 never asks); `sessions.close_prompt()` and `decline_close()`, the decline kept in `current.json` as `close_declined_at`, so it survives a restart and ends with the chapter. `/api/sessions/current` carries `close_prompt`; `POST /api/sessions/close/not-yet` records the decline.
+- **Write tab:** after an entry is saved or a message sent, `askToCloseIfLong()` asks through the close's own confirm, opening with "Your chapter has grown long enough to close and process. Are you ready?", so there is one dialog. OK closes; Cancel is "not yet". History's close button now calls `closeSession()` without passing its click event.
+- **Settings:** "Ask to close a chapter at", in the Journal group, validated as a whole number (commas allowed).
+- **Docs:** the help tab's write section and `.env.example`. The web demo never asks (its backend sends no `close_prompt`).
+- **Tests:** `tests/test_chapter_close_prompt.py` (6).
+
 ## Holdout and final check (2026-09-27, branch `JRNL-54`)
 
 - **`holdout.json`** (local, gitignored): the owner's 10 questions from `my-questions.txt`, word for word, as h01–h10. Each fact is a short quote from the entry the owner's answer names, found by the answer's date and title; `eval_retrieval.py` checks each is in an entry of its date. The set is marked `"deep": false`, so a fact may sit anywhere in its entry (the owner asked what they asked, wherever the answer is); the eval skips the 1,000-character rule for such a set. Nothing was tuned against it.

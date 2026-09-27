@@ -215,5 +215,5 @@ async function showSession(key) {
 }
 
 export function init() {
-  $('session-close-btn').onclick = closeSession;
+  $('session-close-btn').onclick = () => closeSession();
 }
