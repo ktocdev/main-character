@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Resplit — Phase 3 one-shot migration: per-day entry granularity.
+Resplit — per-day entry granularity.
 
 One imported Claude conversation used to be one "entry" spanning up to a
 week under a single date. This script re-splits every imported

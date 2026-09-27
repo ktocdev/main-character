@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Category System — Phase 2 of the RAG Journal.
+Category System.
 
 Tags every journal conversation with the built-in life-domain categories
 from persona-spec.md §5 using the Claude API. Entries can span multiple
