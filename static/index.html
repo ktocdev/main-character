@@ -210,23 +210,35 @@
   </section>
 
   <section class="tab" id="tab-patterns">
-    <div id="patterns">
-      <div id="pat-header">
-        <span id="pat-status"></span>
-        <button class="quiet" id="pat-build" title="re-read the weekly arcs + domain documents and detect recurring patterns (one Claude call, skipped if nothing has changed)">detect patterns</button>
+    <div id="patterns" class="pane">
+      <div class="pane-head">
+        <span class="status" id="pat-status"></span>
+        <span class="right">
+          <button class="quiet sm" id="pat-build" title="re-read the weekly arcs and domain documents and detect recurring patterns (one Claude call, skipped if nothing has changed)">detect patterns</button>
+        </span>
       </div>
+      <div id="pat-kinds" class="chip-row" hidden></div>
+      <div id="pat-notice" class="notice-line"></div>
       <div id="pat-list"></div>
+      <div id="pat-empty" class="notice-card" hidden></div>
+      <p class="footnote" id="pat-foot" hidden>Patterns reach the companion only when a conversation genuinely rhymes with one. Dismissing hides a pattern; it only comes back if new evidence shows up.</p>
     </div>
   </section>
 
   <section class="tab" id="tab-dreams">
-    <div id="dreams">
-      <div id="dream-header">
-        <span id="dream-status"></span>
-        <button class="quiet" id="dream-extract" title="scan the journal for dreams (only entries that mention dreams, and already-scanned ones are free)">extract dreams from history</button>
+    <div id="dreams" class="pane">
+      <div class="pane-head">
+        <span class="status" id="dream-status"></span>
+        <span class="right">
+          <button class="quiet sm" id="dream-extract" title="scan the journal for dreams (only entries that mention one, and already-scanned entries are free)">extract dreams from history</button>
+        </span>
       </div>
-      <div id="dream-weather"></div>
+      <div id="dream-weather" hidden></div>
+      <div id="dream-tones" class="chip-row" hidden></div>
+      <div id="dream-notice" class="notice-line"></div>
       <div id="dream-list"></div>
+      <div id="dream-empty" class="notice-card" hidden></div>
+      <p class="footnote">Dreams live in their own realm, and waking questions never surface them. Write a dream the way you always have and the extractor finds it when the chapter is closed; the entry itself stays in waking memory. Only a read you wrote yourself is kept.</p>
     </div>
   </section>
 
