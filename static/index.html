@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="/static/css/conversation.css">
 <link rel="stylesheet" href="/static/css/search.css">
 <link rel="stylesheet" href="/static/css/entities.css">
+<link rel="stylesheet" href="/static/css/triage.css">
 <link rel="stylesheet" href="/static/css/categories.css">
 <link rel="stylesheet" href="/static/css/patterns.css">
 <link rel="stylesheet" href="/static/css/dreams.css">
@@ -276,41 +277,56 @@
   </section>
 
   <section class="tab" id="tab-triage">
-    <div id="triage">
+    <div id="triage" class="pane narrow" tabindex="-1">
       <div id="triage-progress"></div>
-      <div id="triage-card">
-        <h2 id="triage-name">loading…</h2>
-        <div id="triage-meta"></div>
+      <article id="triage-card" class="card">
+        <div class="head">
+          <h2 id="triage-name">reading…</h2>
+          <span id="triage-meta"></span>
+        </div>
         <div id="triage-aliases"></div>
         <div id="triage-obs"></div>
-      </div>
-      <div id="triage-input-row">
-        <span id="triage-mode-label"></span>
-        <input type="text" id="triage-input" list="entity-names" placeholder="type here…">
-        <button class="send" id="triage-apply" title="apply this action (or press Enter)">apply</button>
-        <button class="quiet" id="triage-cancel" title="cancel (or press Esc)">cancel</button>
-      </div>
-      <div id="triage-kind-row">
-        move to: <button class="quiet" data-kind="person" title="retype to person (1)">1 person</button>
-        <button class="quiet" data-kind="project" title="retype to project (2)">2 project</button>
-        <button class="quiet" data-kind="place" title="retype to place (3)">3 place</button>
-      </div>
-      <div id="triage-help">
-        <b>k</b> keep (mark reviewed) · <b>m</b> merge · <b>c</b> correct · <b>r</b> rename ·
-        <b>a</b> alias · <b>t</b> retype · <b>d</b> delete · <b>s</b> skip · <b>u</b> undo
-      </div>
+        <div id="triage-input-row" hidden>
+          <span id="triage-mode-label"></span>
+          <input type="text" id="triage-input" class="input-xs" placeholder="type here…" autocomplete="off">
+          <span class="btns">
+            <button class="filled" id="triage-apply" title="apply this action (or press Enter)">apply <span class="hint">↵</span></button>
+            <button class="quiet" id="triage-cancel" title="cancel (or press Esc)">cancel <span class="hint">esc</span></button>
+          </span>
+          <div id="triage-suggest" style="flex-basis:100%"></div>
+        </div>
+        <div id="triage-kind-row" hidden>
+          <span class="lbl">move to</span>
+          <span class="btns">
+            <button class="quiet" data-kind="person" title="retype to person (1)"><span class="key">1</span>person</button>
+            <button class="quiet" data-kind="project" title="retype to project (2)"><span class="key">2</span>project</button>
+            <button class="quiet" data-kind="place" title="retype to place (3)"><span class="key">3</span>place</button>
+          </span>
+          <button class="text" id="triage-kind-cancel">cancel <span class="hint">esc</span></button>
+        </div>
+      </article>
       <div id="triage-btns">
-        <button class="quiet" data-tkey="k" title="mark reviewed ✓ and move to the next (k). Your default.">keep</button>
-        <button class="quiet" data-tkey="m" title="fold this into another entity and keep this name as an alias (m)">merge</button>
-        <button class="quiet" data-tkey="c" title="fix a typo without keeping this name as an alias, like Dana → Dane (c)">correct</button>
-        <button class="quiet" data-tkey="r" title="fix the spelling or case of this entity's own name (r)">rename</button>
-        <button class="quiet" data-tkey="a" title="add another name this entity goes by, so it matches both (a)">alias</button>
-        <button class="quiet" data-tkey="t" title="change its kind to person, project or place (t)">retype</button>
-        <button class="quiet" data-tkey="d" title="remove this entity. There's no confirm, but undo brings it back (d)">delete</button>
-        <button class="quiet" data-tkey="s" title="decide later. It stays in the queue for next time (s)">skip</button>
-        <button class="quiet" data-tkey="u" title="undo the last change, up to 50 deep and across sessions (u)">undo</button>
+        <button class="quiet primary" data-tkey="k" title="mark reviewed ✓ and move on. Your default."><span class="key">k</span>keep</button>
+        <button class="quiet" data-tkey="m" title="fold this into another entity; this name is kept as an alias"><span class="key">m</span>merge</button>
+        <button class="quiet" data-tkey="c" title="typo fix; this name is not kept as an alias (Dana → Dane)"><span class="key">c</span>correct</button>
+        <button class="quiet" data-tkey="r" title="fix the spelling or case of this entity's own name"><span class="key">r</span>rename</button>
+        <button class="quiet" data-tkey="a" title="add another name this entity goes by, matchable by both"><span class="key">a</span>alias</button>
+        <button class="quiet" data-tkey="t" title="move to a different kind: then 1 person · 2 project · 3 place"><span class="key">t</span>retype</button>
+        <button class="quiet danger" data-tkey="d" title="remove this entity. There's no confirm, and undo brings it back"><span class="key">d</span>delete</button>
+        <button class="quiet" data-tkey="s" title="decide later. It stays in the queue for next time"><span class="key">s</span>skip</button>
+        <button class="quiet" data-tkey="u" id="triage-undo" title="undo the last change, 50 deep and across sessions"><span class="key">u</span>undo</button>
       </div>
-      <div id="triage-toast"></div>
+      <p class="footnote" id="triage-foot">Most entities are a one-second <span class="key">k</span> or <span class="key">d</span>. Don't deliberate; that is what <span class="key">s</span> is for. Undo is 50 deep and survives closing the tab.</p>
+      <div id="triage-done" class="notice-card" hidden>
+        <div class="eyebrow">queue empty</div>
+        <p></p>
+        <div class="actions">
+          <button class="filled" id="triage-skipped" hidden>go through the skipped</button>
+          <button class="quiet" id="triage-open-entities">open entities ›</button>
+          <button class="quiet" id="triage-undo-last" hidden>↺ undo last</button>
+        </div>
+      </div>
+      <div id="triage-toast" class="toast"></div>
     </div>
   </section>
 

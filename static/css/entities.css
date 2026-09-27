@@ -137,22 +137,3 @@
   .gp-empty { color: var(--text-dim); font-style: italic; padding: .2rem 0; }
   .rev-check { color: var(--accent-dim); font-size: .75rem; margin-left: .25rem; }
   .thinking { color: var(--text-dim); font-style: italic; }
-  /* Triage */
-  #triage { max-width: 44rem; margin: 0 auto; width: 100%; padding: var(--space-8); overflow-y: auto; }
-  #triage-progress { font: var(--font-sm) var(--font-ui); color: var(--text-dim); margin-bottom: var(--space-6); }
-  #triage-card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 12px; padding: 1.3rem var(--space-8); }
-  #triage-card h2 { font-style: normal; font-size: var(--font-xl); color: var(--text); margin-bottom: .2rem; }
-  #triage-meta { font: var(--font-sm) var(--font-ui); color: var(--accent-dim); }
-  #triage-aliases { font: var(--font-xs) var(--font-ui); color: var(--text-dim); margin-top: .2rem; }
-  #triage-obs { margin-top: var(--space-6); font-size: .92rem; max-height: 22rem; overflow-y: auto; }
-  #triage-obs .obs-date { margin: .7rem 0 .2rem; }
-  #triage-help { margin-top: var(--space-6); font: var(--font-sm) var(--font-ui); color: var(--text-dim); }
-  #triage-help b { color: var(--accent); font-weight: normal; }
-  #triage-input-row, #triage-kind-row { margin-top: var(--space-6); font: .9rem var(--font-ui); color: var(--text-dim); display: none; gap: var(--space-4); align-items: center; flex-wrap: wrap; }
-  #triage-input { flex: 1; min-width: 12rem; }
-  #triage-apply { padding: .3rem 1.1rem; font-size: var(--font-sm); align-self: stretch; }
-  #triage-toast { margin-top: var(--space-5); font: var(--font-sm) var(--font-ui); color: var(--accent); min-height: 1.2rem; }
-  #triage-btns { display: flex; gap: var(--space-2); margin-top: var(--space-5); flex-wrap: wrap; }
-  .dup-row { display: flex; gap: var(--space-4); align-items: baseline; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding: var(--space-3) 0; }
-  .dup-row .why { font: var(--font-2xs) var(--font-ui); color: var(--text-dim); }
-
