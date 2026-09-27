@@ -1156,16 +1156,19 @@ def get_settings():
             "timezones": zones,
             "languages": [{"value": v, "label": l}
                           for v, l in config.LANGUAGES.items()],
-            # One lineup, both pickers -- nothing is restricted by bucket.
-            # `efforts` travels with each model so the effort picker can
-            # repopulate from the selection without a second round trip, and
-            # an empty list is meaningful: that model takes no effort at all.
+            # One lineup; the companion picker offers all of it, the
+            # processing picker only the models marked `processing`
+            # (config.PROCESSING_MODELS). `efforts` travels with each model
+            # so the effort picker can repopulate from the selection without
+            # a second round trip, and an empty list is meaningful: that
+            # model takes no effort at all.
             "models": [
                 {"value": m,
                  "label": config.MODEL_LABELS.get(m, m),
                  "efforts": efforts,
                  "price": config.MODEL_PRICES.get(m),
-                 "thinking": config.MODEL_THINKING_SUPPORT.get(m, True)}
+                 "thinking": config.MODEL_THINKING_SUPPORT.get(m, True),
+                 "processing": m in config.PROCESSING_MODELS}
                 for m, efforts in config.MODEL_EFFORT_LEVELS.items()
             ],
             # Every built-in category with its definition, in built-in order.
@@ -1228,6 +1231,10 @@ def _validate_settings(values: dict) -> dict[str, str]:
             raise ValueError(f"unknown model: {value}")
         if key == "MC_PROCESSING_MODEL" and value                 and value not in config.MODEL_EFFORT_LEVELS:
             raise ValueError(f"unknown model: {value}")
+        if key == "MC_PROCESSING_MODEL" and value                 and value not in config.PROCESSING_MODELS:
+            raise ValueError(
+                f"{config.MODEL_LABELS.get(value, value)} isn't offered for "
+                f"processing (try: {', '.join(config.PROCESSING_MODELS)})")
         if key == "MC_COMPANION_EFFORT" and value:
             # the model this effort will actually run under: the one in
             # this save if it carries one, else what .env holds. config's

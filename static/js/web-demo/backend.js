@@ -222,7 +222,7 @@
         + 'running -- wait for it to finish before closing again.'}, 409);
     }
     const mine = current.messages.filter(m => m.role === 'you' && !m.dream);
-    if (!mine.length) return json({error: 'nothing new in this chat yet. Write or chat first'}, 400);
+    if (!mine.length) return json({error: 'nothing new in this chapter yet. Write or send something first'}, 400);
 
     const first = closes === 0;
     let result;

@@ -42,7 +42,7 @@ export async function refreshStatus() {
   $('status').textContent = `${s.entries} entries · ${s.entities} entities`;
   const open = s.open_entries || 0;
   $('status').title = open
-    ? `${open} ${open === 1 ? 'entry' : 'entries'} in this chat, added to journal memory when you close it`
+    ? `${open} ${open === 1 ? 'entry' : 'entries'} in this chapter, added to journal memory when you close it`
     : '';
   // Canned replies only ever run against the demo, so the seed instance is
   // the whole banner condition now -- there is no mode where the replies are
@@ -116,7 +116,7 @@ export async function installDemo(report) {
   // no channel back, so a bar would be inventing a fraction it cannot know.
   const hold = setTimeout(() => {
     const tick = () => report('building the demo journal of 32 entries and 1 dream entry. '
-      + 'The newest 3 will open in the chat (' + Math.round((Date.now() - started) / 1000)
+      + 'The newest 3 will be in the open chapter (' + Math.round((Date.now() - started) / 1000)
       + 's). Expect ' + demoBuildWait() + '.');
     tick();
     timer = setInterval(tick, 1000);

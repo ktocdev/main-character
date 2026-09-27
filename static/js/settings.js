@@ -184,7 +184,7 @@ export async function loadSettings() {
         + 'most of the spend goes, so it is the useful place to trade down.')}
       ${fieldRow('set-max-session', 'Stop after (dollars per session)',
         'A ceiling on one session, counted from when the journal last '
-        + 'started and cleared when you close a chat. '
+        + 'started and cleared when you close a chapter. '
         + capHelp((s.caps || {}).session))}
       ${fieldRow('set-max-spend', 'Stop after (dollars per month)',
         'A ceiling on the calendar month, kept in a small file so it '
@@ -345,10 +345,10 @@ export async function loadSettings() {
       const pr = (o.models.find(x => x.value === m) || {}).price;
       return pr ? '$' + pr.in + ' / $' + pr.out + ' per Mtok' : 'price unlisted';
     };
-    function modelSelect(id, current) {
+    function modelSelect(id, current, models) {
       const sel = document.createElement('select');
       sel.id = id;
-      for (const m of o.models) {
+      for (const m of models) {
         const opt = new Option(m.label + ' \u2014 ' + priceOf(m.value), m.value);
         opt.selected = m.value === current;
         sel.add(opt);
@@ -359,7 +359,7 @@ export async function loadSettings() {
       return sel;
     }
 
-    const cModel = modelSelect('set-companion-model', v.MC_COMPANION_MODEL);
+    const cModel = modelSelect('set-companion-model', v.MC_COMPANION_MODEL, o.models);
     markPending('set-companion-model-control', 'MC_COMPANION_MODEL', modelName);
 
     // The companion is the one surface where dropping a tier is felt in the
@@ -418,7 +418,10 @@ export async function loadSettings() {
     cModel.onchange = () => { fillEfforts(effort.value); showVoiceWarning(); };
     markPending('set-companion-effort-control', 'MC_COMPANION_EFFORT', a => a);
 
-    modelSelect('set-processing-model', v.MC_PROCESSING_MODEL);
+    // Processing offers a shorter list (config.PROCESSING_MODELS). An older
+    // server sends no `processing` flag, so it gets the whole lineup as before.
+    const forProcessing = o.models.filter(m => m.processing !== false);
+    modelSelect('set-processing-model', v.MC_PROCESSING_MODEL, forProcessing);
     markPending('set-processing-model-control', 'MC_PROCESSING_MODEL', modelName);
   }
 
