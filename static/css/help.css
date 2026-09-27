@@ -1,40 +1,58 @@
-  /* Help */
-  #help { max-width: 46rem; margin: 0 auto; width: 100%; padding: var(--space-8); overflow-y: auto; }
-  #help h2 { font-style: italic; font-weight: normal; font-size: var(--font-lg); color: var(--accent); margin: 1.6rem 0 var(--space-5); }
-  #help h2:first-child { margin-top: 0; }
-  /* collapsible sections (item 2): the summary reads as the old h2 heading,
-     with a rotating caret in place of the default disclosure triangle. */
-  #help .help-sec { border-bottom: 1px solid var(--border); padding: .3rem 0; }
-  #help .help-sec > summary {
-    list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: var(--space-3);
-    font-style: italic; font-size: var(--font-lg); color: var(--accent);
-    padding: var(--space-4) 0; user-select: none;
+  /* SPDX-License-Identifier: AGPL-3.0-or-later */
+  /* Help: a reading column with a sticky jump row and an accordion of
+     sections. Prose is the page's 17px/1.65 serif; steps drop to .95rem. */
+  #help { padding-bottom: 4rem; }
+  #help .jump-pills .text { flex-shrink: 0; white-space: nowrap; }
+
+  /* the accordion: a full-width header button, hairline between sections */
+  .help-sec { border-bottom: 1px solid var(--border); }
+  .help-sec > summary {
+    list-style: none; cursor: pointer; user-select: none;
+    display: flex; align-items: baseline; gap: .7rem; padding: 1.1rem 0;
+    font: italic 1.3rem var(--font-body); color: var(--accent); text-wrap: pretty;
   }
-  #help .help-sec > summary::-webkit-details-marker { display: none; }
-  #help .help-sec > summary::before {
-    content: "›"; font-style: normal; color: var(--accent-dim);
-    transition: transform .15s ease; display: inline-block;
-  }
-  #help .help-sec[open] > summary::before { transform: rotate(90deg); }
-  #help .help-sec[open] > summary { margin-bottom: var(--space-2); }
-  #help .help-sec > :last-child { margin-bottom: var(--space-5); }
-  #help h3 { font: var(--font-base) var(--font-ui); font-weight: 600; margin-bottom: .3rem; }
-  #help .where { font-weight: normal; font-size: .78rem; color: var(--accent-dim); margin-left: var(--space-3); }
-  #help .step-n { display: inline-flex; width: 1.4rem; height: 1.4rem; border-radius: var(--radius-circle); background: var(--accent-dim); color: var(--bg); align-items: center; justify-content: center; font-size: var(--font-xs); margin-right: var(--space-2); }
-  #help p { font-size: var(--font-base); margin-bottom: var(--space-3); }
-  #help .help-step { margin-bottom: 1.3rem; }
-  #help table { border-collapse: collapse; margin: var(--space-3) 0 var(--space-5); font-size: .9rem; }
-  #help td { padding: var(--space-1) var(--space-5) var(--space-1) 0; vertical-align: top; }
-  #help table.decision td { border-bottom: 1px solid var(--border); padding: var(--space-2) var(--space-6) var(--space-2) 0; }
-  #help b { color: var(--accent); font-weight: 600; }
+  .help-sec > summary::-webkit-details-marker { display: none; }
+  .help-sec > summary .mark { font: .8rem var(--font-ui); color: var(--text-dim); min-width: .8rem; }
+  .help-sec > summary .mark::before { content: "›"; display: inline-block; transition: transform .15s ease; }
+  .help-sec[open] > summary .mark::before { content: "⌄"; }
+  .help-body { display: flex; flex-direction: column; gap: .8rem; padding: 0 0 1.5rem 1.5rem; }
+  .help-body p { text-wrap: pretty; }
+  #help b, #help strong { color: var(--accent); font-weight: 600; }
   #help em { color: var(--text); }
-  #help code { font-size: .85em; background: var(--bg-input); padding: .05rem .35rem; border-radius: 4px; }
-  #help-toc {
-    display: flex; flex-wrap: wrap; gap: var(--space-2); padding-bottom: var(--space-6);
-    border-bottom: 1px solid var(--border); margin-bottom: var(--space-3);
+  #help code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82em;
+    background: var(--bg-input); border-radius: 4px; padding: .1em .4em;
   }
-  #help-toc a {
-    color: var(--text-dim); text-decoration: none; font: var(--font-sm) var(--font-ui);
-    background: var(--bg-input); border-radius: var(--radius-pill); padding: .15rem var(--space-5);
+
+  /* numbered steps: a 1.4rem gutter with the number as an accent glyph */
+  .help-steps { display: flex; flex-direction: column; gap: 1.4rem; }
+  .help-step { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr); gap: .3rem .6rem; }
+  .help-step .step-n { font: 600 .95rem/1.65 var(--font-ui); color: var(--accent); text-align: center; }
+  .help-step .step-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .8rem; }
+  .help-step h3 { font: 600 .95rem/1.65 var(--font-ui); color: var(--text); }
+  .help-step .where { font: .78rem var(--font-ui); color: var(--text-dim); }
+  .help-step a.where { color: var(--text-dim); }
+  .help-step a.where:hover { color: var(--accent); }
+  .help-step .step-body { grid-column: 2; display: flex; flex-direction: column; gap: .8rem; font-size: .95rem; }
+  .help-step p { font-size: .95rem; }
+
+  /* the key table: a two-column grid in a raised card */
+  .help-keys {
+    display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .3rem 1rem;
+    font-size: .92rem; padding: .8rem 1rem; background: var(--bg-raised);
+    border: 1px solid var(--border); border-radius: 12px;
   }
-  #help-toc a:hover { color: var(--accent); }
+  .help-keys .k { font: 600 .9rem/1.65 var(--font-ui); color: var(--accent); white-space: nowrap; }
+  .help-keys .d { text-wrap: pretty; }
+  .help-keys .d .n { color: var(--text); }
+  .help-keys .d .t { color: var(--text-dim); }
+
+  /* the decision table: hairline rows, side by side until ~34rem */
+  .help-fixes { display: flex; flex-direction: column; font-size: .95rem; }
+  .help-fixes .row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: .1rem 1.5rem; padding: .55rem 0; border-top: 1px solid var(--border);
+  }
+  .help-fixes .when { color: var(--text-dim); text-wrap: pretty; }
+  .help-fixes .fix b { font: 600 .9rem/1.65 var(--font-ui); }
+  .help-fixes .fix .t { color: var(--text-dim); }

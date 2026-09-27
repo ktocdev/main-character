@@ -374,22 +374,15 @@
   </section>
 
   <section class="tab" id="tab-help">
-    <div id="help">
-      <nav id="help-toc">
-        <a href="#h-write">write</a>
-        <a href="#h-chat">chat</a>
-        <a href="#h-search">search</a>
-        <a href="#h-history">history</a>
-        <a href="#h-entities">entities</a>
-        <a href="#h-triage">triage</a>
-        <a href="#h-categories">categories</a>
-        <a href="#h-patterns">patterns</a>
-        <a href="#h-dreams">dreams</a>
-        <a href="#h-safety">safety</a>
-      </nav>
+    <div id="help" class="pane jumpy">
+      <div class="jump-pills">
+        <div class="pills" id="help-jumps"></div>
+        <button class="text" id="help-all">expand all</button>
+      </div>
 
       <details class="help-sec" open>
-      <summary id="h-write">write · the journal companion</summary>
+      <summary id="h-write"><span class="mark"></span><span>write · the journal companion</span></summary>
+      <div class="help-body">
       <p>One chapter stays open for as long as it feels right, which is about a week in practice. The write
       screen is that whole conversation: the chapter it continues, your entries, the companion's
       replies, and everything you say back. <b>save entry</b> stores a journal entry (backed up to
@@ -408,10 +401,12 @@
       <p>Dreams need no flag. Write them the way you always have ("last night I had a dream…") and
       the dream extractor finds them at the summarize point, pulling each one into the dream realm
       while the entry itself stays in waking memory. That's exactly how your imported history behaves.</p>
-
+      </div>
       </details>
+
       <details class="help-sec">
-      <summary id="h-chat">chat · look things up</summary>
+      <summary id="h-chat"><span class="mark"></span><span>chat · look things up</span></summary>
+      <div class="help-body">
       <p>The chat screen is a tool, not the journal. Ask it to pull things out of your history
       ("when did I last see Sam?", "what did I say about the move?"). It runs the same
       retrieval as the companion, with its own finder prompt, but it's a <em>separate conversation</em>, so lookups never join
@@ -422,147 +417,173 @@
       own before answering: other words, exact words, a stretch of dates, a whole entry. It is
       much better at "when did I first…", "how often…" and how something changed. Each question
       can take several calls, so it costs more and takes a few seconds longer.</p>
-
+      </div>
       </details>
+
       <details class="help-sec">
-      <summary id="h-search">search · every match, instantly</summary>
+      <summary id="h-search"><span class="mark"></span><span>search · every match, instantly</span></summary>
+      <div class="help-body">
       <p>The search screen sweeps your <em>entire</em> journal locally, so it's free and instant with no API
       calls. <b>meaning</b> mode ranks passages by how semantically close they are to whatever you
       describe, in your own words ("times I felt proud of my work"), while <b>exact text</b> mode finds
       literal matches, newest first, with a ×N count when an entry contains several. Click any
       result to read the full entry in place. This is the exhaustive counterpart to the chat
       screen. Chat retrieves a handful of excerpts and reasons about them, while search shows you
-      <em>everything</em>. Dreams never appear here because they live in their own realm (dreams tab).
-      There are two honest limits. Highlighting is literal (a typo'd word won't light up even though
+      <em>everything</em>. Dreams never appear here because they live in their own realm (dreams tab).</p>
+      <p>There are two honest limits. Highlighting is literal (a typo'd word won't light up even though
       meaning-search still finds the right passages), and dates are the <em>conversation's</em>
       date, so a passage written mid-week inside a week-long chapter shows that chapter's date until
-      the Phase 3 per-day split.</p>
-
+      the per-day split lands.</p>
+      </div>
       </details>
+
       <details class="help-sec">
-      <summary id="h-history">history · every chapter, one at a time</summary>
-      <p>Lands on the open chapter: the conversation it continues (with Claude's replies interleaved,
+      <summary id="h-history"><span class="mark"></span><span>history · every chapter, one at a time</span></summary>
+      <div class="help-body">
+      <p>Lands on the open chapter: the conversation it continues (with the companion's replies interleaved,
       backfilled from your export), your entries, and the live thread. Every closed chapter sits in
-      the sidebar, and you can click one to read it in full. Closed chapters keep both sides for reading, but
+      the list, and you can pick one to read it in full. Closed chapters keep both sides for reading, but
       only your side is journal memory.</p>
-
+      </div>
       </details>
+
       <details class="help-sec">
-      <summary id="h-entities">entities · curation workflow, the efficient order</summary>
+      <summary id="h-entities"><span class="mark"></span><span>entities · curation, in the efficient order</span></summary>
+      <div class="help-body help-steps">
 
       <div class="help-step">
-        <h3><span class="step-n">1</span> find duplicates first <span class="where">entities tab → "find duplicates (free)"</span></h3>
-        <p>Runs locally in a few seconds, no API cost. Work through every pair, merging the real ones
+        <span class="step-n">1</span>
+        <div class="step-h"><h3>find duplicates first</h3><span class="where">entities → find duplicates (free)</span></div>
+        <div class="step-body"><p>Runs locally in a few seconds, no API cost. Work through every pair, merging the real ones
         in whichever direction keeps the name you actually use, and hit <em>not duplicates</em> for the rest.
         Dismissals are permanent, so this list only ever shrinks. Doing merges first matters because
-        every merge shrinks the triage queue you're about to walk.</p>
+        every merge shrinks the triage queue you're about to walk.</p></div>
       </div>
 
       <div class="help-step">
-        <h3><span class="step-n">2</span> ask claude (optional) <span class="where">entities tab → "ask claude: people / projects / places"</span></h3>
-        <p>Catches conceptual duplicates the local scan can't, like long descriptive names that mean the
+        <span class="step-n">2</span>
+        <div class="step-h"><h3>ask claude (optional)</h3><span class="where">entities → ask claude: people / projects / places</span></div>
+        <div class="step-body"><p>Catches conceptual duplicates the local scan can't, like long descriptive names that mean the
         same project. Costs one API call per kind. Worth one pass on projects
-        especially. Apply or dismiss each group. Nothing merges without your click.</p>
+        especially. Apply or dismiss each group. Nothing merges without your click.</p></div>
       </div>
 
       <div class="help-step" id="h-triage">
-        <h3><span class="step-n">3</span> live in triage until the queue is empty <span class="where">triage tab</span></h3>
+        <span class="step-n">3</span>
+        <div class="step-h"><h3>live in triage until the queue is empty</h3><a class="where" href="#" data-tab-link="triage">triage ›</a></div>
+        <div class="step-body">
         <p>Entities come one at a time, junk first (1-mention entities lead). Keep your hands on the keyboard:</p>
-        <table>
-          <tr><td><b>k</b></td><td>keep and mark reviewed ✓, then move to the next. Your default key.</td></tr>
-          <tr><td><b>d</b></td><td>delete junk, noise, and things that shouldn't exist. There's no confirm, and <b>u</b> undoes.</td></tr>
-          <tr><td><b>m</b></td><td>merge into another entity (with autocomplete, keeping the old name as an alias)</td></tr>
-          <tr><td><b>c</b></td><td>correct a typo. The old name is <em>not</em> kept as an alias (Dana → Dane)</td></tr>
-          <tr><td><b>r</b></td><td>rename to fix the spelling or case of this entity's own name</td></tr>
-          <tr><td><b>a</b></td><td>alias to add another name this entity goes by (keeps it matchable by both)</td></tr>
-          <tr><td><b>t</b> then <b>1/2/3</b></td><td>retype to person / project / place</td></tr>
-          <tr><td><b>s</b></td><td>skip to decide later. It stays in the queue for next time</td></tr>
-          <tr><td><b>u</b></td><td>undo last change (50 deep, works across sessions)</td></tr>
-        </table>
+        <div class="help-keys">
+          <span class="k">k</span><span class="d"><span class="n">keep</span> <span class="t">— marks reviewed ✓, next. Your default key.</span></span>
+          <span class="k">d</span><span class="d"><span class="n">delete</span> <span class="t">— junk, noise, things that shouldn't exist. No confirm; u undoes.</span></span>
+          <span class="k">m</span><span class="d"><span class="n">merge</span> <span class="t">— into another entity (autocomplete; old name kept as alias)</span></span>
+          <span class="k">c</span><span class="d"><span class="n">correct</span> <span class="t">— typo fix; old name is not kept as alias (Dana → Dane)</span></span>
+          <span class="k">r</span><span class="d"><span class="n">rename</span> <span class="t">— fix spelling or case of this entity's own name</span></span>
+          <span class="k">a</span><span class="d"><span class="n">alias</span> <span class="t">— add another name this entity goes by (matchable by both)</span></span>
+          <span class="k">t then 1/2/3</span><span class="d"><span class="n">retype</span> <span class="t">— to person / project / place</span></span>
+          <span class="k">s</span><span class="d"><span class="n">skip</span> <span class="t">— decide later, stays in queue for next time</span></span>
+          <span class="k">u</span><span class="d"><span class="n">undo</span> <span class="t">— last change (50 deep, works across sessions)</span></span>
+        </div>
         <p>Most entities are a 1-second <b>k</b> or <b>d</b>. If you're unsure, don't deliberate. That's what
         <b>s</b> is for. Every key also has a matching on-screen button if you're mousing. The ones
         that need a target (merge, correct, rename, alias) open a field with <b>apply</b> / <b>cancel</b>
         buttons, and Enter and Esc still work there. Undo/redo buttons live on the entities screen (they cover
         triage actions too).</p>
+        </div>
       </div>
 
       <div class="help-step">
-        <h3><span class="step-n">4</span> deep fixes on the tricky ones <span class="where">entities tab → click entity → hover an observation</span></h3>
-        <p>For entities that are <em>conflations</em>, like two Sams in one node or a "karaoke bar" that's really
+        <span class="step-n">4</span>
+        <div class="step-h"><h3>deep fixes on the tricky ones</h3><span class="where">entities → pick an entity → hover an observation</span></div>
+        <div class="step-body"><p>For entities that are <em>conflations</em>, like two Sams in one node or a "karaoke bar" that's really
         two different bars, use the observation tools. <em>move</em> reassigns a single memory to the right
         entity (type <code>person:Sam (work)</code> to create a new one), <em>edit</em> fixes wrong facts, and
         <em>×</em> removes them. These are the slow, careful fixes. Save them for after the fast passes
-        so you're not context-switching.</p>
+        so you're not context-switching.</p></div>
       </div>
 
       <div class="help-step">
-        <h3><span class="step-n">5</span> ongoing habit</h3>
-        <p>Memory now updates at the <em>summarize point</em>. Closing a chapter tags it, extracts
+        <span class="step-n">5</span>
+        <div class="step-h"><h3>ongoing habit</h3></div>
+        <div class="step-body"><p>Memory now updates at the <em>summarize point</em>. Closing a chapter tags it, extracts
         its entities, refreshes the week's arc, its summary, and the domain documents, scans it
         for dreams, and integrates the chapter into a <em>seed summary candidate</em>, the rolling
-        co-edited life summary. When a banner on the write tab announces it, download the candidate there, read it
-        fully, edit it, and upload it back. The uploaded file is the seed every chapter opens with,
+        co-edited life summary. When a banner on the write tab announces it, read the candidate
+        through, edit it, and save it. The saved document is the seed every chapter opens with,
         and nothing automatic ever overwrites it. <em>detect patterns</em> in the
         patterns tab still re-reads everything for new recurring shapes when you ask. Closed chapters
         create new entities that arrive <em>unreviewed</em>, so an occasional minute in triage keeps
         the graph clean forever. You never redo work, since reviewed marks persist and category fixes
-        (× a wrong tag in the categories tab) stick the same way entity merges do.</p>
+        (× a wrong tag in the categories tab) stick the same way entity merges do.</p></div>
       </div>
 
+      </div>
       </details>
-      <details class="help-sec">
-      <summary id="h-fixes">which fix do i want?</summary>
-      <table class="decision">
-        <tr><td>Two names, same real thing, both names legit</td><td><b>merge</b> (keeps an alias, so either name still matches)</td></tr>
-        <tr><td>Misspelling/typo that shouldn't be remembered</td><td><b>correct</b> (no alias)</td></tr>
-        <tr><td>Right entity, wrong spelling or capitalization</td><td><b>rename</b></td></tr>
-        <tr><td>Right entity, wrong category (person vs place)</td><td><b>retype</b></td></tr>
-        <tr><td>One wrong memory inside a right entity</td><td>observation <b>edit</b> / <b>move</b> / <b>×</b></td></tr>
-        <tr><td>Shouldn't exist at all</td><td><b>delete</b></td></tr>
-      </table>
 
-      </details>
       <details class="help-sec">
-      <summary id="h-categories">categories</summary>
+      <summary id="h-fixes"><span class="mark"></span><span>which fix do I want?</span></summary>
+      <div class="help-body">
+      <div class="help-fixes">
+        <div class="row"><span class="when">Two names, same real thing, both names legit</span><span class="fix"><b>merge</b> <span class="t">keeps an alias, so either name still matches</span></span></div>
+        <div class="row"><span class="when">Misspelling or typo that shouldn't be remembered</span><span class="fix"><b>correct</b> <span class="t">no alias</span></span></div>
+        <div class="row"><span class="when">Right entity, wrong spelling or capitalization</span><span class="fix"><b>rename</b></span></div>
+        <div class="row"><span class="when">Right entity, wrong kind (person vs place)</span><span class="fix"><b>retype</b></span></div>
+        <div class="row"><span class="when">One wrong memory inside a right entity</span><span class="fix"><b>observation edit / move / ×</b></span></div>
+        <div class="row"><span class="when">Shouldn't exist at all</span><span class="fix"><b>delete</b></span></div>
+      </div>
+      </div>
+      </details>
+
+      <details class="help-sec">
+      <summary id="h-categories"><span class="mark"></span><span>categories</span></summary>
+      <div class="help-body">
       <p>Every entry gets tagged with categories (work, relationships, health…) automatically when a
       chapter closes, and <em>tag new entries</em> re-runs it manually for anything untagged (already-tagged
-      entries are cached and free). Click a category chip to browse its entries and read its
+      entries are cached and free). Pick a category to browse its entries and read its
       <em>domain document</em>, a living ~500-word summary of that area of life. × a wrong tag or
       + a missing one, and your fixes become permanent overrides. <em>scan for new categories</em> clusters
       your places/projects and proposes organic categories, but nothing is created without your
       confirm. You can also hand-seed a category with keywords. Entry categories are deliberately
       flat to stay broad and scannable, so there's no sub-category nesting here.</p>
-
+      </div>
       </details>
+
       <details class="help-sec">
-      <summary id="h-patterns">patterns</summary>
+      <summary id="h-patterns"><span class="mark"></span><span>patterns</span></summary>
+      <div class="help-body">
       <p><em>detect patterns</em> re-reads the weekly arcs + domain documents and names recurring
       shapes (emotional cycles, behavioral pipelines, relationship dynamics), each with dated
       instances and a confidence level. Patterns are injected into the companion's context only
       when the conversation genuinely rhymes with one. <em>dismiss</em> hides a pattern
       until new evidence shows up.</p>
-
+      </div>
       </details>
+
       <details class="help-sec">
-      <summary id="h-dreams">dreams</summary>
+      <summary id="h-dreams"><span class="mark"></span><span>dreams</span></summary>
+      <div class="help-body">
       <p>Dreams live in their own realm, a separate collection that waking questions can never
       accidentally surface. The extractor finds dreams inside your entries (at the summarize point,
       or via <em>extract dreams from history</em>), keeping the narrative, cast, and tones,
       plus your own interpretation if you gave one. Recent dream tone shows up as the
       <em>dream weather</em> line. Asking the companion about dreams crosses the boundary
       explicitly.</p>
-
+      </div>
       </details>
+
       <details class="help-sec">
-      <summary id="h-safety">safety notes</summary>
-      <p>Everything is undoable, since ↺/↻ in the nav cover every curation and observation change, 50 steps back.
+      <summary id="h-safety"><span class="mark"></span><span>safety notes</span></summary>
+      <div class="help-body">
+      <p>Everything is undoable, since ↺/↻ on the entities screen cover every curation and observation change, 50 steps back.
       All your decisions live in <code>entity_graph/curation.json</code> and re-apply on every rebuild, so
       nothing you do here is ever lost by the system regenerating docs. The one exception
       is a <code>--force</code> re-extraction (a from-scratch API re-read of all entries, only ever run deliberately),
       which rebuilds the raw memory files and would discard <em>observation-level</em> edits. Merges, renames and
       the rest survive even that. Removed aliases keep their historical "as ‘name’" data, because removal only
-      stops name-matching. And your journal is just the local folders <code>chroma_data</code>,
+      stops name-matching.</p>
+      <p>Your journal is just the local folders <code>chroma_data</code>,
       <code>journal_entries</code>, <code>entity_graph</code> and <code>summaries</code>, so back them up.</p>
+      </div>
       </details>
     </div>
   </section>
