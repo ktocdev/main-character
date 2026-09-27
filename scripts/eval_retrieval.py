@@ -69,11 +69,13 @@ def _entry_body(path: Path) -> str:
     return "\n".join(lines[i:])
 
 
-def validate(tests: list[dict]) -> list[str]:
+def validate(tests: list[dict], deep: bool = True) -> list[str]:
     """Each fact must be in an entry of its date. A question's fact must sit
     past DEEP characters of every entry that holds it; for an entry reply it is
     the link that must sit past DEEP characters of the query, and the fact
-    can be anywhere."""
+    can be anywhere. A set marked `"deep": false` -- the owner's own
+    questions, which ask what they ask wherever the answer sits -- is only
+    checked for the fact being in its entry."""
     problems = []
     for t in tests:
         files = sorted(JOURNAL_DIR.glob(f"{t['date']}_*.md"))
@@ -83,7 +85,7 @@ def validate(tests: list[dict]) -> list[str]:
         # entry (_HHMM_entry.md) and the day as the chat closed it.
         if not where:
             problems.append(f"{t['id']}: fact not found in any entry dated {t['date']}")
-        elif "query" not in t and min(at for _, at in where) < DEEP:
+        elif deep and "query" not in t and min(at for _, at in where) < DEEP:
             problems.append(f"{t['id']}: fact starts at character "
                             f"{min(at for _, at in where)}, inside the first {DEEP}")
         if "query" in t:
@@ -208,7 +210,8 @@ def main() -> int:
     sets = {"questions": data.get("questions", []),
             "entry_replies": data.get("entry_replies", [])}
 
-    problems = validate(sets["questions"] + sets["entry_replies"])
+    problems = validate(sets["questions"] + sets["entry_replies"],
+                        deep=data.get("deep", True))
     if problems:
         print("the test set does not match this journal:", *problems, sep="\n  ")
         return 1
