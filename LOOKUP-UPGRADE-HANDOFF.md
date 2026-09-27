@@ -10,7 +10,7 @@ As of 2026-09-25, stopped here:
 2. **Switch the model: done 2026-09-25** (see "The switch, as built" under step 1a). Through the real code path it finds 30/38 in the top 6 and 31 in the top 12, with MRR 0.628, which matches the comparison exactly. Entry replies are 3/8 in both the top 6 and top 12; MiniLM got 3/8 and 5/8.
 3. **Finish step 1: done 2026-09-25** (see "Step 1 finished" under step 1a).
    - **The search ceiling is 64, decided by the owner 2026-09-25** (`passages.MAX_QUERY_PIECES`, was 26). It was sized for 254-token pieces, which add ~224 new tokens each, so 26 covered twice the longest entry. At 120 tokens each piece adds ~90, so 26 cover ~2,340 tokens. On the real journal, 5 of 395 entries need more (27–32 pieces, up to 2,824 tokens). At 26 those were searched end to end by 26 pieces spread evenly, with some text between them skipped. Measured on the copy, the longest chunk (11,697 characters, 31 pieces) takes 394 ms to search at 26 and 502 ms at 64, and its whole context block 1.3 s and 1.6 s. At 64 every entry is covered twice over, for about 0.1 s of search and 0.3 s of context block on the longest entries only.
-4. **Step 1b** (the companion's prompt): built 2026-09-26 on branch `JRNL-48` (see "Step 1b as built"). Real replies checked the same day. Then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`. Step 2 built 2026-09-26 (see "Step 2 as built"). Step 3 built 2026-09-26 on `JRNL-51` (see "Step 3 as built"); next is step 4, dates.
+4. **Step 1b** (the companion's prompt): built 2026-09-26 on branch `JRNL-48` (see "Step 1b as built"). Real replies checked the same day. Then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`. Step 2 built 2026-09-26 (see "Step 2 as built"). Step 3 built 2026-09-26 on `JRNL-51` (see "Step 3 as built"); Step 4 built 2026-09-26 on `JRNL-53` (see "Step 4 as built"). Step 4b deferred by the owner 2026-09-26: after steps 3 and 4 every question's fact is in the top 12, which was what it was for.
 5. **Opus 5.5** (side task): done 2026-09-26 on `JRNL-49`, voice comparison included (see "Opus 5.5 as built").
 6. **Holdout.** The owner's own questions are in `docs/retrieval-eval/my-questions.txt` (gitignored, moved there 2026-09-26). Convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
 7. **Final check,** then the real journal: stop 8144, `python backup.py`, then `rebuild_index.py`.
@@ -410,7 +410,21 @@ When a question names a month, a date or a range ("in March", "last summer", "20
 
 Two of the real-set misses are this case: "around Christmas" and "in March", with otherwise generic words. Seasons and holidays ("Christmas", "last summer", "Labor Day") map to ranges. When the question names a range, keep searching outside it too, at a lower weight, so a wrong guess about the range doesn't hide the answer.
 
+#### Step 4 as built (2026-09-26, branch `JRNL-53`)
+
+- **`timeframe.py`** (new) reads the time a question names: an ISO date or month, a month and day either way round (with or without a year), a month (with or without a year), a year after a word like "in", holidays (Christmas, New Year's, Thanksgiving, Halloween, Valentine's, Easter, Labor Day, Memorial Day, the Fourth of July; each a window of a few days around it) and seasons. Without a year it means every year the journal has; "last" picks the latest that has ended and "this" the current one. Words that are also ordinary ("may", "march", "august", "fall", "spring") count only with a clue: a day or year after, or a cue word before ("in", "early", "last"…, past a "the"). `dates_within` turns the ranges into the journal dates inside them. Relative phrases ("last week", "three days ago") aren't read yet.
+- **`passages.fused`:** when a question names a time, the search by meaning and the keyword search run again within that time's dates (`$in`), and those two lists join the reciprocal rank fusion. A passage from then can be on four lists, and one from any other time on two, so the time counts for a lot without hiding the rest. Only for a one-piece query with no filter of its own: whole entries (entry replies) name dates in passing. `passages.DATES` turns it off; the journal's dates come from the keyword index (`keywords.Index.dates`).
+- **`eval_retrieval.py`** gains `--no-dates`.
+- **Tests:** `tests/test_timeframe.py` (ranges, holidays, everyday words, clues, the journal's dates) and three in `tests/test_passages.py` (a month brings its entry forward, a month with no entries changes nothing, a whole entry isn't read for dates).
+- **Not changed:** the companion's prompts. The context block has the same sections; the dates only change which passages are in it.
+
+Measured on the sandbox copy (`real-step4.json`, compared with `real-step3.json`): questions 38/38 in the top 12 and in the block (was 37/38), 36/38 in the top 6 (was 35), MRR 0.778 (was 0.775). r11 is found at rank 10; r01 moved from 7 to 6; no other question changed. Entry replies are unchanged (6/8 in the top 12, 7/8 in the block), as they should be. Times are unchanged (search ~29 ms for a question).
+
+Only two questions in the real set name a time, so this measures little; the holdout will say more if the owner's own questions use dates.
+
 ### Step 4b: re-rank the candidates
+
+*Deferred by the owner 2026-09-26.* It was for facts ranked 13–30; after steps 3 and 4 every question's fact is in the top 12 (`real-step4.json`). Worth another look if the holdout shows near misses.
 
 Added 2026-09-25. Vector search compares the question and a passage as two separate lists of numbers. A **cross-encoder** is a second small model that reads the question and a passage *together* and scores how well the passage answers it. That is much more precise, but too slow to run over every passage. So: gather the top ~50 candidates from steps 1–4 cheaply, re-score them with the cross-encoder, and keep the best 12.
 

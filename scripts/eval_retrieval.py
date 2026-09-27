@@ -190,11 +190,14 @@ def main() -> int:
                     help="search by meaning only, without keyword search (step 3)")
     ap.add_argument("--no-fuzzy", action="store_true",
                     help="keyword search without matching near spellings")
+    ap.add_argument("--no-dates", action="store_true",
+                    help="don't search the time a question names (step 4)")
     args = ap.parse_args()
 
     import keywords
     import passages
     passages.KEYWORDS = not args.no_keywords
+    passages.DATES = not args.no_dates
     keywords.FUZZY = not args.no_fuzzy
 
     sys.stdout.reconfigure(encoding="utf-8")
