@@ -10,7 +10,7 @@ As of 2026-09-25, stopped here:
 2. **Switch the model: done 2026-09-25** (see "The switch, as built" under step 1a). Through the real code path it finds 30/38 in the top 6 and 31 in the top 12, with MRR 0.628, which matches the comparison exactly. Entry replies are 3/8 in both the top 6 and top 12; MiniLM got 3/8 and 5/8.
 3. **Finish step 1: done 2026-09-25** (see "Step 1 finished" under step 1a).
    - **The search ceiling is 64, decided by the owner 2026-09-25** (`passages.MAX_QUERY_PIECES`, was 26). It was sized for 254-token pieces, which add ~224 new tokens each, so 26 covered twice the longest entry. At 120 tokens each piece adds ~90, so 26 cover ~2,340 tokens. On the real journal, 5 of 395 entries need more (27–32 pieces, up to 2,824 tokens). At 26 those were searched end to end by 26 pieces spread evenly, with some text between them skipped. Measured on the copy, the longest chunk (11,697 characters, 31 pieces) takes 394 ms to search at 26 and 502 ms at 64, and its whole context block 1.3 s and 1.6 s. At 64 every entry is covered twice over, for about 0.1 s of search and 0.3 s of context block on the longest entries only.
-4. **Step 1b** (the companion's prompt): built 2026-09-26 on branch `JRNL-48` (see "Step 1b as built"). Real replies checked the same day. Then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`. Step 2 built 2026-09-26 (see "Step 2 as built").
+4. **Step 1b** (the companion's prompt): built 2026-09-26 on branch `JRNL-48` (see "Step 1b as built"). Real replies checked the same day. Then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`. Step 2 built 2026-09-26 (see "Step 2 as built"). Step 3 built 2026-09-26 on `JRNL-51` (see "Step 3 as built"); next is step 4, dates.
 5. **Opus 5.5** (side task): done 2026-09-26 on `JRNL-49`, voice comparison included (see "Opus 5.5 as built").
 6. **Holdout.** The owner's own questions are in `docs/retrieval-eval/my-questions.txt` (gitignored, moved there 2026-09-26). Convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
 7. **Final check,** then the real journal: stop 8144, `python backup.py`, then `rebuild_index.py`.
@@ -159,7 +159,7 @@ Findings:
 - 8 entry-reply tests are too few to separate the variants. A difference of one is noise.
 - **Provisional choice: 120 tokens with 1 neighbour, `N_SEMANTIC` 12.** Showing 12 results comes to roughly today's context size, with 24/38 hits instead of 2. It is provisional because the embedding model (step 1a) sets the window, and the size is re-run for the chosen model.
 
-**Why the other 14 questions miss** (120-token index): 10 name a rare word that only 1–4 passages contain ("Begonia", "Margarita", "karaoke", "kratom"). Search by meaning ranks those low, and step 3 targets them. 5 are ranked 13–30, just outside what is shown, which is what step 4b targets. 2 give a time ("around Christmas", "in March") with otherwise generic words, which step 4 targets. 2 have the word that ties question to answer in the passage just before, which step 3 plus neighbours targets. These groups overlap.
+**Why the other 14 questions miss** (120-token index): 10 name a rare word that only 1–4 passages contain (a film title, a drink, a hobby, a substance). Search by meaning ranks those low, and step 3 targets them. 5 are ranked 13–30, just outside what is shown, which is what step 4b targets. 2 give a time ("around Christmas", "in March") with otherwise generic words, which step 4 targets. 2 have the word that ties question to answer in the passage just before, which step 3 plus neighbours targets. These groups overlap.
 
 **The questions were written from the entries**, so they may be phrased more helpfully than the owner's own would be. Before the final comparison, the owner writes about 10 questions of their own into an untracked holdout file (`docs/retrieval-eval/holdout.json`). No setting is tuned against it; it only confirms the final result.
 
@@ -284,7 +284,7 @@ Done when: the step 0 test shows a clear improvement on the deep-fact questions,
 The companion's prompt (`SYSTEM_PROMPT` in `companion.py`) only half explains where its knowledge comes from. The passage index changes what it receives, so fix the prompt at the same time. Found on 2026-09-23:
 
 - **The opening contradicts the rest.** It calls the companion a friend "who has read every previous entry and remembers what matters", then says it only has retrieved excerpts. Keep the second idea: it doesn't remember everything, it knows where to look.
-- **"The user's journal spans December 2025 to the present" is hard-coded.** That is the owner's start date, wrong for the demo (Jordan's journal) and for anyone else. Fill it in from the journal's first entry date. The system prompt is cached, so the date must stay stable between turns; the first entry's date is.
+- **"The user's journal spans <a month> to the present" is hard-coded.** That is the owner's start date, wrong for the demo (Jordan's journal) and for anyone else. Fill it in from the journal's first entry date. The system prompt is cached, so the date must stay stable between turns; the first entry's date is.
 - **The context sections are not explained.** Nothing says `<related_summaries>` are generated text rather than the person's words, while the prompt also says "Quote their own language back". It could quote a summary as if the person wrote it. Say which sections are their own words (`<recent_entries>`, `<related_history>`) and may be quoted, and that summaries are an outline with a date, not something to quote.
 - **It does not know the app exists.** When it has only a summary, it cannot say "that's in History under March 12", because it does not know History or the search tab exist.
 - **The chat screen uses the companion persona.** `/api/lookup` calls `stream_reply` with the same `SYSTEM_PROMPT`, so the screen for finding things gets the witness-friend voice and its rules ("Ask more than one question" is banned, "Default to prose"). Give it its own short prompt: its job is to find things in the journal, give exact dates, quote when it has the passage, and say plainly when it has only a summary and where to read the entry.
@@ -322,8 +322,8 @@ Testing: this changes the companion's voice, so only real replies show whether i
 - **Tests:** `tests/test_prompts.py` (7): the span from the first date, an empty journal, no hard-coded date, every context tag explained, no "snapshot", the chat tab's prompt, the companion's persona. The two lookup tests in `test_settings.py` patch `stream_lookup`.
 - **Docs:** `HOW-IT-WORKS.md` ("What the companion sees" and "The chat screen").
 - **Real replies (layer 3), 2026-09-26,** on the sandbox copy of the real journal, Opus 4.6, $1.05 for 11 calls: the reflection, six chat-tab questions (r07, r10, r16 found; r03, r32, r38 missed), "the last few days" on the chat tab, r17 as a write-tab chat message, and entry replies e02 and e01. The sample leans on misses on purpose, and there was no before run, so it checks behaviour, not improvement.
-  - Quotes (r07, r10, r16, and the July 11 kratom entry) are word for word. No summary was quoted as the person's words.
-  - Nothing found (r32 "Begonia", r17 "Tasmanian devil"): said so plainly and suggested the search tab. These are step 3's misses.
+  - Quotes (r07, r10, r16, and a July entry) are word for word. No summary was quoted as the person's words.
+  - Nothing found (r32, r17): said so plainly and suggested the search tab. These are step 3's misses.
   - The chat tab answered like a finder; "the last few days" said the three newest days might be in the open chapter, which was right.
   - Entry replies and the reflection stayed in the companion's voice without mentioning the app. Neither entry reply reached its link (search, not the prompt: step 4b).
   - **Two fixes after the run:** r03 gave the date and details from a summary without saying so or where to read it, so the chat prompt now says to always make clear whether it's quoting or going from a summary. The rerun of r03 pointed to History; r38 then called the person "she", copied from the app's third-person summaries, so `CONTEXT_SECTIONS` now says to always talk to them as "you". That last fix hasn't been rerun.
@@ -353,21 +353,56 @@ Measured on the sandbox copy of the real journal:
 (Pairs are questions / entry replies.)
 
 - **It does what it was for:** a summary no longer arrives without the entry's words. 35 of the 56 entry summaries had none before; all 35 now carry about 1,000 characters of the entry.
-- **It doesn't reach the eval's misses,** because the right entry's summary almost never ranks in the top 3. For 7 of the 11 misses it isn't in the top 40. The questions ask about details ("Begonia", "kratom", "the Tasmanian devil") that a summary leaves out. When the entry *is* known, a search inside it finds the fact at rank 1 or 2 for r03, r17, r32, r38 and e01, so the gap is finding the entry, which is what steps 3 (rare words) and 4 (dates) are for.
+- **It doesn't reach the eval's misses,** because the right entry's summary almost never ranks in the top 3. For 7 of the 11 misses it isn't in the top 40. The questions ask about details (a film title, a substance, a nickname) that a summary leaves out. When the entry *is* known, a search inside it finds the fact at rank 1 or 2 for r03, r17, r32, r38 and e01, so the gap is finding the entry, which is what steps 3 (rare words) and 4 (dates) are for.
 - **Cost:** about 200 more tokens per turn on average, and up to three more searches (~40 ms for a question, ~180 ms for an entry reply). Small next to a reply.
 
 ### Step 3: keyword search alongside search by meaning
 
-Search by meaning is weak on names, numbers and rare words, and 10 of the 14 questions step 1 misses name such a word. *Revised 2026-09-25:* the original plan looked up only quoted phrases, capitalized words and entity names. Many of the misses are ordinary rare words ("karaoke", "puppets", "kratom"), so this is now full keyword search:
+Search by meaning is weak on names, numbers and rare words, and 10 of the 14 questions step 1 misses name such a word. *Revised 2026-09-25:* the original plan looked up only quoted phrases, capitalized words and entity names. Many of the misses are ordinary rare words (a hobby, a craft, a substance), so this is now full keyword search:
 
 - **Rank every passage by keyword relevance with BM25,** the standard scoring behind most search engines. It rewards a passage for containing the question's words, and rare words count for much more than common ones. Build it over the passage index's text. At about 4,000 passages it fits in memory and scores in milliseconds; rebuild it when the passage index changes. The `rank_bm25` package, or a short implementation, both work. Drop stopwords.
-- **Normalize words the same way on both sides:** lowercase, fold accents (reuse `_fold` from `server.py`), drop possessive `'s`, and reduce plurals and simple verb endings, so "Luisa's" matches "luisa" and "puppets" matches "puppet".
-- **Fuzzy matching for spelling.** The journal has typos and variant spellings ("tazmanian", "trigylerides"), and a question won't spell them the same way. For a question word with no exact match in the vocabulary, also match words within a small edit distance, or with high character-trigram overlap, at a lower weight. Only for words of 5 or more letters, so short words don't match everything.
+- **Normalize words the same way on both sides:** lowercase, fold accents (reuse `_fold` from `server.py`), drop possessive `'s`, and reduce plurals and simple verb endings, so "Robin's" matches "robin" and "lanterns" matches "lantern".
+- **Fuzzy matching for spelling.** The journal has typos and variant spellings (misspelled names and medical terms), and a question won't spell them the same way. For a question word with no exact match in the vocabulary, also match words within a small edit distance, or with high character-trigram overlap, at a lower weight. Only for words of 5 or more letters, so short words don't match everything.
 - **Merge the two lists by taking turns,** the same way long-query pieces merge. Reciprocal rank fusion is the standard form: a passage's score is the sum of 1/(60 + rank) over the lists it appears in. The rank is what counts, not the raw score, because BM25 scores and distances aren't on the same scale.
 - **Long queries:** run BM25 on each query piece, like the vector search, so an entry's ending gets its own keyword matches.
 - Known entity names and aliases (`entity_index`) are a cheap extra: a question word that matches an alias can be expanded to the entity's name.
 
 Measure on the real set, with and without fuzzy matching, and check that the short-question hits from step 1 don't drop.
+
+#### Step 3 as built (2026-09-26, branch `JRNL-51`)
+
+- **`keywords.py`** (new, no new dependency): BM25 over the passage index's text, built in memory on the first search (0.6 s for the real journal's 4,117 passages and 8,589 distinct words) and rebuilt after any write to the passage index (`passages._upsert`, `_delete_sources`, `drop`, `mirror` call `keywords.invalidate()`), or when the collection's size changes (a rebuild in another process). About 1 ms per query.
+  - Words: lowercased, accents folded (`keywords.fold`, which `server.py` now imports in place of its own `_fold`), possessive `'s` dropped, a crude stemmer for plurals, `-ing`, `-ed` and a final `e`, and English stopwords removed.
+  - A word in more than 20% of passages is skipped (`MAX_DF_SHARE`; never in a journal under 500 passages, `MIN_DF_CUT`).
+  - Fuzzy: a question word of 5+ letters that the journal never uses matches journal words within 1 edit (2 for 8+ letters, a swap of neighbours counting as one), at half weight. Candidates come from shared trigrams.
+  - **A floor** (`FLOOR`, 0.25): keyword hits scoring under a quarter of the best are left off the list. Without it, a question word that is in many passages (a person's name) gives each of them a keyword rank, and in the merge a rank counts the same whatever the score behind it, so a dozen passages that only share the name outvote the one with the rare word. `test_a_rare_word_finds_its_passage_among_many_alike` fails without it.
+  - `where` filters are applied in Python (`keywords.matches`: `$and`, `$or`, `$eq`, `$ne`, `$in`, `$nin`), so step 2's search inside one entry gets keywords too. Any other operator falls back to meaning only.
+- **`passages.fused`**, used by `passages.search` (so by `query_journal` and step 2): for each query piece, the best `FUSION_DEPTH` (30) by meaning and by keyword, merged by reciprocal rank fusion (k = 60), then the pieces take turns as before (`_take_turns`, shared with `ranked`). A passage found only by keyword gets its cosine distance to the piece from its stored embedding. `passages.KEYWORDS` turns it off.
+- **Unchanged:** `passages.ranked` and so the search tab, which relies on distances; `search_documents` (summaries and dreams), meaning only.
+- **`eval_retrieval.py`** gains `--no-keywords` and `--no-fuzzy`.
+- **Tests:** `tests/test_keywords.py` (normalization, rare words, fuzzy, short words, filters) and four in `tests/test_passages.py` (a rare word the meaning search ranks last, a keyword-only hit's distance, the index following writes, a filter). Example words in code and tests are made up, not from the journal.
+
+Measured on the sandbox copy of the real journal (`real-step3.json`, compared with `real-step2.json`):
+
+| | step 2 | step 3 |
+|---|---|---|
+| questions: fact in top 6 / top 12 | 30 / 31 of 38 | 35 / 37 of 38 |
+| questions: fact in the block | 31/38 | 37/38 |
+| questions: MRR | 0.628 | 0.775 |
+| entry replies: fact in top 6 / top 12 | 3 / 3 of 8 | 6 / 6 of 8 |
+| entry replies: fact in the block | 4/8 | 7/8 |
+| search alone, median | 24 / 81 ms | 27 / 124 ms |
+| context block time, median | 105 / 376 ms | 110 / 489 ms |
+| context block, median | 30,200 / 41,100 chars | 30,800 / 39,200 chars |
+
+(Pairs are questions / entry replies.)
+
+- Found now: r01, r02, r03, r17, r32, r38 and e01, e05, e06. No earlier hit was lost; r08, r23 and r35 moved up.
+- Still missed: **r11** (needs the month: step 4), **e07**, and **e04** in the block but not in related history.
+- **Fuzzy matching changes nothing on this set** (`real-step3-nofuzzy.json`, run before the floor: identical counts). r17's misspelled word is found through the question's other words. It's kept, since it costs nothing when every question word is in the journal, but it's unproven.
+- **The floor** changed nothing on the counts (`real-step3-nofloor.json`); r35 moved from 2 to 1, e03 from 2 to 3.
+- `--no-keywords` reproduces step 2 exactly.
+- Not done: expanding entity aliases (the plan's "cheap extra"). None of the remaining misses needs it.
 
 ### Step 4: date filters
 
@@ -461,7 +496,7 @@ t1b.py` did this; it's scratch, so recreate it if it's gone), once on 4.6 and on
 - **Tests:** the processing lineup and its refusal, Opus 5.5 as a companion model, its cache price, and its processing thinking kwarg. Docs: `.env.example`, `README.md`, `HOW-IT-WORKS.md`, and a dated note in `docs/releasing/release-plan.md` item 6 (local; `docs/` is untracked).
 - **Voice comparison, 2026-09-26:** the reflection, entry replies e02 and e01, the r17 chat message, and lookups r07, r38 and "the last few days", on the sandbox copy with its open chapter trimmed to before step 1b's test turns, once per model, in-process (so neither run saw the other's replies). The owner's key reaches Opus 5.5.
   - **Cost:** 5.5 was 13% *more* ($0.60 against $0.54 for the seven calls): 36% more tokens, from its tokenizer and longer replies. Don't expect the lower price to lower the bill.
-  - **5.5 better:** it found the links (e02 reached the April visit to Jon and Suzanne's, e01 the January aphids); it said exactly when it was going from a summary and quoted earlier entries with dates and titles (r38); its misses were more useful (search suggestions, nearest things it did have). 4.6 slipped a banned phrase ("That's not nothing — wait, I mean…").
+  - **5.5 better:** it found the links (e02 reached an April visit to friends, e01 a January garden problem); it said exactly when it was going from a summary and quoted earlier entries with dates and titles (r38); its misses were more useful (search suggestions, nearest things it did have). 4.6 slipped a banned phrase ("That's not nothing — wait, I mean…").
   - **4.6 better:** shorter, lighter entry replies. 5.5's e01 went through nearly every item in six paragraphs, against the persona's "react to one detail, skip the rest", and it ended every write-tab reply with a question.
   - **Outcome:** Opus 5.5 kept as the default. Watch entry-reply length in real use; if it drags, try a persona line or `medium` effort (neither tested).
 

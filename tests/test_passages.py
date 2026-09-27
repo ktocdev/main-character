@@ -7,6 +7,10 @@
     covered;
   * search: the pieces of a long query take turns at the results, and a
     hit's neighbours are cut from the chunk itself, so nothing shows twice;
+  * keyword search is merged in: a rare word finds the passage search by
+    meaning ranks last, a passage found only by keyword still has a
+    distance, and the keyword index follows the passage index's writes and
+    a search's filter;
   * the write paths keep the index complete or absent: search falls back to
     the journal chunks only when it is absent, so an index missing an entry
     would hide that entry instead;
@@ -157,6 +161,65 @@ def test_a_long_query_is_searched_end_to_end():
     assert "trip" in pieces[-1] and "work" in pieces[0]
 
 
+STRUGGLING = "When did Robin admit he was still struggling with melatonin?"
+
+
+def struggles(chroma, rare="melatonin"):
+    """Twelve entries that mean what the question means, and one that names
+    `rare` in passing -- the one it asks about, which search by meaning
+    ranks last. The twelve share one of its words, "Robin", as a journal's
+    entries about a person do."""
+    for i in range(12):
+        col, *_ = write_chunks(
+            {f"c{i}": f"Robin confessed he is still having a hard time quitting, "
+                      f"day {i}. He told me on the phone and he keeps trying."},
+            date=f"2026-03-{i + 1:02d}")
+    write_chunks({"c12": "The garden was muddy. Later there was "
+                         f"{rare} on the counter and I didn't say anything."},
+                 date="2026-03-20")
+    passages.sync(col)
+
+
+def test_a_rare_word_finds_its_passage_among_many_alike(chroma, monkeypatch):
+    struggles(chroma)
+    monkeypatch.setattr(passages, "KEYWORDS", False)
+    assert all("melatonin" not in h["text"]
+               for h in passages.search(STRUGGLING, 2, neighbors=0))
+    monkeypatch.setattr(passages, "KEYWORDS", True)
+    assert any("melatonin" in h["text"]
+               for h in passages.search(STRUGGLING, 2, neighbors=0))
+
+
+def test_a_passage_found_only_by_keyword_has_a_distance(chroma, monkeypatch):
+    struggles(chroma)
+    monkeypatch.setattr(passages, "FUSION_DEPTH", 1)    # meaning offers 2
+    got = passages.search(STRUGGLING, 2, neighbors=0)
+    assert any("melatonin" in h["text"] for h in got)
+    assert all(isinstance(h["distance"], float) and 0 <= h["distance"] <= 2
+               for h in got)
+
+
+def test_the_keyword_index_follows_the_writes(chroma):
+    struggles(chroma, rare="coffee")
+    assert all("melatonin" not in h["text"]                 # built, without it
+               for h in passages.search(STRUGGLING, 2, neighbors=0))
+    _, ids, docs, metas = write_chunks(
+        {"c13": "Melatonin again, left by the sink."}, date="2026-03-21")
+    passages.index_chunks(ids, docs, metas)
+    assert any("Melatonin" in h["text"]
+               for h in passages.search(STRUGGLING, 2, neighbors=0))
+    passages.remove_chunks(["c13"])
+    assert all("Melatonin" not in h["text"]
+               for h in passages.search(STRUGGLING, 13, neighbors=0))
+
+
+def test_a_filtered_search_keeps_its_filter_for_keywords(chroma):
+    struggles(chroma)
+    got = passages.search(STRUGGLING, 5, neighbors=0,
+                          where={"date": {"$eq": "2026-03-01"}})
+    assert [h["metadata"]["source_id"] for h in got] == ["c0"]
+
+
 def test_neighbours_are_cut_from_the_chunk_and_never_shown_twice(chroma):
     text = "\n\n".join(para(t, 8) for t in
                        ["garden", "move", "sister", "job", "trip", "piano"])
@@ -285,7 +348,7 @@ def related(block: str) -> str:
 
 
 def test_passages_are_shown_whole_and_not_repeated_from_recent(chroma, monkeypatch):
-    long_old = "\n\n".join([para("job", 60), "The hidden detail: Begonia the cat."])
+    long_old = "\n\n".join([para("job", 60), "The hidden detail: Pickle the cat."])
     recent = "\n\n".join([para("garden", 10), "My sister called about the piano.",
                           para("trip", 60), "Late in the day: the piano again."])
     col = rag_journal.get_collection()
@@ -298,10 +361,10 @@ def test_passages_are_shown_whole_and_not_repeated_from_recent(chroma, monkeypat
                                                   "title": "New", "_id": "new"})])
 
     block = related(companion.build_context_block(
-        "Begonia the cat, and the piano", col, {}))
+        "Pickle the cat, and the piano", col, {}))
     # Past EXCERPT_CHARS of its chunk, and shown anyway, in full.
-    assert long_old.index("Begonia") > config.EXCERPT_CHARS
-    assert "The hidden detail: Begonia the cat." in block
+    assert long_old.index("Pickle") > config.EXCERPT_CHARS
+    assert "The hidden detail: Pickle the cat." in block
     # The recent entry shows its first EXCERPT_CHARS: a passage from there
     # isn't repeated, one from past it is.
     assert "My sister called about the piano." not in block
@@ -317,12 +380,12 @@ def summaries(block: str) -> str:
 
 def entry_with_a_summary(col):
     """One long entry whose detail sits deep, and its entry summary."""
-    text = "\n\n".join([para("job", 60), "The hidden detail: Begonia the cat."])
+    text = "\n\n".join([para("job", 60), "The hidden detail: Pickle the cat."])
     col.upsert(ids=["old"], documents=[text],
                metadatas=[{"date": "2026-01-01", "title": "Old"}])
     passages.sync(col)
     passages.mirror(companion.SUMMARY_COLLECTION, [(
-        "s-old", "A long week at work, and a new cat called Begonia.",
+        "s-old", "A long week at work, and a new cat called Pickle.",
         {"level": "entry summary", "date": "2026-01-01", "title": "Old"})])
 
 
@@ -334,10 +397,10 @@ def test_an_entry_summary_brings_the_entrys_words(chroma, monkeypatch):
     monkeypatch.setattr(companion, "get_recent_chunks", lambda c, n=1: [])
     monkeypatch.setattr(companion, "query_journal", lambda q, n_results: [])
 
-    block = summaries(companion.build_context_block("Begonia the cat", col, {}))
-    assert "A long week at work, and a new cat called Begonia." in block
+    block = summaries(companion.build_context_block("Pickle the cat", col, {}))
+    assert "A long week at work, and a new cat called Pickle." in block
     assert "From the entry itself, in their words: [2026-01-01] Old" in block
-    assert "The hidden detail: Begonia the cat." in block
+    assert "The hidden detail: Pickle the cat." in block
 
 
 def test_an_entry_passage_already_shown_is_not_repeated(chroma, monkeypatch):
@@ -345,8 +408,8 @@ def test_an_entry_passage_already_shown_is_not_repeated(chroma, monkeypatch):
     entry_with_a_summary(col)
     monkeypatch.setattr(companion, "get_recent_chunks", lambda c, n=1: [])
 
-    block = companion.build_context_block("Begonia the cat", col, {})
-    assert "The hidden detail: Begonia the cat." in related(block)
+    block = companion.build_context_block("Pickle the cat", col, {})
+    assert "The hidden detail: Pickle the cat." in related(block)
     assert "From the entry itself" not in summaries(block)
 
 
@@ -438,7 +501,7 @@ def test_a_long_dream_is_read_to_its_end_and_shown_once(dream_dirs, monkeypatch)
 def test_the_search_tab_finds_a_deep_match_and_shows_it(chroma, monkeypatch):
     import server
     col, *_ = write_chunks({
-        "deep": "\n\n".join([para("job", 60), "Begonia the cat sat on the piano."]),
+        "deep": "\n\n".join([para("job", 60), "Pickle the cat sat on the piano."]),
         "deep_2": para("trip", 5)})                  # the same entry, two chunks
     write_chunks({"other": para("garden", 8)}, date="2026-03-05", title="Other")
     passages.sync(col)
@@ -447,4 +510,4 @@ def test_the_search_tab_finds_a_deep_match_and_shows_it(chroma, monkeypatch):
     # One row per entry, however many chunks and passages matched.
     titles = [r["title"] for r in got]
     assert titles[0] == "A day" and len(titles) == len(set(titles))
-    assert "Begonia the cat sat on the piano." in got[0]["snippet"]
+    assert "Pickle the cat sat on the piano." in got[0]["snippet"]

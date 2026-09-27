@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Config — centralized settings for RAG Journal.
+Config — centralized settings.
 
 Single source of truth for what used to be scattered across modules: the
 two-model split (companion vs. processing), the companion's effort level,

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Entity Graph — Phase 2 of the RAG Journal.
+Entity Graph.
 
 Extracts people, projects, and places from imported journal conversations
 using the Claude API, then aggregates them into per-entity markdown docs

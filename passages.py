@@ -20,7 +20,8 @@ search all read that.
     index_chunks(...)       -> passages for journal chunks just written
     remove_chunks(ids)      -> ...and for chunks just deleted
     sync()                  -> reconcile the whole index with the journal
-    search(query, n)        -> the best passages, shaped like query_journal's
+    search(query, n)        -> the best passages, shaped like query_journal's,
+                               found by meaning and by keyword (keywords.py)
 
 The summaries and dreams are searched with the same model, through
 mirror() (their owners rewrite them whole) and search_documents().
@@ -62,6 +63,15 @@ _UPSERT = 1000         # passages per write; small writes degrade the index
 _HNSW = {"space": "cosine", "ef_construction": 400, "ef_search": 400,
          "max_neighbors": 48}
 _DOWNLOAD_TRIES = 5
+# Keyword search (keywords.py) runs beside search by meaning, and each query
+# piece's two lists are merged by reciprocal rank fusion: a passage scores
+# 1/(FUSION_K + rank) in each list it is on. Ranks, not scores, because BM25
+# scores and distances aren't on the same scale. Each list offers its best
+# FUSION_DEPTH, so a passage just outside one list's top n still counts
+# when the other ranks it high.
+KEYWORDS = True
+FUSION_K = 60
+FUSION_DEPTH = 30
 
 # The models this index can use, and how each marks a search query. Both were
 # trained with this instruction on queries and nothing on passages; leaving
@@ -355,6 +365,8 @@ def get_passage_collection(create: bool = False):
 def drop(name: str = COLLECTION_NAME) -> None:
     """Delete a collection. For the passage index, search then falls back
     to the journal chunks until rebuild_index.py builds it again."""
+    import keywords
+    keywords.invalidate()
     client, col, _ = _open(name)
     if col is not None:
         client.delete_collection(name)
@@ -377,6 +389,8 @@ def mirror(name: str, rows: list[tuple[str, str, dict]],
     fresh = [(rid, *want[rid]) for rid in want if have.get(rid) != want[rid]]
     if not dry_run:
         if stale:
+            import keywords
+            keywords.invalidate()
             col.delete(ids=stale)
         _upsert(col, fresh)
     return {"documents": len(want), "removed": len(stale), "embedded": len(fresh)}
@@ -439,6 +453,8 @@ def passages_for_chunk(chunk_id: str, text: str, meta: dict) -> list[tuple[str, 
 
 
 def _upsert(col, rows: list[tuple[str, str, dict]], vectors=None) -> None:
+    import keywords
+    keywords.invalidate()
     for i in range(0, len(rows), _UPSERT):
         batch = rows[i:i + _UPSERT]
         col.upsert(ids=[r[0] for r in batch],
@@ -499,6 +515,8 @@ def remove_chunks(ids: list[str]) -> None:
 
 
 def _delete_sources(col, ids: list[str]) -> None:
+    import keywords
+    keywords.invalidate()
     old = col.get(where={"source_id": {"$in": list(ids)}}, include=[])["ids"]
     if old:
         col.delete(ids=old)
@@ -565,9 +583,15 @@ def ranked(col, query: str, n: int,
                     include=["documents", "metadatas", "distances"], **kwargs)
     per_piece = [list(zip(ids, docs, metas, dists)) for ids, docs, metas, dists
                  in zip(res["ids"], res["documents"], res["metadatas"], res["distances"])]
+    return _take_turns(per_piece, n, key=lambda h: h[3])
+
+
+def _take_turns(per_piece: list[list], n: int, key) -> list:
+    """Every piece's best before any piece's second best, and so on; within
+    a turn, in `key` order. A hit is kept once, at its first turn."""
     out, seen = [], set()
     for turn in range(max((len(p) for p in per_piece), default=0)):
-        row = sorted((p[turn] for p in per_piece if turn < len(p)), key=lambda h: h[3])
+        row = sorted((p[turn] for p in per_piece if turn < len(p)), key=key)
         for hit in row:
             if hit[0] not in seen:
                 seen.add(hit[0])
@@ -577,6 +601,69 @@ def ranked(col, query: str, n: int,
     return out[:n]
 
 
+def fused(col, query: str, n: int,
+          where: dict | None = None) -> list[tuple[str, str, dict, float]]:
+    """ranked(), with keyword search merged in: for each query piece, its
+    FUSION_DEPTH best by meaning and its FUSION_DEPTH best by keyword, merged
+    by reciprocal rank fusion; then the pieces take turns as in ranked().
+
+    A passage found only by keyword is given its distance to the piece, so
+    every hit carries one, as ranked()'s do. Without a keyword index -- one
+    that can't be built, or a filter it can't apply -- this is ranked().
+    """
+    import keywords
+    index = keywords.index_for(col) if KEYWORDS else None
+    total = col.count()
+    if index is None or total == 0:
+        return ranked(col, query, n, where)
+    pieces = query_pieces(query)
+    try:
+        by_keyword = [index.top(piece, FUSION_DEPTH, where) for piece in pieces]
+    except ValueError:
+        return ranked(col, query, n, where)
+    vectors = embed(pieces, query=True)
+    kwargs = {"where": where} if where else {}
+    res = col.query(query_embeddings=vectors, n_results=min(max(n, FUSION_DEPTH), total),
+                    include=["documents", "metadatas", "distances"], **kwargs)
+
+    found: dict[str, tuple[str, dict]] = {}
+    scores, dists = [], []
+    for p, (ids, docs, metas, ds) in enumerate(zip(
+            res["ids"], res["documents"], res["metadatas"], res["distances"])):
+        score: dict[str, float] = {}
+        for rank, (pid, doc, meta) in enumerate(zip(ids, docs, metas), 1):
+            score[pid] = 1 / (FUSION_K + rank)
+            found[pid] = (doc, meta)
+        for rank, (pid, _) in enumerate(by_keyword[p], 1):
+            score[pid] = score.get(pid, 0.0) + 1 / (FUSION_K + rank)
+        scores.append(score)
+        dists.append(dict(zip(ids, ds)))
+
+    only_keyword = {pid for score, d in zip(scores, dists) for pid in score if pid not in d}
+    if only_keyword:
+        import numpy as np
+        got = col.get(ids=list(only_keyword),
+                      include=["documents", "metadatas", "embeddings"])
+        vecs = {}
+        for pid, doc, meta, vec in zip(got["ids"], got["documents"],
+                                       got["metadatas"], got["embeddings"]):
+            found[pid] = (doc, meta)
+            vecs[pid] = np.asarray(vec, dtype=float)
+        for vector, score, d in zip(vectors, scores, dists):
+            q = np.asarray(vector, dtype=float)
+            for pid in score:
+                if pid not in d and pid in vecs:
+                    v = vecs[pid]
+                    d[pid] = float(1 - q @ v / (np.linalg.norm(q) * np.linalg.norm(v)))
+
+    per_piece = []
+    for score, d in zip(scores, dists):
+        best = sorted((pid for pid in score if pid in found and pid in d),
+                      key=lambda pid: (-score[pid], d[pid]))
+        per_piece.append([(pid, *found[pid], d[pid], score[pid]) for pid in best])
+    return [h[:4] for h in _take_turns(per_piece, n, key=lambda h: (-h[4], h[3]))]
+
+
 def search(query: str, n: int, where: dict | None = None,
            neighbors: int | None = None, collection=None) -> list[dict]:
     """The n best passages for `query`, as [{"text", "metadata", "distance"}],
@@ -584,13 +671,14 @@ def search(query: str, n: int, where: dict | None = None,
     metadata's `source_id`, `start` and `end` say which span of which
     journal chunk the text is.
 
-    The query is split and its pieces take turns (ranked()). With
+    Found by meaning and by keyword, merged (fused()); the query is split
+    and its pieces take turns (ranked()). With
     `neighbors`, each hit is shown with that many passages on either side
     from the same chunk, and hits whose windows touch are merged, so no text
     is shown twice.
     """
     col = collection or get_passage_collection()
-    hits = ranked(col, query, n, where) if col is not None else []
+    hits = fused(col, query, n, where) if col is not None else []
     if not hits:
         return []
     neighbors = PASSAGE_NEIGHBORS if neighbors is None else neighbors
