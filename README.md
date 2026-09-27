@@ -46,7 +46,7 @@ To restart, use `journal restart` instead of `Ctrl+C` and starting again. `Ctrl+
 
 A demo journal ships with the repo: seven weeks of a fictional life, with the companion's replies pre-recorded. You can see how the app works before deciding whether to pay for it.
 
-It opens mid-week, three days after the author last closed a chat. You can read the week so far, then press **summarize & close chat** to watch the memory pipeline run. Each trip into the demo starts from that same point, so anything you write there lasts only until you leave.
+It opens mid-week, three days after the author last closed a chapter. You can read the week so far, then press **close chapter** to watch the memory pipeline run. Each trip into the demo starts from that same point, so anything you write there lasts only until you leave.
 
 ```bash
 ./journal start                              # Windows: .\journal start
@@ -63,7 +63,7 @@ The same demo also builds as a static site that runs entirely in the browser, wi
 ## What it costs
 
 - **Reading, searching and browsing are free.** Embeddings are computed on your machine by two small local models. Search by meaning, for the companion and in the search tab, uses snowflake-arctic-embed-s, over entries split into short passages so that every part of a long entry can be found; summaries and dreams use it too. The journal's own index of whole entries uses all-MiniLM-L6-v2. Search never calls an API.
-- **Writing costs money.** Each entry gets the companion's reply. Closing a chat triggers a background pass that tags what you wrote, extracts entities and updates summaries, so a close costs more than any one reply.
+- **Writing costs money.** Each entry gets the companion's reply. Closing a chapter triggers a background pass that tags what you wrote, extracts entities and updates summaries, so a close costs more than any one reply.
 - **Two models, so you can trade down.** The companion is the voice you read, and it defaults to Opus. Background processing is mechanical, runs in bulk, and uses most of the tokens. It defaults to Sonnet. Both can be changed in Settings.
 - **Two spend caps,** one per session and one per calendar month, checked before each call. They exist to catch runaway spending, not to set a budget, so the defaults sit above what a heavy month of ordinary writing would cost.
 - **Set a limit in the Anthropic Console too.** Every figure this app shows is an estimate from a hand-maintained price table, and the caps are only as reliable as the code that enforces them. A [spend limit on your Anthropic account](https://console.anthropic.com/settings/limits) holds even if this app's accounting is wrong.
@@ -123,7 +123,7 @@ If you want a journal several people can use, start from a different codebase.
 - **Entry summaries.** Two or three sentences per entry, cached incrementally.
 - **Weekly arcs.** A short narrative per week, stitched from entry summaries.
 - **Domain summaries.** A roughly 500-word doc per category, updated over time.
-- **Seed summary.** A rolling life summary you co-edit, which opens every chat. Each close drafts an update for you to review. It never replaces yours on its own.
+- **Seed summary.** A rolling life summary you co-edit, which opens every chapter. Each close drafts an update for you to review. It never replaces yours on its own.
 
 ### Categories
 - **Automatic tagging** against ten built-in categories. Each can be turned off.

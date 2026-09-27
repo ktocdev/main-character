@@ -61,7 +61,7 @@ function saveIdFor(text) {
 function settleSave() {
   try { localStorage.removeItem(PENDING_SAVE); } catch (e) { }
 }
-const SAVED_NOTE = 'becomes journal memory when you close the chat';
+const SAVED_NOTE = 'becomes journal memory when you close the chapter';
 const UNREACHED = 'could not reach the journal. Your draft is back, and '
   + 'saving it again will not make a second copy';
 // The one rule that decides whether a close is possible, mirrored from the
@@ -84,11 +84,11 @@ export async function closeSession() {
       + 'one from the live seed instead. What it integrated is kept as a file '
       + 'but drops out of the seed. Download and upload it first to keep it.\n'
     : '';
-  if (!confirm('Close this chat?' + pending + '\n\nYour side of it becomes a journal entry, and tagging, entities, summaries, dream extraction, and the seed summary candidate run in the background. A fresh chat starts empty.')) return;
+  if (!confirm('Close this chapter?' + pending + '\n\nYour side of it becomes a journal entry, and tagging, entities, summaries, dream extraction, and the seed summary candidate run in the background. The next chapter starts empty.')) return;
   const r = await api('/api/sessions/close', {});
   if (!r) return;
   $('write-log').innerHTML = '';
-  $('entry-saved').textContent = `chat closed and saved as "${r.title}".`;
+  $('entry-saved').textContent = `chapter closed and saved as "${r.title}".`;
   trackCloseProgress();
   state.sessionSel = 'current';
   if (state.activeTab === 'history') await loadHistory();
@@ -111,7 +111,7 @@ function renderCloseProgress(steps, done) {
     + steps.map(s => `<div class="cp-step cp-${s.status}">`
         + `<span class="cp-mark">${CP_GLYPH[s.status] || '·'}</span>`
         + `<span>${esc(s.label)}</span></div>`).join('')
-    + (done ? '<div class="cp-done">memory updated, and a fresh chat is open</div>' : '');
+    + (done ? '<div class="cp-done">memory updated, and the next chapter is open</div>' : '');
 }
 function trackCloseProgress() {
   clearInterval(closePoll);
@@ -195,10 +195,10 @@ async function maybeFirstRun(el) {
   if ((s.sessions || []).some(i => i.kind === 'archive')) return;
   const d = document.createElement('div');
   d.id = 'write-first-run';
-  d.innerHTML = '<p>This is one open chat, and everything you write here joins it. '
+  d.innerHTML = '<p>This is one open chapter, and everything you write here joins it. '
     + '<b>save entry</b> keeps a journal entry, and <b>send</b> talks it over with the companion.</p>'
     + '<p>Write for about a week, then open the <b>⋯</b> menu and choose '
-    + '<b>summarize &amp; close chat</b>. That is when it all becomes journal memory.</p>';
+    + '<b>close chapter</b>. That is when it all becomes journal memory.</p>';
   el.appendChild(d);
 }
 
@@ -311,7 +311,7 @@ export function init() {
     } catch (e) { }   // can't tell: leave the action available
     $('reset').disabled = !fresh;
     $('reset').title = fresh ? resetTitle
-      : 'nothing new in this chat yet. Write or chat first';
+      : 'nothing new in this chapter yet. Write or send something first';
   });
   $('seed-download').onclick = () =>
     download('/api/seed/download?which=current', 'seed_summary.md');

@@ -148,7 +148,7 @@ async function save() {
     setNote('that looks too short to be a seed summary, so nothing was saved');
     return;
   }
-  if (!confirm('Save this as your seed summary?\n\nEvery new chat will open with it. '
+  if (!confirm('Save this as your seed summary?\n\nEvery new chapter will open with it. '
     + 'The current seed is backed up, and any pending candidate is retired.')) return;
   clearTimeout(draftTimer);   // a debounce still pending from typing must not
   draftTimer = null;          // re-write the draft after this commits
@@ -157,7 +157,7 @@ async function save() {
   clearDraft();
   await refreshSeedMenu();        // the candidate is gone; drop the banner
   await openSeedEditor();         // reload as the fresh live seed
-  setNote('saved. Every new chat now opens with it');
+  setNote('saved. Every new chapter now opens with it');
 }
 
 async function copy() {

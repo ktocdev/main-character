@@ -184,7 +184,7 @@ export async function loadSettings() {
         + 'most of the spend goes, so it is the useful place to trade down.')}
       ${fieldRow('set-max-session', 'Stop after (dollars per session)',
         'A ceiling on one session, counted from when the journal last '
-        + 'started and cleared when you close a chat. '
+        + 'started and cleared when you close a chapter. '
         + capHelp((s.caps || {}).session))}
       ${fieldRow('set-max-spend', 'Stop after (dollars per month)',
         'A ceiling on the calendar month, kept in a small file so it '

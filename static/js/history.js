@@ -32,7 +32,7 @@ function renderSessionList() {
   };
   const cur = sessionIndex.current;
   mk('current',
-     cur.title || 'new chat',
+     cur.title || 'new chapter',
      `open · ${cur.message_count} message${cur.message_count === 1 ? '' : 's'}`,
      true);
   for (const s of sessionIndex.sessions) {
@@ -162,7 +162,7 @@ async function showSession(key) {
   if (key === 'current') {
     const r = await (await fetch('/api/sessions/current')).json();
     if (state.sessionSel !== 'current') return;
-    $('session-title').textContent = r.parts.length ? r.parts[0].title : 'current chat';
+    $('session-title').textContent = r.parts.length ? r.parts[0].title : 'current chapter';
     $('session-dates').textContent = 'open since ' + fmtDate(r.started);
     body.innerHTML = '';
     for (const p of r.parts) renderSessionPart(body, p, true);

@@ -11,9 +11,10 @@ As of 2026-09-25, stopped here:
 3. **Finish step 1: done 2026-09-25** (see "Step 1 finished" under step 1a).
    - **The search ceiling is 64, decided by the owner 2026-09-25** (`passages.MAX_QUERY_PIECES`, was 26). It was sized for 254-token pieces, which add ~224 new tokens each, so 26 covered twice the longest entry. At 120 tokens each piece adds ~90, so 26 cover ~2,340 tokens. On the real journal, 5 of 395 entries need more (27–32 pieces, up to 2,824 tokens). At 26 those were searched end to end by 26 pieces spread evenly, with some text between them skipped. Measured on the copy, the longest chunk (11,697 characters, 31 pieces) takes 394 ms to search at 26 and 502 ms at 64, and its whole context block 1.3 s and 1.6 s. At 64 every entry is covered twice over, for about 0.1 s of search and 0.3 s of context block on the longest entries only.
 4. **Step 1b** (the companion's prompt): built 2026-09-26 on branch `JRNL-48` (see "Step 1b as built"). Real replies checked the same day. Then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`.
-5. **Holdout.** The owner's own questions are in `docs/retrieval-eval/my-questions.txt` (gitignored, moved there 2026-09-26). Convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
-6. **Final check,** then the real journal: stop 8144, `python backup.py`, then `rebuild_index.py`.
-7. **Step 5** (Smart Search), and the "close chapter" side task at any point.
+5. **Opus 5.5** (side task, added 2026-09-26): add it to Settings and make it the companion's default. Do it before the holdout and the final check, so the last real-reply check runs on the model that ships.
+6. **Holdout.** The owner's own questions are in `docs/retrieval-eval/my-questions.txt` (gitignored, moved there 2026-09-26). Convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
+7. **Final check,** then the real journal: stop 8144, `python backup.py`, then `rebuild_index.py`.
+8. **Step 5** (Smart Search). The "close chapter" side task was done 2026-09-26 on `JRNL-49`.
 
 Where things live:
 
@@ -394,6 +395,38 @@ What does not change:
 Where the chapter word does belong outside the interface: step 1b's "How you work" section in the companion's prompt. That prompt is not recorded, so describe the conversation there as a chapter that becomes memory when it is closed, so the companion uses the same word as the app.
 
 Checking: grep the tests for the old strings and update any that assert on them. Run the full suite, and `tests/test_web_demo_build.py` in particular. Then rebuild the web demo (`scripts/build_web_demo.py`, whose `static/js/web-demo/backend.js` may carry its own copies of these strings) and refresh the portfolio copy (the `refresh-demo` skill). Look at the write, history and help tabs in the sandbox to make sure no user-facing "close chat" is left.
+
+### Side task: Opus 5.5 in Settings, and the companion's default
+
+Added 2026-09-26 at the owner's request. Not part of the search work; it can be merged on its own, but do it before the holdout and final check (Next steps, item 5).
+
+Facts to build on (Claude API reference as of 2026-09-26; check Anthropic's pricing and models pages when doing it, as `config.py` asks):
+
+- Model id `claude-opus-5-5`, label "Opus 5.5". $4 in / $20 out per million tokens (cache reads $0.20), against $5 / $25 for Opus 4.6. It was marked "launching": before switching the default, confirm the owner's key can call it (one real call, or `client.models.retrieve`).
+- Effort levels: `low`, `medium`, `high`, `xhigh`, `max`. Its default when omitted is `medium`, not `high`, but the app always sends `MC_COMPANION_EFFORT` (default `high`), so that doesn't change anything here.
+- **Thinking can't be turned off.** `{"type": "disabled"}` returns a 400 at every effort level; omitting `thinking` runs adaptive.
+- Tokenizer: the one introduced with Opus 4.7. The same text is about 1–1.35× as many tokens as on Opus 4.6, so a reply costs less than 4.6's, but by less than the price cut suggests.
+
+What to change:
+
+1. **`config.py`:** add `claude-opus-5-5` to `MODEL_EFFORT_LEVELS` (all five), `MODEL_LABELS`, and `MODEL_PRICES`. Change the default `MC_COMPANION_MODEL` to `claude-opus-5-5`, and `.env.example` with it.
+2. **The trap: processing calls.** `processing_thinking_kwargs()` sends `{"type": "disabled"}` to every model whose `MODEL_THINKING_SUPPORT` is True. Anyone who picks Opus 5.5 as the *processing* model would get a 400 on every close step (seed, categories, entities, summaries, dreams), the chat title and patterns. A plain True/False can't say "always on", so give the map a third state (for example `"always"`) that processing omits the parameter for. The tight `max_tokens` sites the release plan lists (`sessions.py` title at 30, `summarizer.py` at 400, 2,000 elsewhere) then have thinking eating into them: either raise those limits for such models or keep Opus 5.5 out of the processing picker. **Decided by the owner 2026-09-26: companion only.** Keep Opus 5.5 out of the processing picker for now, and have the settings route refuse it for `MC_PROCESSING_MODEL` (a hand-edited `.env` too), so the 400 can't be reached. The third thinking state is still worth adding so the map is truthful, but processing never sees it yet. Check `server.py`'s settings route (it sends `thinking` support to the page, line ~1168) and the Settings page for how they read the map.
+3. **Settings:** the pickers are built from `MODEL_EFFORT_LEVELS` and `MODEL_LABELS`, so the new model should appear with its effort levels on its own. Check the companion picker's warning copy and that an existing `.env` with `MC_COMPANION_MODEL` set keeps its choice (only the default changes, so the owner's real journal stays on whatever its `.env` says until changed in Settings).
+4. **Docs:** `README.md` / `HOW-IT-WORKS.md` wherever the companion model is named, and `docs/releasing/release-plan.md` Phase 0 items 6–8 (the default and why, the model lineup, and the thinking and effort tables).
+5. **While there:** `MODEL_PRICES` has Sonnet 5 at $3 / $15; the reference used above lists $2 / $10. Check it on the pricing page and fix it if stale, since the cost meter and the caps are computed from these rows.
+
+Nothing here touches the demo: `mock_client.request_fingerprint` leaves the model out, and the recorded close calls don't depend on it. Run the full suite and `tests/test_demo_close_replay.py` anyway.
+
+Checking: the default was Opus 4.6 on purpose ("it reads best as the companion", release plan item 6), so this changes the voice. Tests can't judge that. On the sandbox copy with a key, send the same few real-reply requests as step 1b's check (`%TEMP%
+t1b.py` did this; it's scratch, so recreate it if it's gone), once on 4.6 and once on 5.5, and let the owner compare the replies side by side before the default changes. Roughly $1 per set.
+
+#### Chapter rename as built (2026-09-26)
+
+- **Buttons:** the write tab's ⋯ menu says **close chapter**; history's button says **close chapter & start the next**. Both tooltips keep "this is the summarize point".
+- **Other interface text:** the seed banner and seed editor, the status tooltip, the close confirm and its notes, the first-run note, the demo build and wizard notes, the spend-cap help in Settings, history's "new chapter" / "current chapter", and the help tab (write, chat, search, history, categories and the entities habit). "Write or chat first" became "Write or send something first", on the server (`sessions.close_session`) and in the web demo's `backend.js`.
+- **Docs:** `README.md` and `HOW-IT-WORKS.md` ("When you close a chapter").
+- **Left as they were:** the chat tab and "chat screen"; code, routes, comments; the close pipeline's prompts, including the title prompt (`sessions.py`, recorded in `mock_fixtures/demo_close/`); the fallback title `Journal chat {date}` (a stored title); `(picking our chat back up)`, which only the model sees.
+- No test asserted on the old strings. Full suite passes.
 
 ## Checking your work
 

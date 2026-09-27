@@ -95,7 +95,7 @@ function renderKey() {
     '</div>',
     '<p class="wiz-aside">No key yet?',
     '  <a href="#" id="wiz-skip">look around the demo journal first</a>',
-    '  (32 entries and 1 dream entry). The newest 3 are still in the open chat,',
+    '  (32 entries and 1 dream entry). The newest 3 are still in the open chapter,',
     '  so close it to add them to journal memory. The life is fictional and the replies are recorded.',
     '  Nothing is spent. Demo writing is stored locally until the next demo visit, when all demo data is reset.' + buildNote() + '</p>',
   ].join('\n');
