@@ -12,8 +12,8 @@ As of 2026-09-25, stopped here:
    - **The search ceiling is 64, decided by the owner 2026-09-25** (`passages.MAX_QUERY_PIECES`, was 26). It was sized for 254-token pieces, which add ~224 new tokens each, so 26 covered twice the longest entry. At 120 tokens each piece adds ~90, so 26 cover ~2,340 tokens. On the real journal, 5 of 395 entries need more (27–32 pieces, up to 2,824 tokens). At 26 those were searched end to end by 26 pieces spread evenly, with some text between them skipped. Measured on the copy, the longest chunk (11,697 characters, 31 pieces) takes 394 ms to search at 26 and 502 ms at 64, and its whole context block 1.3 s and 1.6 s. At 64 every entry is covered twice over, for about 0.1 s of search and 0.3 s of context block on the longest entries only.
 4. **Step 1b** (the companion's prompt): built 2026-09-26 on branch `JRNL-48` (see "Step 1b as built"). Real replies checked the same day. Then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`. Step 2 built 2026-09-26 (see "Step 2 as built"). Step 3 built 2026-09-26 on `JRNL-51` (see "Step 3 as built"); Step 4 built 2026-09-26 on `JRNL-53` (see "Step 4 as built"). Step 4b deferred by the owner 2026-09-26: after steps 3 and 4 every question's fact is in the top 12, which was what it was for.
 5. **Opus 5.5** (side task): done 2026-09-26 on `JRNL-49`, voice comparison included (see "Opus 5.5 as built").
-6. **Holdout.** The owner's own questions are in `docs/retrieval-eval/my-questions.txt` (gitignored, moved there 2026-09-26). Convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
-7. **Final check,** then the real journal: stop 8144, `python backup.py`, then `rebuild_index.py`.
+6. **Holdout.** The owner's own questions are in `docs/retrieval-eval/my-questions.txt` (gitignored, moved there 2026-09-26). Convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check. *Done 2026-09-27 on `JRNL-54`* (see "Holdout and final check").
+7. **Final check: done 2026-09-27** (see "Holdout and final check"). **Next: the real journal,** done by the owner: stop 8144, `python backup.py`, then `python rebuild_index.py` (builds the passage index; the keyword index needs nothing, it is built in memory on the first search). Then restart 8144; with no model set in `.env`, its companion becomes Opus 5.5.
 8. **Step 5** (Smart Search). The "close chapter" side task was done 2026-09-26 on `JRNL-49`.
 
 Where things live:
@@ -513,6 +513,23 @@ t1b.py` did this; it's scratch, so recreate it if it's gone), once on 4.6 and on
   - **5.5 better:** it found the links (e02 reached an April visit to friends, e01 a January garden problem); it said exactly when it was going from a summary and quoted earlier entries with dates and titles (r38); its misses were more useful (search suggestions, nearest things it did have). 4.6 slipped a banned phrase ("That's not nothing — wait, I mean…").
   - **4.6 better:** shorter, lighter entry replies. 5.5's e01 went through nearly every item in six paragraphs, against the persona's "react to one detail, skip the rest", and it ended every write-tab reply with a question.
   - **Outcome:** Opus 5.5 kept as the default. Watch entry-reply length in real use; if it drags, try a persona line or `medium` effort (neither tested).
+
+## Holdout and final check (2026-09-27, branch `JRNL-54`)
+
+- **`holdout.json`** (local, gitignored): the owner's 10 questions from `my-questions.txt`, word for word, as h01–h10. Each fact is a short quote from the entry the owner's answer names, found by the answer's date and title; `eval_retrieval.py` checks each is in an entry of its date. The set is marked `"deep": false`, so a fact may sit anywhere in its entry (the owner asked what they asked, wherever the answer is); the eval skips the 1,000-character rule for such a set. Nothing was tuned against it.
+- **Results** on the sandbox copy (`holdout-final.json`, compared with `holdout-step2.json`, the same code with `--no-keywords --no-dates`):
+
+| | steps 1–2 | final |
+|---|---|---|
+| fact in the top 6 | 5/10 | 6/10 |
+| fact in the top 12 (and in the block) | 6/10 | 8/10 |
+| MRR | 0.316 | 0.449 |
+| search, median | 27 ms | 31 ms |
+
+- Found now: h04, h09, h10. Moved up: h03 (5 to 2), h05 (2 to 1), h08 (3 to 2).
+- **Lost: h06** (rank 8 before, 20 now). Its only informative keyword is a person's name (the other words are in over 20% of passages), so the keyword list is that person's passages, where the fact ranks 36th; merged at equal weight they push the meaning search's hit out. A known cost of rank fusion. Not tuned here, since that would spoil the holdout: to work on it, add questions of that shape (a name plus common words) to `real.json` and tune there, for example by weighting a keyword list by how much its words say.
+- **Missed both times: h07,** a "when did I first..." question: meaning ranks the fact 30th, keywords 16th. Order in time is what step 5 (Smart Search) is for.
+- The real set's final numbers are step 4's (`real-step4.json`): 38/38 questions and 7/8 entry replies with the fact in the block.
 
 ## Checking your work
 
