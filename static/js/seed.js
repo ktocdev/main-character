@@ -2,6 +2,7 @@
 import { $, api } from './core.js';
 import { state } from './state.js';
 import { refreshSeedMenu, seedState } from './write.js';
+import { showTab } from './main.js';
 
 // ---- seed summary editor (item 11) ----
 // The seed summary is the rolling, co-edited life summary every chat opens
@@ -62,14 +63,9 @@ function setNote(msg) { $('seed-editor-note').textContent = msg || ''; }
 function dirty() { return $('seed-editor-text').value !== baseline; }
 
 function showSeedView() {
-  document.querySelectorAll('nav button[data-tab]').forEach(x => x.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
   // It is a sub-view of write, so keep write lit in the nav even though the
   // seed section is the one showing.
-  const wb = document.querySelector('nav button[data-tab="write"]');
-  if (wb) wb.classList.add('active');
-  $('tab-seed').classList.add('active');
-  state.activeTab = 'seed';
+  showTab('seed', 'write');
 }
 
 function renderMeta(s) {
@@ -223,10 +219,7 @@ export function init() {
   $('seed-edit').onclick = () => { $('write-actions').removeAttribute('open'); openSeedEditor(); };
   $('seed-banner-edit').onclick = () => openSeedEditor();
   // back reuses the nav handler, which restores the write log
-  $('seed-back').onclick = () => {
-    const wb = document.querySelector('nav button[data-tab="write"]');
-    if (wb) wb.click();
-  };
+  $('seed-back').onclick = () => showTab('write');
   // Enter makes a newline; nothing here takes that away (no form, no submit-on-
   // Enter). Save is a button and only a button.
   $('seed-editor-text').addEventListener('input', () => { setNote(''); scheduleDraftSave(); });

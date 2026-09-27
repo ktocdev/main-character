@@ -57,8 +57,8 @@ export async function refreshStatus() {
   // Smart replies need a real client: canned replies can't use tools
   $('lookup-smart').hidden = !!s.mock;
   $('app-banner').textContent = s.web_demo
-    ? 'web demo... sample journal, canned replies.'
-    : 'demo journal... sample journal, canned replies.';
+    ? 'web demo — sample entries, and the replies are canned.'
+    : 'demo journal — sample entries, and the replies are canned. Restart to go back to yours.';
   // A server too old to report this sends nothing; `!== false` reads that
   // as configured rather than as a fresh clone, so the wizard cannot open
   // over a journal that has been working for months.

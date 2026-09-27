@@ -8,6 +8,9 @@ import { toggleEntryText } from './categories.js';
 // Dreams never appear here — they live in their own realm.
 let searchMode = 'semantic', searchHits = [], searchSort = 'relevance';
 
+// main.js calls this when the tab opens; the empty state renders here.
+export function showTab() {}
+
 export function init() {
   $('search-mode').onclick = () => {
     searchMode = searchMode === 'semantic' ? 'exact' : 'semantic';

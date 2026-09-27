@@ -16,32 +16,43 @@ import * as settings from './settings.js';
 import * as cost from './cost.js';
 import * as help from './help.js';
 import * as wizard from './wizard.js';
+import * as nav from './nav.js';
+import * as tooltip from './tooltip.js';
+import * as popover from './popover.js';
 
 // ---- tabs ----
 // Categories came back with Phase 3 (entries split by date, 2026-07-11).
 const CATEGORIES_ENABLED = true;
-$('cat-paused').style.display = CATEGORIES_ENABLED ? 'none' : 'block';
+$('cat-paused').hidden = CATEGORIES_ENABLED;
 $('categories').classList.toggle('paused', !CATEGORIES_ENABLED);
-document.querySelector('nav button[data-tab="categories"]')
-  .classList.toggle('paused', !CATEGORIES_ENABLED);
 
-document.querySelectorAll('nav button[data-tab]').forEach(b => b.onclick = () => {
-  document.querySelectorAll('nav button[data-tab]').forEach(x => x.classList.remove('active'));
+// The tooltip and popover layers go first: every screen's controls carry a
+// `title`, and the nav's own menu is a popover.
+popover.init();
+tooltip.init();
+tooltip.adopt();
+
+// Show one tab's pane and run its loader. `lit` is which nav item to light
+// when that differs from the pane (the seed editor is a sub-view of write).
+export function showTab(name, lit = name) {
   document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-  b.classList.add('active');
-  state.activeTab = b.dataset.tab;
-  $('tab-' + state.activeTab).classList.add('active');
-  if (state.activeTab === 'write' && !$('entry-send').disabled) write.loadWriteLog();
-  if (state.activeTab === 'chat') lookup.restoreLookupLog();
-  if (state.activeTab === 'search') $('search-q').focus();
-  if (state.activeTab === 'entities') entities.loadEntities();
-  if (state.activeTab === 'categories' && CATEGORIES_ENABLED) categories.loadCategories();
-  if (state.activeTab === 'patterns') patterns.loadPatterns();
-  if (state.activeTab === 'dreams') dreams.loadDreams();
-  if (state.activeTab === 'history') history.loadHistory();
-  if (state.activeTab === 'triage') triage.startTriage();
-  if (state.activeTab === 'settings') settings.loadSettings();
-});
+  nav.markActive(lit);
+  state.activeTab = name;
+  $('tab-' + name).classList.add('active');
+  if (name === 'write' && !$('entry-send').disabled) write.loadWriteLog();
+  if (name === 'chat') lookup.restoreLookupLog();
+  if (name === 'search') { $('search-q').focus(); search.showTab(); }
+  if (name === 'entities') entities.loadEntities();
+  if (name === 'categories' && CATEGORIES_ENABLED) categories.loadCategories();
+  if (name === 'patterns') patterns.loadPatterns();
+  if (name === 'dreams') dreams.loadDreams();
+  if (name === 'history') history.loadHistory();
+  if (name === 'triage') triage.startTriage();
+  if (name === 'settings') settings.loadSettings();
+}
+nav.init(showTab);
+document.querySelectorAll('nav [data-tab="categories"]').forEach(b =>
+  b.classList.toggle('paused', !CATEGORIES_ENABLED));
 
 // feature wiring, in original document order
 write.init();

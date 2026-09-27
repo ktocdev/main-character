@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
 <link rel="stylesheet" href="/static/css/conversation.css">
 <link rel="stylesheet" href="/static/css/search.css">
 <link rel="stylesheet" href="/static/css/entities.css">
@@ -48,23 +49,16 @@
      /api/status. Demo is the louder tone (see base.css). -->
 <div id="app-banner"></div>
 <header>
-  <h1>main character</h1>
-  <span class="status" id="status"></span>
-  <nav>
-    <button data-tab="write" class="active">write</button>
-    <button data-tab="chat">chat</button>
-    <button data-tab="search">search</button>
-    <button data-tab="entities">entities</button>
-    <button data-tab="categories" title="paused until entries are split by date (Phase 3)">categories</button>
-    <button data-tab="patterns">patterns</button>
-    <button data-tab="dreams">dreams</button>
-    <button data-tab="history">history</button>
-    <button data-tab="triage">triage</button>
-    <button data-tab="help">help</button>
-    <button data-tab="settings">settings</button>
-    <button id="cost-toggle" title="what this session has cost"
-            aria-expanded="false" aria-controls="cost-panel">◌</button>
-    <div id="cost-panel" hidden></div>
+  <div class="masthead">
+    <h1>main character</h1>
+    <span class="status" id="status"></span>
+  </div>
+  <nav aria-label="screens">
+    <span class="cost-wrap">
+      <button id="cost-toggle" title="what this session has cost"
+              aria-expanded="false" aria-controls="cost-panel">◌</button>
+      <div id="cost-panel" hidden></div>
+    </span>
   </nav>
 </header>
 <main>
