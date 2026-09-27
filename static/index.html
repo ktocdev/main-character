@@ -66,9 +66,11 @@
     <div id="write-log"></div>
     <div id="seed-banner" hidden>
       <span>your seed summary candidate is ready. It's the life summary every chapter opens with, so read it through and edit it before it goes live.</span>
-      <button class="send" id="seed-banner-edit">edit seed summary</button>
-      <button class="quiet" id="seed-banner-download">download</button>
-      <button class="quiet" id="seed-banner-upload">upload edited seed</button>
+      <div class="actions">
+        <button class="send" id="seed-banner-edit">edit seed summary</button>
+        <button class="quiet" id="seed-banner-download">download</button>
+        <button class="quiet" id="seed-banner-upload">upload edited seed</button>
+      </div>
     </div>
     <div id="close-progress" hidden></div>
     <div class="composer write-composer">
@@ -91,8 +93,8 @@
         </label>
         <span class="saved-note" id="entry-saved"></span>
         <details id="write-actions">
-          <summary title="chapter actions">⋯</summary>
-          <div class="menu">
+          <summary title="chapter actions" aria-label="chapter actions">⋯</summary>
+          <div class="menu popover">
             <button class="quiet" id="reset" title="this is the summarize point. Your side of this chapter becomes a journal entry, memory updates in the background, and a new chapter opens">close chapter</button>
             <button class="quiet" id="seed-edit" title="edit the seed summary (the co-edited life summary that opens every chapter) right here in the app">edit seed summary</button>
             <button class="quiet" id="seed-download" title="download the live seed summary, the co-edited life summary that opens every chapter" hidden>download current seed</button>
@@ -110,7 +112,7 @@
   <section class="tab" id="tab-seed">
     <div id="seed-editor">
       <div id="seed-editor-head">
-        <button class="quiet" id="seed-back" title="back to the write screen">&larr; back to write</button>
+        <button class="text" id="seed-back" title="back to the write screen">‹ back to write</button>
         <span id="seed-editor-meta"></span>
         <span id="seed-editor-draftnote" class="set-warn" hidden></span>
       </div>
@@ -129,17 +131,18 @@
   </section>
 
   <section class="tab" id="tab-chat">
-    <p class="tab-intro"><b>Chat</b> answers questions about your journal. Each question is sent to
-      Claude with what a search of your journal finds, and it answers with dates and your own words.
-      It uses your API key. Turn on <b>smart replies</b> to let it search again on its own before
-      answering, which helps with firsts, how often and how things changed. A question can then take
-      several calls, so it costs more. Nothing here becomes part of your journal.</p>
     <div id="chat-log"></div>
     <div class="composer">
-      <textarea id="chat-text" rows="2" placeholder="look something up in your journal…"></textarea>
-      <button class="quiet chip-toggle" id="lookup-smart" aria-pressed="false" title="smart replies: let it search again on its own before answering. Better at firsts, how often, and changes over time; each question can take several calls, so it costs more and takes a few seconds longer">smart replies</button>
-      <button class="quiet" id="lookup-clear" title="clear this lookup conversation (it was never journal data)">clear</button>
-      <button class="send" id="lookup-send">send</button>
+      <div class="box">
+        <textarea id="chat-text" rows="2" placeholder="look something up in your journal…"></textarea>
+        <div class="box-row">
+          <span class="left">
+            <button class="chip-toggle" id="lookup-smart" aria-pressed="false" title="smart replies: let it search again on its own before answering. Better at firsts, how often, and changes over time; each question can take several calls, so it costs more and takes a few seconds longer">smart replies</button>
+          </span>
+          <button class="text" id="lookup-clear" title="clear this lookup conversation (it was never journal data)">clear</button>
+          <button class="send pill" id="lookup-send">send <span class="ret">↵</span></button>
+        </div>
+      </div>
     </div>
   </section>
 
