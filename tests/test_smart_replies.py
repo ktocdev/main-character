@@ -200,6 +200,8 @@ def test_tool_results_go_back_until_it_answers(quiet):
     assert client.calls[1]["messages"][1]["content"][0].type == "thinking"
     assert [c["tool_choice"] for c in client.calls] == [{"type": "auto"}] * 2
     assert client.calls[0]["system"][-1]["text"] == companion.SMART_REPLY_PROMPT
+    # every round caches up to its last block, so the next reads it back
+    assert all(c["cache_control"] == {"type": "ephemeral"} for c in client.calls)
 
 
 def test_the_last_round_has_tools_off(quiet, monkeypatch):

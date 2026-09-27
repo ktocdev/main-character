@@ -194,8 +194,11 @@ dates if asked), `read_entry` (one entry whole) and `list_entries` (dates and
 titles in a range). It can search, read and search again before it answers,
 up to 5 calls per question, the last with tools off so it has to answer. The
 tools are local and free; the calls are not, so a question can cost several
-times what it does without. Every call goes through the same metering and
-caps. It never runs in the demo, whose canned client can't use tools.
+times what it does without. Each call is cached up to its last block, so the
+next round reads the search results and earlier tool results back at a tenth
+of the price instead of paying for them again. Every call goes through the
+same metering and caps. It never runs in the demo, whose canned client can't
+use tools.
 
 ## The search tab
 

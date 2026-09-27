@@ -599,9 +599,10 @@ def stream_smart_lookup(client, collection, entity_index: dict, messages: list,
 
     Every round goes into `messages` as it came back, tool calls, results
     and thinking included. The next question sends that history unchanged,
-    as a tool loop and preserved thinking require, and its cached prefix
-    stays good. If a round fails, `messages` goes back to how it was before
-    the question, so a half-finished loop never reaches the next one.
+    as a tool loop and preserved thinking require, so each round, and the
+    next question, can read everything before it from cache. If a round
+    fails, `messages` goes back to how it was before the question, so a
+    half-finished loop never reaches the next one.
     """
     import lookup_tools
     start = len(messages)
@@ -624,6 +625,12 @@ def stream_smart_lookup(client, collection, entity_index: dict, messages: list,
                 tools=lookup_tools.TOOLS,
                 tool_choice={"type": "none" if last else "auto"},
                 messages=messages,
+                # A second breakpoint, which the API puts on the last block
+                # sent: each round resends the context block and every earlier
+                # tool result, and this lets the next round, or the next
+                # question, read them from cache instead of paying for them
+                # again. The system prompt keeps its own.
+                cache_control={"type": "ephemeral"},
                 **companion_effort_kwargs(),
             ) as stream:
                 started = False
