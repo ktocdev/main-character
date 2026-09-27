@@ -163,26 +163,49 @@
 
   <section class="tab" id="tab-categories">
     <div id="categories">
-      <div id="cat-paused">
-        <b>Categories are paused.</b> Right now an “entry” is a whole week-long chapter, so browsing a
-        category shows a week's blob under one date instead of the individual days. This section
-        won't be trustworthy until entries are re-run split by date (Phase 3). It's kept in the nav
-        as a reminder. Everything here still works. It's just switched off on purpose.
+      <div id="cat-paused" hidden>
+        <div class="notice-card">
+          <div class="eyebrow">categories are paused</div>
+          <p>Right now an entry is a whole week-long chapter, so browsing a category shows a week
+            under one date instead of the individual days. This tab comes back once entries are
+            re-run split by date. Everything here still works. It is switched off on purpose.</p>
+          <div class="actions"><button class="quiet sm" id="cat-browse">browse anyway</button></div>
+        </div>
       </div>
-      <div id="cat-header">
-        <span id="cat-status"></span>
-        <button class="quiet" id="cat-build" title="tag any untagged entries with Claude. Already-tagged entries are skipped, so they cost nothing">tag new entries</button>
-        <button class="quiet" id="cat-scan" title="cluster places/projects by what happened around them and propose new categories (local embeddings + one Claude naming call)">scan for new categories</button>
+      <div class="split" id="cat-split">
+        <aside id="cat-list">
+          <div class="side-tools" id="cat-tools">
+            <div class="row">
+              <span id="cat-status"></span>
+            </div>
+            <div class="row">
+              <button class="quiet sm" id="cat-build" title="tag any untagged entries with Claude. Already-tagged entries are skipped, so they cost nothing">tag new entries</button>
+              <button class="quiet sm" id="cat-scan" title="cluster places and projects by what happened around them and propose new categories. Nothing is created without your confirm">scan for new categories</button>
+            </div>
+          </div>
+          <div class="side-list">
+            <div id="cat-proposed"></div>
+            <div id="cat-rows"></div>
+            <div id="cat-newform-wrap">
+              <button class="quiet sm" id="cat-new-toggle">+ new category</button>
+              <div id="cat-newform" hidden>
+                <input type="text" id="newcat-name" class="input-xs" placeholder="new category…">
+                <input type="text" id="newcat-keywords" class="input-xs" placeholder="keywords, comma-separated (optional)">
+                <div class="row">
+                  <button class="filled sm" id="newcat-add">add</button>
+                  <button class="quiet sm" id="newcat-cancel">cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+        <section id="cat-detail" class="detail">
+          <div class="detail-col" id="cat-detail-col" hidden></div>
+          <div class="none" id="cat-none">
+            <p>Pick a category on the left. A living summary of that part of life, then every entry tagged with it.</p>
+          </div>
+        </section>
       </div>
-      <div id="cat-proposals"></div>
-      <div id="cat-chips"></div>
-      <div id="cat-custom-row"></div>
-      <div id="cat-newform">
-        <input type="text" id="newcat-name" placeholder="new category…">
-        <input type="text" id="newcat-keywords" placeholder="keywords, comma-separated (optional)">
-        <button class="quiet" id="newcat-add">add</button>
-      </div>
-      <div id="cat-entries"></div>
     </div>
   </section>
 
