@@ -72,6 +72,8 @@ _DOWNLOAD_TRIES = 5
 KEYWORDS = True
 FUSION_K = 60
 FUSION_DEPTH = 30
+# Search the time a question names as well (timeframe.py, fused()).
+DATES = True
 
 # The models this index can use, and how each marks a search query. Both were
 # trained with this instruction on queries and nothing on passages; leaving
@@ -607,6 +609,14 @@ def fused(col, query: str, n: int,
     FUSION_DEPTH best by meaning and its FUSION_DEPTH best by keyword, merged
     by reciprocal rank fusion; then the pieces take turns as in ranked().
 
+    When a question names a time ("in March", "around Christmas"; see
+    timeframe.py), the same two searches run again within the entries of
+    that time, and those lists join the merge. A passage from then is on
+    up to four lists, and one from any other time still on two: the time
+    counts for a lot, and a wrong guess about it doesn't hide the answer.
+    Only for a question-sized query (one piece) with no filter of its own:
+    a whole entry names dates in passing, and they aren't what it asks.
+
     A passage found only by keyword is given its distance to the piece, so
     every hit carries one, as ranked()'s do. Without a keyword index -- one
     that can't be built, or a filter it can't apply -- this is ranked().
@@ -617,27 +627,36 @@ def fused(col, query: str, n: int,
     if index is None or total == 0:
         return ranked(col, query, n, where)
     pieces = query_pieces(query)
+    searches = [where]
+    if DATES and where is None and len(pieces) == 1:
+        import timeframe
+        within = timeframe.dates_within(query, index.dates)
+        if within:
+            searches.append({"date": {"$in": within}})
     try:
-        by_keyword = [index.top(piece, FUSION_DEPTH, where) for piece in pieces]
+        by_keyword = [[index.top(piece, FUSION_DEPTH, w) for piece in pieces]
+                      for w in searches]
     except ValueError:
         return ranked(col, query, n, where)
     vectors = embed(pieces, query=True)
-    kwargs = {"where": where} if where else {}
-    res = col.query(query_embeddings=vectors, n_results=min(max(n, FUSION_DEPTH), total),
-                    include=["documents", "metadatas", "distances"], **kwargs)
 
     found: dict[str, tuple[str, dict]] = {}
-    scores, dists = [], []
-    for p, (ids, docs, metas, ds) in enumerate(zip(
-            res["ids"], res["documents"], res["metadatas"], res["distances"])):
-        score: dict[str, float] = {}
-        for rank, (pid, doc, meta) in enumerate(zip(ids, docs, metas), 1):
-            score[pid] = 1 / (FUSION_K + rank)
-            found[pid] = (doc, meta)
-        for rank, (pid, _) in enumerate(by_keyword[p], 1):
-            score[pid] = score.get(pid, 0.0) + 1 / (FUSION_K + rank)
-        scores.append(score)
-        dists.append(dict(zip(ids, ds)))
+    scores = [{} for _ in pieces]
+    dists = [{} for _ in pieces]
+    for w, keyword_lists in zip(searches, by_keyword):
+        kwargs = {"where": w} if w else {}
+        res = col.query(query_embeddings=vectors,
+                        n_results=min(max(n, FUSION_DEPTH), total),
+                        include=["documents", "metadatas", "distances"], **kwargs)
+        for p, (ids, docs, metas, ds) in enumerate(zip(
+                res["ids"], res["documents"], res["metadatas"], res["distances"])):
+            score = scores[p]
+            for rank, (pid, doc, meta, dist) in enumerate(zip(ids, docs, metas, ds), 1):
+                score[pid] = score.get(pid, 0.0) + 1 / (FUSION_K + rank)
+                found[pid] = (doc, meta)
+                dists[p][pid] = dist
+            for rank, (pid, _) in enumerate(keyword_lists[p], 1):
+                score[pid] = score.get(pid, 0.0) + 1 / (FUSION_K + rank)
 
     only_keyword = {pid for score, d in zip(scores, dists) for pid in score if pid not in d}
     if only_keyword:

@@ -11,6 +11,9 @@
     meaning ranks last, a passage found only by keyword still has a
     distance, and the keyword index follows the passage index's writes and
     a search's filter;
+  * a question that names a time brings that time's entries forward, a
+    time with no entries changes nothing, and a whole entry isn't searched
+    by the dates it mentions;
   * the write paths keep the index complete or absent: search falls back to
     the journal chunks only when it is absent, so an index missing an entry
     would hide that entry instead;
@@ -218,6 +221,46 @@ def test_a_filtered_search_keeps_its_filter_for_keywords(chroma):
     got = passages.search(STRUGGLING, 5, neighbors=0,
                           where={"date": {"$eq": "2026-03-01"}})
     assert [h["metadata"]["source_id"] for h in got] == ["c0"]
+
+
+GARDEN = "What did I do in the garden in March?"
+
+
+def gardens(chroma):
+    """Six garden entries in other months, and a March one that is mostly
+    about something else -- by meaning, the last garden entry."""
+    for m in (1, 2, 4, 5, 6, 7):
+        write_chunks({f"c{m}": "Out in the garden all afternoon, weeding the garden "
+                               f"beds and planning the garden, day {m}."},
+                     date=f"2026-{m:02d}-10")
+    col, *_ = write_chunks({"c3": "Robin came by. Later the garden, briefly."},
+                           date="2026-03-10")
+    passages.sync(col)
+
+
+def test_a_month_brings_its_entries_forward(chroma, monkeypatch):
+    gardens(chroma)
+    monkeypatch.setattr(passages, "DATES", False)
+    assert passages.search(GARDEN, 3, neighbors=0)[0]["metadata"]["source_id"] != "c3"
+    monkeypatch.setattr(passages, "DATES", True)
+    assert passages.search(GARDEN, 3, neighbors=0)[0]["metadata"]["source_id"] == "c3"
+
+
+def test_a_month_with_no_entries_changes_nothing(chroma, monkeypatch):
+    gardens(chroma)
+    question = "What did I do in the garden in August?"
+    with_dates = passages.search(question, 3, neighbors=0)
+    monkeypatch.setattr(passages, "DATES", False)
+    assert passages.search(question, 3, neighbors=0) == with_dates
+
+
+def test_a_whole_entry_is_not_searched_by_its_dates(chroma, monkeypatch):
+    """An entry names dates in passing; they aren't what it asks about."""
+    import timeframe
+    gardens(chroma)
+    monkeypatch.setattr(timeframe, "dates_within",
+                        lambda *a, **k: pytest.fail("a long query read for dates"))
+    passages.search("\n\n".join([para("garden", 12), "Back in March, too."]), 3)
 
 
 def test_neighbours_are_cut_from_the_chunk_and_never_shown_twice(chroma):

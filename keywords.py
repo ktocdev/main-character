@@ -194,6 +194,8 @@ class Index:
         self.idf = {w: math.log(1 + (n - len(p) + 0.5) / (len(p) + 0.5))
                     for w, p in self.postings.items()}
         self.max_df = max(MIN_DF_CUT, int(n * MAX_DF_SHARE))
+        # The days the passages are from, for a question that names a time.
+        self.dates = {m.get("date") for m in metas if m.get("date")}
         self._by_trigram: dict[str, set[str]] | None = None
         self._variants: dict[str, list[str]] = {}
 
