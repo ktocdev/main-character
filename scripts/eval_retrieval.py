@@ -186,7 +186,16 @@ def main() -> int:
     ap.add_argument("--compare", type=Path, help="an earlier --save to compare with")
     ap.add_argument("--demo", action="store_true")
     ap.add_argument("--sandbox", action="store_true")
+    ap.add_argument("--no-keywords", action="store_true",
+                    help="search by meaning only, without keyword search (step 3)")
+    ap.add_argument("--no-fuzzy", action="store_true",
+                    help="keyword search without matching near spellings")
     args = ap.parse_args()
+
+    import keywords
+    import passages
+    passages.KEYWORDS = not args.no_keywords
+    keywords.FUZZY = not args.no_fuzzy
 
     sys.stdout.reconfigure(encoding="utf-8")
     path = args.questions or (DEMO_SET if WHICH == "demo" else None)
@@ -208,11 +217,14 @@ def main() -> int:
 
     collection = get_collection()
     entity_index = companion.load_entity_index()
-    # The first search loads the embedders; keep that out of the timings.
+    # The first search loads the embedders and builds the keyword index;
+    # keep that out of the timings.
     companion.build_context_block("warm up", collection, entity_index)
 
     print(f"{WHICH} journal, {collection.count()} chunks in the journal "
-          f"collection, EXCERPT_CHARS={EXCERPT_CHARS}")
+          f"collection, EXCERPT_CHARS={EXCERPT_CHARS}, keywords "
+          f"{'off' if args.no_keywords else 'on'}, fuzzy "
+          f"{'off' if args.no_keywords or args.no_fuzzy else 'on'}")
     results, summaries = {}, {}
     for name, tests in sets.items():
         if not tests:

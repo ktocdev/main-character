@@ -2155,15 +2155,9 @@ def refresh_summaries():
     return {"ok": True, **result, "categories_tagged": cat["new"]}
 
 
-def _fold(s: str) -> str:
-    """Lowercase and strip accents, one char at a time so indexes still
-    line up with the original text (fiancé matches fiance)."""
-    import unicodedata
-    out = []
-    for c in s.lower():
-        d = unicodedata.normalize("NFKD", c)
-        out.append(d[0] if d else c)
-    return "".join(out)
+# Lowercase and strip accents, index for index (fiancé matches fiance): the
+# same folding keyword search gives the passage index.
+from keywords import fold as _fold  # noqa: E402
 
 
 def _snippet_around(doc: str, q: str, before: int = 150, after: int = 300) -> str:

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Dream Layer — Phase 3A of the RAG Journal.
+Dream Layer.
 
 Dreams share entities with waking life but are a different data type: a
 dream about your boss isn't a meeting with your boss. This module keeps
