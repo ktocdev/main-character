@@ -311,6 +311,45 @@ def test_passages_are_shown_whole_and_not_repeated_from_recent(chroma, monkeypat
         assert sentence.strip() not in block, sentence
 
 
+def summaries(block: str) -> str:
+    return block.split("<related_summaries>")[1].split("</related_summaries>")[0]
+
+
+def entry_with_a_summary(col):
+    """One long entry whose detail sits deep, and its entry summary."""
+    text = "\n\n".join([para("job", 60), "The hidden detail: Begonia the cat."])
+    col.upsert(ids=["old"], documents=[text],
+               metadatas=[{"date": "2026-01-01", "title": "Old"}])
+    passages.sync(col)
+    passages.mirror(companion.SUMMARY_COLLECTION, [(
+        "s-old", "A long week at work, and a new cat called Begonia.",
+        {"level": "entry summary", "date": "2026-01-01", "title": "Old"})])
+
+
+def test_an_entry_summary_brings_the_entrys_words(chroma, monkeypatch):
+    """Step 2: a summary hit comes with that entry's best passage, even when
+    related history didn't find the entry."""
+    col = rag_journal.get_collection()
+    entry_with_a_summary(col)
+    monkeypatch.setattr(companion, "get_recent_chunks", lambda c, n=1: [])
+    monkeypatch.setattr(companion, "query_journal", lambda q, n_results: [])
+
+    block = summaries(companion.build_context_block("Begonia the cat", col, {}))
+    assert "A long week at work, and a new cat called Begonia." in block
+    assert "From the entry itself, in their words: [2026-01-01] Old" in block
+    assert "The hidden detail: Begonia the cat." in block
+
+
+def test_an_entry_passage_already_shown_is_not_repeated(chroma, monkeypatch):
+    col = rag_journal.get_collection()
+    entry_with_a_summary(col)
+    monkeypatch.setattr(companion, "get_recent_chunks", lambda c, n=1: [])
+
+    block = companion.build_context_block("Begonia the cat", col, {})
+    assert "The hidden detail: Begonia the cat." in related(block)
+    assert "From the entry itself" not in summaries(block)
+
+
 # ---------------------------------------------------------------------------
 # SUMMARIES AND DREAMS, ON THE SAME MODEL
 # ---------------------------------------------------------------------------
