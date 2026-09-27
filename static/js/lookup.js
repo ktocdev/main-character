@@ -28,6 +28,19 @@ export function restoreLookupLog() {
     }
   } catch (e) { }
 }
+// Smart replies, per question: on, Claude can search again on its own before
+// answering, at the cost of several calls. Off by default, and remembered in
+// this browser only. The demo hides it (see core.js): canned replies can't
+// search, and the server ignores it there anyway.
+const SMART_KEY = 'rag_lookup_smart';
+function smartOn() {
+  return $('lookup-smart').classList.contains('on');
+}
+function setSmart(on) {
+  $('lookup-smart').classList.toggle('on', on);
+  $('lookup-smart').setAttribute('aria-pressed', String(on));
+  try { localStorage.setItem(SMART_KEY, on ? '1' : ''); } catch (e) { }
+}
 async function sendLookup() {
   const text = $('chat-text').value.trim();
   if (!text) return;
@@ -35,7 +48,8 @@ async function sendLookup() {
   $('lookup-send').disabled = true;
   lookupMsg('you', text);
   const el = lookupMsg('companion thinking', '');
-  try { await streamInto(el, '/api/lookup', {message: text}); }
+  const smart = smartOn() && !$('lookup-smart').hidden;
+  try { await streamInto(el, '/api/lookup', {message: text, smart}); }
   finally {
     saveLookupLog();
     $('lookup-send').disabled = false;
@@ -44,6 +58,10 @@ async function sendLookup() {
 }
 export function init() {
   $('lookup-send').onclick = sendLookup;
+  let saved = '';
+  try { saved = localStorage.getItem(SMART_KEY) || ''; } catch (e) { }
+  setSmart(saved === '1');
+  $('lookup-smart').onclick = () => setSmart(!smartOn());
   $('chat-text').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendLookup(); }
   });

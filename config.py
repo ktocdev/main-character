@@ -48,6 +48,11 @@ MC_PROCESSING_MODEL = os.getenv("MC_PROCESSING_MODEL", "claude-sonnet-5").strip(
 
 MC_COMPANION_EFFORT = os.getenv("MC_COMPANION_EFFORT", "high").strip()
 
+# Smart replies, the chat tab's toggle: Claude gets the journal's search tools
+# and can search, read and search again before answering. This caps the
+# calls per question; the companion model answers.
+SMART_REPLY_ROUNDS = 5
+
 # Model -> valid `effort` levels. Haiku 4.5 doesn't take the parameter at
 # all; Opus 4.6 predates `xhigh`. A Settings picker must derive its options
 # from this map rather than offering a static list, or a request 400s.
