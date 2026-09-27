@@ -64,7 +64,7 @@ The same demo also builds as a static site that runs entirely in the browser, wi
 
 - **Reading, searching and browsing are free.** Embeddings are computed on your machine by two small local models. Search by meaning, for the companion and in the search tab, uses snowflake-arctic-embed-s, over entries split into short passages so that every part of a long entry can be found; summaries and dreams use it too. The journal's own index of whole entries uses all-MiniLM-L6-v2. Search never calls an API.
 - **Writing costs money.** Each entry gets the companion's reply. Closing a chapter triggers a background pass that tags what you wrote, extracts entities and updates summaries, so a close costs more than any one reply.
-- **Two models, so you can trade down.** The companion is the voice you read, and it defaults to Opus. Background processing is mechanical, runs in bulk, and uses most of the tokens. It defaults to Sonnet. Both can be changed in Settings.
+- **Two models, so you can trade down.** The companion is the voice you read, and it defaults to Opus 5.5. Background processing is mechanical, runs in bulk, and uses most of the tokens. It defaults to Sonnet. Both can be changed in Settings.
 - **Two spend caps,** one per session and one per calendar month, checked before each call. They exist to catch runaway spending, not to set a budget, so the defaults sit above what a heavy month of ordinary writing would cost.
 - **Set a limit in the Anthropic Console too.** Every figure this app shows is an estimate from a hand-maintained price table, and the caps are only as reliable as the code that enforces them. A [spend limit on your Anthropic account](https://console.anthropic.com/settings/limits) holds even if this app's accounting is wrong.
 

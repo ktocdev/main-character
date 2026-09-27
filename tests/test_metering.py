@@ -121,6 +121,21 @@ def test_every_model_offered_in_settings_is_priced():
         assert metering.price(model, usage) > 0, model
 
 
+def test_opus_5_5_cache_reads_cost_five_percent():
+    """Opus 5.5 bills a cache hit at 0.05x input, not the usual 0.1x."""
+    usage = {"input": 0, "output": 0, "cache_write": 0, "cache_read": 1_000_000}
+    assert metering.price("claude-opus-5-5", usage) == pytest.approx(0.20)
+    assert metering.price("claude-sonnet-5", usage) == pytest.approx(0.20)
+
+
+def test_thinking_is_left_off_a_processing_call_that_cant_disable_it():
+    import config
+    assert config.processing_thinking_kwargs("claude-opus-5-5") == {}
+    assert config.processing_thinking_kwargs("claude-sonnet-5") == {
+        "thinking": {"type": "disabled"}}
+    assert config.processing_thinking_kwargs("claude-haiku-4-5") == {}
+
+
 # ---- counting ----
 
 def test_a_call_adds_its_usage_to_the_running_total():

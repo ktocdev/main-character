@@ -88,7 +88,7 @@ def price(model: str, usage: dict) -> float:
     per_out = rates["out"] / 1_000_000
     return (usage["input"] * per_in
             + usage["cache_write"] * per_in * CACHE_WRITE_RATIO
-            + usage["cache_read"] * per_in * CACHE_READ_RATIO
+            + usage["cache_read"] * per_in * rates.get("cache_read", CACHE_READ_RATIO)
             + usage["output"] * per_out)
 
 

@@ -43,7 +43,7 @@ _PROJECT_ROOT = Path(__file__).parent
 # structured/mechanical, runs in bulk, and dominates token spend — Sonnet 5
 # is the default there because that work doesn't need Opus-tier reasoning.
 
-MC_COMPANION_MODEL = os.getenv("MC_COMPANION_MODEL", "claude-opus-4-6").strip()
+MC_COMPANION_MODEL = os.getenv("MC_COMPANION_MODEL", "claude-opus-5-5").strip()
 MC_PROCESSING_MODEL = os.getenv("MC_PROCESSING_MODEL", "claude-sonnet-5").strip()
 
 MC_COMPANION_EFFORT = os.getenv("MC_COMPANION_EFFORT", "high").strip()
@@ -52,6 +52,7 @@ MC_COMPANION_EFFORT = os.getenv("MC_COMPANION_EFFORT", "high").strip()
 # all; Opus 4.6 predates `xhigh`. A Settings picker must derive its options
 # from this map rather than offering a static list, or a request 400s.
 MODEL_EFFORT_LEVELS = {
+    "claude-opus-5-5": ["low", "medium", "high", "max", "xhigh"],
     "claude-opus-4-6": ["low", "medium", "high", "max"],
     "claude-opus-4-7": ["low", "medium", "high", "max", "xhigh"],
     "claude-opus-4-8": ["low", "medium", "high", "max", "xhigh"],
@@ -63,6 +64,7 @@ MODEL_EFFORT_LEVELS = {
 # Model -> the name a person recognizes. The API ids are what get written
 # to .env; these are what the pickers show.
 MODEL_LABELS = {
+    "claude-opus-5-5": "Opus 5.5",
     "claude-opus-4-6": "Opus 4.6",
     "claude-opus-4-7": "Opus 4.7",
     "claude-opus-4-8": "Opus 4.8",
@@ -79,21 +81,27 @@ MODEL_LABELS = {
 # on screen rather than a wrong label -- but still nothing *bills* or refuses a
 # call against them; that is Phase 2 item 10. Anthropic's pricing page is the
 # authority: check these against it when adding a model, and treat a figure
-# here as an estimate that goes stale, never as a quote.
+# here as an estimate that goes stale, never as a quote. `cache_read` is the
+# share of the input price a cache hit costs, where a model differs from the
+# usual 0.1 (metering.CACHE_READ_RATIO). Checked 2026-09-26.
 MODEL_PRICES = {
+    "claude-opus-5-5": {"in": 4.0, "out": 20.0, "cache_read": 0.05},
     "claude-opus-4-6": {"in": 5.0, "out": 25.0},
     "claude-opus-4-7": {"in": 5.0, "out": 25.0},
     "claude-opus-4-8": {"in": 5.0, "out": 25.0},
     "claude-opus-5": {"in": 5.0, "out": 25.0},
-    "claude-sonnet-5": {"in": 3.0, "out": 15.0},
+    "claude-sonnet-5": {"in": 2.0, "out": 10.0},
     "claude-haiku-4-5": {"in": 1.0, "out": 5.0},
 }
 
 # Model -> whether the `thinking` parameter is supported at all. Where
 # it's supported, Opus 4.6/4.7/4.8 default to *off* when the parameter is
 # omitted; Sonnet 5 and Opus 5 default to *adaptive* when omitted. Haiku
-# 4.5 rejects the parameter outright.
+# 4.5 rejects the parameter outright. "always": thinking can't be turned
+# off -- Opus 5.5 answers `{"type": "disabled"}` with a 400 -- so a call
+# that wants it off leaves the parameter out instead.
 MODEL_THINKING_SUPPORT = {
+    "claude-opus-5-5": "always",
     "claude-opus-4-6": True,
     "claude-opus-4-7": True,
     "claude-opus-4-8": True,
@@ -115,6 +123,13 @@ def companion_effort_kwargs(model: str = None, effort: str = None) -> dict:
     return {}
 
 
+# The processing picker's lineup. Processing is structured bulk work where
+# trading down is the point, and its calls are sized for thinking switched
+# off, which Opus 5.5 can't do. Opus is left out for now (owner's call,
+# 2026-09-26); the companion picker offers everything above.
+PROCESSING_MODELS = ["claude-sonnet-5", "claude-haiku-4-5"]
+
+
 def processing_thinking_kwargs(model: str = None) -> dict:
     """The `thinking` kwarg for a processing call on the given model
     (default: the configured processing model). Processing calls want
@@ -123,7 +138,10 @@ def processing_thinking_kwargs(model: str = None) -> dict:
     eat the budget and truncate the response — and omitted entirely on
     models that reject the parameter (Haiku 4.5)."""
     model = model or MC_PROCESSING_MODEL
-    if MODEL_THINKING_SUPPORT.get(model, True):
+    support = MODEL_THINKING_SUPPORT.get(model, True)
+    if support == "always":
+        return {}
+    if support:
         return {"thinking": {"type": "disabled"}}
     return {}
 

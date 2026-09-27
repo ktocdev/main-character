@@ -64,7 +64,7 @@ next rewritten, by the rebuild or by the next chapter close.
 2. **Spend caps are checked** (`caps.check`), before anything is spent.
 3. **The context is assembled, locally.** The entry text itself is the search
    query. See [what the companion sees](#what-the-companion-sees).
-4. **One call to the companion model** (Opus by default) streams the reply.
+4. **One call to the companion model** (Opus 5.5 by default) streams the reply.
 
 The new entry is not in the search indexes yet. The companion knows about it
 because it is part of the open conversation. It gets indexed when the chapter

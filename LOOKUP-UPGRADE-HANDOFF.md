@@ -11,7 +11,7 @@ As of 2026-09-25, stopped here:
 3. **Finish step 1: done 2026-09-25** (see "Step 1 finished" under step 1a).
    - **The search ceiling is 64, decided by the owner 2026-09-25** (`passages.MAX_QUERY_PIECES`, was 26). It was sized for 254-token pieces, which add ~224 new tokens each, so 26 covered twice the longest entry. At 120 tokens each piece adds ~90, so 26 cover ~2,340 tokens. On the real journal, 5 of 395 entries need more (27–32 pieces, up to 2,824 tokens). At 26 those were searched end to end by 26 pieces spread evenly, with some text between them skipped. Measured on the copy, the longest chunk (11,697 characters, 31 pieces) takes 394 ms to search at 26 and 502 ms at 64, and its whole context block 1.3 s and 1.6 s. At 64 every entry is covered twice over, for about 0.1 s of search and 0.3 s of context block on the longest entries only.
 4. **Step 1b** (the companion's prompt): built 2026-09-26 on branch `JRNL-48` (see "Step 1b as built"). Real replies checked the same day. Then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`.
-5. **Opus 5.5** (side task, added 2026-09-26): add it to Settings and make it the companion's default. Do it before the holdout and the final check, so the last real-reply check runs on the model that ships.
+5. **Opus 5.5** (side task): done 2026-09-26 on `JRNL-49`, voice comparison included (see "Opus 5.5 as built").
 6. **Holdout.** The owner's own questions are in `docs/retrieval-eval/my-questions.txt` (gitignored, moved there 2026-09-26). Convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
 7. **Final check,** then the real journal: stop 8144, `python backup.py`, then `rebuild_index.py`.
 8. **Step 5** (Smart Search). The "close chapter" side task was done 2026-09-26 on `JRNL-49`.
@@ -427,6 +427,19 @@ t1b.py` did this; it's scratch, so recreate it if it's gone), once on 4.6 and on
 - **Docs:** `README.md` and `HOW-IT-WORKS.md` ("When you close a chapter").
 - **Left as they were:** the chat tab and "chat screen"; code, routes, comments; the close pipeline's prompts, including the title prompt (`sessions.py`, recorded in `mock_fixtures/demo_close/`); the fallback title `Journal chat {date}` (a stored title); `(picking our chat back up)`, which only the model sees.
 - No test asserted on the old strings. Full suite passes.
+
+#### Opus 5.5 as built (2026-09-26)
+
+- **`config.py`:** `claude-opus-5-5` added (label "Opus 5.5", all five effort levels, $4 / $20, cache reads at 0.05× input) and made the `MC_COMPANION_MODEL` default. `MODEL_THINKING_SUPPORT` gains `"always"` for it, and `processing_thinking_kwargs` leaves the parameter out for such a model instead of sending a disabled that would 400. `metering.price` reads an optional per-model `cache_read` ratio.
+- **Processing is Sonnet 5 and Haiku 4.5 only** (owner, 2026-09-26: no Opus models there for now). `config.PROCESSING_MODELS` holds the list; the settings payload marks each model `processing`, the Settings page builds the processing picker from those, and saving an Opus processing model is refused. A `.env` that already names one locks the picker (as any unlisted value does) and keeps working.
+- **Sonnet 5's price corrected to $2 / $10.** Anthropic's pricing page says the introductory price became the standard one and the $3 / $15 increase won't happen.
+- **Your real journal switches too.** Its `.env` sets no model, so 8144 runs the defaults: after this merges and 8144 restarts, the companion is Opus 5.5. To stay on 4.6, set it in Settings (or `MC_COMPANION_MODEL=claude-opus-4-6`).
+- **Tests:** the processing lineup and its refusal, Opus 5.5 as a companion model, its cache price, and its processing thinking kwarg. Docs: `.env.example`, `README.md`, `HOW-IT-WORKS.md`, and a dated note in `docs/releasing/release-plan.md` item 6 (local; `docs/` is untracked).
+- **Voice comparison, 2026-09-26:** the reflection, entry replies e02 and e01, the r17 chat message, and lookups r07, r38 and "the last few days", on the sandbox copy with its open chapter trimmed to before step 1b's test turns, once per model, in-process (so neither run saw the other's replies). The owner's key reaches Opus 5.5.
+  - **Cost:** 5.5 was 13% *more* ($0.60 against $0.54 for the seven calls): 36% more tokens, from its tokenizer and longer replies. Don't expect the lower price to lower the bill.
+  - **5.5 better:** it found the links (e02 reached the April visit to Jon and Suzanne's, e01 the January aphids); it said exactly when it was going from a summary and quoted earlier entries with dates and titles (r38); its misses were more useful (search suggestions, nearest things it did have). 4.6 slipped a banned phrase ("That's not nothing — wait, I mean…").
+  - **4.6 better:** shorter, lighter entry replies. 5.5's e01 went through nearly every item in six paragraphs, against the persona's "react to one detail, skip the rest", and it ended every write-tab reply with a question.
+  - **Outcome:** Opus 5.5 kept as the default. Watch entry-reply length in real use; if it drags, try a persona line or `medium` effort (neither tested).
 
 ## Checking your work
 

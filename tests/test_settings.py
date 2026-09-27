@@ -362,6 +362,27 @@ def test_a_negative_spend_cap_is_refused(env, client):
     assert "MC_MAX_SESSION_SPEND" not in env_file.read_env()
 
 
+def test_processing_offers_only_sonnet_and_haiku(env, client):
+    """Opus is kept off the processing picker (config.PROCESSING_MODELS):
+    processing calls are sized for thinking switched off, which Opus 5.5
+    can't do. The companion picker still offers every model."""
+    models = client.get("/api/settings").json()["options"]["models"]
+    assert sorted(m["value"] for m in models if m["processing"]) == [
+        "claude-haiku-4-5", "claude-sonnet-5"]
+    assert "claude-opus-5-5" in [m["value"] for m in models]
+
+
+def test_an_opus_processing_model_is_refused(env, client):
+    for model in ("claude-opus-5-5", "claude-opus-4-6"):
+        r = client.post("/api/settings",
+                        json={"values": {"MC_PROCESSING_MODEL": model}})
+        assert r.status_code == 400, model
+    assert "MC_PROCESSING_MODEL" not in env_file.read_env()
+    ok = client.post("/api/settings", json={"values": {
+        "MC_COMPANION_MODEL": "claude-opus-5-5", "MC_COMPANION_EFFORT": "xhigh"}})
+    assert ok.status_code == 200
+
+
 def test_an_unknown_model_is_refused(env, client):
     r = client.post("/api/settings",
                     json={"values": {"MC_PROCESSING_MODEL": "claude-imaginary-9"}})
