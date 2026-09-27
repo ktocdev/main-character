@@ -10,8 +10,8 @@ As of 2026-09-25, stopped here:
 2. **Switch the model: done 2026-09-25** (see "The switch, as built" under step 1a). Through the real code path it finds 30/38 in the top 6 and 31 in the top 12, with MRR 0.628, which matches the comparison exactly. Entry replies are 3/8 in both the top 6 and top 12; MiniLM got 3/8 and 5/8.
 3. **Finish step 1: done 2026-09-25** (see "Step 1 finished" under step 1a).
    - **The search ceiling is 64, decided by the owner 2026-09-25** (`passages.MAX_QUERY_PIECES`, was 26). It was sized for 254-token pieces, which add ~224 new tokens each, so 26 covered twice the longest entry. At 120 tokens each piece adds ~90, so 26 cover ~2,340 tokens. On the real journal, 5 of 395 entries need more (27–32 pieces, up to 2,824 tokens). At 26 those were searched end to end by 26 pieces spread evenly, with some text between them skipped. Measured on the copy, the longest chunk (11,697 characters, 31 pieces) takes 394 ms to search at 26 and 502 ms at 64, and its whole context block 1.3 s and 1.6 s. At 64 every entry is covered twice over, for about 0.1 s of search and 0.3 s of context block on the longest entries only.
-4. **Step 1b** (the companion's prompt), then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`.
-5. **Holdout.** The owner is writing their own questions in `my-questions.txt` at the repo root, which is untracked. Move it to `docs/retrieval-eval/` (gitignored) and convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
+4. **Step 1b** (the companion's prompt): built 2026-09-26 on branch `JRNL-48` (see "Step 1b as built"). Real replies checked the same day. Then **steps 2, 3, 4 and 4b**, measuring each with `eval_retrieval.py --compare`.
+5. **Holdout.** The owner's own questions are in `docs/retrieval-eval/my-questions.txt` (gitignored, moved there 2026-09-26). Convert it to `holdout.json`. Only check that each quote is found in its entry. Don't read it for tuning, and run it only at the final check.
 6. **Final check,** then the real journal: stop 8144, `python backup.py`, then `rebuild_index.py`.
 7. **Step 5** (Smart Search), and the "close chapter" side task at any point.
 
@@ -306,6 +306,26 @@ Testing: this changes the companion's voice, so only real replies show whether i
 - When it has only a summary, it gives the date and says where to read the entry.
 - Journal replies do not mention the app unless that helps.
 - The chat screen answers like a finder, not a companion.
+
+#### Step 1b as built (2026-09-26)
+
+- **`companion.py`:**
+  - The opening no longer claims it "has read every previous entry": it knows the journal well, "not every line by heart, but where to look".
+  - A **"How you work"** section: part of Main Character, run on the person's own computer; the write-tab conversation is a chapter that becomes memory when closed; the open chapter isn't searched yet; say so rather than invent; with only a summary or a date, point to the history tab (by date and title) or the search tab; and "use this, don't narrate it", with the March 12 example.
+  - **`CONTEXT_SECTIONS`** names each section of the context block and says which are the person's words (`<recent_entries>`, `<related_history>`) and which the app wrote. Both prompts use it. `tests/test_prompts.py` fails if `build_context_block` gains a tag the list doesn't explain, so steps 2–5 can't forget.
+  - "Quote their own language back" now adds: only their entries, never a summary or profile.
+  - **The start date** comes from `journal_span(collection)`: the earliest date in the journal collection, filled into `{journal_span}` by `system_prompt()` each turn. It only changes when the first entry does, so the cache holds. An empty journal says nothing has been closed yet.
+  - **`LOOKUP_PROMPT` and `stream_lookup`** for the chat tab: a finder, not the companion. Answer first with exact dates, quote only the person's own words, say plainly when it has only a summary and where to read the entry, suggest search words when nothing is found, mention that the open chapter isn't searched, and no commentary unless asked. It still gets the seed summary and the same context block. `/api/lookup` calls it.
+  - `REFLECTION_REQUEST` says "the life summary" instead of "the snapshot". `SEED_PREAMBLE` says "across chapters".
+  - Every turn still goes through `_stream_turn` (now with a `prompt` argument), so `mock_client` files lookups under `companion._stream_turn` as before. Its canned replies are picked by the message text, not the system prompt, and the web demo picks its own, so the demo is unchanged. None of the recorded close calls use these prompts.
+- **Tests:** `tests/test_prompts.py` (7): the span from the first date, an empty journal, no hard-coded date, every context tag explained, no "snapshot", the chat tab's prompt, the companion's persona. The two lookup tests in `test_settings.py` patch `stream_lookup`.
+- **Docs:** `HOW-IT-WORKS.md` ("What the companion sees" and "The chat screen").
+- **Real replies (layer 3), 2026-09-26,** on the sandbox copy of the real journal, Opus 4.6, $1.05 for 11 calls: the reflection, six chat-tab questions (r07, r10, r16 found; r03, r32, r38 missed), "the last few days" on the chat tab, r17 as a write-tab chat message, and entry replies e02 and e01. The sample leans on misses on purpose, and there was no before run, so it checks behaviour, not improvement.
+  - Quotes (r07, r10, r16, and the July 11 kratom entry) are word for word. No summary was quoted as the person's words.
+  - Nothing found (r32 "Begonia", r17 "Tasmanian devil"): said so plainly and suggested the search tab. These are step 3's misses.
+  - The chat tab answered like a finder; "the last few days" said the three newest days might be in the open chapter, which was right.
+  - Entry replies and the reflection stayed in the companion's voice without mentioning the app. Neither entry reply reached its link (search, not the prompt: step 4b).
+  - **Two fixes after the run:** r03 gave the date and details from a summary without saying so or where to read it, so the chat prompt now says to always make clear whether it's quoting or going from a summary. The rerun of r03 pointed to History; r38 then called the person "she", copied from the app's third-person summaries, so `CONTEXT_SECTIONS` now says to always talk to them as "you". That last fix hasn't been rerun.
 
 ### Step 2: go from a summary to the entry it summarizes
 

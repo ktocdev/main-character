@@ -83,7 +83,14 @@ The call has three parts.
 
 **The system prompt**, cached so repeated turns are cheaper:
 
-- The companion's persona (`SYSTEM_PROMPT`).
+- The companion's persona (`SYSTEM_PROMPT`). Its "How you work" section
+  tells it what it is part of: the app, the open chat as a chapter that
+  becomes memory when it is closed, the date the journal begins (the first
+  entry's date, filled in each turn), and what each section of the context
+  block is (`CONTEXT_SECTIONS`). Only recent entries and related history are
+  your own words, so only those may be quoted; summaries, profiles and
+  patterns are the app's outline. When it has only a summary or a date, it
+  says where to read the entry: History by date, or the search tab.
 - The seed summary: the rolling life summary you co-edit.
 
 **The conversation so far**: every entry, message and reply in the open chat.
@@ -162,10 +169,14 @@ tokens.
 
 ## The chat screen
 
-`POST /api/lookup`. It uses the same search as a companion reply, but keeps its
-own conversation. Lookups never join the open chat and never become journal
-memory. It is the place to ask things like "when did I last mention…", then
-go to History to read the entry in full.
+`POST /api/lookup`, `companion.stream_lookup`. It uses the same search and
+context block as a companion reply, but keeps its own conversation and its
+own prompt (`LOOKUP_PROMPT`): a finder, not the companion. It answers first,
+gives exact dates, quotes your words when it has the passage, and says plainly
+when it has only a summary and where to read the entry. Lookups never join the
+open chat and never become journal memory, and the open chat isn't searched
+until it is closed. It is the place to ask things like "when did I last
+mention…", then go to History to read the entry in full.
 
 ## The search tab
 
