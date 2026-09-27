@@ -389,6 +389,43 @@ def backfill_braids(collection, export_path: str = "conversations.json") -> int:
     return made
 
 
+# After "not yet", the chapter has to grow by this much more before the
+# write tab asks again.
+ASK_AGAIN_CHARS = 10_000
+
+
+def chapter_chars(cur: dict) -> int:
+    """Characters of the author's own writing in the open chapter: what a
+    close turns into journal entries (_close_locked), so dreams aside."""
+    return sum(len(m.get("text", "")) for m in cur.get("messages", [])
+               if m.get("role") == "you" and not m.get("dream"))
+
+
+def close_prompt(collection=None) -> dict:
+    """Whether the write tab should ask to close the chapter.
+
+    It asks once the chapter reaches config.CHAPTER_CLOSE_CHARS, and after
+    "not yet" (decline_close) again only once it has grown by
+    ASK_AGAIN_CHARS more. The decline is kept in the open chapter's file,
+    so it survives a restart and ends with the chapter."""
+    import config
+    cur = load_current(collection)
+    chars, limit = chapter_chars(cur), config.CHAPTER_CLOSE_CHARS
+    declined = cur.get("close_declined_at")
+    due = limit if declined is None else max(limit, declined + ASK_AGAIN_CHARS)
+    return {"chars": chars, "limit": limit, "ask": bool(limit) and chars >= due}
+
+
+def decline_close(collection=None) -> dict:
+    """"Not yet": remember how long the chapter was, so the next ask waits
+    for it to grow."""
+    with LOCK:
+        cur = load_current(collection)
+        cur["close_declined_at"] = chapter_chars(cur)
+        save_current(cur)
+    return close_prompt(collection)
+
+
 def current_view(collection) -> dict:
     """The open session: every part it continues (braid or text, in
     order) followed by the live braid."""

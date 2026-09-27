@@ -72,7 +72,10 @@ export function hasNewMaterial(messages) {
   return (messages || []).some(m => m.role === 'you' && !m.dream);
 }
 
-export async function closeSession() {
+// `question` opens the one confirm the close asks: the menu's plain one, or
+// askToCloseIfLong's. Returns false when the author says no, so that caller
+// can tell a "not yet" from a close that failed.
+export async function closeSession(question = 'Close this chapter?') {
   // A pending candidate is retired, not carried: generate_candidate folds the
   // new archive into the *live* seed, so an unuploaded candidate's integration
   // is backed up and then skipped in the seed's lineage. Say so before the
@@ -84,7 +87,7 @@ export async function closeSession() {
       + 'one from the live seed instead. What it integrated is kept as a file '
       + 'but drops out of the seed. Download and upload it first to keep it.\n'
     : '';
-  if (!confirm('Close this chapter?' + pending + '\n\nYour side of it becomes a journal entry, and tagging, entities, summaries, dream extraction, and the seed summary candidate run in the background. The next chapter starts empty.')) return;
+  if (!confirm(question + pending + '\n\nYour side of it becomes a journal entry, and tagging, entities, summaries, dream extraction, and the seed summary candidate run in the background. The next chapter starts empty.')) return false;
   const r = await api('/api/sessions/close', {});
   if (!r) return;
   $('write-log').innerHTML = '';
@@ -93,6 +96,34 @@ export async function closeSession() {
   state.sessionSel = 'current';
   if (state.activeTab === 'history') await loadHistory();
   refreshStatus();
+  return true;
+}
+
+// A chapter past the length set in Settings (MC_CHAPTER_CLOSE_CHARS, counted
+// in the author's own writing) is worth closing: nothing in it is searchable
+// until then, and every reply resends all of it. So after an entry or a
+// message lands, ask -- through the close's own confirm, so there is one
+// question, not two. "Not yet" tells the server, which waits for the chapter
+// to grow before the next ask. The server decides when to ask; this only
+// does what it says. Queued rather than awaited, so the composer is free
+// before the dialog opens.
+const LONG_ENOUGH = 'Your chapter has grown long enough to close and process. Are you ready?';
+let askingToClose = false;
+export function askToCloseIfLong() {
+  setTimeout(async () => {
+    if (askingToClose) return;
+    askingToClose = true;
+    try {
+      let r;
+      try { r = await (await fetch('/api/sessions/current')).json(); }
+      catch (e) { return; }
+      if (!r.close_prompt || !r.close_prompt.ask) return;
+      if (await closeSession(LONG_ENOUGH) === false) {
+        try { await fetch('/api/sessions/close/not-yet', {method: 'POST'}); }
+        catch (e) { }   // unrecorded: it asks again next time, which is harmless
+      }
+    } finally { askingToClose = false; }
+  }, 0);
 }
 
 // After a close, the memory pipeline runs as background tasks — so the close
@@ -287,6 +318,7 @@ export function init() {
     anchorTop(you);   // stay on your own message while the reply streams in
     try { await streamInto(el, '/api/chat', {message: text}); }
     finally { composerBusy(false); $('entry-text').focus(); }
+    askToCloseIfLong();
   };
 
   $('reflect-btn').onclick = async () => {
@@ -373,6 +405,7 @@ export function init() {
             ? 'that entry was already saved, so nothing was added twice'
             : `entry saved, no reply · ${SAVED_NOTE}`;
           refreshStatus();
+          askToCloseIfLong();
         } else {
           you.remove();
           restoreDraft(text);
@@ -411,6 +444,7 @@ export function init() {
             : `entry saved · ${SAVED_NOTE}`;
         }
         refreshStatus();
+        askToCloseIfLong();
       } else {
         // not saved (or unknown) — put the draft back so nothing is lost
         restoreDraft(text);
