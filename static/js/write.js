@@ -3,6 +3,8 @@ import { $, api, download, esc, refreshStatus } from './core.js';
 import { state } from './state.js';
 import { addMsg, streamInto, composerBusy, anchorTop } from './conversation.js';
 import { renderSessionPart, addSessionBraid, loadHistory } from './history.js';
+import * as popover from './popover.js';
+import { tipOf, setTip } from './tooltip.js';
 
 // ---- draft persistence + growing textarea ----
 // the write box survives an accidental refresh or tab close; it grows with
@@ -133,16 +135,17 @@ export function askToCloseIfLong() {
 // a real key; against a live key the stages are genuinely long. When the seed
 // stage lands, its candidate banner appears the way watching /api/seed used to.
 let closePoll = null;
-const CP_GLYPH = {done: '✓', running: '…', failed: '✕', pending: '·'};
+const CP_GLYPH = {done: '·', running: '…', failed: '✕', pending: '·'};
 function renderCloseProgress(steps, done) {
   const box = $('close-progress');
   if (!box) return;
   box.hidden = false;
-  box.innerHTML = '<b>updating memory</b>'
-    + steps.map(s => `<div class="cp-step cp-${s.status}">`
-        + `<span class="cp-mark">${CP_GLYPH[s.status] || '·'}</span>`
+  box.innerHTML = '<div class="eyebrow strong">updating memory</div><div class="checklist">'
+    + steps.map(s => `<div class="step ${s.status}">`
+        + `<span class="mark">${CP_GLYPH[s.status] || '·'}</span>`
         + `<span>${esc(s.label)}</span></div>`).join('')
-    + (done ? '<div class="cp-done">memory updated, and the next chapter is open</div>' : '');
+    + '</div>'
+    + (done ? '<div class="done-line">memory updated, and the next chapter is open</div>' : '');
 }
 function trackCloseProgress() {
   clearInterval(closePoll);
@@ -260,9 +263,9 @@ function renderStamp() {
     hour: 'numeric', minute: '2-digit',
   });
   $('entry-stamp-text').textContent = `Started ${when}`;
-  $('entry-stamp-text').title = state.tz
+  setTip($('entry-stamp-text'), state.tz
     ? `when this entry was written · ${state.tz}`
-    : 'when this entry was written';
+    : 'when this entry was written');
 }
 
 function startStamp() {
@@ -331,9 +334,14 @@ export function init() {
 
   $('reset').onclick = () => { $('write-actions').removeAttribute('open'); closeSession(); };
 
-  const resetTitle = $('reset').title;
+  const resetTitle = tipOf($('reset'));
+  // The ⋯ menu is a popover like the others: opening it closes the rest,
+  // and a click anywhere else closes it.
+  popover.register('actions', () => $('write-actions').removeAttribute('open'),
+    t => $('write-actions').contains(t));
   $('write-actions').addEventListener('toggle', async () => {
     if (!$('write-actions').open) return;
+    popover.opened('actions');
     refreshSeedMenu();
     // don't offer a close the server will refuse — see hasNewMaterial
     let fresh = true;
@@ -342,8 +350,8 @@ export function init() {
       fresh = hasNewMaterial(r.messages);
     } catch (e) { }   // can't tell: leave the action available
     $('reset').disabled = !fresh;
-    $('reset').title = fresh ? resetTitle
-      : 'nothing new in this chapter yet. Write or send something first';
+    setTip($('reset'), fresh ? resetTitle
+      : 'nothing new in this chapter yet. Write or send something first');
   });
   $('seed-download').onclick = () =>
     download('/api/seed/download?which=current', 'seed_summary.md');
@@ -365,12 +373,15 @@ export function init() {
   $('refresh-summaries').onclick = async () => {
     const b = $('refresh-summaries');
     b.disabled = true;
-    b.textContent = 'refreshing…';
+    b.innerHTML = 'refreshing <span class="dots">···</span>';
     try {
       const r = await api('/api/summaries/refresh', {});
-      if (r) b.textContent = `memory current (${r.arcs} weeks)`;
+      if (r) {
+        const n = $('session-notice');
+        if (n) n.textContent = `weekly arcs and domain documents regenerated (${r.arcs} weeks).`;
+      }
     } finally {
-      setTimeout(() => { b.textContent = 'refresh memory'; b.disabled = false; }, 4000);
+      b.textContent = 'refresh memory'; b.disabled = false;
     }
   };
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $ } from './core.js';
 import { costLine } from './settings.js';
+import * as popover from './popover.js';
 
 // ---- the nav cost icon ----
 // Cost is available, not ambient. A running dollar figure sitting in the nav
@@ -52,16 +53,14 @@ function toggle(next) {
   open = next;
   $('cost-panel').hidden = !open;
   $('cost-toggle').setAttribute('aria-expanded', String(open));
-  if (open) show();
+  if (open) { popover.opened('cost'); show(); }
 }
 
 export function init() {
   $('cost-toggle').onclick = e => { e.stopPropagation(); toggle(!open); };
-  // Anywhere else dismisses it. A panel that only closes by pressing the same
-  // small icon again is one people leave open by accident, which quietly
-  // turns it back into the ambient figure this is meant not to be.
-  document.addEventListener('click', () => { if (open) toggle(false); });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && open) toggle(false);
-  });
+  // Anywhere else dismisses it (popover.js). A panel that only closes by
+  // pressing the same small icon again is one people leave open by accident,
+  // which quietly turns it back into the ambient figure this is meant not to be.
+  popover.register('cost', () => { if (open) toggle(false); },
+    t => $('cost-panel').contains(t));
 }
