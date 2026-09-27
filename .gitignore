@@ -59,6 +59,8 @@ export/
 # Glob, not the bare name: a hand-made .bak copy of the list is just as
 # sensitive as the list, and gitignore has no trailing comments.
 third-party-names.txt*
+# Its companion for words that aren't names (scripts/gen_private_terms.py).
+private-terms.txt*
 
 # Seed corpus scratch dirs — working state, not deliverables.
 # build/ is where the corpus is chatted through the real companion;

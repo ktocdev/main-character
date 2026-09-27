@@ -515,6 +515,8 @@ Three layers, cheapest first. Run them after every step.
 
 Do not judge reply quality on the demo. Its replies are canned and never change.
 
+**Keep the journal out of the repo.** The test sets quote the real journal, and it is easy to copy a word from them into something that gets committed. In code, tests, comments and committed docs (this handoff included), examples are made up ("Robin", "Quillon"), and results name tests by id (r17, e04), never by what they ask about. `scripts/check_leaks.sh` checks for the owner's people (`third-party-names.txt`) and for other journal words (`private-terms.txt`, from `python scripts/gen_private_terms.py`); both lists are gitignored, so only a local run checks them. `bash scripts/install_hooks.sh` makes it run before every push. Run it before committing too.
+
 Only after the owner has seen these results, move to the real journal: stop 8144, run `python backup.py`, then rebuild the index (`rebuild_index.py`, extended in step 1). Rebuilding is local and costs nothing.
 
 At the end, update `HOW-IT-WORKS.md` ("What the companion sees") with the new layers and counts.

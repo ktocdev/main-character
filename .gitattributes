@@ -4,3 +4,5 @@
 # which misreads labels and gotos in LF-only batch files.
 journal text eol=lf
 *.cmd text eol=crlf
+# Git hooks run under bash, which reads a CR as part of the command.
+scripts/hooks/* text eol=lf
