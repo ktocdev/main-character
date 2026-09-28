@@ -13,8 +13,6 @@
 // showing beside this one. Code that sets `.title` again later is fine: the
 // next hover moves it again.
 
-import { $ } from './core.js';
-
 const GAP = 7.2;      // .45rem
 const EDGE = 8;
 let tip = null;

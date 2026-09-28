@@ -52,7 +52,7 @@ async function runSearch() {
     searchHits = r.results;
     searchSort = 'relevance';
     renderSearchResults(q);
-  } catch (e) {
+  } catch {
     status.textContent = 'search failed. Is the server up?';
   }
 }

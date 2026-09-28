@@ -554,3 +554,53 @@ def test_the_search_tab_finds_a_deep_match_and_shows_it(chroma, monkeypatch):
     titles = [r["title"] for r in got]
     assert titles[0] == "A day" and len(titles) == len(set(titles))
     assert "Pickle the cat sat on the piano." in got[0]["snippet"]
+
+
+# ---------------------------------------------------------------------------
+# NO JOURNAL NEEDED
+# ---------------------------------------------------------------------------
+
+
+def test_windows_bridged_by_a_later_hit_are_merged_once(monkeypatch):
+    """Hits at 0, 4 and 2 with one neighbour: 2's window joins 0's and 4's,
+    so the chunk comes back once, in the best hit's place."""
+    text = "p0 p1 p2 p3 p4 p5"
+    spans = {f"c_p{i}": {"start": 3 * i, "end": 3 * i + 2} for i in range(6)}
+
+    class Passages:
+        def get(self, ids, include):
+            return {"ids": ids, "metadatas": [spans[i] for i in ids]}
+
+    class Chunks:
+        def get(self, ids, include):
+            return {"ids": ids, "documents": [text for _ in ids]}
+
+    monkeypatch.setattr(rag_journal, "get_collection", lambda: Chunks())
+    hit = lambda pos: {"source_id": "c", "position": pos, "count": 6}
+    got = passages._with_neighbors(
+        [(0.1, "", hit(0)), (0.2, "", hit(4)), (0.3, "", hit(2))], 1, Passages())
+    assert [h["text"] for h in got] == [text]
+    assert got[0]["distance"] == 0.1 and got[0]["metadata"]["position"] == 0
+
+
+def test_a_failed_download_is_not_retried_every_turn(monkeypatch):
+    import huggingface_hub
+    tries = []
+
+    def fail(*a, **k):
+        tries.append(1)
+        raise ConnectionError("reset")
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", fail)
+    monkeypatch.setattr(passages, "_local_copy", lambda: None)
+    monkeypatch.setattr(passages, "_model_files", lambda: ("repo", []))
+    monkeypatch.setattr(passages.time, "sleep", lambda s: None)
+    monkeypatch.setattr(passages, "_download_failed", None)
+    for _ in range(3):
+        with pytest.raises(passages.ModelUnavailable, match="reset"):
+            passages._download()
+    assert len(tries) == passages._DOWNLOAD_TRIES
+    # after the wait, it tries again
+    monkeypatch.setattr(passages, "_DOWNLOAD_RETRY_AFTER", 0)
+    with pytest.raises(passages.ModelUnavailable):
+        passages._download()
+    assert len(tries) == 2 * passages._DOWNLOAD_TRIES

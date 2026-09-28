@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api } from './core.js';
-import { state } from './state.js';
 import { refreshSeedMenu, seedState } from './write.js';
 import { showTab } from './main.js';
 
@@ -39,7 +38,7 @@ async function fetchDoc(which) {
   try {
     const r = await fetch('/api/seed/download?which=' + which);
     return r.ok ? await r.text() : '';
-  } catch (e) { return ''; }
+  } catch { return ''; }
 }
 // Load order is draft → candidate → live seed. The source under any draft is
 // the candidate when one is pending, otherwise the live seed.
@@ -50,13 +49,13 @@ function pickSource(s) {
 
 function readDraft() {
   try { const raw = localStorage.getItem(DRAFT_KEY); return raw ? JSON.parse(raw) : null; }
-  catch (e) { return null; }
+  catch { return null; }
 }
 function writeDraft(obj) {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(obj)); } catch (e) {}
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(obj)); } catch {}
 }
 function clearDraft() {
-  try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+  try { localStorage.removeItem(DRAFT_KEY); } catch {}
 }
 
 function setNote(msg) { $('seed-editor-note').textContent = msg || ''; }
@@ -160,7 +159,7 @@ async function copy() {
   try {
     await navigator.clipboard.writeText($('seed-editor-text').value);
     setNote('copied to the clipboard');
-  } catch (e) { setNote('could not copy because your browser blocked clipboard access'); }
+  } catch { setNote('could not copy because your browser blocked clipboard access'); }
 }
 
 // The buffer, not the file on disk -- a half-finished edit is what lands in an
@@ -201,7 +200,7 @@ async function openWithClaude() {
   try {
     await navigator.clipboard.writeText(buf);
     setNote('copied with a revise instruction. Paste it into the new Claude tab');
-  } catch (e) {
+  } catch {
     setNote('opened Claude, but could not copy. Copy the text here manually');
   }
 }

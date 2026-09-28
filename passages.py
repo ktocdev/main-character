@@ -63,6 +63,11 @@ _UPSERT = 1000         # passages per write; small writes degrade the index
 _HNSW = {"space": "cosine", "ef_construction": 400, "ef_search": 400,
          "max_neighbors": 48}
 _DOWNLOAD_TRIES = 5
+# After a download gives up, how long before another is tried. Without it
+# every turn that searches would sit through all the tries again (~20 s)
+# with nothing on screen to say why; with it they fall back straight away.
+_DOWNLOAD_RETRY_AFTER = 600    # seconds
+_download_failed: tuple[float, str] | None = None   # when, and why
 # Keyword search (keywords.py) runs beside search by meaning, and each query
 # piece's two lists are merged by reciprocal rank fusion: a passage scores
 # 1/(FUSION_K + rank) in each list it is on. Ranks, not scores, because BM25
@@ -133,10 +138,13 @@ def _download() -> str:
     the parallel downloader every time, and a retried file resumes where it
     stopped. About 130 MB, once per machine.
     """
+    global _download_failed
     from huggingface_hub import snapshot_download
     found = _local_copy()
     if found:
         return found
+    if _download_failed and time.monotonic() - _download_failed[0] < _DOWNLOAD_RETRY_AFTER:
+        raise ModelUnavailable(_download_failed[1])
     repo, files = _model_files()
     print(f"Downloading the search model {EMBED_MODEL} (about 130 MB, once "
           f"per machine) to {MODEL_CACHE}", file=sys.stderr, flush=True)
@@ -150,11 +158,12 @@ def _download() -> str:
                                          cache_dir=str(MODEL_CACHE), max_workers=1)
         except Exception as exc:
             if attempt == _DOWNLOAD_TRIES:
-                raise ModelUnavailable(
-                    f"Could not download the search model {EMBED_MODEL} "
-                    f"({exc.__class__.__name__}: {exc}). Search uses the older "
-                    f"index until it can; check the connection and run "
-                    f"rebuild_index.py.") from exc
+                why = (f"Could not download the search model {EMBED_MODEL} "
+                       f"({exc.__class__.__name__}: {exc}). Search uses the "
+                       f"older index until it can; check the connection and "
+                       f"run rebuild_index.py.")
+                _download_failed = (time.monotonic(), why)
+                raise ModelUnavailable(why) from exc
             print(f"  download interrupted ({exc.__class__.__name__}), "
                   f"retrying ({attempt}/{_DOWNLOAD_TRIES - 1})",
                   file=sys.stderr, flush=True)
@@ -714,17 +723,24 @@ def _with_neighbors(ranked, neighbors: int, col) -> list[dict]:
     from the journal chunk itself, so overlap is never shown twice."""
     from rag_journal import get_collection
 
+    # Merged in one pass over the windows in chunk order, so a hit that
+    # bridges two earlier windows joins all three (hits at 0, 4, 2). A merged
+    # window keeps its best hit's place, distance and metadata.
+    spans = sorted(
+        (meta["source_id"], max(0, meta["position"] - neighbors),
+         min(meta["count"] - 1, meta["position"] + neighbors), rank, dist, meta)
+        for rank, (dist, _doc, meta) in enumerate(ranked))
     windows: list[dict] = []
-    for dist, _doc, meta in ranked:
-        src, pos = meta["source_id"], meta["position"]
-        lo, hi = max(0, pos - neighbors), min(meta["count"] - 1, pos + neighbors)
-        for w in windows:
-            if w["source_id"] == src and lo <= w["hi"] + 1 and hi >= w["lo"] - 1:
-                w["lo"], w["hi"] = min(lo, w["lo"]), max(hi, w["hi"])
-                break
+    for src, lo, hi, rank, dist, meta in spans:
+        w = windows[-1] if windows else None
+        if w and w["source_id"] == src and lo <= w["hi"] + 1:
+            w["hi"] = max(hi, w["hi"])
+            if rank < w["rank"]:
+                w.update(rank=rank, distance=dist, metadata=meta)
         else:
-            windows.append({"source_id": src, "lo": lo, "hi": hi,
+            windows.append({"source_id": src, "lo": lo, "hi": hi, "rank": rank,
                             "distance": dist, "metadata": meta})
+    windows.sort(key=lambda w: w["rank"])
 
     want = [f"{w['source_id']}_p{i}" for w in windows for i in (w["lo"], w["hi"])]
     spans = dict(zip(*[col.get(ids=list(set(want)), include=["metadatas"])[k]

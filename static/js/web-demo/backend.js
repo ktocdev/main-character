@@ -426,7 +426,7 @@
     const method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
     if (method === 'GET') return get(u);
     let body = {};
-    try { body = init && init.body ? JSON.parse(init.body) : {}; } catch (e) { body = {}; }
+    try { body = init && init.body ? JSON.parse(init.body) : {}; } catch { body = {}; }
     return post(u, body);
   };
 })();
