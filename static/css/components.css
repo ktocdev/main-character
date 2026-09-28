@@ -17,6 +17,8 @@
     font: .95rem var(--font-ui); height: 2.2rem; padding: 0 1.2rem;
     border-radius: var(--radius-lg); white-space: nowrap; flex-shrink: 0;
   }
+  /* a step toward the text colour: brighter in dark, deeper in light */
+  button.send:hover:not(:disabled) { background: var(--accent-hover); }
   button.send:disabled { opacity: .45; }
   /* the pill form, for compact composers and the search bar */
   button.send.pill {
@@ -42,6 +44,8 @@
     font: .8rem var(--font-ui); padding: .3rem .9rem; border-radius: var(--radius-base);
     min-height: 2.2rem; display: inline-flex; align-items: center; gap: .4rem; white-space: nowrap;
   }
+  /* lifts to the full accent: filled reads as a quieter send until pointed at */
+  button.filled:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
   button.filled:disabled { opacity: .5; }
   /* text: borderless quiet (clear, expand all, back links) */
   button.text {
