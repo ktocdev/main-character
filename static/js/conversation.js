@@ -41,7 +41,7 @@ export async function streamInto(el, url, payload) {
     // "you are at your monthly ceiling" back into a crash.
     const body = await res.text();
     let message = body;
-    try { message = JSON.parse(body).error || body; } catch (e) { /* not JSON */ }
+    try { message = JSON.parse(body).error || body; } catch { /* not JSON */ }
     el.textContent = 'error: ' + message;
     return res;
   }
@@ -72,7 +72,7 @@ export async function streamInto(el, url, payload) {
       el.textContent += chunk;
       if (pinned) scroller.scrollTop = scroller.scrollHeight;
     }
-  } catch (e) {
+  } catch {
     // The request already succeeded -- whatever it stored is stored. Only
     // the reply broke off, so say that here and let the caller report the
     // saved state from the response head it already has.

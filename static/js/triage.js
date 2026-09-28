@@ -36,7 +36,7 @@ async function refreshUndo() {
     const h = await (await fetch('/api/history')).json();
     $('triage-undo').classList.toggle('empty', !h.undo);
     $('triage-undo-last').hidden = !h.undo;
-  } catch (e) { }
+  } catch { }
 }
 
 function progress(reviewed, total, left) {

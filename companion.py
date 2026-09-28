@@ -28,6 +28,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+import caps
 from config import (
     ENTITY_DIR, EXCERPT_CHARS, MAX_TOKENS, MC_COMPANION_MODEL as MODEL,
     N_RECENT, N_SEMANTIC, SMART_REPLY_ROUNDS, SUMMARY_DIR,
@@ -656,6 +657,12 @@ def stream_smart_lookup(client, collection, entity_index: dict, messages: list,
                 results.append({"type": "tool_result", "tool_use_id": call.id,
                                 "content": text, "is_error": is_error})
             messages.append({"role": "user", "content": results})
+    except caps.CapExceeded as exc:
+        # A round past the spend cap is refused before it is sent. The
+        # route's own check only covers the first, so say which cap it was
+        # here, or the reply just stops with nothing to explain it.
+        del messages[start:]
+        yield ("\n\n" if wrote else "") + f"[Stopped: {exc.detail}]"
     except BaseException:
         del messages[start:]
         raise

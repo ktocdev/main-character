@@ -563,7 +563,7 @@ async function instanceId() {
   try {
     const res = await fetch('/api/status', {cache: 'no-store'});
     return res.ok ? ((await res.json()).instance || null) : null;
-  } catch (e) {
+  } catch {
     return null;      // still down
   }
 }
@@ -582,7 +582,7 @@ export async function restartServer(note, saved = true, into = 'journal') {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({into}),
     })).json();
-  } catch (e) {
+  } catch {
     r = {error: 'could not reach the server.'};
   }
   if (r.error) {
@@ -759,7 +759,7 @@ async function save() {
       body: JSON.stringify({values}),
     });
     r = await res.json();
-  } catch (e) {
+  } catch {
     r = {error: 'could not reach the server'};
   }
   btn.disabled = false;
@@ -905,7 +905,7 @@ function wireData() {
   if (reb) reb.onclick = () => runData(reb, 'rebuilding',
     '/api/data/rebuild',
     b => 'search index rebuilt: '
-       + Object.entries(b).filter(([k, val]) => val && val.documents !== undefined)
+       + Object.entries(b).filter(([, val]) => val && val.documents !== undefined)
            .map(([k, val]) => val.documents + ' ' + k.replace('journal_', ''))
            .join(', ') + '.');
 }
@@ -931,7 +931,7 @@ function themeInit() {
   const group = $('theme-toggle');
   if (!group) return;
   let stored;
-  try { stored = localStorage.getItem(THEME_KEY); } catch (e) {}
+  try { stored = localStorage.getItem(THEME_KEY); } catch {}
   const current = (stored === 'light' || stored === 'dark') ? stored : 'auto';
   applyTheme(current);
   markTheme(current);
@@ -942,7 +942,7 @@ function themeInit() {
     try {
       if (choice === 'auto') localStorage.removeItem(THEME_KEY);
       else localStorage.setItem(THEME_KEY, choice);
-    } catch (e) {}
+    } catch {}
     applyTheme(choice);
     markTheme(choice);
   });

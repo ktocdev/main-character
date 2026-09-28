@@ -8,7 +8,6 @@ import { $, api, esc, fmtDate } from './core.js';
 // the list and open to a confirm / not now / dismiss card.
 let catIndex = null, catSelected = null, propSelected = null;
 let organicState = {proposals: [], custom: []};
-let openEntry = null;        // which entry's full text is unfolded
 
 export async function loadCategories() {
   const [ci, os] = await Promise.all([
@@ -41,7 +40,7 @@ function catRow(name, count, custom) {
   b.querySelector('.li-title').textContent = label(name);
   b.querySelector('.li-meta').textContent = count;
   if (custom) b.title = 'a category of yours';
-  b.onclick = () => { catSelected = name; propSelected = null; openEntry = null; notice(''); renderCategories(); drill(); };
+  b.onclick = () => { catSelected = name; propSelected = null; notice(''); renderCategories(); drill(); };
   return b;
 }
 

@@ -57,7 +57,7 @@ function say(text, kind) {
 // wants, and forward is what the buttons are for.
 function rail() {
   const at = STEPS.findIndex(s => s[0] === step);
-  $('wizard-steps').innerHTML = STEPS.map(([id, label], i) =>
+  $('wizard-steps').innerHTML = STEPS.map(([, label], i) =>
     '<span class="wiz-step' + (i === at ? ' at' : '') + (i < at ? ' done' : '')
     + '">' + esc(label) + '</span>').join('');
 }
@@ -123,7 +123,7 @@ async function checkKey() {
       body: JSON.stringify({key}),
     });
     r = await res.json();
-  } catch (e) {
+  } catch {
     r = {ok: false, error: 'could not reach the server.'};
   }
   go.disabled = false;
@@ -147,7 +147,7 @@ function renderZone() {
   // exactly until the journal runs somewhere other than the machine its
   // author is sitting at.
   let detected = '';
-  try { detected = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+  try { detected = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch {}
   const zones = (options && options.options && options.options.timezones) || [];
   const usable = zones.includes(detected);
 
@@ -389,7 +389,7 @@ async function commit() {
       });
       const rb = await r.json();
       if (!r.ok || rb.error) failed.push(c.name);
-    } catch (e) {
+    } catch {
       failed.push(c.name);
     }
   }
@@ -462,7 +462,7 @@ export async function open() {
   try {
     const res = await fetch('/api/settings');
     options = res.ok ? await res.json() : null;
-  } catch (e) {
+  } catch {
     options = null;
   }
   // A missing payload is survivable: the zone step says the picker is

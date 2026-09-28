@@ -27,7 +27,7 @@ export function restoreLookupLog() {
     for (const m of JSON.parse(localStorage.getItem('rag_lookup') || '[]')) {
       lookupMsg(m.role, m.text);
     }
-  } catch (e) { }
+  } catch { }
   if (!$('chat-log').querySelector('.msg')) renderEmpty();
 }
 
@@ -71,7 +71,7 @@ function smartOn() {
 function setSmart(on) {
   $('lookup-smart').classList.toggle('on', on);
   $('lookup-smart').setAttribute('aria-pressed', String(on));
-  try { localStorage.setItem(SMART_KEY, on ? '1' : ''); } catch (e) { }
+  try { localStorage.setItem(SMART_KEY, on ? '1' : ''); } catch { }
 }
 async function sendLookup() {
   const text = $('chat-text').value.trim();
@@ -91,7 +91,7 @@ async function sendLookup() {
 export function init() {
   $('lookup-send').onclick = sendLookup;
   let saved = '';
-  try { saved = localStorage.getItem(SMART_KEY) || ''; } catch (e) { }
+  try { saved = localStorage.getItem(SMART_KEY) || ''; } catch { }
   setSmart(saved === '1');
   $('lookup-smart').onclick = () => setSmart(!smartOn());
   $('chat-text').addEventListener('keydown', e => {
@@ -101,7 +101,7 @@ export function init() {
     $('chat-log').innerHTML = '';
     renderEmpty();
     localStorage.removeItem('rag_lookup');
-    try { await fetch('/api/lookup/reset', {method: 'POST'}); } catch (e) { }
+    try { await fetch('/api/lookup/reset', {method: 'POST'}); } catch { }
   };
 }
 

@@ -54,14 +54,14 @@ function newSaveId() {
 }
 function saveIdFor(text) {
   let pending = null;
-  try { pending = JSON.parse(localStorage.getItem(PENDING_SAVE)); } catch (e) { }
+  try { pending = JSON.parse(localStorage.getItem(PENDING_SAVE)); } catch { }
   if (pending && pending.text === text && pending.id) return pending.id;
   const id = newSaveId();
-  try { localStorage.setItem(PENDING_SAVE, JSON.stringify({text, id})); } catch (e) { }
+  try { localStorage.setItem(PENDING_SAVE, JSON.stringify({text, id})); } catch { }
   return id;
 }
 function settleSave() {
-  try { localStorage.removeItem(PENDING_SAVE); } catch (e) { }
+  try { localStorage.removeItem(PENDING_SAVE); } catch { }
 }
 const SAVED_NOTE = 'becomes journal memory when you close the chapter';
 const UNREACHED = 'could not reach the journal. Your draft is back, and '
@@ -118,11 +118,11 @@ export function askToCloseIfLong() {
     try {
       let r;
       try { r = await (await fetch('/api/sessions/current')).json(); }
-      catch (e) { return; }
+      catch { return; }
       if (!r.close_prompt || !r.close_prompt.ask) return;
       if (await closeSession(LONG_ENOUGH) === false) {
         try { await fetch('/api/sessions/close/not-yet', {method: 'POST'}); }
-        catch (e) { }   // unrecorded: it asks again next time, which is harmless
+        catch { }   // unrecorded: it asks again next time, which is harmless
       }
     } finally { askingToClose = false; }
   }, 0);
@@ -160,7 +160,7 @@ function trackCloseProgress() {
   const tick = async () => {
     let p;
     try { p = await (await fetch('/api/sessions/close/progress')).json(); }
-    catch (e) {
+    catch {
       // transient — the next tick tries again, but a run of failures still
       // has to hit the same ~120 s ceiling normal polling does, or a
       // persistently erroring endpoint polls forever.
@@ -182,7 +182,7 @@ function trackCloseProgress() {
 
 // ---- the seed ritual (close → download candidate → edit in VS Code → upload) ----
 export async function seedState() {
-  try { return await (await fetch('/api/seed')).json(); } catch (e) { return null; }
+  try { return await (await fetch('/api/seed')).json(); } catch { return null; }
 }
 export async function refreshSeedMenu() {
   const s = await seedState();
@@ -207,7 +207,7 @@ export async function loadWriteLog() {
           method: 'POST', headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({messages: JSON.parse(old)}),
         });
-      } catch (e) { }
+      } catch { }
       localStorage.removeItem('rag_chat');
     }
     const r = await (await fetch('/api/sessions/current')).json();
@@ -215,7 +215,7 @@ export async function loadWriteLog() {
     addSessionBraid(el, r.messages, null, true);
     if (!r.parts.length && !r.messages.length) await maybeFirstRun(el);
     el.scrollTop = el.scrollHeight;
-  } catch (e) { }
+  } catch { }
 }
 
 // A brand-new journal's write screen is otherwise a blank log. One message,
@@ -225,7 +225,7 @@ export async function loadWriteLog() {
 // Worded with the help tab's own vocabulary so the two agree.
 async function maybeFirstRun(el) {
   let s;
-  try { s = await (await fetch('/api/sessions')).json(); } catch (e) { return; }
+  try { s = await (await fetch('/api/sessions')).json(); } catch { return; }
   if ((s.sessions || []).some(i => i.kind === 'archive')) return;
   const d = document.createElement('div');
   d.id = 'write-first-run';
@@ -348,7 +348,7 @@ export function init() {
     try {
       const r = await (await fetch('/api/sessions/current')).json();
       fresh = hasNewMaterial(r.messages);
-    } catch (e) { }   // can't tell: leave the action available
+    } catch { }   // can't tell: leave the action available
     $('reset').disabled = !fresh;
     setTip($('reset'), fresh ? resetTitle
       : 'nothing new in this chapter yet. Write or send something first');
@@ -404,7 +404,7 @@ export function init() {
       try {
         let r = null, unreached = false;
         try { r = await api('/api/entry', {text, ts, no_reply: true, save_id}); }
-        catch (e) { unreached = true; }
+        catch { unreached = true; }
         if (r && r.ok) {
           settleSave();
           clearStamp();
@@ -436,7 +436,7 @@ export function init() {
     try {
       let res = null;
       try { res = await streamInto(el, '/api/entry', {text, ts, save_id}); }
-      catch (e) {
+      catch {
         el.classList.remove('thinking');
         el.textContent = 'error: could not reach the journal';
       }

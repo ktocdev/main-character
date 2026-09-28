@@ -23,6 +23,7 @@ from types import SimpleNamespace
 import pytest
 from starlette.testclient import TestClient
 
+import caps
 import companion
 import config
 import lookup_tools
@@ -228,6 +229,19 @@ def test_a_failed_round_leaves_the_history_as_it_was(quiet):
     client = Scripted([tool_round(), RuntimeError("connection dropped")])
     with pytest.raises(RuntimeError):
         smart(client, messages)
+    assert messages == before
+
+
+def test_a_round_past_the_cap_says_which_cap(quiet):
+    before = [{"role": "user", "content": "earlier"},
+              {"role": "assistant", "content": "reply"}]
+    messages = list(before)
+    client = Scripted([Round(["Looking."], [block("text", text="Looking."),
+                                            block("tool_use", id="t", name="list_entries",
+                                                  input={})], "tool_use"),
+                       caps.CapExceeded("this month's estimated spend is $5.00")])
+    assert smart(client, messages) == (
+        "Looking.\n\n[Stopped: this month's estimated spend is $5.00]")
     assert messages == before
 
 

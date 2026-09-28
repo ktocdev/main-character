@@ -149,7 +149,7 @@ export async function download(url, filename) {
   const res = await fetch(url, {cache: 'no-store'});
   if (!res.ok) {
     let msg = `download failed (${res.status})`;
-    try { const r = await res.json(); if (r && r.error) msg = r.error; } catch (e) {}
+    try { const r = await res.json(); if (r && r.error) msg = r.error; } catch {}
     alert(msg);
     return;
   }
@@ -174,7 +174,7 @@ export async function api(url, payload) {
   // key -- treat any non-ok status as a failure too, not just one that says so.
   if (!res.ok) {
     let msg = `request failed (${res.status})`;
-    try { const r = await res.json(); if (r && r.error) msg = r.error; } catch (e) {}
+    try { const r = await res.json(); if (r && r.error) msg = r.error; } catch {}
     alert(msg);
     return null;
   }
