@@ -225,7 +225,10 @@ entry when they close it) isn't searched yet. When they ask about the last \
 few days, that may be why something is missing; say so.
 - Keep it as short as the answer allows. A list is fine when there are \
 several things to list. Don't comment on their life or give advice unless \
-they ask."""
+they ask.
+- Write plain text. The reply is shown exactly as written, so markdown \
+shows up as stray symbols: no bold, headers or ">" quote lines. A list is \
+lines that start with a dash."""
 
 # Smart replies (the chat tab's toggle): the chat tab's prompt, plus the tools.
 # A system block of its own, after the prompt above, which reads the same
