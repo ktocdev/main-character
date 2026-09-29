@@ -37,6 +37,8 @@ STATIC = ROOT / "static"
 DEFAULT_OUT = ROOT / "dist" / "web-demo"
 INSTALLER = ROOT / "seed_corpus" / "import_seed_corpus.py"
 REPLIES = ROOT / "mock_fixtures" / "companion._stream_turn.json"
+# What the demo sends in place of whatever the visitor types (backend.js)
+SCRIPT = ROOT / "mock_fixtures" / "demo_script.json"
 
 DATA_DIRS = {
     "JOURNAL": "journal_entries", "CHROMA": "chroma_data",
@@ -215,11 +217,13 @@ def stage_capture(tmp: Path, data_dir: Path):
         assert (status["entries"], status["open_entries"]) == (32, 0), status
 
     replies = json.loads(REPLIES.read_text(encoding="utf-8"))["responses"]
+    script = json.loads(SCRIPT.read_text(encoding="utf-8"))
     data_dir.mkdir(parents=True, exist_ok=True)
     write_json(data_dir / "before.json", {
         "reads": before,
         "search": search_before,
         "replies": [r if isinstance(r, str) else json.dumps(r) for r in replies],
+        "script": {k: script[k] for k in ("write", "lookup", "chips")},
         "close": {
             "response": closed.json(),
             "steps": [{"key": k, "label": label} for k, label in server.CLOSE_STEPS],

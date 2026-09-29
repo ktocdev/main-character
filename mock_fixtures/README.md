@@ -50,6 +50,15 @@ by the real application during playback, not copied over the running demo.
 endpoint with no API key, requires every model call to match an exact
 recording, and compares all derived files with the real captured states.
 
+`demo_script.json` is not a replay bucket. It is the published web demo's
+script: whatever a visitor types, `static/js/web-demo/backend.js` sends the
+next scripted message instead and answers with the reply written for it.
+Three write-tab entries after the open chat (9/19, 9/21, 9/24) with their
+follow-ups, three chat-tab questions, and an answer for each suggestion chip
+(`reply_after` where the recorded close changes the answer). The entries
+never go into `seed_corpus/journal_entries/`: that would change the recorded
+close. Local `MC_MOCK` installs don't use it.
+
 **These ship publicly — they are source, not data.**
 
 - Capture from the curated seed corpus only, never from a real journal.
