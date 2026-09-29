@@ -46,7 +46,11 @@ _PROJECT_ROOT = Path(__file__).parent
 MC_COMPANION_MODEL = os.getenv("MC_COMPANION_MODEL", "claude-opus-5-5").strip()
 MC_PROCESSING_MODEL = os.getenv("MC_PROCESSING_MODEL", "claude-sonnet-5-5").strip()
 
-MC_COMPANION_EFFORT = os.getenv("MC_COMPANION_EFFORT", "high").strip()
+# Medium, not high: at high, Opus 5.5 answers every thread in an entry and
+# runs long. Measured 2026-09-29 against the replies Opus 4.6 gave at high:
+# medium plus the prompt's Length section matched their length (~105 words
+# on average); high alone ran ~170.
+MC_COMPANION_EFFORT = os.getenv("MC_COMPANION_EFFORT", "medium").strip()
 
 # Smart replies, the chat tab's toggle: Claude gets the journal's search tools
 # and can search, read and search again before answering. This caps the
