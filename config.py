@@ -40,11 +40,11 @@ _PROJECT_ROOT = Path(__file__).parent
 # Two workloads, two settings: the companion is the one user-visible voice,
 # so quality matters most there. Processing (entity extraction, summaries,
 # arcs, categories, patterns, dreams, organic naming, seed integration) is
-# structured/mechanical, runs in bulk, and dominates token spend — Sonnet 5
+# structured/mechanical, runs in bulk, and dominates token spend — Sonnet 5.5
 # is the default there because that work doesn't need Opus-tier reasoning.
 
 MC_COMPANION_MODEL = os.getenv("MC_COMPANION_MODEL", "claude-opus-5-5").strip()
-MC_PROCESSING_MODEL = os.getenv("MC_PROCESSING_MODEL", "claude-sonnet-5").strip()
+MC_PROCESSING_MODEL = os.getenv("MC_PROCESSING_MODEL", "claude-sonnet-5-5").strip()
 
 MC_COMPANION_EFFORT = os.getenv("MC_COMPANION_EFFORT", "high").strip()
 
@@ -62,6 +62,7 @@ MODEL_EFFORT_LEVELS = {
     "claude-opus-4-7": ["low", "medium", "high", "max", "xhigh"],
     "claude-opus-4-8": ["low", "medium", "high", "max", "xhigh"],
     "claude-opus-5": ["low", "medium", "high", "max", "xhigh"],
+    "claude-sonnet-5-5": ["low", "medium", "high", "max", "xhigh"],
     "claude-sonnet-5": ["low", "medium", "high", "max", "xhigh"],
     "claude-haiku-4-5": [],
 }
@@ -74,6 +75,7 @@ MODEL_LABELS = {
     "claude-opus-4-7": "Opus 4.7",
     "claude-opus-4-8": "Opus 4.8",
     "claude-opus-5": "Opus 5",
+    "claude-sonnet-5-5": "Sonnet 5.5",
     "claude-sonnet-5": "Sonnet 5",
     "claude-haiku-4-5": "Haiku 4.5",
 }
@@ -88,13 +90,14 @@ MODEL_LABELS = {
 # authority: check these against it when adding a model, and treat a figure
 # here as an estimate that goes stale, never as a quote. `cache_read` is the
 # share of the input price a cache hit costs, where a model differs from the
-# usual 0.1 (metering.CACHE_READ_RATIO). Checked 2026-09-26.
+# usual 0.1 (metering.CACHE_READ_RATIO). Checked 2026-09-29.
 MODEL_PRICES = {
     "claude-opus-5-5": {"in": 4.0, "out": 20.0, "cache_read": 0.05},
     "claude-opus-4-6": {"in": 5.0, "out": 25.0},
     "claude-opus-4-7": {"in": 5.0, "out": 25.0},
     "claude-opus-4-8": {"in": 5.0, "out": 25.0},
     "claude-opus-5": {"in": 5.0, "out": 25.0},
+    "claude-sonnet-5-5": {"in": 2.0, "out": 10.0},
     "claude-sonnet-5": {"in": 2.0, "out": 10.0},
     "claude-haiku-4-5": {"in": 1.0, "out": 5.0},
 }
@@ -104,13 +107,18 @@ MODEL_PRICES = {
 # omitted; Sonnet 5 and Opus 5 default to *adaptive* when omitted. Haiku
 # 4.5 rejects the parameter outright. "always": thinking can't be turned
 # off -- Opus 5.5 answers `{"type": "disabled"}` with a 400 -- so a call
-# that wants it off leaves the parameter out instead.
+# that wants it off leaves the parameter out instead. "between_tools":
+# thinking turns off, but under that name -- Sonnet 5.5 400s on
+# `{"type": "disabled"}` and asks for `{"type": "between_tools"}`, which
+# skips thinking before the reply (any short updates between tool calls
+# come back as thinking blocks).
 MODEL_THINKING_SUPPORT = {
     "claude-opus-5-5": "always",
     "claude-opus-4-6": True,
     "claude-opus-4-7": True,
     "claude-opus-4-8": True,
     "claude-opus-5": True,
+    "claude-sonnet-5-5": "between_tools",
     "claude-sonnet-5": True,
     "claude-haiku-4-5": False,
 }
@@ -132,7 +140,7 @@ def companion_effort_kwargs(model: str = None, effort: str = None) -> dict:
 # trading down is the point, and its calls are sized for thinking switched
 # off, which Opus 5.5 can't do. Opus is left out for now (owner's call,
 # 2026-09-26); the companion picker offers everything above.
-PROCESSING_MODELS = ["claude-sonnet-5", "claude-haiku-4-5"]
+PROCESSING_MODELS = ["claude-sonnet-5-5", "claude-sonnet-5", "claude-haiku-4-5"]
 
 
 def processing_thinking_kwargs(model: str = None) -> dict:
@@ -141,11 +149,14 @@ def processing_thinking_kwargs(model: str = None) -> dict:
     thinking explicitly disabled on models that support the parameter —
     several call sites are sized tight enough that adaptive thinking would
     eat the budget and truncate the response — and omitted entirely on
-    models that reject the parameter (Haiku 4.5)."""
+    models that reject the parameter (Haiku 4.5). Sonnet 5.5 spells "off"
+    as `between_tools`."""
     model = model or MC_PROCESSING_MODEL
     support = MODEL_THINKING_SUPPORT.get(model, True)
     if support == "always":
         return {}
+    if support == "between_tools":
+        return {"thinking": {"type": "between_tools"}}
     if support:
         return {"thinking": {"type": "disabled"}}
     return {}

@@ -368,7 +368,7 @@ def test_processing_offers_only_sonnet_and_haiku(env, client):
     can't do. The companion picker still offers every model."""
     models = client.get("/api/settings").json()["options"]["models"]
     assert sorted(m["value"] for m in models if m["processing"]) == [
-        "claude-haiku-4-5", "claude-sonnet-5"]
+        "claude-haiku-4-5", "claude-sonnet-5", "claude-sonnet-5-5"]
     assert "claude-opus-5-5" in [m["value"] for m in models]
 
 

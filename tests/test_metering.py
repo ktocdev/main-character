@@ -136,6 +136,13 @@ def test_thinking_is_left_off_a_processing_call_that_cant_disable_it():
     assert config.processing_thinking_kwargs("claude-haiku-4-5") == {}
 
 
+def test_sonnet_5_5_turns_processing_thinking_off_by_its_own_name():
+    """Sonnet 5.5 400s on {"type": "disabled"}; off is "between_tools"."""
+    import config
+    assert config.processing_thinking_kwargs("claude-sonnet-5-5") == {
+        "thinking": {"type": "between_tools"}}
+
+
 # ---- counting ----
 
 def test_a_call_adds_its_usage_to_the_running_total():
