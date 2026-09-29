@@ -394,8 +394,8 @@
 
   function seedDownload(which) {
     const text = which === 'candidate' ? seed.candidate : seed.current;
-    if (text === null) return json({error: `no ${which} seed yet`}, 404);
-    const name = which === 'candidate' ? 'seed_summary.candidate.md' : 'seed_summary.md';
+    if (text === null) return json({error: `no ${which} life summary yet`}, 404);
+    const name = which === 'candidate' ? 'life_summary.candidate.md' : 'life_summary.md';
     return new Response(text, {headers: {
       'Content-Type': 'text/markdown; charset=utf-8',
       'Content-Disposition': `attachment; filename="${name}"`,
@@ -406,7 +406,7 @@
   function seedUpload(body) {
     const text = String(body.text || '').trim();
     if (text.length < 200) {
-      return json({error: 'that file looks empty, so the seed was not replaced'}, 400);
+      return json({error: 'that file looks empty, so the life summary was not replaced'}, 400);
     }
     seed.current = text + '\n';
     seed.updated = nowStamp();

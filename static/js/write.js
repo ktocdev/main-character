@@ -84,12 +84,12 @@ export async function closeSession(question = 'Close this chapter?') {
   // close — the only moment the author can still act on it.
   const s = await seedState();
   const pending = (s && s.candidate_exists)
-    ? '\n\nA seed summary candidate from your last close is still pending. '
+    ? '\n\nA life summary candidate from your last close is still pending. '
       + 'Closing now retires it to summaries/seed_backups and builds the next '
-      + 'one from the live seed instead. What it integrated is kept as a file '
-      + 'but drops out of the seed. Download and upload it first to keep it.\n'
+      + 'one from your current life summary instead. What it integrated is kept as a file '
+      + 'but drops out of the summary. Download and upload it first to keep it.\n'
     : '';
-  if (!confirm(question + pending + '\n\nYour side of it becomes a journal entry, and tagging, entities, summaries, dream extraction, and the seed summary candidate run in the background. The next chapter starts empty.')) return false;
+  if (!confirm(question + pending + '\n\nYour side of it becomes a journal entry, and tagging, entities, summaries, dream extraction, and the life summary candidate run in the background. The next chapter starts empty.')) return false;
   const r = await api('/api/sessions/close', {});
   if (!r) return;
   $('write-log').innerHTML = '';
@@ -354,9 +354,9 @@ export function init() {
       : 'nothing new in this chapter yet. Write or send something first');
   });
   $('seed-download').onclick = () =>
-    download('/api/seed/download?which=current', 'seed_summary.md');
+    download('/api/seed/download?which=current', 'life_summary.md');
   $('seed-banner-download').onclick = () =>
-    download('/api/seed/download?which=candidate', 'seed_summary.candidate.md');
+    download('/api/seed/download?which=candidate', 'life_summary.candidate.md');
   $('seed-upload-btn').onclick = () => $('seed-upload-file').click();
   $('seed-banner-upload').onclick = () => $('seed-upload-file').click();
   $('seed-upload-file').onchange = async () => {
@@ -364,7 +364,7 @@ export function init() {
     if (!f) return;
     const text = await f.text();
     const r = await api('/api/seed/upload', {text});
-    if (r) $('entry-saved').textContent = `seed updated from ${f.name}. Every new turn opens with it`;
+    if (r) $('entry-saved').textContent = `life summary updated from ${f.name}. Every new turn opens with it`;
     $('seed-upload-file').value = '';
     refreshSeedMenu();
   };

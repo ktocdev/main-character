@@ -400,7 +400,7 @@ def reset_lookup():
 # the steps are listed in that order. Progress is what the mock-mode per-call
 # delays exist to make visible; against a real key each stage is genuinely long.
 CLOSE_STEPS = [
-    ("seed", "writing your seed summary candidate"),
+    ("seed", "writing your life summary candidate"),
     ("categories", "tagging the entry"),
     ("entities", "extracting people, places and projects"),
     ("summaries", "refreshing weekly arcs and summaries"),
@@ -1615,9 +1615,11 @@ def seed_download(which: str = "current"):
     import seed
     path = seed.CANDIDATE_FILE if which == "candidate" else seed.SEED_FILE
     if not path.exists():
-        return JSONResponse({"error": f"no {which} seed yet"}, status_code=404)
+        return JSONResponse({"error": f"no {which} life summary yet"}, status_code=404)
     return FileResponse(
-        path, media_type="text/markdown", filename=path.name,
+        # the file on disk keeps its old name; the download says what it is
+        path, media_type="text/markdown",
+        filename="life_summary.candidate.md" if which == "candidate" else "life_summary.md",
         headers={"Cache-Control": "no-store"},
     )
 
