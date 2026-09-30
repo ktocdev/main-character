@@ -50,9 +50,6 @@ docs/
 # published by copying it into the ktoc.dev site repo, never from this one.
 dist/
 
-# Design handoff artifacts
-design_handoff_card/
-
 # Later-phase artifacts (pre-emptive — Phase 0.5 item 5)
 publish.toml
 public_site/
