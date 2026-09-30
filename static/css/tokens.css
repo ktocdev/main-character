@@ -43,6 +43,8 @@
     --border: #3d362f;
     --you: #c9b99f;
     --error: #c96a5a;       /* the app's one danger/error color */
+    /* the item card visual's hover fill: a small warm shift (~#3a3029) */
+    --card-thumb-hover: color-mix(in oklch, var(--bg-input) 90%, var(--accent));
 
     /* fonts */
     --font-ui: 'CMU Sans Demi Condensed', system-ui, sans-serif;
@@ -74,13 +76,16 @@
     --radius-lg:     10px;
     --radius-pill:   999px;
     --radius-circle: 50%;
+
+    /* motion: the hover fade (item card visual and title) */
+    --dur-hover: .25s;
   }
   @media (prefers-color-scheme: light) {
     :root:not([data-theme="dark"]) {
       --bg: #faf7f2; --bg-raised: #ffffff; --bg-input: #f1ece4;
       --text: #38322b; --text-dim: #6b6258; --accent: #9c6021; --accent-hover: #82501b;
       --accent-dim: #827020; --border: #e4dcd0; --you: #6a4a2a;
-      --error: #a8493a;
+      --error: #a8493a; --card-thumb-hover: #faf7f2;
     }
   }
   :root[data-theme="light"] {
@@ -88,6 +93,6 @@
     --bg: #faf7f2; --bg-raised: #ffffff; --bg-input: #f1ece4;
     --text: #38322b; --text-dim: #6b6258; --accent: #9c6021; --accent-hover: #82501b;
     --accent-dim: #827020; --border: #e4dcd0; --you: #6a4a2a;
-    --error: #a8493a;
+    --error: #a8493a; --card-thumb-hover: #faf7f2;
   }
   :root[data-theme="dark"] { color-scheme: dark; }

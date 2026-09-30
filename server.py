@@ -214,6 +214,13 @@ def home():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+# The design system home: static pages that render the app's own tokens and
+# components (static/design/). Linked from the bottom of Settings.
+@app.get("/design")
+def design():
+    return FileResponse(STATIC_DIR / "design" / "index.html")
+
+
 # Which process is answering. The restart poll cannot use "the server
 # responded" as proof the new one is up: uvicorn keeps serving while it
 # drains, so the first poll is routinely answered by the process on its way
