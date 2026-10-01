@@ -51,12 +51,12 @@
   <main class="doc wide">
     <section>
       <h2>Button group</h2>
-      <p class="lede">A row of buttons where one is the current choice. Three shapes: a <b>filter row</b> of count chips (dreams' tones, the entity filters), a sticky <b>jump row</b> of pills that scrolls a long column (help, settings), and the boxed <b>segmented</b> control for two to four fixed options (the theme). Each marks its one choice the same way: <span class="mono">--bg-input</span> under an <span class="mono">--accent</span> label.</p>
+      <p class="lede">A row of buttons where one is the current choice. Three shapes: a <b>filter row</b> of count chips (dreams' tones, the entity filters), a sticky <b>jump row</b> of pills that scrolls a long column (help, settings), and the boxed <b>segmented</b> control for two to four fixed options (the theme). Each marks its one choice the same way: <span class="mono">--bg-muted</span> under a <span class="mono">--text-accent</span> label.</p>
     </section>
 
     <section id="chip">
       <div class="rule eyebrow strong">Chip</div>
-      <p class="note">The button the first two groups are made of: a pill in a <span class="mono">--border</span> rule, <span class="mono">.on</span> when it is the current choice. <b>plain</b> is the 2.2rem chip (suggestion pills); <b>filter</b> and <b>jump</b> are the 1.8rem <span class="mono">.chip.sm</span> inside a <span class="mono">.chip-row</span> or a <span class="mono">.jump-pills</span>, which only differ on hover: a filter chip's rule brightens, a jump pill's label goes to <span class="mono">--accent</span>.</p>
+      <p class="note">The button the first two groups are made of: a pill in a <span class="mono">--border-default</span> rule, <span class="mono">.on</span> when it is the current choice. <b>plain</b> is the 2.2rem chip (suggestion pills); <b>filter</b> and <b>jump</b> are the 1.8rem <span class="mono">.chip.sm</span> inside a <span class="mono">.chip-row</span> or a <span class="mono">.jump-pills</span>, which only differ on hover: a filter chip's rule brightens, a jump pill's label goes to <span class="mono">--text-accent</span>.</p>
       <div class="stack">
         <div class="spec-row">
           <button class="chip" data-figma-set="Chip" data-figma-variant="kind=plain, selected=false, state=default" data-figma-text="label">what did I write about Mika?</button>
@@ -100,7 +100,7 @@
 
     <section id="jump">
       <div class="rule eyebrow strong">Jump pills</div>
-      <p class="note"><span class="mono">.jump-pills</span>: sticky at the top of a scrolling column, on <span class="mono">--bg</span> with a hairline under it. The pills scroll sideways rather than wrap; an optional text button sits at the end (help's expand all). The pill for the section in view is <span class="mono">.on</span>.</p>
+      <p class="note"><span class="mono">.jump-pills</span>: sticky at the top of a scrolling column, on <span class="mono">--bg-page</span> with a hairline under it. The pills scroll sideways rather than wrap; an optional text button sits at the end (help's expand all). The pill for the section in view is <span class="mono">.on</span>.</p>
       <div class="spec-row top">
         <div class="jump-pills" data-figma-set="Jump pills" data-figma-variant="action=true">
           <div class="pills">
@@ -144,15 +144,15 @@ div.jump-pills               sticky row
 div.segmented[role=group]
   button[aria-pressed]</pre>
       <div class="parts">
-        <div class="part">chip</div><div class="rule-text">--border pill, --text-dim label. Hover: --text on --bg-raised. On: --bg-input fill, --accent-dim rule, --accent label.</div>
+        <div class="part">chip</div><div class="rule-text">--border-default pill, --text-muted label. Hover: --text-default on --bg-raised. On: --bg-muted fill, --border-accent rule, --text-accent label.</div>
         <div class="part">count</div><div class="rule-text">Tabular figures at 70% opacity, after the label.</div>
-        <div class="part">segment</div><div class="rule-text">2.4rem tall, at least 4.2rem wide, hairline on the left of all but the first. Pressed: --bg-input under an --accent label.</div>
+        <div class="part">segment</div><div class="rule-text">2.4rem tall, at least 4.2rem wide, hairline on the left of all but the first. Pressed: --bg-muted under a --text-accent label.</div>
       </div>
     </section>
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Fills <span class="mono">--bg-input</span>, <span class="mono">--bg-raised</span>, <span class="mono">--bg</span>; labels <span class="mono">--text-dim</span>, <span class="mono">--text</span>, <span class="mono">--accent</span>; rules <span class="mono">--border</span>, <span class="mono">--accent-dim</span>; radius <span class="mono">--radius-pill</span>, <span class="mono">--radius-sm</span>. In Figma: <b>Chip</b> (<span class="mono">kind × selected × state</span>; <span class="mono">label</span>, <span class="mono">count</span>, <span class="mono">show count</span>), and <b>Filter row</b>, <b>Jump pills</b> and <b>Segmented</b>, the first two made of Chip instances.</p>
+      <p class="note">Fills <span class="mono">--bg-muted</span>, <span class="mono">--bg-raised</span>, <span class="mono">--bg-page</span>; labels <span class="mono">--text-muted</span>, <span class="mono">--text-default</span>, <span class="mono">--text-accent</span>; rules <span class="mono">--border-default</span>, <span class="mono">--border-strong</span>, <span class="mono">--border-accent</span>; radius <span class="mono">--radius-pill</span>, <span class="mono">--radius-sm</span>. In Figma: <b>Chip</b> (<span class="mono">kind × selected × state</span>; <span class="mono">label</span>, <span class="mono">count</span>, <span class="mono">show count</span>), and <b>Filter row</b>, <b>Jump pills</b> and <b>Segmented</b>, the first two made of Chip instances.</p>
     </section>
   </main>
 </div>

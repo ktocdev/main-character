@@ -44,7 +44,7 @@
   <main class="doc wide">
     <section>
       <h2>Tooltip</h2>
-      <p class="lede">One card for every <span class="mono">title</span> in the app. The browser's own tooltips come late, small and unstyled; this one is a <span class="mono">--bg-raised</span> card in the UI face, in full <span class="mono">--text</span> for contrast. Nothing to add per control: a <span class="mono">title</span> is enough, and <span class="mono">tooltip.js</span> takes it over on first hover or focus.</p>
+      <p class="lede">One card for every <span class="mono">title</span> in the app. The browser's own tooltips come late, small and unstyled; this one is a <span class="mono">--bg-raised</span> card in the UI face, in full <span class="mono">--text-default</span> for contrast. Nothing to add per control: a <span class="mono">title</span> is enough, and <span class="mono">tooltip.js</span> takes it over on first hover or focus.</p>
     </section>
 
     <section id="card">
@@ -74,15 +74,15 @@
 <pre class="tree">div#tip.tooltip[role=tooltip]   one per page, made by tooltip.js
   text                          the control's title, moved to data-tip</pre>
       <div class="parts">
-        <div class="part">card</div><div class="rule-text">--bg-raised, --border hairline, --radius-base, padding .4rem .7rem, a soft 0 6px 18px shadow at 25% black. max-width 16rem.</div>
-        <div class="part">text</div><div class="rule-text">UI face .8rem/1.4 in --text, left-aligned, never uppercase or tracked even when its control is.</div>
+        <div class="part">card</div><div class="rule-text">--bg-raised, --border-default hairline, --radius-base, padding .4rem .7rem, a soft 0 6px 18px shadow at 25% black. max-width 16rem.</div>
+        <div class="part">text</div><div class="rule-text">UI face .8rem/1.4 in --text-default, left-aligned, never uppercase or tracked even when its control is.</div>
         <div class="part">place</div><div class="rule-text">.45rem from the control, kept 8px inside the window. Above unless there is no room.</div>
       </div>
     </section>
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Fill <span class="mono">--bg-raised</span>; rule <span class="mono">--border</span>; text <span class="mono">--text</span>; radius <span class="mono">--radius-base</span>; the shadow is a literal. In Figma: <b>Tooltip</b>, <span class="mono">lines</span> (one, wrap), with a <span class="mono">text</span> property. Placement is behaviour, so it isn't a variant: put the card where it would go.</p>
+      <p class="note">Fill <span class="mono">--bg-raised</span>; rule <span class="mono">--border-default</span>; text <span class="mono">--text-default</span>; radius <span class="mono">--radius-base</span>; the shadow is a literal. In Figma: <b>Tooltip</b>, <span class="mono">lines</span> (one, wrap), with a <span class="mono">text</span> property. Placement is behaviour, so it isn't a variant: put the card where it would go.</p>
     </section>
   </main>
 </div>

@@ -131,21 +131,21 @@
 button.filled            secondary primary · 2.2rem
 button.quiet[.sm | .xs]  default secondary · 2.2 / 2 / 1.8rem
 button.text              borderless · 1.8rem
-button.quiet.danger      quiet, --error on hover</pre>
+button.quiet.danger      quiet, --text-danger on hover</pre>
       <div class="parts">
-        <div class="part">send</div><div class="rule-text">--accent fill, --bg text, --radius-lg. At most one per composer. Hover steps to --accent-hover: brighter in dark, deeper in light.</div>
-        <div class="part">filled</div><div class="rule-text">--accent-dim fill and rule, --bg text, --radius-base. Lifts to the full --accent on hover, so it reads as a quieter send until pointed at.</div>
-        <div class="part">quiet</div><div class="rule-text">A --border hairline, --text-dim label, no fill. Hover brings the label to --text on --bg-raised.</div>
+        <div class="part">send</div><div class="rule-text">--fill-accent fill, --text-on-accent text, --radius-lg. At most one per composer. Hover steps to --fill-accent-hover: brighter in dark, deeper in light.</div>
+        <div class="part">filled</div><div class="rule-text">--fill-accent-muted fill and rule, --text-on-accent text, --radius-base. Lifts to the full --fill-accent on hover, so it reads as a quieter send until pointed at.</div>
+        <div class="part">quiet</div><div class="rule-text">A --border-default hairline, --text-muted label, no fill. Hover brings the label to --text-default on --bg-raised.</div>
         <div class="part">text</div><div class="rule-text">Quiet without the rule, at --radius-sm. Hover is the label colour only.</div>
-        <div class="part">danger</div><div class="rule-text">Quiet until hover, when label and rule turn --error. Always paired with an undo or a confirm.</div>
-        <div class="part">focus</div><div class="rule-text">Keyboard only (:focus-visible): a 2px --accent-dim outline, 2px off the edge. Never a ring on a mouse click.</div>
+        <div class="part">danger</div><div class="rule-text">Quiet until hover, when the label turns --text-danger and the rule --border-danger. Always paired with an undo or a confirm.</div>
+        <div class="part">focus</div><div class="rule-text">Keyboard only (:focus-visible): a 2px --focus-ring outline, 2px off the edge. Never a ring on a mouse click.</div>
         <div class="part">disabled</div><div class="rule-text">Send at 45% opacity, filled, quiet and danger at 50%; hover does nothing. Text has no disabled style of its own: hide it instead.</div>
       </div>
     </section>
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Fills <span class="mono">--accent</span>, <span class="mono">--accent-hover</span>, <span class="mono">--accent-dim</span>, <span class="mono">--bg-raised</span>; labels <span class="mono">--bg</span>, <span class="mono">--text-dim</span>, <span class="mono">--text</span>, <span class="mono">--error</span>; rules <span class="mono">--border</span>; radius <span class="mono">--radius-sm</span>, <span class="mono">--radius-base</span>, <span class="mono">--radius-lg</span>, <span class="mono">--radius-pill</span>; type <span class="mono">--font-ui</span>. In Figma: one <b>Button</b> set, <span class="mono">kind × size × state</span>, with a <span class="mono">label</span> text property and <span class="mono">show return</span> on the pill.</p>
+      <p class="note">Fills <span class="mono">--fill-accent</span>, <span class="mono">--fill-accent-hover</span>, <span class="mono">--fill-accent-muted</span>, <span class="mono">--bg-raised</span>; labels <span class="mono">--text-on-accent</span>, <span class="mono">--text-muted</span>, <span class="mono">--text-default</span>, <span class="mono">--text-danger</span>; rules <span class="mono">--border-default</span>, <span class="mono">--border-danger</span>; focus <span class="mono">--focus-ring</span>; radius <span class="mono">--radius-sm</span>, <span class="mono">--radius-base</span>, <span class="mono">--radius-lg</span>, <span class="mono">--radius-pill</span>; type <span class="mono">--font-ui</span>. In Figma: one <b>Button</b> set, <span class="mono">kind × size × state</span>, with a <span class="mono">label</span> text property and <span class="mono">show return</span> on the pill.</p>
     </section>
   </main>
 </div>

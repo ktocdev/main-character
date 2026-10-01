@@ -47,7 +47,7 @@
   <main class="doc wide">
     <section>
       <h2>Search bar</h2>
-      <p class="lede">One <span class="mono">--bg-input</span> box holding everything search needs: the query, the mode, and the button. The input gives up its own well and border to the box, so the box takes the focus colour: it is the field. Enter submits; the button is there for pointers. Below about 28rem the controls wrap under the query.</p>
+      <p class="lede">One <span class="mono">--bg-muted</span> box holding everything search needs: the query, the mode, and the button. The input gives up its own well and border to the box, so the box takes the focus colour: it is the field. Enter submits; the button is there for pointers. Below about 28rem the controls wrap under the query.</p>
     </section>
 
     <section id="states">
@@ -119,7 +119,7 @@
     button.chip-toggle.soft     the mode
     button.send.pill            search ↵</pre>
       <div class="parts">
-        <div class="part">box</div><div class="rule-text">--bg-input, --border hairline, a 12px radius (a literal, shared with the chat bar), padding .55rem .6rem .55rem .9rem. The border turns --accent-dim while anything inside has focus.</div>
+        <div class="part">box</div><div class="rule-text">--bg-muted, --border-default hairline, a 12px radius (a literal, shared with the chat bar), padding .55rem .6rem .55rem .9rem. The border turns --border-accent while anything inside has focus.</div>
         <div class="part">query</div><div class="rule-text">The input with its well, border and padding taken away: body serif, 1.8rem tall, line-height 1.4.</div>
         <div class="part">controls</div><div class="rule-text">.5rem apart, after a .9rem gap; they wrap below the query when the bar is narrow.</div>
       </div>
@@ -127,7 +127,7 @@
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Fill <span class="mono">--bg-input</span>; rule <span class="mono">--border</span>, focus <span class="mono">--accent-dim</span>; query <span class="mono">--text</span>, placeholder <span class="mono">--text-dim</span>. In Figma: <b>Search bar</b>, <span class="mono">state × mode</span>, with <span class="mono">query</span> and <span class="mono">mode</span> properties; the search button is a Button instance.</p>
+      <p class="note">Fill <span class="mono">--bg-muted</span>; rule <span class="mono">--border-default</span>, focus <span class="mono">--border-accent</span>; query <span class="mono">--text-default</span>, placeholder <span class="mono">--text-muted</span>. In Figma: <b>Search bar</b>, <span class="mono">state × mode</span>, with <span class="mono">query</span> and <span class="mono">mode</span> properties; the search button is a Button instance.</p>
     </section>
   </main>
 </div>

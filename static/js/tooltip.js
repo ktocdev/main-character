@@ -2,7 +2,7 @@
 // ---- the custom tooltip ----
 // One card for every `title` in the app. Native tooltips are late, small
 // and unstyled, and the redesign replaces them with a --bg-raised card in
-// the UI face, full --text for contrast (docs/design_handoff_main_character,
+// the UI face, full --text-default for contrast (docs/design_handoff_main_character,
 // "Tooltip"). The rule of placement: above the control by default; below it
 // when there is no room above (the first row under the header); above again
 // for the sticky bottom bar. Measuring the room is what makes that one rule.

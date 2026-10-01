@@ -21,16 +21,16 @@
   .spec-row .set-control select, #wizard-body select { width: 16rem; }
   /* The open list is drawn by the browser, outside the page, so it can't be
      rendered live. This is a drawing of Chrome's dark list from a
-     screenshot: the rows are `select option` (--bg-input, --text) from
+     screenshot: the rows are `select option` (--bg-muted, --text-default) from
      components.css; the rule, the highlight and its text are Chrome's own
      colours, not tokens. */
   .native-list {
     display: flex; flex-direction: column; width: 16rem;
-    background: var(--bg-input); border: 1px solid #858585;
+    background: var(--bg-muted); border: 1px solid #858585;
   }
   .native-list .opt {
     display: flex; align-items: center; height: 1.85rem; padding: 0 .75rem;
-    color: var(--text); white-space: nowrap;
+    color: var(--text-default); white-space: nowrap;
   }
   .native-list .opt.hi { background: #99c8ff; color: #3b3b3b; }
   .native-list.field { font: 1rem var(--font-body); }
@@ -66,12 +66,12 @@
   <main class="doc wide">
     <section>
       <h2>Select</h2>
-      <p class="lede">The browser's own <span class="mono">&lt;select&gt;</span>, dressed in the palette. The closed control is ours. The open list belongs to the browser, so it follows <span class="mono">color-scheme</span> and takes <span class="mono">--bg-input</span> and <span class="mono">--text</span> from the <span class="mono">select option</span> rule, but the highlight is the operating system's.</p>
+      <p class="lede">The browser's own <span class="mono">&lt;select&gt;</span>, dressed in the palette. The closed control is ours. The open list belongs to the browser, so it follows <span class="mono">color-scheme</span> and takes <span class="mono">--bg-muted</span> and <span class="mono">--text-default</span> from the <span class="mono">select option</span> rule, but the highlight is the operating system's.</p>
     </section>
 
     <section id="kinds">
       <div class="rule eyebrow strong">Kinds</div>
-      <p class="note"><b>quiet</b> is the tool-row select (entities' suggest and retype): UI face, <span class="mono">--text-dim</span>, 2.2rem, or 2rem as <span class="mono">.sm</span>. It has no hover and no focus style of its own. <b>tag-add</b> is the borderless "+ add" at the end of a tag editor, with a rule on hover. <b>field</b> and <b>wizard</b> are the settings and first-run selects, which share the input field's shape.</p>
+      <p class="note"><b>quiet</b> is the tool-row select (entities' suggest and retype): UI face, <span class="mono">--text-muted</span>, 2.2rem, or 2rem as <span class="mono">.sm</span>. It has no hover and no focus style of its own. <b>tag-add</b> is the borderless "+ add" at the end of a tag editor, with a rule on hover. <b>field</b> and <b>wizard</b> are the settings and first-run selects, which share the input field's shape.</p>
       <div class="stack">
         <div class="spec-row">
           <select class="quiet-select" data-figma-set="Select" data-figma-variant="kind=quiet, state=default" data-figma-text="value"><option>suggest merges for…</option><option>people</option><option>projects</option><option>places</option></select>
@@ -114,18 +114,18 @@
 select.tag-add             a tag editor's "+ add"
 .set-control select        settings field
 #wizard-body select        first-run field
-  option                   --bg-input, --text (the open list)</pre>
+  option                   --bg-muted, --text-default (the open list)</pre>
       <div class="parts">
-        <div class="part">control</div><div class="rule-text">The closed box: a --bg-input well for quiet, field and wizard; transparent for tag-add. The value is the selected option's text.</div>
+        <div class="part">control</div><div class="rule-text">The closed box: a --bg-muted well for quiet, field and wizard; transparent for tag-add. The value is the selected option's text.</div>
         <div class="part">chevron</div><div class="rule-text">The browser's, in the control's text colour. Not styled, so it keeps the platform's size and inset.</div>
-        <div class="part">focus</div><div class="rule-text">Field and wizard: the border turns --accent-dim, as an input's does. Quiet has none.</div>
+        <div class="part">focus</div><div class="rule-text">Field and wizard: the border turns --border-accent, as an input's does. Quiet has none.</div>
         <div class="part">open list</div><div class="rule-text">The browser's popup, as wide as the control. Rows take the select option rule; the highlight is the platform's.</div>
       </div>
     </section>
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Fill <span class="mono">--bg-input</span>; rule <span class="mono">--border</span>, focus <span class="mono">--accent-dim</span>; value <span class="mono">--text-dim</span> (quiet, tag-add) or <span class="mono">--text</span>; radius <span class="mono">--radius-base</span>, <span class="mono">--radius-sm</span>. In Figma: <b>Select</b> (<span class="mono">kind × state</span>, a <span class="mono">value</span> property, the chevron drawn as a vector) and <b>Select list</b> (<span class="mono">kind</span>, three option properties).</p>
+      <p class="note">Fill <span class="mono">--bg-muted</span>; rule <span class="mono">--border-default</span>, focus <span class="mono">--border-accent</span>; value <span class="mono">--text-muted</span> (quiet, tag-add) or <span class="mono">--text-default</span>; radius <span class="mono">--radius-base</span>, <span class="mono">--radius-sm</span>. In Figma: <b>Select</b> (<span class="mono">kind × state</span>, a <span class="mono">value</span> property, the chevron drawn as a vector) and <b>Select list</b> (<span class="mono">kind</span>, three option properties).</p>
     </section>
   </main>
 </div>

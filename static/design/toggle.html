@@ -49,7 +49,7 @@
 
     <section id="tones">
       <div class="rule eyebrow strong">Tones and states</div>
-      <p class="note"><b>solid</b> fills with <span class="mono">--toggle-on</span> (the full <span class="mono">--accent</span> in dark, <span class="mono">--accent-dim</span> in light) and drops its label to <span class="mono">--bg</span> when on: a filter that narrows what you see. <b>soft</b> (<span class="mono">.chip-toggle.soft</span>) only lifts to a <span class="mono">--bg-input</span> fill in <span class="mono">--text</span>: a mode switch whose two states are both ordinary, like search's meaning / exact text.</p>
+      <p class="note"><b>solid</b> fills with <span class="mono">--toggle-on</span> (<span class="mono">--fill-accent</span> in both themes) and drops its label to <span class="mono">--text-on-accent</span> when on: a filter that narrows what you see. <b>soft</b> (<span class="mono">.chip-toggle.soft</span>) only lifts to a <span class="mono">--bg-muted</span> fill in <span class="mono">--text-default</span>: a mode switch whose two states are both ordinary, like search's meaning / exact text.</p>
       <div class="stack">
         <div class="spec-row">
           <button class="chip-toggle" aria-pressed="false" data-figma-set="Toggle" data-figma-variant="tone=solid, pressed=false, state=default" data-figma-text="label">unreviewed</button>
@@ -90,17 +90,17 @@
 <pre class="tree">button.chip-toggle[.soft][aria-pressed]   1.8rem pill
   label                                    UI face .78rem</pre>
       <div class="parts">
-        <div class="part">off</div><div class="rule-text">A --border hairline and a --text-dim label on no fill; hover brings the label to --text (soft also fills --bg-raised).</div>
-        <div class="part">on, solid</div><div class="rule-text">--toggle-on fill and rule (--accent in dark, --accent-dim in light), --bg label.</div>
-        <div class="part">on, soft</div><div class="rule-text">--bg-input fill, --border rule, --text label.</div>
+        <div class="part">off</div><div class="rule-text">A --border-default hairline and a --text-muted label on no fill; hover brings the label to --text-default (soft also fills --bg-raised).</div>
+        <div class="part">on, solid</div><div class="rule-text">--toggle-on fill and rule (--fill-accent in both themes), --text-on-accent label.</div>
+        <div class="part">on, soft</div><div class="rule-text">--bg-muted fill, --border-default rule, --text-default label.</div>
         <div class="part">state</div><div class="rule-text">aria-pressed="true" (or .on) is the state; the label stays the same either way, search's mode aside.</div>
-        <div class="part">focus</div><div class="rule-text">The button focus ring: 2px --accent-dim, 2px off the edge.</div>
+        <div class="part">focus</div><div class="rule-text">The button focus ring: 2px --focus-ring, 2px off the edge.</div>
       </div>
     </section>
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Fills <span class="mono">--toggle-on</span>, <span class="mono">--bg-input</span>, <span class="mono">--bg-raised</span>; labels <span class="mono">--text-dim</span>, <span class="mono">--text</span>, <span class="mono">--bg</span>; rule <span class="mono">--border</span>; radius <span class="mono">--radius-pill</span>. In Figma: one <b>Toggle</b> set, <span class="mono">tone × pressed × state</span>, with a <span class="mono">label</span> property.</p>
+      <p class="note">Fills <span class="mono">--toggle-on</span>, <span class="mono">--bg-muted</span>, <span class="mono">--bg-raised</span>; labels <span class="mono">--text-muted</span>, <span class="mono">--text-default</span>, <span class="mono">--text-on-accent</span>; rule <span class="mono">--border-default</span>; radius <span class="mono">--radius-pill</span>. In Figma: one <b>Toggle</b> set, <span class="mono">tone × pressed × state</span>, with a <span class="mono">label</span> property.</p>
     </section>
   </main>
 </div>

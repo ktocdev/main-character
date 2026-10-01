@@ -80,7 +80,9 @@
     --fill-accent-muted: var(--amber-600); /* the filled button */
     --fill-danger: var(--rust-500);
     --border-default: var(--umber-800);   /* every hairline */
+    --border-strong: var(--umber-400);    /* a hairline lifted on hover */
     --border-accent: var(--amber-600);    /* the dashed borders */
+    --border-danger: var(--rust-500);     /* a danger outline */
     --focus-ring: var(--amber-600);
     --shadow-sm: 0 6px 18px rgba(0,0,0,.25);   /* tooltip, settings popover */
     --shadow-md: 0 8px 24px rgba(0,0,0,.25);   /* cost panel */
@@ -134,7 +136,8 @@
       --text-on-accent: var(--umber-50);
       --fill-accent: var(--amber-700); --fill-accent-hover: var(--amber-800);
       --fill-accent-muted: var(--amber-600); --fill-danger: var(--rust-600);
-      --border-default: var(--umber-200); --border-accent: var(--amber-600); --focus-ring: var(--amber-600);
+      --border-default: var(--umber-200); --border-strong: var(--umber-600);
+      --border-accent: var(--amber-600); --border-danger: var(--rust-600); --focus-ring: var(--amber-600);
       --card-thumb-hover: var(--bg-page);
     }
   }
@@ -146,7 +149,8 @@
     --text-on-accent: var(--umber-50);
     --fill-accent: var(--amber-700); --fill-accent-hover: var(--amber-800);
     --fill-accent-muted: var(--amber-600); --fill-danger: var(--rust-600);
-    --border-default: var(--umber-200); --border-accent: var(--amber-600); --focus-ring: var(--amber-600);
+    --border-default: var(--umber-200); --border-strong: var(--umber-600);
+    --border-accent: var(--amber-600); --border-danger: var(--rust-600); --focus-ring: var(--amber-600);
     --card-thumb-hover: var(--bg-page);
   }
   :root[data-theme="dark"] { color-scheme: dark; }

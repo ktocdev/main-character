@@ -6,17 +6,17 @@
      app draws. Page-specific specimen styles stay in each page. */
   body { height: auto; min-height: 100dvh; overflow: auto; }
   header .status { white-space: normal; }
-  header .right { margin-left: auto; min-width: 0; font: .8rem var(--font-ui); color: var(--text-dim); display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .5rem .8rem; }
+  header .right { margin-left: auto; min-width: 0; font: .8rem var(--font-ui); color: var(--text-muted); display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .5rem .8rem; }
   header .masthead a { color: inherit; }
   .wrap { display: flex; flex-wrap: wrap; align-items: flex-start; }
   .side {
     position: sticky; top: 0; flex: 0 0 auto; max-width: 100%; margin-left: 0; padding: 1.5rem;
     display: flex; flex-direction: column; align-items: flex-start; gap: .25rem;
-    font: .9rem var(--font-ui); background: var(--bg); z-index: 2;
+    font: .9rem var(--font-ui); background: var(--bg-page); z-index: 2;
   }
   .side a { padding: .35rem .8rem; border-radius: var(--radius-sm); display: block; }
-  .side a:hover { background: var(--bg-input); }
-  .side a[aria-current="page"] { color: var(--accent); }
+  .side a:hover { background: var(--bg-muted); }
+  .side a[aria-current="page"] { color: var(--text-accent); }
   .side .eyebrow { padding: .8rem .8rem .2rem; }
   .side .eyebrow:first-child { padding-top: 0; }
   /* narrow: the nav wraps above the column and scrolls away with the page,
@@ -29,27 +29,27 @@
   main.doc.wide { max-width: 76rem; }
   main.doc > section { display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 5rem; }
   main.doc > section:last-child { padding-bottom: 3rem; }
-  h2 { font-size: 1.05rem; font-weight: normal; font-style: italic; color: var(--accent); }
-  .lede { max-width: 40rem; font-size: .95rem; color: var(--text-dim); text-wrap: pretty; }
-  .note { max-width: 40rem; font-size: .85rem; color: var(--text-dim); text-wrap: pretty; }
-  .mono { font-family: var(--font-ui); color: var(--text); }
+  h2 { font-size: 1.05rem; font-weight: normal; font-style: italic; color: var(--text-accent); }
+  .lede { max-width: 40rem; font-size: .95rem; color: var(--text-muted); text-wrap: pretty; }
+  .note { max-width: 40rem; font-size: .85rem; color: var(--text-muted); text-wrap: pretty; }
+  .mono { font-family: var(--font-ui); color: var(--text-default); }
   .segmented button { min-height: 2rem; min-width: 3.4rem; padding: 0 .7rem; font-size: .8rem; }
 
   /* ---- specimens: shared by the component pages ---- */
-  .spec-line { font: .8rem var(--font-ui); color: var(--text-dim); }
-  .spec-line b { font-weight: 600; font-size: .95rem; color: var(--text); margin-right: .3rem; }
+  .spec-line { font: .8rem var(--font-ui); color: var(--text-muted); }
+  .spec-line b { font-weight: 600; font-size: .95rem; color: var(--text-default); margin-right: .3rem; }
   .stack { display: flex; flex-direction: column; gap: 1rem; }
   /* a row of specimens, each captioned by design.js with its variant */
   .spec-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.2rem 1.6rem; }
   .spec-row.top { align-items: flex-start; }
   .spec-cell { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; }
-  .spec-cell > .cap { font: .72rem var(--font-ui); color: var(--text-dim); white-space: nowrap; }
+  .spec-cell > .cap { font: .72rem var(--font-ui); color: var(--text-muted); white-space: nowrap; }
   /* room above for a specimen whose popover opens upward */
   .spec-row.menus { padding-top: 13rem; }
   .parts { display: grid; grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr); gap: .5rem 1rem; }
-  .parts > div { padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
-  .parts .part { font: 600 .9rem var(--font-ui); color: var(--text); }
-  .parts .rule-text { font-size: .85rem; line-height: 1.45; color: var(--text-dim); text-wrap: pretty; }
-  pre.tree { font: .8rem/1.6 var(--font-ui); color: var(--text-dim); background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: .9rem 1.1rem; overflow-x: auto; }
+  .parts > div { padding-bottom: .5rem; border-bottom: 1px solid var(--border-default); }
+  .parts .part { font: 600 .9rem var(--font-ui); color: var(--text-default); }
+  .parts .rule-text { font-size: .85rem; line-height: 1.45; color: var(--text-muted); text-wrap: pretty; }
+  pre.tree { font: .8rem/1.6 var(--font-ui); color: var(--text-muted); background: var(--bg-raised); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: .9rem 1.1rem; overflow-x: auto; }
   /* a component shown where it lives in the app */
-  .in-context { padding: 1rem 1.2rem; border: 1px dashed var(--border); border-radius: var(--radius-lg); }
+  .in-context { padding: 1rem 1.2rem; border: 1px dashed var(--border-default); border-radius: var(--radius-lg); }

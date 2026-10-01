@@ -50,7 +50,7 @@
   <main class="doc wide">
     <section>
       <h2>Input</h2>
-      <p class="lede">A single-line field: a <span class="mono">--bg-input</span> well with a <span class="mono">--border</span> hairline that turns <span class="mono">--accent-dim</span> on focus. There is no focus ring and no glow; the border is the whole signal. The app's inputs take the type around them (the 17px body serif); settings and the first-run wizard set their own.</p>
+      <p class="lede">A single-line field: a <span class="mono">--bg-muted</span> well with a <span class="mono">--border-default</span> hairline that turns <span class="mono">--border-accent</span> on focus. There is no focus ring and no glow; the border is the whole signal. The app's inputs take the type around them (the 17px body serif); settings and the first-run wizard set their own.</p>
     </section>
 
     <section id="app">
@@ -105,17 +105,17 @@
 .set-control input       settings field
 #wizard-body input       first-run field</pre>
       <div class="parts">
-        <div class="part">well</div><div class="rule-text">--bg-input fill, --border hairline, --radius-lg (sm and md) or --radius-base (xs, 2xs). Full width of its column.</div>
-        <div class="part">value</div><div class="rule-text">--text, line-height 1.6. The type is inherited, so an input reads like the prose around it.</div>
-        <div class="part">placeholder</div><div class="rule-text">--text-dim at 70%, ending in an ellipsis when it invites typing.</div>
-        <div class="part">focus</div><div class="rule-text">The border turns --accent-dim. No outline: inputs are the one control that never gets the focus ring.</div>
+        <div class="part">well</div><div class="rule-text">--bg-muted fill, --border-default hairline, --radius-lg (sm and md) or --radius-base (xs, 2xs). Full width of its column.</div>
+        <div class="part">value</div><div class="rule-text">--text-default, line-height 1.6. The type is inherited, so an input reads like the prose around it.</div>
+        <div class="part">placeholder</div><div class="rule-text">--text-muted at 70%, ending in an ellipsis when it invites typing.</div>
+        <div class="part">focus</div><div class="rule-text">The border turns --border-accent. No outline: inputs are the one control that never gets the focus ring.</div>
         <div class="part">disabled</div><div class="rule-text">The settings field only: 55% with a not-allowed cursor. Elsewhere a field that can't be used is hidden.</div>
       </div>
     </section>
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Fill <span class="mono">--bg-input</span>; rule <span class="mono">--border</span>, focus <span class="mono">--accent-dim</span>; value <span class="mono">--text</span>; placeholder <span class="mono">--text-dim</span>; radius <span class="mono">--radius-lg</span>, <span class="mono">--radius-base</span>, <span class="mono">--radius-sm</span>. In Figma: one <b>Input</b> set, <span class="mono">size × state</span>, with a <span class="mono">value</span> text property (the placeholder in the empty state).</p>
+      <p class="note">Fill <span class="mono">--bg-muted</span>; rule <span class="mono">--border-default</span>, focus <span class="mono">--border-accent</span>; value <span class="mono">--text-default</span>; placeholder <span class="mono">--text-muted</span>; radius <span class="mono">--radius-lg</span>, <span class="mono">--radius-base</span>, <span class="mono">--radius-sm</span>. In Figma: one <b>Input</b> set, <span class="mono">size × state</span>, with a <span class="mono">value</span> text property (the placeholder in the empty state).</p>
     </section>
   </main>
 </div>

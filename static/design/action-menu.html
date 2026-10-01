@@ -58,7 +58,7 @@
 
     <section id="item">
       <div class="rule eyebrow strong">Item</div>
-      <p class="note">A quiet button made taller (44px, the touch minimum) and left-aligned. Hover fills <span class="mono">--bg-input</span>, a step up from the card it sits on.</p>
+      <p class="note">A quiet button made taller (44px, the touch minimum) and left-aligned. Hover fills <span class="mono">--bg-muted</span>, a step up from the card it sits on.</p>
       <div class="spec-row">
         <div class="host popover"><button class="quiet" data-figma-set="Menu item" data-figma-variant="state=default" data-figma-text="label">close chapter</button></div>
         <div class="host popover"><button class="quiet is-hover" data-figma-set="Menu item" data-figma-variant="state=hover" data-figma-text="label">close chapter</button></div>
@@ -86,7 +86,7 @@
 
     <section id="trigger">
       <div class="rule eyebrow strong">Action menu</div>
-      <p class="note">The trigger is a 2.8 × 2.2rem box with a tracked ⋯, quiet-styled: hover, and open, bring it to <span class="mono">--text</span> on <span class="mono">--bg-raised</span>. Open, the menu sits .5rem above it, its right edge on the trigger's. In Figma the menu is placed outside the component's frame, as it is on screen.</p>
+      <p class="note">The trigger is a 2.8 × 2.2rem box with a tracked ⋯, quiet-styled: hover, and open, bring it to <span class="mono">--text-default</span> on <span class="mono">--bg-raised</span>. Open, the menu sits .5rem above it, its right edge on the trigger's. In Figma the menu is placed outside the component's frame, as it is on screen.</p>
       <div class="spec-row menus">
         <details class="action-menu" data-figma-set="Action menu" data-figma-variant="open=false, state=default">
           <summary aria-label="chapter actions">⋯</summary>
@@ -117,15 +117,15 @@
   div.menu.popover        opens upward, right-aligned
     button.quiet × n      44px items</pre>
       <div class="parts">
-        <div class="part">trigger</div><div class="rule-text">--border hairline, --radius-base, --text-dim ⋯ at .95rem, letter-spacing .1em.</div>
-        <div class="part">menu</div><div class="rule-text">--bg-raised, --border, --radius-lg, padding .5rem, gap .35rem, shadow 0 10px 30px at 35% black.</div>
-        <div class="part">item</div><div class="rule-text">A quiet button: 44px tall, .85rem, left-aligned, --bg-input on hover.</div>
+        <div class="part">trigger</div><div class="rule-text">--border-default hairline, --radius-base, --text-muted ⋯ at .95rem, letter-spacing .1em.</div>
+        <div class="part">menu</div><div class="rule-text">--bg-raised, --border-default, --radius-lg, padding .5rem, gap .35rem, shadow 0 10px 30px at 35% black.</div>
+        <div class="part">item</div><div class="rule-text">A quiet button: 44px tall, .85rem, left-aligned, --bg-muted on hover.</div>
       </div>
     </section>
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Fills <span class="mono">--bg-raised</span>, <span class="mono">--bg-input</span>; labels <span class="mono">--text-dim</span>, <span class="mono">--text</span>; rule <span class="mono">--border</span>; radius <span class="mono">--radius-base</span>, <span class="mono">--radius-lg</span>; the shadow is a literal. In Figma: <b>Menu item</b> (<span class="mono">state</span>), <b>Menu</b> (<span class="mono">items</span>, made of Menu items) and <b>Action menu</b> (<span class="mono">open × state</span>, holding a Menu when open).</p>
+      <p class="note">Fills <span class="mono">--bg-raised</span>, <span class="mono">--bg-muted</span>; labels <span class="mono">--text-muted</span>, <span class="mono">--text-default</span>; rule <span class="mono">--border-default</span>; radius <span class="mono">--radius-base</span>, <span class="mono">--radius-lg</span>; the shadow is a literal. In Figma: <b>Menu item</b> (<span class="mono">state</span>), <b>Menu</b> (<span class="mono">items</span>, made of Menu items) and <b>Action menu</b> (<span class="mono">open × state</span>, holding a Menu when open).</p>
     </section>
   </main>
 </div>

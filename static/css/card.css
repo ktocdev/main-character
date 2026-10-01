@@ -22,35 +22,35 @@
   .item-card {
     display: flex; flex-direction: column; overflow: hidden;
     width: 100%; min-width: 13rem; height: 19rem;
-    background: var(--bg-raised); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); color: var(--text);
+    background: var(--bg-raised); border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg); color: var(--text-default);
   }
   .card-visual {
     flex: none; height: 7rem;
     display: flex; align-items: center; justify-content: center;
-    background: var(--bg-input); border-bottom: 1px solid var(--border);
-    color: var(--accent); font: italic 2.4rem/1 var(--font-body);
+    background: var(--bg-muted); border-bottom: 1px solid var(--border-default);
+    color: var(--text-accent); font: italic 2.4rem/1 var(--font-body);
     transition: background-color var(--dur-hover) ease;
   }
-  .card-visual:hover { background: var(--card-thumb-hover); color: var(--accent); }
+  .card-visual:hover { background: var(--card-thumb-hover); color: var(--text-accent); }
   .card-body {
     flex: 1; min-height: 0; display: flex; flex-direction: column;
     gap: .35rem; padding: .8rem .9rem .85rem;
   }
   .card-type {
     font: 600 var(--font-3xs)/1.3 var(--font-ui);
-    letter-spacing: .1em; text-transform: uppercase; color: var(--accent-dim);
+    letter-spacing: .1em; text-transform: uppercase; color: var(--text-accent-muted);
   }
   .card-title {
-    font: 700 1rem/1.25 var(--font-body); color: var(--text);
+    font: 700 1rem/1.25 var(--font-body); color: var(--text-default);
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden; border-radius: 2px;
     transition: color var(--dur-hover) ease;
   }
-  .card-title:hover { color: var(--accent); }
-  .card-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card-title:hover { color: var(--text-accent); }
+  .card-title:focus-visible { outline: 2px solid var(--text-accent); outline-offset: 2px; }
   .card-desc {
-    margin: 0; font: var(--font-sm)/1.45 var(--font-body); color: var(--text-dim);
+    margin: 0; font: var(--font-sm)/1.45 var(--font-body); color: var(--text-muted);
     user-select: text; cursor: text;
     display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
   }
@@ -61,7 +61,7 @@
      ellipsis come from there; the card only sizes it per card size */
   .card-badge { flex: 0 1 auto; min-width: 0; }
   .card-more {
-    flex: none; font: var(--font-2xs)/1.4 var(--font-ui); color: var(--text-dim);
+    flex: none; font: var(--font-2xs)/1.4 var(--font-ui); color: var(--text-muted);
     padding: .1rem .3rem; white-space: nowrap; font-variant-numeric: tabular-nums;
   }
 
@@ -94,7 +94,7 @@
   .item-card.horizontal { flex-direction: row; min-width: 0; height: 8.5rem; }
   .item-card.horizontal .card-visual {
     width: 7rem; height: auto; font-size: 2.2rem;
-    border-bottom: 0; border-right: 1px solid var(--border);
+    border-bottom: 0; border-right: 1px solid var(--border-default);
   }
   .item-card.horizontal .card-body { min-width: 0; gap: var(--space-1); padding: .7rem .9rem; }
   .item-card.horizontal .card-type { font-size: .68rem; }
@@ -114,7 +114,7 @@
     .item-card:not(.vertical) { flex-direction: row; min-width: 0; height: 8.5rem; }
     .item-card:not(.vertical) .card-visual {
       width: 7rem; height: auto; font-size: 2.2rem;
-      border-bottom: 0; border-right: 1px solid var(--border);
+      border-bottom: 0; border-right: 1px solid var(--border-default);
     }
     .item-card:not(.vertical) .card-body { min-width: 0; gap: var(--space-1); padding: .7rem .9rem; }
     .item-card:not(.vertical) .card-type { font-size: .68rem; }
