@@ -92,7 +92,7 @@
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Everything is bound to <span class="mono">tokens.css</span>. The card added two tokens: <span class="mono">--card-thumb-hover</span>, the visual's hover fill (dark: <span class="mono">--bg-input</span> mixed 10% toward <span class="mono">--accent</span>; light: #faf7f2, the page background), and <span class="mono">--dur-hover</span> .25s, the app's first duration token. Card fill <span class="mono">--bg-raised</span>; visual and badge fill <span class="mono">--bg-input</span>; hairlines <span class="mono">--border</span>; title <span class="mono">--text</span>; description and badges <span class="mono">--text-dim</span>; glyph, title hover and focus ring <span class="mono">--accent</span>; eyebrow <span class="mono">--accent-dim</span>; radius <span class="mono">--radius-lg</span> and <span class="mono">--radius-pill</span>.</p>
+      <p class="note">Everything is bound to <span class="mono">tokens.css</span>. The card added two tokens: <span class="mono">--card-thumb-hover</span>, the visual's hover fill (dark: <span class="mono">--bg-muted</span> mixed 10% toward <span class="mono">--fill-accent</span>; light: <span class="mono">--bg-page</span>), and <span class="mono">--dur-hover</span> .25s, the app's first duration token. Card fill <span class="mono">--bg-raised</span>; visual and badge fill <span class="mono">--bg-muted</span>; hairlines <span class="mono">--border-default</span>; title <span class="mono">--text-default</span>; description and badges <span class="mono">--text-muted</span>; glyph, title hover and focus ring <span class="mono">--text-accent</span>; eyebrow <span class="mono">--text-accent-muted</span>; radius <span class="mono">--radius-lg</span> and <span class="mono">--radius-pill</span>.</p>
     </section>
   </main>
 </div>
@@ -141,9 +141,9 @@
   const parts = document.getElementById('parts');
   for (const [part, text] of [
     ['visual', 'Links to the item. One glyph per type (¶ § ☾ ★ ◎ ◇); people get their initials. Override it with icon. Hidden from screen readers and skipped by Tab, because the title is the real link.'],
-    ['type', 'Tracked uppercase eyebrow in --accent-dim, the same label idiom every section in the app uses.'],
-    ['title', 'Links to the item. Body serif 700, since bold is for entry titles and category names. Clamped to two lines; --accent on hover, an accent outline on focus.'],
-    ['description', 'Plain text, not a link, so it can be selected and copied. --text-dim serif, clamped to 3 lines on md and 4 on lg. Small has none.'],
+    ['type', 'Tracked uppercase eyebrow in --text-accent-muted, the same label idiom every section in the app uses.'],
+    ['title', 'Links to the item. Body serif 700, since bold is for entry titles and category names. Clamped to two lines; --text-accent on hover, an outline in the same colour on focus.'],
+    ['description', 'Plain text, not a link, so it can be selected and copied. --text-muted serif, clamped to 3 lines on md and 4 on lg. Small has none.'],
     ['badges', 'Pinned to the bottom, one row, never wraps. A badge that doesn’t fit gets an ellipsis. Past the size’s limit the last slot becomes +N.'],
     ['row', '.card-row[.sm | .lg]: a grid whose track floor matches the card (9.5 / 13 / 18rem) with a 1rem gap, so every card in a row is the same width. One column below 670px.'],
   ]) {

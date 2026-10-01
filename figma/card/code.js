@@ -93,7 +93,9 @@ async function tokenFinder() {
       if (e.type !== type) continue;
       const i = e.keys.indexOf(token);
       if (i < 0) continue;
-      const score = i * 2 + (e.local ? 0 : 1);  // closest name first, local before library
+      // the Semantic collection first (an older Color/bg-raised loses), then
+      // closest name, then local before library
+      const score = (/(^|: )Semantic \//.test(e.label) ? 0 : 100) + i * 2 + (e.local ? 0 : 1);
       if (score < bestScore) { best = e; bestScore = score; }
     }
     cache[id] = best ? { variable: await best.load(), label: best.label } : null;

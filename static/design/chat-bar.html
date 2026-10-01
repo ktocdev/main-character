@@ -47,7 +47,7 @@
   <main class="doc wide">
     <section>
       <h2>Chat bar</h2>
-      <p class="lede">Chat's compact composer: one <span class="mono">--bg-input</span> box, a two-line textarea on top and a row of small controls under it. Smart replies sits on the left; clear and send sit on the right. It's the search bar's sibling: the same box, the same focus colour, stacked rather than in a line.</p>
+      <p class="lede">Chat's compact composer: one <span class="mono">--bg-muted</span> box, a two-line textarea on top and a row of small controls under it. Smart replies sits on the left; clear and send sit on the right. It's the search bar's sibling: the same box, the same focus colour, stacked rather than in a line.</p>
     </section>
 
     <section id="states">
@@ -118,7 +118,7 @@
       button.text               clear
       button.send.pill          send ↵</pre>
       <div class="parts">
-        <div class="part">box</div><div class="rule-text">--bg-input, --border hairline, the 12px literal radius, padding .7rem .9rem .55rem, .4rem between the text and the row. The border turns --accent-dim while anything inside has focus.</div>
+        <div class="part">box</div><div class="rule-text">--bg-muted, --border-default hairline, the 12px literal radius, padding .7rem .9rem .55rem, .4rem between the text and the row. The border turns --border-accent while anything inside has focus.</div>
         <div class="part">message</div><div class="rule-text">The textarea with its well taken away: body serif, line-height 1.6, at least 3.2rem.</div>
         <div class="part">row</div><div class="rule-text">.9rem between controls; the left group takes the spare room.</div>
       </div>
@@ -126,7 +126,7 @@
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Fill <span class="mono">--bg-input</span>; rule <span class="mono">--border</span>, focus <span class="mono">--accent-dim</span>; message <span class="mono">--text</span>, placeholder <span class="mono">--text-dim</span>. In Figma: <b>Chat bar</b>, <span class="mono">state × smart</span>, with a <span class="mono">message</span> property; the toggle and both buttons are instances.</p>
+      <p class="note">Fill <span class="mono">--bg-muted</span>; rule <span class="mono">--border-default</span>, focus <span class="mono">--border-accent</span>; message <span class="mono">--text-default</span>, placeholder <span class="mono">--text-muted</span>. In Figma: <b>Chat bar</b>, <span class="mono">state × smart</span>, with a <span class="mono">message</span> property; the toggle and both buttons are instances.</p>
     </section>
   </main>
 </div>

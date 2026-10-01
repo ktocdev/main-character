@@ -8,10 +8,12 @@
 // Everything is read from the live page: computed styles for colour, type,
 // padding, gap, radius, rules and shadows; the layout for sizes; and a
 // sizing probe for whether a box hugs its content, fills its parent or is
-// fixed. Colours and lengths are matched back to tokens.css by value, so
-// the plugin can bind them to the file's variables. The page is expected to
-// be in the dark theme (the extractor pins it), and dark has no two colour
-// tokens with the same value, so a colour matches at most one token.
+// fixed. Lengths are matched back to tokens.css by value, so the plugin can
+// bind them to the file's variables. Colours are not matched here: several
+// roles share a value (amber-600 is muted text, the accent border, the
+// muted fill and the focus ring), so each paint carries the kind of property
+// it came from (text, bg, border, focus) and extract.mjs walks the page in
+// both themes and names the role whose dark and light values both fit.
 //
 // Markup the walker reads (on the design pages):
 //   data-figma-set="Button"          a specimen root: one variant of a set
@@ -47,7 +49,6 @@
     return { r: d[0], g: d[1], b: d[2], a: +(d[3] / 255).toFixed(3) };
   }
   const hex = c => '#' + [c.r, c.g, c.b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
-  const key = c => `${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)}`;
 
   // ---- tokens: every custom property tokens.css puts on :root ----
   const root = document.documentElement;
@@ -63,9 +64,8 @@
 
   const rootCs = getComputedStyle(root);
   const REM = parseFloat(rootCs.fontSize) || 16;
-  const colorTokens = new Map();               // 'r,g,b' -> name
   const lengthTokens = { space: new Map(), font: new Map(), radius: new Map() };
-  const tokenHex = {};
+  const colorTokens = {};                      // role or platform name -> hex, this theme
   for (const name of tokenNames) {
     const raw = rootCs.getPropertyValue(name).trim();
     const bare = name.slice(2);
@@ -76,21 +76,22 @@
       continue;
     }
     if (!CSS.supports('color', raw)) continue;
+    // roles and platform colours only: specs bind roles, never ramp steps,
+    // and a component token (--toggle-on) is always one of the roles
+    if (!/^(bg|text|fill|border|focus|platform)-/.test(bare)) continue;
     const probe = document.createElement('i');
     probe.style.color = `var(${name})`;
     root.appendChild(probe);
     const c = rgba(getComputedStyle(probe).color);
     probe.remove();
-    if (c && !colorTokens.has(key(c))) { colorTokens.set(key(c), bare); tokenHex[bare] = hex(c); }
+    if (c) colorTokens[bare] = hex(c);
   }
 
-  const usedTokens = new Set();
-  function paint(str, opacity = 1) {
+  // cat: the kind of property the colour came from, for extract.mjs
+  function paint(str, opacity = 1, cat = 'bg') {
     const c = rgba(str);
     if (!c || c.a * opacity === 0) return null;
-    const p = { hex: hex(c) };
-    const t = colorTokens.get(key(c));
-    if (t) { p.token = t; usedTokens.add(t); }
+    const p = { hex: hex(c), cat };
     const a = +(c.a * opacity).toFixed(3);
     if (a < 1) p.opacity = a;
     return p;
@@ -116,7 +117,7 @@
       weight: +cs.fontWeight || 400,
       italic: cs.fontStyle === 'italic',
       size: len(px(cs.fontSize), 'font'),
-      color: paint(cs.color, opacity),
+      color: paint(cs.color, opacity, 'text'),
     };
     const ls = cs.letterSpacing === 'normal' ? 0 : px(cs.letterSpacing);
     if (ls) s.letterSpacing = +ls.toFixed(2);
@@ -233,7 +234,7 @@
     if (sides.some(Boolean)) {
       const colors = ['Top', 'Right', 'Bottom', 'Left'].map(s => cs[`border${s}Color`]);
       const i = sides.findIndex(Boolean);
-      const stroke = paint(colors[i]);
+      const stroke = paint(colors[i], 1, 'border');
       if (stroke) {
         n.stroke = { paint: stroke, weights: sides };
         const style = cs[`border${['Top', 'Right', 'Bottom', 'Left'][i]}Style`];
@@ -254,7 +255,7 @@
     const shadows = parseShadows(cs.boxShadow);
     if (shadows.length) n.shadows = shadows;
     if (cs.outlineStyle !== 'none' && px(cs.outlineWidth) > 0) {
-      const p = paint(cs.outlineColor);
+      const p = paint(cs.outlineColor, 1, 'focus');
       if (p) n.outline = { width: px(cs.outlineWidth), offset: px(cs.outlineOffset), paint: p };
     }
   }
@@ -271,7 +272,7 @@
       const color = /(rgba?\([^)]*\)|#[0-9a-f]+)/i.exec(p);
       const nums = p.replace(color ? color[0] : '', '').match(/-?[\d.]+px/g) || [];
       return {
-        paint: paint(color ? color[0] : 'rgba(0,0,0,.25)'), inset: /inset/.test(p),
+        paint: paint(color ? color[0] : 'rgba(0,0,0,.25)', 1, 'shadow'), inset: /inset/.test(p),
         x: px(nums[0]), y: px(nums[1]), blur: px(nums[2]), spread: px(nums[3]),
       };
     });
@@ -613,7 +614,7 @@
     else {
       const ph = getComputedStyle(el, '::placeholder');
       style = runStyle(cs, 1);
-      style.color = paint(ph.color, +ph.opacity);
+      style.color = paint(ph.color, +ph.opacity, 'text');
     }
     const contentW = b.content.right - b.content.left;
     const t = { type: 'text', name: value ? 'value' : 'placeholder', chars: shown, runs: [{ len: shown.length, style }] };
@@ -641,7 +642,7 @@
     n.mode = 'H';
     n.align = 'CENTER';
     n.gap = 6;
-    n.children.push({ type: 'chevron', name: 'chevron', w: 9, h: 5, paint: paint(cs.color) });
+    n.children.push({ type: 'chevron', name: 'chevron', w: 9, h: 5, paint: paint(cs.color, 1, 'text') });
     return n;
   }
 
@@ -689,10 +690,8 @@
       const keys = s.variants.map(v => v.name.split(', ').map(p => p.split('=')[0]).sort().join(','));
       if (new Set(keys).size > 1) warnings.push(`${s.name}: variants name different properties (${[...new Set(keys)].join(' | ')})`);
     }
-    const fallback = {};
-    for (const t of [...usedTokens].sort()) fallback[t] = tokenHex[t];
-    return { remPx: REM, sets, fallback, warnings };
+    return { remPx: REM, sets, colorTokens, warnings };
   };
-  // for the extractor: a sampled colour as a paint, matched to a token
-  window.__mcPaint = str => paint(str);
+  // for the extractor: a sampled colour as a paint
+  window.__mcPaint = (str, cat) => paint(str, 1, cat);
 })();

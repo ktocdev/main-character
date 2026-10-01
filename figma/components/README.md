@@ -14,24 +14,34 @@ static/design/*.html ──extract.mjs + walk.js──▶ specs/*.figma.json ─
 Card is the exception. Its plugin and hand-kept spec stay in `figma/card/`.
 
 ## Run it in Figma
-1. Open the Figma desktop app and the file with the Main Character
-   variables (in the file itself or in an enabled library).
+1. Open the Figma desktop app and the Main Character file.
 2. Plugins → Development → **Import plugin from manifest…** → pick
    `figma/components/manifest.json`. You only do this once.
 3. Plugins → Development → **Main Character: Components** → choose the specs
-   in `figma/components/specs/` (select them all for the whole library) →
-   **Build components**.
+   in `figma/components/specs/` (select them all for the whole library,
+   `variables.figma.json` included) → **Build components**.
+
+`variables.figma.json` is the colour palette from `tokens.css`. With it
+chosen, the plugin first creates or updates three collections, by name:
+
+| collection | modes | holds |
+|---|---|---|
+| Primitives | Value | the ramps, `umber/950`, `amber/600`, `rust/500`…; hidden from the pickers |
+| Semantic | Dark, Light | the roles, `bg/page`, `text/accent-muted`, `fill/accent`…; each an alias to a ramp step, scoped to fills, text or strokes |
+| Platform | Dark, Light | the browser's own colours the select and checkbox pages draw: `highlight`, `highlight-text`, `rule`, `well` |
+
+It never deletes a variable, and this is the only variable writing it does.
+The old ten-name Color collection (`bg`, `accent-dim`…) can stay or go:
+nothing binds to it once Semantic exists. Choose the variables spec alone to
+sync the palette without building anything.
 
 The plugin builds the sets in dependency order. Button comes before the
 Search bar that holds a Button instance, and so on, whatever order you pick
 the files in. The log lists every token it bound and the variable it bound
-to. Anything it couldn't find stays a literal and is listed as missing.
-Like Card's plugin, it never creates or edits a variable. If a set's name is
-already taken, the new set gets " (import)" and the old one is left alone.
-
-One known miss in the current file: there's no variable for `accent-hover`
-(the send button's hover, added in JRNL-60). Add a colour variable with that
-name and run the plugin again to bind it.
+to, preferring the Semantic and Platform collections over any other of the
+same name. Anything it couldn't find stays a literal and is listed as
+missing. If a set's name is already taken, the new set gets " (import)" and
+the old one is left alone.
 
 ## What it builds
 22 sets from 13 pages. Each variant's name is its page caption.
@@ -65,8 +75,12 @@ it, so a change to Button carries through:
 An instance's text, as the page has it, is an override on the instance.
 
 Layer names are the CSS classes (`chat-bar-row`, `controls`, `mark`).
-Colours, padding, gaps, radii and type sizes that equal a token are bound to
-it. Values that aren't on the scale (the bars' 12px radius, the 17px body
+Padding, gaps, radii and type sizes that equal a token are bound to it.
+Colours bind to roles, never ramp steps. Several roles share a value
+(amber-600 is muted text, the accent border, the muted fill and the focus
+ring), so the extractor walks every page in dark and in light, and names
+the role whose two values both match, among the roles for that kind of
+property: text colour, fill, rule or outline. Values that aren't on the scale (the bars' 12px radius, the 17px body
 size) stay literal, as they are in the CSS.
 
 ## Keeping it in step
@@ -90,8 +104,11 @@ static design pages.
   stand-in that throws where Figma's API throws: a child filling a parent
   that hugs that axis, text changed before its fonts are loaded, variants
   naming different properties, and a property reference to a property the
-  set doesn't have. It uses the variable names from
-  `../main-character-figma-fonts-v3/figma-variables`.
+  set doesn't have. The file starts with the variables
+  from `../main-character-figma-fonts-v3/figma-variables` (the old colour
+  names among them), then `variables.figma.json` syncs the three
+  collections into it. It also fails if a role isn't an alias to its ramp
+  step in both modes, or if any colour binds outside Semantic and Platform.
 - `test/render.mjs` draws the built nodes back as HTML (auto layout as
   flexbox) and screenshots each set, so you can hold it up against the
   design page.
@@ -118,16 +135,18 @@ dependency order) and in `static/design/design.js`.
 
 ## Not modelled
 - **The select's open list.** The browser draws it off the page, so the
-  Select list set is built from a drawing on the select page. The highlight
-  (`#99c8ff`, with `#3b3b3b` text) and the list's rule (`#858585`) are
-  Chrome's colours on Windows in dark, not tokens.
+  Select list set is built from a drawing on the select page. Its highlight,
+  highlight text and rule are Chrome's colours on Windows, sampled in both
+  themes: the `--platform-*` tokens in `static/design/design.css`, bound to
+  the Platform collection.
 - **The checkbox's own colours.** It's the browser's checkbox
   (`accent-color` is its only styling), so the extractor samples it from a
-  screenshot. Unchecked, it's `#3b3b3b` in a `#858585` rule, which is right
-  only in dark. Checked, the fill binds to `accent`. The tick is drawn
-  approximately, as is the select's chevron.
-- **Light mode.** Bound colours follow the file's variable modes. Literals
-  (the native colours above and the shadows) stay dark.
+  screenshot in each theme. Unchecked, it's a `platform-well` well in a
+  `platform-rule` rule; checked, the fill binds to `fill-accent` and the
+  tick to `platform-well` (Chrome draws it in the well's colour). The tick
+  is drawn approximately, as is the select's chevron.
+- **Shadows.** The four `--shadow-*` tokens are whole box-shadows, not
+  colours, so they stay literal effects, in their dark values.
 - **Behaviour.** Tooltip placement, the pulse animation, and the search
   bar's controls wrapping under the query below about 28rem. In Figma, place
   or resize the instance.

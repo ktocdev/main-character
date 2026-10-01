@@ -215,8 +215,36 @@ export function makeFigma({ fonts, variables }) {
   page.name = 'Page 1';
   page.selection = [];
 
-  const vars = variables.map((v, i) => ({ id: 'VariableID:' + i, name: v.name, resolvedType: v.type, variableCollectionId: v.collection }));
-  const collections = [...new Set(variables.map(v => v.collection))].map(c => ({ id: c, name: c }));
+  // variables: the file's own (from figma-variables), plus whatever the
+  // plugin creates. Modes, values and aliases are checked as Figma does.
+  let nextId = 0;
+  class Collection {
+    constructor(name) {
+      this.id = 'VariableCollectionId:' + name; this.name = name;
+      this.modes = [{ modeId: this.id + '/0', name: 'Mode 1' }];
+    }
+    renameMode(id, name) { const m = this.modes.find(x => x.modeId === id); check(m, `renameMode: no mode ${id}`); m.name = name; }
+    addMode(name) { const id = this.id + '/' + this.modes.length; this.modes.push({ modeId: id, name }); return id; }
+  }
+  class Variable {
+    constructor(name, collection, type) {
+      this.id = 'VariableID:' + nextId++; this.name = name; this.resolvedType = type;
+      this.variableCollectionId = collection.id; this.valuesByMode = {}; this.scopes = ['ALL_SCOPES'];
+    }
+    setValueForMode(modeId, value) {
+      const c = collections.find(x => x.id === this.variableCollectionId);
+      check(c && c.modes.some(m => m.modeId === modeId), `${this.name}: no mode ${modeId} in its collection`);
+      if (value && value.type === 'VARIABLE_ALIAS') {
+        const target = vars.find(v => v.id === value.id);
+        check(target && target.resolvedType === this.resolvedType, `${this.name}: alias to a missing or mistyped variable`);
+      } else if (this.resolvedType === 'COLOR') {
+        check(value && ['r', 'g', 'b'].every(k => value[k] >= 0 && value[k] <= 1), `${this.name}: not a colour`);
+      }
+      this.valuesByMode[modeId] = value;
+    }
+  }
+  const collections = [...new Set(variables.map(v => v.collection))].map(c => new Collection(c));
+  const vars = variables.map(v => new Variable(v.name, collections.find(c => c.name === v.collection), v.type));
 
   const figma = {
     logs,
@@ -259,7 +287,17 @@ export function makeFigma({ fonts, variables }) {
     },
     variables: {
       async getLocalVariableCollectionsAsync() { return collections; },
-      async getLocalVariablesAsync() { return vars; },
+      async getLocalVariablesAsync(type) { return type ? vars.filter(v => v.resolvedType === type) : vars; },
+      createVariableCollection(name) {
+        check(!collections.some(c => c.name === name), `a second collection named ${name}`);
+        const c = new Collection(name); collections.push(c); return c;
+      },
+      createVariable(name, collection, type) {
+        check(collection instanceof Collection, 'createVariable takes the collection itself, not its id');
+        check(!vars.some(v => v.variableCollectionId === collection.id && v.name === name), `a second variable named ${name}`);
+        const v = new Variable(name, collection, type); vars.push(v); return v;
+      },
+      createVariableAlias(v) { check(v instanceof Variable, 'alias of a non-variable'); return { type: 'VARIABLE_ALIAS', id: v.id }; },
       async importVariableByKeyAsync() { throw new Error('no libraries'); },
       setBoundVariableForPaint(p, field, v) {
         check(field === 'color' && v.resolvedType === 'COLOR', 'paint binding');

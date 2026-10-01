@@ -38,7 +38,7 @@ variants are at each size's minimum width; horizontal ones are 46rem wide.
 Resize an instance to fill its column the way the CSS grid track does.
 
 ## Not modelled
-- Hover (`--card-thumb-hover`, title to `--accent`) and the focus ring.
+- Hover (`--card-thumb-hover`, title to `--text-accent`) and the focus ring.
   These could be a `state` variant later.
 - Badge ellipsis when a badge is too wide: Figma auto layout can't shrink a
   hugging pill, so the row clips instead.

@@ -7,10 +7,17 @@
 // search bar's button) becomes an instance of that set.
 //
 // Colours, padding, gaps, radii and type sizes that match a token are bound
-// to the file's existing variables, found by name (local variables first,
-// then enabled libraries); the matcher is the Card plugin's. Nothing here
-// creates or edits a variable. A token the file doesn't have falls back to
-// the spec's value and is listed in the report.
+// to the file's variables, found by name (local variables first, then
+// enabled libraries; the Semantic and Platform collections before any
+// other); the matcher is the Card plugin's. A token the file doesn't have
+// falls back to the spec's value and is listed in the report.
+//
+// The one spec that is not a component, variables.figma.json, is the colour
+// palette from tokens.css. Choose it and the plugin first creates or
+// updates three collections by name: Primitives (the ramps), Semantic (the
+// roles, Dark and Light, each an alias to a ramp step) and Platform (the
+// browser's colours). It never deletes a variable, and it is the only
+// variable writing the plugin does.
 //
 // Choose several specs at once; they build in dependency order (the spec's
 // `order`), so a set is on the page before anything that holds instances of
@@ -26,14 +33,73 @@ function log(text, kind) {
 figma.ui.onmessage = async function (msg) {
   if (msg.type !== 'build') return;
   try {
-    const specs = msg.specs.map(function (s) { return JSON.parse(s); });
+    const all = msg.specs.map(function (s) { return JSON.parse(s); });
+    for (const v of all.filter(function (s) { return s.kind === 'variables'; })) await syncVariables(v);
+    const specs = all.filter(function (s) { return s.kind !== 'variables'; });
     specs.sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
-    await buildAll(specs);
+    if (specs.length) await buildAll(specs);
+    else figma.notify('Colour variables synced.');
   } catch (e) {
     log(String((e && e.stack) || e), 'error');
     figma.notify('Import failed: ' + (e && e.message), { error: true });
   }
 };
+
+// ---- the colour variables (specs/variables.figma.json) ----
+// Created or updated by name, never deleted, so anything the file adds to
+// these collections survives a sync. Ramp steps are hidden from the pickers
+// (no scopes): a design binds a role, as the CSS does.
+const SCOPES = {
+  bg: ['FRAME_FILL', 'SHAPE_FILL'], fill: ['FRAME_FILL', 'SHAPE_FILL'], text: ['TEXT_FILL'],
+  border: ['STROKE_COLOR'], focus: ['STROKE_COLOR'],
+  highlight: ['FRAME_FILL', 'SHAPE_FILL'], 'highlight-text': ['TEXT_FILL'], rule: ['STROKE_COLOR'], well: ['FRAME_FILL', 'SHAPE_FILL'],
+};
+
+async function syncVariables(spec) {
+  const cols = (await figma.variables.getLocalVariableCollectionsAsync()).slice();
+  const vars = (await figma.variables.getLocalVariablesAsync('COLOR')).slice();
+  let made = 0, updated = 0;
+  function collection(name, modes) {
+    let c = cols.find(function (x) { return x.name === name; });
+    if (!c) { c = figma.variables.createVariableCollection(name); cols.push(c); }
+    if (c.modes[0].name !== modes[0]) c.renameMode(c.modes[0].modeId, modes[0]);
+    for (const m of modes.slice(1)) {
+      if (c.modes.some(function (x) { return x.name === m; })) continue;
+      try { c.addMode(m); } catch (e) { log(name + ': could not add the ' + m + ' mode (' + e.message + '); its values are skipped.', 'warn'); }
+    }
+    const ids = {};
+    for (const m of c.modes) ids[m.name] = m.modeId;
+    return { c: c, ids: ids };
+  }
+  function variable(c, name, scopes) {
+    let v = vars.find(function (x) { return x.variableCollectionId === c.id && x.name === name; });
+    if (v) updated++;
+    else { v = figma.variables.createVariable(name, c, 'COLOR'); vars.push(v); made++; }
+    v.scopes = scopes;
+    return v;
+  }
+  const P = collection('Primitives', ['Value']);
+  const prim = {};
+  for (const name of Object.keys(spec.primitives)) {
+    prim[name] = variable(P.c, name, []);
+    prim[name].setValueForMode(P.ids.Value, hexToRgb(spec.primitives[name]));
+  }
+  for (const [title, group, alias] of [['Semantic', spec.semantic, true], ['Platform', spec.platform, false]]) {
+    const C = collection(title, ['Dark', 'Light']);
+    for (const name of Object.keys(group)) {
+      const v = variable(C.c, name, SCOPES[alias ? name.split('/')[0] : name] || []);
+      for (const mode of ['Dark', 'Light']) {
+        if (!C.ids[mode]) continue;
+        const value = group[name][mode.toLowerCase()];
+        if (alias && !prim[value]) { log(title + ' ' + name + ': no ramp step ' + value, 'warn'); continue; }
+        v.setValueForMode(C.ids[mode], alias ? figma.variables.createVariableAlias(prim[value]) : hexToRgb(value));
+      }
+    }
+  }
+  log('Colour variables: ' + made + ' created, ' + updated + ' updated (Primitives '
+    + Object.keys(spec.primitives).length + ', Semantic ' + Object.keys(spec.semantic).length
+    + ', Platform ' + Object.keys(spec.platform).length + ').', 'ok');
+}
 
 // ---- finding the token variables by name (as in figma/card/code.js) ----
 const STEMS = {
@@ -58,6 +124,8 @@ function keysFor(collection, name) {
   return keys;
 }
 
+const PREFERRED = ['Semantic', 'Platform'];
+
 async function tokenFinder() {
   const entries = [];
   const cols = {};
@@ -65,7 +133,7 @@ async function tokenFinder() {
   for (const v of await figma.variables.getLocalVariablesAsync()) {
     const col = cols[v.variableCollectionId] || '';
     entries.push({
-      label: col + ' / ' + v.name, type: v.resolvedType, local: true,
+      label: col + ' / ' + v.name, type: v.resolvedType, local: true, col: col,
       keys: keysFor(col, v.name), load: async function () { return v; },
     });
   }
@@ -73,7 +141,7 @@ async function tokenFinder() {
     for (const c of await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()) {
       for (const lv of await figma.teamLibrary.getVariablesInLibraryCollectionAsync(c.key)) {
         entries.push({
-          label: c.libraryName + ': ' + c.name + ' / ' + lv.name, type: lv.resolvedType, local: false,
+          label: c.libraryName + ': ' + c.name + ' / ' + lv.name, type: lv.resolvedType, local: false, col: c.name,
           keys: keysFor(c.name, lv.name),
           load: function () { return figma.variables.importVariableByKeyAsync(lv.key); },
         });
@@ -93,7 +161,9 @@ async function tokenFinder() {
       if (e.type !== type) continue;
       const i = e.keys.indexOf(token);
       if (i < 0) continue;
-      const score = i * 2 + (e.local ? 0 : 1);
+      // the synced collections first, so a role beats an older variable of
+      // the same name (an earlier Color/bg-raised)
+      const score = (PREFERRED.indexOf(e.col) >= 0 ? 0 : 100) + i * 2 + (e.local ? 0 : 1);
       if (score < bestScore) { best = e; bestScore = score; }
     }
     cache[id] = best ? { variable: await best.load(), label: best.label } : null;

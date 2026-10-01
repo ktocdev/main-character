@@ -13,7 +13,7 @@
   position: fixed;
   inset: 0;
   z-index: 100;              /* over the header, the banner and the popovers */
-  background: var(--bg);
+  background: var(--bg-page);
   overflow-y: auto;          /* the category step is the tall one */
   display: flex;
   align-items: flex-start;
@@ -31,7 +31,7 @@ body.setting-up { overflow: hidden; }
   width: 100%;
   max-width: 34rem;
   background: var(--bg-raised);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   padding: var(--space-8);
   margin: auto 0;
@@ -46,7 +46,7 @@ body.setting-up { overflow: hidden; }
   font-size: var(--font-2xs);
   letter-spacing: .04em;
   text-transform: lowercase;
-  color: var(--text-dim);
+  color: var(--text-muted);
   margin-bottom: var(--space-7);
 }
 
@@ -57,11 +57,11 @@ body.setting-up { overflow: hidden; }
 }
 
 .wiz-step.at {
-  color: var(--accent);
-  border-color: var(--accent-dim);
+  color: var(--text-accent);
+  border-color: var(--border-accent);
 }
 
-.wiz-step.done { color: var(--text-dim); opacity: .7; }
+.wiz-step.done { color: var(--text-muted); opacity: .7; }
 
 /* ---- content ---- */
 
@@ -69,26 +69,26 @@ body.setting-up { overflow: hidden; }
   font-family: var(--font-ui);
   font-size: var(--font-xl);
   margin: 0 0 var(--space-4);
-  color: var(--text);
+  color: var(--text-default);
 }
 
 .wiz-sub {
   font-family: var(--font-ui);
   font-size: var(--font-md);
   margin: var(--space-7) 0 var(--space-2);
-  color: var(--text);
+  color: var(--text-default);
 }
 
 .wiz-lede {
   margin: 0 0 var(--space-7);
-  color: var(--text);
+  color: var(--text-default);
   line-height: 1.55;
 }
 
 .wiz-help, .wiz-aside {
   font-family: var(--font-ui);
   font-size: var(--font-xs);
-  color: var(--text-dim);
+  color: var(--text-muted);
   line-height: 1.5;
   margin: var(--space-3) 0 0;
 }
@@ -96,13 +96,13 @@ body.setting-up { overflow: hidden; }
 .wiz-aside {
   margin-top: var(--space-8);
   padding-top: var(--space-5);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-default);
 }
 
 .wiz-warn {
   font-family: var(--font-ui);
   font-size: var(--font-xs);
-  color: var(--accent);
+  color: var(--text-accent);
   line-height: 1.5;
   margin: var(--space-3) 0 0;
 }
@@ -111,7 +111,7 @@ body.setting-up { overflow: hidden; }
   display: block;
   font-family: var(--font-ui);
   font-size: var(--font-sm);
-  color: var(--text);
+  color: var(--text-default);
   margin-bottom: var(--space-2);
 }
 
@@ -120,9 +120,9 @@ body.setting-up { overflow: hidden; }
 #wizard-body select {
   width: 100%;
   box-sizing: border-box;
-  background: var(--bg-input);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: var(--bg-muted);
+  color: var(--text-default);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   padding: var(--space-3) var(--space-4);
   font-family: var(--font-ui);
@@ -131,7 +131,7 @@ body.setting-up { overflow: hidden; }
 
 #wizard-body input:focus, #wizard-body select:focus {
   outline: none;
-  border-color: var(--accent-dim);
+  border-color: var(--border-accent);
 }
 
 .wiz-actions {
@@ -180,8 +180,8 @@ body.setting-up { overflow: hidden; }
   gap: var(--space-3);
   font-family: var(--font-ui);
   font-size: var(--font-xs);
-  color: var(--text);
-  background: var(--bg-input);
+  color: var(--text-default);
+  background: var(--bg-muted);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
   margin-top: var(--space-2);
@@ -192,21 +192,21 @@ body.setting-up { overflow: hidden; }
 .wiz-list {
   font-family: var(--font-ui);
   font-size: var(--font-xs);
-  color: var(--text-dim);
+  color: var(--text-muted);
   line-height: 1.6;
   padding-left: 1.2rem;
   margin: 0;
 }
 
 .wiz-cmd {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
+  background: var(--bg-muted);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   padding: var(--space-4);
   margin: var(--space-4) 0 0;
   overflow-x: auto;
   font-size: var(--font-xs);
-  color: var(--text);
+  color: var(--text-default);
 }
 
 /* ---- the status line ---- */
@@ -218,13 +218,13 @@ body.setting-up { overflow: hidden; }
   font-family: var(--font-ui);
   font-size: var(--font-xs);
   line-height: 1.5;
-  color: var(--text-dim);
+  color: var(--text-muted);
   margin: var(--space-5) 0 0;
   min-height: 1.2em;         /* no reflow when a message appears */
 }
 
-#wizard-note.error, #wizard-note.set-note.error { color: var(--error); }
-#wizard-note.warn { color: var(--accent); }
+#wizard-note.error, #wizard-note.set-note.error { color: var(--text-danger); }
+#wizard-note.warn { color: var(--text-accent); }
 
 @media (max-width: 40rem) {
   #setup-wizard { padding: var(--space-5) var(--space-3); }

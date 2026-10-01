@@ -52,7 +52,7 @@
 
     <section id="states">
       <div class="rule eyebrow strong">States</div>
-      <p class="note">Shown at write's resting height, 6.6rem. Focus is the input's: the border turns <span class="mono">--accent-dim</span>, no ring. The chat bar's textarea is the same element with the well taken away: see <a href="/static/design/chat-bar.html">chat bar</a>.</p>
+      <p class="note">Shown at write's resting height, 6.6rem. Focus is the input's: the border turns <span class="mono">--border-accent</span>, no ring. The chat bar's textarea is the same element with the well taken away: see <a href="/static/design/chat-bar.html">chat bar</a>.</p>
       <div class="spec-row top">
         <textarea placeholder="write freely…" data-figma-set="Textarea" data-figma-variant="state=empty" data-figma-text="value"></textarea>
         <textarea data-figma-set="Textarea" data-figma-variant="state=filled" data-figma-text="value">Ran the long loop at Greenwood Park with Mika this morning. Slower than last week, and I didn't mind.</textarea>
@@ -66,15 +66,15 @@
   #entry-text          write: min 6.6rem, max 85vh, then scrolls
   #seed-editor-text    life summary editor: fills the column</pre>
       <div class="parts">
-        <div class="part">well</div><div class="rule-text">--bg-input, --border hairline, --radius-lg, padding .7rem .9rem. resize: none.</div>
-        <div class="part">text</div><div class="rule-text">Inherited body serif, --text, line-height 1.6; the placeholder in --text-dim at 70%.</div>
-        <div class="part">focus</div><div class="rule-text">The border turns --accent-dim.</div>
+        <div class="part">well</div><div class="rule-text">--bg-muted, --border-default hairline, --radius-lg, padding .7rem .9rem. resize: none.</div>
+        <div class="part">text</div><div class="rule-text">Inherited body serif, --text-default, line-height 1.6; the placeholder in --text-muted at 70%.</div>
+        <div class="part">focus</div><div class="rule-text">The border turns --border-accent.</div>
       </div>
     </section>
 
     <section id="tokens">
       <div class="rule eyebrow strong">Tokens</div>
-      <p class="note">Fill <span class="mono">--bg-input</span>; rule <span class="mono">--border</span>, focus <span class="mono">--accent-dim</span>; text <span class="mono">--text</span>, placeholder <span class="mono">--text-dim</span>; radius <span class="mono">--radius-lg</span>. In Figma: <b>Textarea</b>, <span class="mono">state</span>, with a <span class="mono">value</span> text property; resize the instance for a taller box.</p>
+      <p class="note">Fill <span class="mono">--bg-muted</span>; rule <span class="mono">--border-default</span>, focus <span class="mono">--border-accent</span>; text <span class="mono">--text-default</span>, placeholder <span class="mono">--text-muted</span>; radius <span class="mono">--radius-lg</span>. In Figma: <b>Textarea</b>, <span class="mono">state</span>, with a <span class="mono">value</span> text property; resize the instance for a taller box.</p>
     </section>
   </main>
 </div>
