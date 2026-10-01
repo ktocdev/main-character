@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character · design system</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/design/design.css">
+<script>
+  try {
+    var _t = localStorage.getItem('rag_theme');
+    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+  } catch (e) {}
+</script>
+<style>
+  /* The design system home, served at /design and linked from the bottom
+     of Settings. One entry per page; add a page here and in every page's
+     side nav when a component lands. */
+  .pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 1rem; }
+  a.card { display: flex; flex-direction: column; gap: .35rem; color: var(--text-dim); }
+  a.card:hover { border-color: var(--accent-dim); }
+  a.card .eyebrow { margin-bottom: .2rem; }
+  a.card .ttl { font: 700 1.05rem/1.25 var(--font-body); color: var(--text); }
+  a.card:hover .ttl { color: var(--accent); }
+  a.card p { font-size: .9rem; line-height: 1.5; text-wrap: pretty; }
+  a.card .src { margin-top: auto; padding-top: .4rem; font: .78rem var(--font-ui); }
+</style>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="/design">main character</a></h1>
+    <span class="status">design system</span>
+  </div>
+  <div class="right">
+    <a href="/">← back to the journal</a>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">design system</div>
+    <a href="/design" aria-current="page">home</a>
+    <a href="/static/design/tokens.html">tokens</a>
+    <a href="/static/design/card.html">card</a>
+  </nav>
+
+  <main class="doc">
+    <section>
+      <h2>Design system</h2>
+      <p class="lede">The pieces the journal is built from, each rendered live from the app's own stylesheets. Nothing here is a mockup: if a page looks wrong, the app looks wrong too.</p>
+    </section>
+
+    <section>
+      <div class="rule eyebrow strong">Foundations</div>
+      <div class="pages">
+        <a class="card" href="/static/design/tokens.html">
+          <span class="eyebrow">foundation</span>
+          <span class="ttl">Tokens</span>
+          <p>Color in both themes, the two type families and their scale, spacing, radius and motion.</p>
+          <span class="src">static/css/tokens.css</span>
+        </a>
+      </div>
+    </section>
+
+    <section>
+      <div class="rule eyebrow strong">Components</div>
+      <div class="pages">
+        <a class="card" href="/static/design/card.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Card</span>
+          <p>One card for anything the journal can point at, in three sizes, with a horizontal form below 670px.</p>
+          <span class="src">static/css/card.css · static/js/card.js</span>
+        </a>
+      </div>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/design/design.js"></script>
+</body>
+</html>

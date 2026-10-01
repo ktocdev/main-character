@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Main Character — design tokens</title>
+<title>Main Character · design tokens</title>
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/base.css">
 <link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/design/design.css">
 <script>
   try {
     var _t = localStorage.getItem('rag_theme');
@@ -17,25 +18,8 @@
 <style>
   /* The living spec: every semantic token the app is built from, rendered
      live from tokens.css. Dark is the default palette; light is a second
-     value set for the same ten names. Served at /static/design/tokens.html;
-     nothing in the app links here, it is for whoever works on the app. */
-  body { height: auto; min-height: 100dvh; overflow: auto; }
-  header .status { white-space: normal; }
-  header .right { margin-left: auto; font: .8rem var(--font-ui); color: var(--text-dim); display: flex; align-items: center; gap: .8rem; }
-  .wrap { display: flex; flex-wrap: wrap; align-items: flex-start; }
-  .side {
-    position: sticky; top: 0; flex: 1 1 11rem; max-width: 100%; padding: 1.5rem;
-    display: flex; flex-direction: column; align-items: flex-start; gap: .25rem;
-    font: .9rem var(--font-ui); background: var(--bg); z-index: 2;
-  }
-  .side a { padding: .35rem .8rem; border-radius: var(--radius-sm); display: block; }
-  .side a:hover { background: var(--bg-input); }
-  main.doc { flex: 999 1 26rem; min-width: 0; max-width: 52rem; padding: 1.5rem; display: flex; flex-direction: column; gap: 3rem; overflow: visible; }
-  section { display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 5rem; }
-  h2 { font-size: 1.05rem; font-weight: normal; font-style: italic; color: var(--accent); }
-  .lede { max-width: 40rem; font-size: .95rem; color: var(--text-dim); text-wrap: pretty; }
-  .note { max-width: 40rem; font-size: .85rem; color: var(--text-dim); text-wrap: pretty; }
-  .mono { font-family: var(--font-ui); color: var(--text); }
+     value set for the same ten names. Part of the design system at /design;
+     the shell is design.css. */
   .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0 1rem; padding: 0 .2rem; }
   .cols.head { font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); }
   .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .6rem 1rem; align-items: stretch; padding-bottom: .8rem; border-bottom: 1px solid var(--border); }
@@ -71,14 +55,13 @@
   .literals { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; font: .8rem var(--font-ui); color: var(--text-dim); padding: .8rem 1rem; border: 1px dashed var(--accent-dim); border-radius: 10px; }
   .literals .sq { display: inline-block; width: 1.6rem; height: 1.6rem; background: var(--bg-input); border: 1px solid var(--border); vertical-align: middle; margin-right: .5rem; }
   .motion { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
-  .segmented button { min-height: 2rem; min-width: 3.4rem; padding: 0 .7rem; font-size: .8rem; }
 </style>
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1>main character</h1>
-    <span class="status">design tokens · 10 colors · 2 families · 8 type steps · 8 space steps · 5 radii · 1 motion</span>
+    <h1><a href="/design">main character</a></h1>
+    <span class="status">design tokens · 10 colors · 2 families · 8 type steps · 8 space steps · 5 radii · 2 motion</span>
   </div>
   <div class="right">
     <span>source: static/css/tokens.css</span>
@@ -91,7 +74,12 @@
 </header>
 
 <div class="wrap">
-  <nav class="side" aria-label="sections">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">design system</div>
+    <a href="/design">home</a>
+    <a href="/static/design/tokens.html" aria-current="page">tokens</a>
+    <a href="/static/design/card.html">card</a>
+    <div class="eyebrow">on this page</div>
     <a href="#color">color</a>
     <a href="#type">type</a>
     <a href="#space">spacing</a>
@@ -175,7 +163,7 @@
       </div>
     </section>
 
-    <section id="motion" style="padding-bottom:3rem">
+    <section id="motion">
       <div class="rule eyebrow strong">Motion</div>
       <p class="note">One idiom: a slow breathing fade, standing in for "something is happening, wait." No spinners, no skeletons. New async states reuse this.</p>
       <div class="motion">
@@ -197,7 +185,7 @@
           <div class="note">Pending steps sit at .5 opacity; running and done are full, differing only by mark.</div>
         </div>
       </div>
-      <div class="note">The only other transition is a one-off <span class="mono">transform .15s ease</span> on the help caret. There is no duration scale.</div>
+      <div class="note">One hover fade: <span class="mono">--dur-hover</span> .25s ease, on the item card's visual (background to <span class="mono">--card-thumb-hover</span>) and title (color to <span class="mono">--accent</span>). The only other transition is a one-off <span class="mono">transform .15s ease</span> on the help caret.</div>
     </section>
   </main>
 </div>
@@ -286,22 +274,7 @@
     c.querySelector('.role').textContent = covers;
     radEl.appendChild(c);
   }
-  // theme: the same client-only pin the app's Settings writes
-  const seg = document.getElementById('theme');
-  function mark() {
-    let t = 'auto';
-    try { t = localStorage.getItem('rag_theme') || 'auto'; } catch (e) {}
-    if (t !== 'light' && t !== 'dark') t = 'auto';
-    seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === t)));
-  }
-  seg.addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    const t = b.dataset.t;
-    try { if (t === 'auto') localStorage.removeItem('rag_theme'); else localStorage.setItem('rag_theme', t); } catch (e) {}
-    if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
-    mark();
-  });
-  mark();
 </script>
+<script type="module" src="/static/design/design.js"></script>
 </body>
 </html>

@@ -1,0 +1,36 @@
+  /* SPDX-License-Identifier: AGPL-3.0-or-later */
+  /* The shell every design system page shares: masthead with a theme
+     toggle, a sticky side nav, one reading column. The pages are served
+     from static/design/ (home at /design) and render from the app's own
+     tokens.css, base.css and components.css, so what they show is what the
+     app draws. Page-specific specimen styles stay in each page. */
+  body { height: auto; min-height: 100dvh; overflow: auto; }
+  header .status { white-space: normal; }
+  header .right { margin-left: auto; min-width: 0; font: .8rem var(--font-ui); color: var(--text-dim); display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .5rem .8rem; }
+  header .masthead a { color: inherit; }
+  .wrap { display: flex; flex-wrap: wrap; align-items: flex-start; }
+  .side {
+    position: sticky; top: 0; flex: 0 0 auto; max-width: 100%; margin-left: 0; padding: 1.5rem;
+    display: flex; flex-direction: column; align-items: flex-start; gap: .25rem;
+    font: .9rem var(--font-ui); background: var(--bg); z-index: 2;
+  }
+  .side a { padding: .35rem .8rem; border-radius: var(--radius-sm); display: block; }
+  .side a:hover { background: var(--bg-input); }
+  .side a[aria-current="page"] { color: var(--accent); }
+  .side .eyebrow { padding: .8rem .8rem .2rem; }
+  .side .eyebrow:first-child { padding-top: 0; }
+  /* narrow: the nav wraps above the column and scrolls away with the page,
+     rather than sitting stuck over the content */
+  @media (max-width: 669px) {
+    .side { position: static; flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; padding-bottom: 0; }
+    .side .eyebrow { flex-basis: 100%; padding: .6rem .8rem 0; }
+  }
+  main.doc { flex: 999 1 26rem; min-width: 0; max-width: 52rem; padding: 1.5rem; display: flex; flex-direction: column; gap: 3rem; overflow: visible; }
+  main.doc.wide { max-width: 76rem; }
+  main.doc > section { display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 5rem; }
+  main.doc > section:last-child { padding-bottom: 3rem; }
+  h2 { font-size: 1.05rem; font-weight: normal; font-style: italic; color: var(--accent); }
+  .lede { max-width: 40rem; font-size: .95rem; color: var(--text-dim); text-wrap: pretty; }
+  .note { max-width: 40rem; font-size: .85rem; color: var(--text-dim); text-wrap: pretty; }
+  .mono { font-family: var(--font-ui); color: var(--text); }
+  .segmented button { min-height: 2rem; min-width: 3.4rem; padding: 0 .7rem; font-size: .8rem; }

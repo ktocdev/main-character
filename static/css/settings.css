@@ -52,7 +52,7 @@
   .set-check:has(input:not(:checked)) strong { color: var(--text-dim); }
 
   /* data actions: quiet buttons, the result as a notice card beneath */
-  .set-control > button.quiet { min-height: 2.4rem; padding: .3rem .9rem; font-size: .85rem; }
+  .set-control > :is(button, a).quiet { min-height: 2.4rem; padding: .3rem .9rem; font-size: .85rem; }
   .set-feedback { margin-top: .7rem; max-width: 34rem; padding: .7rem 1rem; font-size: .95rem; text-wrap: pretty; overflow-wrap: anywhere; }
   .set-feedback.working { color: var(--text-dim); }
   .set-feedback.error { color: var(--error); border-color: var(--error); }

@@ -146,9 +146,12 @@
 
   /* The published web demo has no server behind it (static/js/web-demo/).
      Restarting, installing the demo, the API key and the data folder all
-     mean nothing in a browser tab, so their controls go. */
+     mean nothing in a browser tab, so their controls go. The design system
+     is served by the app's own /design route and isn't in the demo build. */
   body.web-demo #settings-restart,
   body.web-demo #settings-seed,
   body.web-demo #settings-restart-info,
   body.web-demo .set-group:has(#set-key),
-  body.web-demo .set-group:has(#set-export) { display: none; }
+  body.web-demo .set-group:has(#set-export),
+  body.web-demo .set-group:has(#set-design),
+  body.web-demo #settings-jumps [data-jump="design"] { display: none; }
