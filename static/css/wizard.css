@@ -161,20 +161,7 @@ body.setting-up { overflow: hidden; }
 
 /* ---- categories ---- */
 
-#wizard-body .wiz-check {
-  display: flex;
-  gap: var(--space-3);
-  align-items: baseline;
-  padding: var(--space-2) 0;
-  font-family: var(--font-ui);
-  font-size: var(--font-xs);
-  color: var(--text-dim);
-  line-height: 1.45;
-  cursor: pointer;
-}
-
-.wiz-check input { accent-color: var(--accent); flex: none; }
-.wiz-check strong { color: var(--text); font-weight: 600; }
+/* the rows are the CheckboxFieldset, ui form (.check-group.ui, components.css) */
 
 .wiz-newcat {
   display: flex;

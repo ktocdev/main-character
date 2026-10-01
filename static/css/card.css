@@ -11,7 +11,7 @@
            div.card-type    eyebrow
            a.card-title     the one tab stop
            p.card-desc      plain text, never inside a link
-           div.card-badges > span.card-badge × n, span.card-more "+N"
+           div.card-badges > span.badge.card-badge × n, span.card-more "+N"
 
      md is the default size and has no class. Width fills the grid track
      (.card-row); height is fixed per size, so long content clamps instead of
@@ -57,16 +57,13 @@
   /* pinned to the bottom, one row, never wraps: a badge that doesn't fit
      gets an ellipsis rather than being cut off */
   .card-badges { margin-top: auto; display: flex; gap: .3rem; overflow: hidden; }
-  .card-badge, .card-more {
-    font: var(--font-2xs)/1.4 var(--font-ui); color: var(--text-dim);
-    padding: .1rem .5rem; white-space: nowrap; font-variant-numeric: tabular-nums;
+  /* each badge is a .badge (components.css): fill, rule, pill, type and the
+     ellipsis come from there; the card only sizes it per card size */
+  .card-badge { flex: 0 1 auto; min-width: 0; }
+  .card-more {
+    flex: none; font: var(--font-2xs)/1.4 var(--font-ui); color: var(--text-dim);
+    padding: .1rem .3rem; white-space: nowrap; font-variant-numeric: tabular-nums;
   }
-  .card-badge {
-    flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
-    background: var(--bg-input); border: 1px solid var(--border);
-    border-radius: var(--radius-pill);
-  }
-  .card-more { flex: none; padding-inline: .3rem; }
 
   /* ---- sm: no description, two badges ---- */
   .item-card.sm { min-width: 9.5rem; height: 12rem; }
