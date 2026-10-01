@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $ } from './core.js';
 import { showTab } from './main.js';
+import { label } from './nav.js';
 
 // ---- help ----
 // The sections are an accordion of <details>. A jump pill (or any in-page
@@ -39,7 +40,7 @@ export function init() {
     const b = document.createElement('button');
     b.className = 'chip sm';
     b.dataset.jump = id;
-    b.textContent = id;
+    b.textContent = label(id);
     b.onclick = () => { markActive(id); reveal('h-' + id); };
     pills.appendChild(b);
   }

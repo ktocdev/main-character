@@ -174,7 +174,7 @@ Everything here is incremental. That is why a close costs more than any one
 reply, and why the processing model, not the companion, uses most of the
 tokens.
 
-## The chat screen
+## The ask screen
 
 `POST /api/lookup`, `companion.stream_lookup`. It uses the same search and
 context block as a companion reply, but keeps its own conversation and its
@@ -185,8 +185,8 @@ open chapter and never become journal memory, and the open chapter isn't searche
 until it is closed. It is the place to ask things like "when did I last
 mention…", then go to History to read the entry in full.
 
-**Smart replies**, a toggle by the chat screen's send button (off by default,
-sent with each question, remembered in the browser), makes the chat screen a
+**Smart replies**, a toggle by the ask screen's send button (off by default,
+sent with each question, remembered in the browser), makes the ask screen a
 tool-use loop: `companion.stream_smart_lookup`. The first search and context
 block are the same, but Claude also gets three tools
 (`lookup_tools.py`): `search_journal` (by meaning or by exact words, within

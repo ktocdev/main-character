@@ -3048,10 +3048,10 @@
           "variant": "kind=jump, selected=false, state=default",
           "texts": [
            {
-            "chars": "chat",
+            "chars": "ask",
             "runs": [
              {
-              "len": 4,
+              "len": 3,
               "style": {
                "font": "ui",
                "weight": 400,
@@ -3069,7 +3069,7 @@
           "tree": {
            "type": "frame",
            "name": "chip",
-           "w": 45.61,
+           "w": 40.25,
            "h": 28.8,
            "fills": [],
            "stroke": {
@@ -3116,10 +3116,10 @@
             {
              "type": "text",
              "name": "text",
-             "chars": "chat",
+             "chars": "ask",
              "runs": [
               {
-               "len": 4,
+               "len": 3,
                "style": {
                 "font": "ui",
                 "weight": 400,
@@ -3133,7 +3133,7 @@
               }
              ],
              "lineHeight": 12.48,
-             "w": 21.234375,
+             "w": 15.875,
              "h": 17,
              "lines": 1,
              "sizing": {
@@ -3144,7 +3144,7 @@
            ],
            "sizing": null
           },
-          "w": 45.61,
+          "w": 40.25,
           "h": 28.8,
           "name": "chip",
           "sizing": {
