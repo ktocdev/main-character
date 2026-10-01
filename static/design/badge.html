@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — badge</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/card.css">
+<link rel="stylesheet" href="/static/css/search.css">
+<link rel="stylesheet" href="/static/css/dreams.css">
+<link rel="stylesheet" href="/static/design/design.css">
+<script>
+  try {
+    var _t = localStorage.getItem('rag_theme');
+    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+  } catch (e) {}
+</script>
+<style>
+  .ctx { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; align-items: start; }
+  .ctx .search-hit { padding: 0; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="/design">main character</a></h1>
+    <span class="status">badge · 3 tones · 3 sizes</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#tones">tones and sizes</a>
+    <a href="#in-context">in context</a>
+    <a href="#not-badges">not badges</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Badge</h2>
+      <p class="lede">A small pill that labels something: a date range, a count, a tone, "related". It is read, not pressed. A badge that also filters (a dream's tones) is a button underneath, and its label brightens on hover, but nothing else about it changes.</p>
+    </section>
+
+    <section id="tones">
+      <div class="rule eyebrow strong">Tones and sizes</div>
+      <p class="note"><b>neutral</b> is the item card's badge: a <span class="mono">--bg-input</span> pill in a <span class="mono">--border</span> rule, <span class="mono">--text-dim</span>. <b>outline</b> drops the fill and takes <span class="mono">--accent-dim</span> (search's "related"). <b>accent</b> drops the rule and takes <span class="mono">--accent</span> (a dream's tones). <b>md</b> is the default; <span class="mono">.sm</span> is .68rem, tracked; <span class="mono">.lg</span> is .72rem with more air. One line, never wraps: a badge too wide for its row ends in an ellipsis.</p>
+      <div class="stack">
+        <div class="spec-row">
+          <span class="badge sm" data-figma-set="Badge" data-figma-variant="tone=neutral, size=sm" data-figma-text="label">7 entries</span>
+          <span class="badge" data-figma-set="Badge" data-figma-variant="tone=neutral, size=md" data-figma-text="label">7 entries</span>
+          <span class="badge lg" data-figma-set="Badge" data-figma-variant="tone=neutral, size=lg" data-figma-text="label">7 entries</span>
+        </div>
+        <div class="spec-row">
+          <span class="badge sm outline" data-figma-set="Badge" data-figma-variant="tone=outline, size=sm" data-figma-text="label">related</span>
+          <span class="badge outline" data-figma-set="Badge" data-figma-variant="tone=outline, size=md" data-figma-text="label">related</span>
+          <span class="badge lg outline" data-figma-set="Badge" data-figma-variant="tone=outline, size=lg" data-figma-text="label">related</span>
+        </div>
+        <div class="spec-row">
+          <span class="badge sm accent" data-figma-set="Badge" data-figma-variant="tone=accent, size=sm" data-figma-text="label">surreal</span>
+          <span class="badge accent" data-figma-set="Badge" data-figma-variant="tone=accent, size=md" data-figma-text="label">surreal</span>
+          <span class="badge lg accent" data-figma-set="Badge" data-figma-variant="tone=accent, size=lg" data-figma-text="label">surreal</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="in-context">
+      <div class="rule eyebrow strong">In context</div>
+      <p class="note">The three places badges live today, drawn with each screen's own stylesheet. The card sizes its badges per card size in <span class="mono">card.css</span>; colour, rule and shape come from <span class="mono">.badge</span>.</p>
+      <div class="ctx in-context">
+        <div id="card-out"></div>
+        <div class="search-hit">
+          <h3>July 31, 2026 — Friday run with Mika <span class="badge sm outline">related</span></h3>
+          <div class="search-snip">met Mika at Greenwood Park after work for a run…</div>
+        </div>
+        <article class="card dream-card">
+          <div class="head">
+            <h3>September 14, 2026</h3>
+            <button class="badge lg accent">surreal</button>
+            <button class="badge lg accent">anxiety</button>
+          </div>
+          <p>The office dream again, the third time. Same empty floor.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="not-badges">
+      <div class="rule eyebrow strong">Not badges</div>
+      <p class="note">Two pills that look close but are controls, with their own pages: a <b>chip</b> is a button that selects (filter rows, jump pills: <a href="/static/design/button-group.html">button group</a>); a <b>toggle</b> stays pressed (<a href="/static/design/toggle.html">toggle</a>). The tag editor's removable <span class="mono">.tag</span>, with its ×, belongs to entities.</p>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">span.badge[.sm | .lg][.outline | .accent]
+button.badge…                 when it also filters</pre>
+      <div class="parts">
+        <div class="part">pill</div><div class="rule-text">--radius-pill, a 1px rule (transparent for accent), padding .1rem .5rem at md.</div>
+        <div class="part">label</div><div class="rule-text">UI face, --font-2xs/1.4 at md, tabular figures, one line with an ellipsis.</div>
+        <div class="part">hover</div><div class="rule-text">Only a button.badge: the label goes to --text.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fill <span class="mono">--bg-input</span>; rule <span class="mono">--border</span>; labels <span class="mono">--text-dim</span>, <span class="mono">--accent-dim</span>, <span class="mono">--accent</span>; size <span class="mono">--font-2xs</span>; radius <span class="mono">--radius-pill</span>. In Figma: one <b>Badge</b> set, <span class="mono">tone × size</span>, with a <span class="mono">label</span> property.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/design/design.js"></script>
+<script type="module">
+  import { itemCard } from '/static/js/card.js';
+  document.getElementById('card-out').appendChild(itemCard({
+    type: 'summary', title: 'Week of September 22', href: '#', size: 'sm',
+    badges: ['Sep 22–28', '7 entries'],
+  }));
+</script>
+</body>
+</html>

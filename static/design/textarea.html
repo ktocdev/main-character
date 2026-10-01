@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — textarea</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/design/design.css">
+<script>
+  try {
+    var _t = localStorage.getItem('rag_theme');
+    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+  } catch (e) {}
+</script>
+<style>
+  /* write's entry box at its resting height (autosize grows it in the app) */
+  .spec-row textarea { width: 24rem; height: 6.6rem; }
+</style>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="/design">main character</a></h1>
+    <span class="status">textarea · 3 states</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#states">states</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Textarea</h2>
+      <p class="lede">Where entries are written: the input's well, many lines tall, in the 17px body serif at 1.6. Write's box grows with what you type, up to most of the window, then scrolls; the life summary editor fills the space it has. Never resizable by hand.</p>
+    </section>
+
+    <section id="states">
+      <div class="rule eyebrow strong">States</div>
+      <p class="note">Shown at write's resting height, 6.6rem. Focus is the input's: the border turns <span class="mono">--accent-dim</span>, no ring. The chat bar's textarea is the same element with the well taken away: see <a href="/static/design/chat-bar.html">chat bar</a>.</p>
+      <div class="spec-row top">
+        <textarea placeholder="write freely…" data-figma-set="Textarea" data-figma-variant="state=empty" data-figma-text="value"></textarea>
+        <textarea data-figma-set="Textarea" data-figma-variant="state=filled" data-figma-text="value">Ran the long loop at Greenwood Park with Mika this morning. Slower than last week, and I didn't mind.</textarea>
+        <textarea class="is-focus" data-figma-set="Textarea" data-figma-variant="state=focus" data-figma-text="value">Ran the long loop at Greenwood Park with Mika this morning. Slower than last week, and I didn't mind.</textarea>
+      </div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">textarea               rows=3, autosized by write.js
+  #entry-text          write: min 6.6rem, max 85vh, then scrolls
+  #seed-editor-text    life summary editor: fills the column</pre>
+      <div class="parts">
+        <div class="part">well</div><div class="rule-text">--bg-input, --border hairline, --radius-lg, padding .7rem .9rem. resize: none.</div>
+        <div class="part">text</div><div class="rule-text">Inherited body serif, --text, line-height 1.6; the placeholder in --text-dim at 70%.</div>
+        <div class="part">focus</div><div class="rule-text">The border turns --accent-dim.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fill <span class="mono">--bg-input</span>; rule <span class="mono">--border</span>, focus <span class="mono">--accent-dim</span>; text <span class="mono">--text</span>, placeholder <span class="mono">--text-dim</span>; radius <span class="mono">--radius-lg</span>. In Figma: <b>Textarea</b>, <span class="mono">state</span>, with a <span class="mono">value</span> text property; resize the instance for a taller box.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/design/design.js"></script>
+</body>
+</html>

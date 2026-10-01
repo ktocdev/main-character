@@ -22,14 +22,6 @@
      code the app will use. Spec: docs/design_handoff_card/README.md. */
   .frame { max-width: 46rem; }
   .frame.w72 { max-width: 72rem; }
-  .spec-line { font: .8rem var(--font-ui); color: var(--text-dim); }
-  .spec-line b { font-weight: 600; font-size: .95rem; color: var(--text); margin-right: .3rem; }
-  .stack { display: flex; flex-direction: column; gap: 1rem; }
-  .parts { display: grid; grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr); gap: .5rem 1rem; }
-  .parts > div { padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
-  .parts .part { font: 600 .9rem var(--font-ui); color: var(--text); }
-  .parts .rule-text { font-size: .85rem; line-height: 1.45; color: var(--text-dim); text-wrap: pretty; }
-  pre.tree { font: .8rem/1.6 var(--font-ui); color: var(--text-dim); background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: .9rem 1.1rem; overflow-x: auto; }
 </style>
 </head>
 <body>
@@ -50,10 +42,7 @@
 
 <div class="wrap">
   <nav class="side" aria-label="design system">
-    <div class="eyebrow">design system</div>
-    <a href="/design">home</a>
-    <a href="/static/design/tokens.html">tokens</a>
-    <a href="/static/design/card.html" aria-current="page">card</a>
+    <!-- the site links come from design.js (PAGES) -->
     <div class="eyebrow">on this page</div>
     <a href="#sizes">sizes</a>
     <a href="#horizontal">horizontal</a>
