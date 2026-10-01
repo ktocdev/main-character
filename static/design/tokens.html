@@ -250,26 +250,33 @@
   // WCAG contrast between two hex colours
   const lum = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [.2126, .7152, .0722][i], 0); };
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return ((Math.max(x, y) + .05) / (Math.min(x, y) + .05)).toFixed(1) + ':1'; };
-  // [role, dark step, light step, job, kind]: kind says what the contrast is against
-  const ROLES = [
-    ['--bg-page', 'umber-950', 'umber-50', 'page background', 'surface'],
-    ['--bg-raised', 'umber-900', 'umber-0', 'cards, panels, menus', 'surface'],
-    ['--bg-muted', 'umber-850', 'umber-100', 'inputs, textareas, chips, pressed nav, the soft toggle on', 'surface'],
-    ['--text-default', 'umber-200', 'umber-800', 'primary text', 'text'],
-    ['--text-muted', 'umber-400', 'umber-600', 'meta, labels, help copy', 'text'],
-    ['--text-you', 'umber-300', 'amber-800', 'your own words in a transcript', 'text'],
-    ['--text-accent', 'amber-400', 'amber-700', 'italic headings, active labels', 'text'],
-    ['--text-accent-muted', 'amber-600', 'amber-600', 'eyebrows, date labels', 'text'],
-    ['--text-danger', 'rust-500', 'rust-600', 'error notes, delete on hover', 'text'],
-    ['--text-on-accent', 'umber-950', 'umber-50', 'the label on an amber fill', 'on'],
-    ['--fill-accent', 'amber-400', 'amber-700', 'the send button, the solid toggle on', 'fill'],
-    ['--fill-accent-hover', 'amber-300', 'amber-800', 'the send button on hover', 'fill'],
-    ['--fill-accent-muted', 'amber-600', 'amber-600', 'the filled button', 'fill'],
-    ['--fill-danger', 'rust-500', 'rust-600', 'danger fills', 'fill'],
-    ['--border-default', 'umber-800', 'umber-200', 'every hairline', 'line'],
-    ['--border-accent', 'amber-600', 'amber-600', 'dashed borders', 'line'],
-    ['--focus-ring', 'amber-600', 'amber-600', 'the keyboard focus outline', 'line'],
+  // [role, job, kind]: kind says what the contrast is against. The steps
+  // each role points at come from tokens.css itself: the :root rule for
+  // dark, the data-theme="light" rule for light.
+  const JOBS = [
+    ['--bg-page', 'page background', 'surface'],
+    ['--bg-raised', 'cards, panels, menus', 'surface'],
+    ['--bg-muted', 'inputs, textareas, chips, pressed nav, the soft toggle on', 'surface'],
+    ['--text-default', 'primary text', 'text'],
+    ['--text-muted', 'meta, labels, help copy', 'text'],
+    ['--text-you', 'your own words in a transcript', 'text'],
+    ['--text-accent', 'italic headings, active labels', 'text'],
+    ['--text-accent-muted', 'eyebrows, date labels', 'text'],
+    ['--text-danger', 'error notes, delete on hover', 'text'],
+    ['--text-on-accent', 'the label on an amber fill', 'on'],
+    ['--fill-accent', 'the send button, the solid toggle on', 'fill'],
+    ['--fill-accent-hover', 'the send button on hover', 'fill'],
+    ['--fill-accent-muted', 'the filled button', 'fill'],
+    ['--fill-danger', 'danger fills', 'fill'],
+    ['--border-default', 'every hairline', 'line'],
+    ['--border-accent', 'dashed borders', 'line'],
+    ['--focus-ring', 'the keyboard focus outline', 'line'],
   ];
+  const tokenRules = [...document.styleSheets].filter(sh => /tokens\.css$/.test(sh.href || '')).flatMap(sh => [...sh.cssRules]);
+  const ruleFor = sel => tokenRules.find(r => r.selectorText === sel && r.style.getPropertyValue('--bg-page'));
+  const darkRule = ruleFor(':root'), lightRule = ruleFor(':root[data-theme="light"]');
+  const stepOf = (rule, role) => (/var\(--([a-z]+-\d+)\)/.exec(rule.style.getPropertyValue(role)) || [])[1];
+  const ROLES = JOBS.map(([role, job, kind]) => [role, stepOf(darkRule, role), stepOf(lightRule, role), job, kind]);
   const step = (roles, theme, role) => roles.find(r => r[0] === role)[theme === 'dk' ? 1 : 2];
   function cell(theme, s, kind, roles) {
     const hex = stepHex(s), page = stepHex(step(roles, theme, '--bg-page')), on = stepHex(step(roles, theme, '--text-on-accent'));
