@@ -32,7 +32,23 @@
      always beats the OS; "Auto" clears the attribute and hands it back. */
   :root {
     color-scheme: light dark;  /* native controls (select popups, checkboxes, scrollbars) follow the theme */
-    --bg: #211d19;          /* warm charcoal, not pitch black */
+
+    /* ramps: the only hex values in the palette. Three hues, built in OKLCH
+       so the steps look evenly spaced. Every dark value is a step as it was;
+       the steps between them are interpolated. Never used directly: the
+       roles below point at them, and only the roles are used. */
+    --umber-0: #ffffff;   --umber-50: #faf7f2;  --umber-100: #f1ece4; --umber-200: #e8e0d5;
+    --umber-300: #c9b99f; --umber-400: #a99f92; --umber-500: #898075; --umber-600: #6b6258;
+    --umber-700: #534c43; --umber-800: #3d362f; --umber-850: #322c27; --umber-900: #2a2521;
+    --umber-950: #211d19;
+    --amber-50: #fef5ea;  --amber-100: #fee9d0; --amber-200: #f8d2a5; --amber-300: #e8b377;
+    --amber-400: #d99e5b; --amber-500: #b58248; --amber-600: #8a6a44; --amber-700: #86531e;
+    --amber-800: #6a4a2a; --amber-900: #4f3722; --amber-950: #352517;
+    --rust-50: #fff4f2;   --rust-100: #fee7e2;  --rust-200: #fdccc2;  --rust-300: #f4aa9c;
+    --rust-400: #e28979;  --rust-500: #c96a5a;  --rust-600: #a8493a;  --rust-700: #883a2d;
+    --rust-800: #6a2d23;  --rust-900: #4d211a;  --rust-950: #351813;
+
+    --bg: #211d19;         /* warm charcoal, not pitch black */
     --bg-raised: #2a2521;
     --bg-input: #322c27;
     --text: #e8e0d5;

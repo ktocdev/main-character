@@ -55,6 +55,15 @@
   .literals { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; font: .8rem var(--font-ui); color: var(--text-dim); padding: .8rem 1rem; border: 1px dashed var(--accent-dim); border-radius: 10px; }
   .literals .sq { display: inline-block; width: 1.6rem; height: 1.6rem; background: var(--bg-input); border: 1px solid var(--border); vertical-align: middle; margin-right: .5rem; }
   .motion { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
+  .ramp { display: flex; flex-direction: column; gap: .5rem; }
+  .ramp .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr)); gap: .5rem; }
+  .ramp .step { display: flex; flex-direction: column; gap: .25rem; min-width: 0; font: .75rem var(--font-ui); color: var(--text-dim); }
+  .ramp .step .sq { height: 2.6rem; border-radius: 8px; border: 1px solid rgba(128,128,128,.25); }
+  .ramp .step b { font-weight: 600; color: var(--text); }
+  .swatch .pair { display: flex; flex-direction: column; gap: .1rem; margin-left: auto; text-align: right; font: .8rem var(--font-ui); }
+  .swatch .pair .hex { margin-left: 0; }
+  .swatch.dk .pair { color: #a99f92; }
+  .swatch.lt .pair { color: #6b6258; }
 </style>
 </head>
 <body>
@@ -78,6 +87,7 @@
     <!-- the site links come from design.js (PAGES) -->
     <div class="eyebrow">on this page</div>
     <a href="#color">color</a>
+    <a href="#ramps">ramps</a>
     <a href="#type">type</a>
     <a href="#space">spacing</a>
     <a href="#radius">radius</a>
@@ -111,6 +121,15 @@
           <div class="meta"><span style="color:#6b6258">31 entries · 49 entities</span><span style="color:#9c6021">saved</span><span style="color:#a8493a">could not reach the model</span></div>
         </div>
       </div>
+    </section>
+
+    <section id="ramps">
+      <div class="rule eyebrow strong">Ramps</div>
+      <p class="note">Three hues, built in OKLCH so the steps look evenly spaced: <b>umber</b> for every background, text and rule, <b>amber</b> for the lamp, <b>rust</b> for danger. These are the only hex values in the palette. Each dark value is a step exactly as it was, so dark looks the same; the steps between them are interpolated. Light takes the light end of the same ramps. Its neutrals sit on steps or within a just-noticeable difference of one, and its accents were re-picked from amber, which retires the olive #827020. CSS never uses a step directly: only the roles below do.</p>
+      <div id="ramp-list" class="stack"></div>
+      <p class="note">Roles to steps, with contrast against the page (text) or under <span class="mono">--text-on-accent</span> (fills). AA for text is 4.5:1.</p>
+      <div class="cols head"><div>role · job</div><div>dark (default)</div><div>light</div></div>
+      <div id="role-map"></div>
     </section>
 
     <section id="type">
@@ -211,6 +230,71 @@
     row.querySelector('.role').textContent = role;
     colorsEl.appendChild(row);
   }
+  // ---- ramps, read live from tokens.css ----
+  const rootCs = getComputedStyle(document.documentElement);
+  const stepHex = name => rootCs.getPropertyValue('--' + name).trim();
+  const RAMPS = { umber: [0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950], amber: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950], rust: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] };
+  const rampEl = document.getElementById('ramp-list');
+  for (const [hue, steps] of Object.entries(RAMPS)) {
+    const r = document.createElement('div');
+    r.className = 'ramp';
+    r.innerHTML = `<div class="name" style="font:600 .95rem var(--font-ui); color:var(--text)">${hue}</div><div class="steps"></div>`;
+    for (const s of steps) {
+      const st = document.createElement('div');
+      st.className = 'step';
+      st.innerHTML = `<div class="sq" style="background:var(--${hue}-${s})"></div><span><b>${s}</b> ${stepHex(`${hue}-${s}`)}</span>`;
+      r.querySelector('.steps').appendChild(st);
+    }
+    rampEl.appendChild(r);
+  }
+  // WCAG contrast between two hex colours
+  const lum = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [.2126, .7152, .0722][i], 0); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return ((Math.max(x, y) + .05) / (Math.min(x, y) + .05)).toFixed(1) + ':1'; };
+  // [role, dark step, light step, job, kind]: kind says what the contrast is against
+  const ROLES = [
+    ['--bg-page', 'umber-950', 'umber-50', 'page background', 'surface'],
+    ['--bg-raised', 'umber-900', 'umber-0', 'cards, panels, menus', 'surface'],
+    ['--bg-muted', 'umber-850', 'umber-100', 'inputs, textareas, chips, pressed nav, the soft toggle on', 'surface'],
+    ['--text-default', 'umber-200', 'umber-800', 'primary text', 'text'],
+    ['--text-muted', 'umber-400', 'umber-600', 'meta, labels, help copy', 'text'],
+    ['--text-you', 'umber-300', 'amber-800', 'your own words in a transcript', 'text'],
+    ['--text-accent', 'amber-400', 'amber-700', 'italic headings, active labels', 'text'],
+    ['--text-accent-muted', 'amber-600', 'amber-600', 'eyebrows, date labels', 'text'],
+    ['--text-danger', 'rust-500', 'rust-600', 'error notes, delete on hover', 'text'],
+    ['--text-on-accent', 'umber-950', 'umber-50', 'the label on an amber fill', 'on'],
+    ['--fill-accent', 'amber-400', 'amber-700', 'the send button, the solid toggle on', 'fill'],
+    ['--fill-accent-hover', 'amber-300', 'amber-800', 'the send button on hover', 'fill'],
+    ['--fill-accent-muted', 'amber-600', 'amber-600', 'the filled button', 'fill'],
+    ['--fill-danger', 'rust-500', 'rust-600', 'danger fills', 'fill'],
+    ['--border-default', 'umber-800', 'umber-200', 'every hairline', 'line'],
+    ['--border-accent', 'amber-600', 'amber-600', 'dashed borders', 'line'],
+    ['--focus-ring', 'amber-600', 'amber-600', 'the keyboard focus outline', 'line'],
+  ];
+  const step = (roles, theme, role) => roles.find(r => r[0] === role)[theme === 'dk' ? 1 : 2];
+  function cell(theme, s, kind, roles) {
+    const hex = stepHex(s), page = stepHex(step(roles, theme, '--bg-page')), on = stepHex(step(roles, theme, '--text-on-accent'));
+    const fillHex = stepHex(step(roles, theme, '--fill-accent'));
+    let chip = `<div class="chip-sq" style="background:${hex}"></div>`, note = '';
+    if (kind === 'text') { chip += `<span class="aa" style="color:${hex}">Aa</span>`; note = `${ratio(hex, page)} on page`; }
+    else if (kind === 'fill') { chip = `<div class="chip-sq" style="background:${hex}; color:${on}; display:grid; place-items:center; font:600 .95rem var(--font-ui)">Aa</div>`; note = `${ratio(on, hex)} under its label`; }
+    else if (kind === 'on') { chip = `<div class="chip-sq" style="background:${fillHex}; color:${hex}; display:grid; place-items:center; font:600 .95rem var(--font-ui)">Aa</div>`; note = `${ratio(hex, fillHex)} on --fill-accent`; }
+    else if (kind === 'line') note = `${ratio(hex, page)} on page`;
+    return `<div class="swatch ${theme}">${chip}<span class="pair"><span>${s}</span><span class="hex">${hex}${note ? ' · ' + note : ''}</span></span></div>`;
+  }
+  function drawRoles(roles) {
+    const el = document.getElementById('role-map');
+    el.textContent = '';
+    for (const [name, dk, lt, job, kind] of roles) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `<div class="id"><div class="name"></div><div class="role"></div></div>${cell('dk', dk, kind, roles)}${cell('lt', lt, kind, roles)}`;
+      row.querySelector('.name').textContent = name;
+      row.querySelector('.role').textContent = job;
+      el.appendChild(row);
+    }
+  }
+  drawRoles(ROLES);
+
   const fmt = rem => `${rem}rem · ${Math.round(rem * 16 * 10) / 10}px`;
   const type = [
     ['--font-3xs', .7, 'eyebrows, tracked uppercase labels (600); message labels use .75rem', 'YOU · SEPTEMBER 1, 2026'],

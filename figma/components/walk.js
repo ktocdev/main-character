@@ -76,6 +76,7 @@
       continue;
     }
     if (!CSS.supports('color', raw)) continue;
+    if (/^[a-z]+-\d+$/.test(bare)) continue;   // a ramp step: specs bind roles, never primitives
     const probe = document.createElement('i');
     probe.style.color = `var(${name})`;
     root.appendChild(probe);
