@@ -50,19 +50,6 @@
     --rust-400: #e28979;  --rust-500: #c96a5a;  --rust-600: #a8493a;  --rust-700: #883a2d;
     --rust-800: #6a2d23;  --rust-900: #4d211a;  --rust-950: #351813;
 
-    /* the old names, kept while the CSS moves over to the roles. They come
-       first so the Figma extractor still matches a colour to them. */
-    --bg: var(--bg-page);
-    --bg-input: var(--bg-muted);
-    --text: var(--text-default);
-    --text-dim: var(--text-muted);
-    --accent: var(--text-accent);
-    --accent-hover: var(--fill-accent-hover);
-    --accent-dim: var(--text-accent-muted);
-    --border: var(--border-default);
-    --you: var(--text-you);
-    --error: var(--text-danger);
-
     /* roles: what a colour is for. Dark is the default; the light blocks
        below point the same roles at the light end of the ramps. */
     --bg-page: var(--umber-950);          /* warm charcoal, not pitch black */
