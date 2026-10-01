@@ -20,6 +20,7 @@ export const PAGES = [
   ['disclosure', 'disclosure.html'],
   ['search bar', 'search-bar.html'],
   ['chat bar', 'chat-bar.html'],
+  ['modal', 'modal.html'],
 ];
 
 // ---- theme ----

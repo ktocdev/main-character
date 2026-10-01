@@ -2,7 +2,7 @@
 
 A local Figma plugin that builds the Main Character component library from
 the design system pages (`static/design/`). There's one plugin for all
-thirteen components. It reads specs that are **generated from the live pages**
+fourteen components. It reads specs that are **generated from the live pages**
 rather than written by hand, so the Figma side can't drift from the CSS
 without `--check` saying so.
 
@@ -44,7 +44,7 @@ missing. If a set's name is already taken, the new set gets " (import)" and
 the old one is left alone.
 
 ## What it builds
-22 sets from 13 pages. Each variant's name is its page caption.
+23 sets from 14 pages. Each variant's name is its page caption.
 
 | page | sets | variants | properties |
 |---|---|---|---|
@@ -61,6 +61,7 @@ the old one is left alone.
 | disclosure | Disclosure | open | title, body |
 | search bar | Search bar | state × mode | query, mode |
 | chat bar | Chat bar | state × smart | message |
+| modal | Modal | actions | eyebrow, title, body |
 
 Composite sets use **instances** of the simpler ones wherever the page marks
 it, so a change to Button carries through:
@@ -71,6 +72,7 @@ it, so a change to Button carries through:
 - Menu holds Menu items, and an open Action menu holds a Menu.
 - Search bar holds a send-pill Button.
 - Chat bar holds a Toggle and two Buttons.
+- Modal holds one or two Buttons.
 
 An instance's text, as the page has it, is an override on the instance.
 

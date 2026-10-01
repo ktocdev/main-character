@@ -45,6 +45,7 @@ export const PAGES = [
   ['disclosure', 'Disclosure'],
   ['search-bar', 'Search bar'],
   ['chat-bar', 'Chat bar'],
+  ['modal', 'Modal'],
 ];
 
 const args = process.argv.slice(2);
