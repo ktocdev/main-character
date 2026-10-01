@@ -20,19 +20,19 @@
 <style>
   .spec-row .set-control select, #wizard-body select { width: 16rem; }
   /* The open list is drawn by the browser, outside the page, so it can't be
-     rendered live. This is a drawing of Chrome's dark list from a
+     rendered live. This is a drawing of Chrome's list from a
      screenshot: the rows are `select option` (--bg-muted, --text-default) from
      components.css; the rule, the highlight and its text are Chrome's own
-     colours, not tokens. */
+     colours, the --platform-* tokens in design.css. */
   .native-list {
     display: flex; flex-direction: column; width: 16rem;
-    background: var(--bg-muted); border: 1px solid #858585;
+    background: var(--bg-muted); border: 1px solid var(--platform-rule);
   }
   .native-list .opt {
     display: flex; align-items: center; height: 1.85rem; padding: 0 .75rem;
     color: var(--text-default); white-space: nowrap;
   }
-  .native-list .opt.hi { background: #99c8ff; color: #3b3b3b; }
+  .native-list .opt.hi { background: var(--platform-highlight); color: var(--platform-highlight-text); }
   .native-list.field { font: 1rem var(--font-body); }
   .native-list.quiet { width: auto; font: .8rem var(--font-ui); }
   .native-list.quiet .opt { height: 1.5rem; padding: 0 .55rem; }
@@ -93,7 +93,7 @@
 
     <section id="open">
       <div class="rule eyebrow strong">Open list</div>
-      <p class="note">Drawn, not live: the list opens outside the page. The width is the select's, the text lines up with the select's own, and the row under the pointer is Chrome's <span class="mono">#99c8ff</span> with <span class="mono">#3b3b3b</span> text, inside a <span class="mono">#858585</span> rule (sampled from Chrome on Windows, dark). Those three are not tokens and do not change with the theme in Figma; in the light theme the browser draws its own light list.</p>
+      <p class="note">Drawn, not live: the list opens outside the page. The width is the select's, the text lines up with the select's own, and the row under the pointer is Chrome's <span class="mono">--platform-highlight</span> with <span class="mono">--platform-highlight-text</span> text, inside a <span class="mono">--platform-rule</span> rule, sampled from Chrome on Windows in both themes. They are the browser's colours, not ours, and the live list's highlight comes from the operating system; they are tokens only so this drawing, and Figma's Platform collection, follow the theme.</p>
       <div class="spec-row top">
         <div class="native-list field" data-figma-set="Select list" data-figma-variant="kind=field">
           <div class="opt hi" data-figma-text="option 1">October 01, 2026 (long)</div>

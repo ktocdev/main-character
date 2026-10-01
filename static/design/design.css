@@ -4,6 +4,27 @@
      from static/design/ (home at /design) and render from the app's own
      tokens.css, base.css and components.css, so what they show is what the
      app draws. Page-specific specimen styles stay in each page. */
+  /* Platform colours: the browser's, not ours, so they sit outside the
+     ramps. The select and checkbox pages draw native chrome the page can't
+     style (the open list, the unchecked box) in colours sampled from Chrome
+     on Windows, dark and light (light sampled 2026-10-01). The app never
+     uses them; in Figma they are the Platform collection. */
+  :root {
+    --platform-highlight: #99c8ff;       /* the open list's hovered row */
+    --platform-highlight-text: #3b3b3b;  /* that row's text */
+    --platform-rule: #858585;            /* the open list's rule, the unchecked box's rule */
+    --platform-well: #3b3b3b;            /* the unchecked box's fill */
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --platform-highlight: #1967d2; --platform-highlight-text: #ffffff;
+      --platform-rule: #767676; --platform-well: #ffffff;
+    }
+  }
+  :root[data-theme="light"] {
+    --platform-highlight: #1967d2; --platform-highlight-text: #ffffff;
+    --platform-rule: #767676; --platform-well: #ffffff;
+  }
   body { height: auto; min-height: 100dvh; overflow: auto; }
   header .status { white-space: normal; }
   header .right { margin-left: auto; min-width: 0; font: .8rem var(--font-ui); color: var(--text-muted); display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .5rem .8rem; }

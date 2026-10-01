@@ -1,5 +1,5 @@
 {
-  "$comment": "The Card component for Figma, read by figma/card/code.js. Every value mirrors static/css/card.css (spec: docs/design_handoff_card/README.md); change both together. Lengths are rem (x remPx). A {rem, token} value is bound to the Figma variable of that token name; a bare number stays a literal because no token has that value. Colors are token names only; `fallback` is the dark palette from static/css/tokens.css, used only when the file has no variable by that name.",
+  "$comment": "The Card component for Figma, read by figma/card/code.js. Every value mirrors static/css/card.css (spec: docs/design_handoff_card/README.md); change both together. Lengths are rem (x remPx). A {rem, token} value is bound to the Figma variable of that token name; a bare number stays a literal because no token has that value. Colors are role names only (the Semantic collection that figma/components syncs); `fallback` is their dark values from static/css/tokens.css, used only when the file has no variable by that name.",
   "name": "Card",
   "remPx": 16,
   "fonts": {
@@ -8,14 +8,14 @@
   },
   "colors": {
     "card": "bg-raised",
-    "border": "border",
-    "visual": "bg-input",
-    "glyph": "accent",
-    "type": "accent-dim",
-    "title": "text",
-    "desc": "text-dim",
-    "badgeFill": "bg-input",
-    "badgeText": "text-dim"
+    "border": "border-default",
+    "visual": "bg-muted",
+    "glyph": "text-accent",
+    "type": "text-accent-muted",
+    "title": "text-default",
+    "desc": "text-muted",
+    "badgeFill": "bg-muted",
+    "badgeText": "text-muted"
   },
   "radius": {
     "card": { "px": 10, "token": "radius-lg" },
@@ -23,12 +23,12 @@
   },
   "fallback": {
     "bg-raised": "#2a2521",
-    "bg-input": "#322c27",
-    "border": "#3d362f",
-    "text": "#e8e0d5",
-    "text-dim": "#a99f92",
-    "accent": "#d99e5b",
-    "accent-dim": "#8a6a44"
+    "bg-muted": "#322c27",
+    "border-default": "#3d362f",
+    "text-default": "#e8e0d5",
+    "text-muted": "#a99f92",
+    "text-accent": "#d99e5b",
+    "text-accent-muted": "#8a6a44"
   },
   "sample": {
     "type": "summary",

@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Runs code.js against the stand-in Figma API (fake-figma.mjs) with every
 // spec in specs/, the way the plugin runs them in Figma: all at once, in
-// order. The variables are the ones the Main Character Figma file has
-// (figma/main-character-figma-fonts-v3/figma-variables). Fails on any error
-// the API would throw, any instance that had to be drawn in place, and any
-// set whose variant count or properties don't match its spec.
+// order. The file starts with the variables the Main Character Figma file
+// had (figma/main-character-figma-fonts-v3/figma-variables, the old colour
+// names among them); variables.figma.json then syncs the Primitives,
+// Semantic and Platform collections into it. Fails on any error the API
+// would throw, any instance that had to be drawn in place, any set whose
+// variant count or properties don't match its spec, any role that isn't an
+// alias to a ramp step in both modes, and any colour token bound anywhere
+// but the Semantic or Platform collection.
 //
 //   node test/run.mjs
 
@@ -64,7 +68,7 @@ for (const l of figma.logs) {
   if (l.kind === 'warn' && /drew it in place/.test(l.text)) fail(l.text);
 }
 const sets = figma.currentPage.children.filter(n => n.type === 'COMPONENT_SET');
-const specs = texts.map(t => JSON.parse(t)).sort((a, b) => a.order - b.order);
+const specs = texts.map(t => JSON.parse(t)).filter(s => s.kind !== 'variables').sort((a, b) => a.order - b.order);
 for (const spec of specs) for (const s of spec.sets) {
   const node = sets.find(n => n.name === s.name);
   if (!node) { fail(`no set "${s.name}"`); continue; }
@@ -76,5 +80,34 @@ for (const spec of specs) for (const s of spec.sets) {
 for (const l of figma.logs) if (l.kind === 'warn') console.log('warn: ' + l.text.split('\n')[0]);
 const bound = figma.logs.find(l => /^Bound/.test(l.text || ''));
 if (bound) console.log(bound.text.split('\n')[0]);
+
+// the synced colour variables
+const vspec = JSON.parse(texts.find(t => JSON.parse(t).kind === 'variables'));
+const cols = await figma.variables.getLocalVariableCollectionsAsync();
+const all = await figma.variables.getLocalVariablesAsync('COLOR');
+const col = name => cols.find(c => c.name === name);
+for (const [name, group, modes] of [['Primitives', vspec.primitives, ['Value']], ['Semantic', vspec.semantic, ['Dark', 'Light']], ['Platform', vspec.platform, ['Dark', 'Light']]]) {
+  const c = col(name);
+  if (!c) { fail(`no ${name} collection`); continue; }
+  if (c.modes.map(m => m.name).join() !== modes.join()) fail(`${name}: modes ${c.modes.map(m => m.name).join()}`);
+  const mine = all.filter(v => v.variableCollectionId === c.id);
+  if (mine.length !== Object.keys(group).length) fail(`${name}: ${mine.length} variables, spec has ${Object.keys(group).length}`);
+  for (const v of mine) for (const m of c.modes) {
+    const value = v.valuesByMode[m.modeId];
+    if (!value) { fail(`${name} ${v.name}: no ${m.name} value`); continue; }
+    if (name === 'Semantic') {
+      const target = all.find(x => x.id === value.id);
+      const want = group[v.name][m.name.toLowerCase()];
+      if (value.type !== 'VARIABLE_ALIAS' || !target || target.name !== want || target.variableCollectionId !== col('Primitives').id)
+        fail(`Semantic ${v.name} ${m.name}: not an alias to Primitives ${want}`);
+    }
+  }
+}
+console.log(`variables: ${Object.keys(vspec.primitives).length} primitives, ${Object.keys(vspec.semantic).length} roles (aliases in Dark and Light), ${Object.keys(vspec.platform).length} platform`);
+for (const line of (bound ? bound.text.split('\n').slice(1) : [])) {
+  const [token, label] = line.trim().split(' → ');
+  if (/^(space|font|radius)-/.test(token)) continue;
+  if (!/^(Semantic|Platform) \//.test(label)) fail(`colour token ${token} bound to ${label}`);
+}
 console.log(failed ? 'FAILED' : `ok: ${sets.length} sets built`);
 process.exit(failed ? 1 : 0);
