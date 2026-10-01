@@ -1,22 +1,10 @@
   /* SPDX-License-Identifier: AGPL-3.0-or-later */
   /* Help: a reading column with a sticky jump row and an accordion of
-     sections. Prose is the page's 17px/1.65 serif; steps drop to .95rem. */
+     sections (.disclosure). Prose is the page's 17px/1.65 serif; steps drop to .95rem. */
   #help { padding-bottom: 4rem; }
   #help .jump-pills .text { flex-shrink: 0; white-space: nowrap; }
 
-  /* the accordion: a full-width header button, hairline between sections */
-  .help-sec { border-bottom: 1px solid var(--border); }
-  .help-sec > summary {
-    list-style: none; cursor: pointer; user-select: none;
-    display: flex; align-items: baseline; gap: .7rem; padding: 1.1rem 0;
-    font: italic 1.3rem var(--font-body); color: var(--accent); text-wrap: pretty;
-  }
-  .help-sec > summary::-webkit-details-marker { display: none; }
-  .help-sec > summary .mark { font: .8rem var(--font-ui); color: var(--text-dim); min-width: .8rem; }
-  .help-sec > summary .mark::before { content: "›"; display: inline-block; transition: transform .15s ease; }
-  .help-sec[open] > summary .mark::before { content: "⌄"; }
-  .help-body { display: flex; flex-direction: column; gap: .8rem; padding: 0 0 1.5rem 1.5rem; }
-  .help-body p { text-wrap: pretty; }
+  /* the accordion is the Disclosure component (components.css) */
   #help b, #help strong { color: var(--accent); font-weight: 600; }
   #help em { color: var(--text); }
   #help code {

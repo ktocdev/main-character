@@ -10,7 +10,7 @@
   .set-group { display: flex; flex-direction: column; gap: 1.4rem; }
   .set-group > .rule { padding-bottom: .4rem; }
   .set-group > .set-help { margin: -.4rem 0 0; }
-  .set-row label, .set-row .set-label { display: block; font-size: 1rem; color: var(--text); margin-bottom: .35rem; }
+  .set-row label:not(.check-row), .set-row .set-label { display: block; font-size: 1rem; color: var(--text); margin-bottom: .35rem; }
   .set-control select, .set-control input[type=text], .set-control input[type=password] {
     width: min(100%, 22rem); background: var(--bg-input); color: var(--text);
     border: 1px solid var(--border); border-radius: 4px; padding: .4rem .7rem;
@@ -39,17 +39,7 @@
   .set-cost-total { font: 600 1.2rem var(--font-ui); color: var(--text); font-variant-numeric: tabular-nums; }
   .set-cost-total + .set-help { margin-top: .3rem; }
 
-  /* category toggles: a checkbox and its definition on one row; the whole
-     row is the label */
-  #set-categories-control { display: flex; flex-direction: column; gap: .2rem; max-width: 34rem; }
-  label.set-check {
-    display: flex; align-items: flex-start; gap: .8rem; padding: .35rem .3rem; border-radius: var(--radius-sm);
-    cursor: pointer; font-size: .95rem; line-height: 1.5; color: var(--text-dim); margin: 0;
-  }
-  label.set-check:hover { background: var(--bg-raised); }
-  .set-check input { margin: .3rem 0 0; flex-shrink: 0; }
-  .set-check strong { font: 600 .9rem var(--font-ui); color: var(--text); }
-  .set-check:has(input:not(:checked)) strong { color: var(--text-dim); }
+  /* category toggles are the CheckboxFieldset (.check-group, components.css) */
 
   /* data actions: quiet buttons, the result as a notice card beneath */
   .set-control > :is(button, a).quiet { min-height: 2.4rem; padding: .3rem .9rem; font-size: .85rem; }

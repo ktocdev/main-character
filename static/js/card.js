@@ -32,7 +32,7 @@ function badgeRow(badges, size) {
   const shown = labels.length > max ? labels.slice(0, max - 1) : labels;
   for (const label of shown) {
     const s = document.createElement('span');
-    s.className = 'card-badge';
+    s.className = 'badge card-badge';
     s.textContent = label;
     row.appendChild(s);
   }

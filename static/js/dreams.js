@@ -83,7 +83,7 @@ function card(d) {
   head.appendChild(h);
   for (const t of d.tones || []) {
     const b = document.createElement('button');
-    b.className = 'dream-tone';
+    b.className = 'badge lg accent';
     b.textContent = t;
     b.title = `show only ${t} dreams`;
     b.onclick = () => { toneFilter = t; renderDreams(); };

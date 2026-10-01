@@ -209,7 +209,7 @@ function renderCategories() {
     '<p class="wiz-lede">These are the tags the journal suggests on a new',
     '  entry. They are all on by default. Turn off any that do not apply, so they',
     '  never show up as noise.</p>',
-    '<div id="wiz-cats"></div>',
+    '<div id="wiz-cats" class="check-group ui"></div>',
     '<h3 class="wiz-sub">Add your own</h3>',
     '<p class="wiz-help">Worth doing now if you already know you want one. A',
     '  category added later does not go back and tag what you wrote before it',
@@ -230,7 +230,7 @@ function renderCategories() {
   const off = new Set(draft.disabled);
   for (const c of cats) {
     const row = document.createElement('label');
-    row.className = 'wiz-check';
+    row.className = 'check-row ui';
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.value = c.name;

@@ -10,11 +10,6 @@
   #dream-list { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.2rem; }
   .dream-card .head { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem .6rem; }
   .dream-card h3 { font: 600 .95rem var(--font-ui); color: var(--text-dim); }
-  .dream-tone {
-    border: 0; background: var(--bg-input); color: var(--accent);
-    font: .72rem/1 var(--font-ui); height: 1.5rem; padding: 0 .6rem; border-radius: var(--radius-pill);
-  }
-  .dream-tone:hover { color: var(--text); }
   .dream-card .head .text { margin-left: auto; font-size: .78rem; }
   .dream-card p { margin: .6rem 0 0; text-wrap: pretty; white-space: pre-wrap; }
   .dream-cast {

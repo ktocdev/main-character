@@ -34,3 +34,22 @@
   .note { max-width: 40rem; font-size: .85rem; color: var(--text-dim); text-wrap: pretty; }
   .mono { font-family: var(--font-ui); color: var(--text); }
   .segmented button { min-height: 2rem; min-width: 3.4rem; padding: 0 .7rem; font-size: .8rem; }
+
+  /* ---- specimens: shared by the component pages ---- */
+  .spec-line { font: .8rem var(--font-ui); color: var(--text-dim); }
+  .spec-line b { font-weight: 600; font-size: .95rem; color: var(--text); margin-right: .3rem; }
+  .stack { display: flex; flex-direction: column; gap: 1rem; }
+  /* a row of specimens, each captioned by design.js with its variant */
+  .spec-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.2rem 1.6rem; }
+  .spec-row.top { align-items: flex-start; }
+  .spec-cell { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; }
+  .spec-cell > .cap { font: .72rem var(--font-ui); color: var(--text-dim); white-space: nowrap; }
+  /* room above for a specimen whose popover opens upward */
+  .spec-row.menus { padding-top: 13rem; }
+  .parts { display: grid; grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr); gap: .5rem 1rem; }
+  .parts > div { padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
+  .parts .part { font: 600 .9rem var(--font-ui); color: var(--text); }
+  .parts .rule-text { font-size: .85rem; line-height: 1.45; color: var(--text-dim); text-wrap: pretty; }
+  pre.tree { font: .8rem/1.6 var(--font-ui); color: var(--text-dim); background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: .9rem 1.1rem; overflow-x: auto; }
+  /* a component shown where it lives in the app */
+  .in-context { padding: 1rem 1.2rem; border: 1px dashed var(--border); border-radius: var(--radius-lg); }

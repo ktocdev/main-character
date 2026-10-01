@@ -106,8 +106,32 @@
   }
   .chip-toggle:hover { color: var(--text); }
   .chip-toggle.on, .chip-toggle[aria-pressed="true"] {
-    background: var(--accent-dim); color: var(--bg); border-color: var(--accent-dim);
+    background: var(--toggle-on); color: var(--bg); border-color: var(--toggle-on);
   }
+  /* soft: on = a filled --bg-input pill in --text, for a mode switch whose
+     two states are both ordinary (search's meaning / exact text) */
+  .chip-toggle.soft.on, .chip-toggle.soft[aria-pressed="true"] {
+    background: var(--bg-input); color: var(--text); border-color: var(--border);
+  }
+  .chip-toggle.soft:hover { color: var(--text); background: var(--bg-raised); }
+
+  /* ---- Badge: a small read-only label pill (item cards, search's
+     "related", a dream's tones). A badge that is a button says so on hover. */
+  .badge {
+    display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; vertical-align: middle;
+    font: var(--font-2xs)/1.4 var(--font-ui); font-variant-numeric: tabular-nums;
+    padding: .1rem .5rem; border-radius: var(--radius-pill);
+    background: var(--bg-input); border: 1px solid var(--border); color: var(--text-dim);
+  }
+  .badge.sm { font-size: .68rem; letter-spacing: .04em; padding: .05rem .6rem; }
+  .badge.lg { font-size: .72rem; padding: .2rem .6rem; }
+  /* outline: no fill, --accent-dim text (search's "related") */
+  .badge.outline { background: transparent; color: var(--accent-dim); }
+  /* accent: no rule, --accent text (a dream's tones) */
+  .badge.accent { border-color: transparent; color: var(--accent); }
+  button.badge { cursor: pointer; }
+  button.badge:hover { color: var(--text); }
 
   /* ---- JumpPills: sticky at the top of a scrolling column ---- */
   .jump-pills {
@@ -221,6 +245,32 @@
   textarea:focus, input:focus { border-color: var(--accent-dim); }
   ::placeholder { color: var(--text-dim); opacity: .7; }
   input[type=checkbox] { accent-color: var(--accent); width: 1rem; height: 1rem; margin: 0; cursor: pointer; }
+  /* a checkbox beside its label, inline with other controls (write's no reply) */
+  label.check-inline {
+    display: inline-flex; align-items: center; gap: .4rem; cursor: pointer;
+    font: .85rem var(--font-ui); color: var(--text-dim); min-height: 2.2rem; padding: 0 .2rem;
+    white-space: nowrap;
+  }
+  /* CheckboxFieldset: a stack of rows, each a checkbox and its definition;
+     the whole row is the label (settings and wizard categories) */
+  .check-group { display: flex; flex-direction: column; gap: .2rem; max-width: 34rem; }
+  label.check-row {
+    display: flex; align-items: flex-start; gap: .8rem; padding: .35rem .3rem; border-radius: var(--radius-sm);
+    cursor: pointer; font-size: .95rem; line-height: 1.5; color: var(--text-dim); margin: 0;
+  }
+  label.check-row:hover { background: var(--bg-raised); }
+  .check-row input { margin: .3rem 0 0; flex-shrink: 0; }
+  .check-row strong { font: 600 .9rem var(--font-ui); color: var(--text); }
+  .check-row:has(input:not(:checked)) strong { color: var(--text-dim); }
+  /* ui: all in the UI face, smaller, no hover fill (the wizard's card) */
+  .check-group.ui { gap: 0; max-width: none; }
+  label.check-row.ui {
+    gap: var(--space-3); align-items: baseline; padding: var(--space-2) 0; border-radius: 0;
+    font: var(--font-xs)/1.45 var(--font-ui);
+  }
+  label.check-row.ui:hover { background: transparent; }
+  .check-row.ui input { margin: 0; }
+  .check-row.ui strong { font: inherit; font-weight: 600; }
   /* the 2.4rem filter input */
   input.input-sm { min-height: 2.4rem; padding: .4rem .8rem; font-size: .95rem; }
   /* the 2.2rem inline field (edit rows, inline forms) */
@@ -241,17 +291,34 @@
     padding: .5rem clamp(1rem, 3vw, 1.5rem) clamp(1rem, 3vw, 1.5rem);
     display: flex; flex-direction: column; gap: .6rem;
   }
-  /* compact: one --bg-input box, pill buttons bottom-right */
-  .composer .box {
+  /* ---- ChatBar: the compact composer, one --bg-input box with the
+     textarea on top and pill buttons bottom-right (chat) ---- */
+  .chat-bar {
     background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px;
     padding: .7rem .9rem .55rem; display: flex; flex-direction: column; gap: .4rem;
   }
-  .composer .box:focus-within { border-color: var(--accent-dim); }
-  .composer .box textarea {
+  .chat-bar:focus-within { border-color: var(--accent-dim); }
+  .chat-bar textarea {
     min-height: 3.2rem; background: transparent; border: 0; padding: 0; border-radius: 0;
   }
-  .composer .box-row { display: flex; align-items: center; gap: .9rem; justify-content: flex-end; flex-wrap: wrap; }
-  .composer .box-row .left { margin-right: auto; display: flex; align-items: center; gap: .5rem; }
+  .chat-bar-row { display: flex; align-items: center; gap: .9rem; justify-content: flex-end; flex-wrap: wrap; }
+  .chat-bar-row .left { margin-right: auto; display: flex; align-items: center; gap: .5rem; }
+
+  /* ---- SearchBar: the same box on one line, input left and controls
+     right (search) ---- */
+  .search-bar {
+    background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 12px; padding: .55rem .6rem .55rem .9rem;
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem;
+  }
+  .search-bar:focus-within { border-color: var(--accent-dim); }
+  .search-bar input {
+    flex: 1 1 12rem; min-width: 0; min-height: 1.8rem;
+    background: transparent; border: 0; border-radius: 0; padding: 0; line-height: 1.4;
+  }
+  .search-bar .controls { display: flex; align-items: center; gap: .5rem; margin-left: auto; }
+  /* the mode toggle: a 1.8rem pill, a touch wider than the stock toggle */
+  .search-bar .chip-toggle { height: 1.8rem; min-height: 0; padding: 0 .75rem; }
 
   /* ---- Message: YOU / COMPANION transcript block ---- */
   .msg { margin-bottom: 1.6rem; white-space: pre-wrap; text-wrap: pretty; }
@@ -325,13 +392,16 @@
   .checklist .failed .mark { color: var(--error); }
 
   /* ---- Tooltip (replaces every title) ---- */
-  #tip {
-    position: fixed; z-index: 60; pointer-events: none;
+  /* tooltip.js makes the one live #tip; .tooltip is the card itself, so the
+     design pages can draw it in place */
+  .tooltip {
+    pointer-events: none;
     background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-base);
     padding: .4rem .7rem; font: .8rem/1.4 var(--font-ui); color: var(--text);
     width: max-content; max-width: 16rem; box-shadow: 0 6px 18px rgba(0,0,0,.25);
     text-wrap: pretty; text-align: left; text-transform: none; letter-spacing: 0; font-style: normal;
   }
+  #tip { position: fixed; z-index: 60; }
   #tip[hidden] { display: none; }
 
   /* ---- Popover / menu ---- */
@@ -345,6 +415,34 @@
   }
   .popover button.quiet:hover { background: var(--bg-input); }
   .popover[hidden] { display: none; }
+
+  /* ---- ActionMenu: a ⋯ <details> whose summary is the trigger and whose
+     popover opens upward, right-aligned (write's chapter actions) ---- */
+  .action-menu { position: relative; }
+  .action-menu > summary {
+    list-style: none; display: inline-flex; align-items: center; justify-content: center;
+    width: 2.8rem; height: 2.2rem; cursor: pointer; color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: var(--radius-base);
+    font: .95rem var(--font-ui); letter-spacing: .1em; background: transparent;
+  }
+  .action-menu > summary::-webkit-details-marker { display: none; }
+  .action-menu > summary:hover, .action-menu[open] > summary { color: var(--text); background: var(--bg-raised); }
+  .action-menu > .menu { bottom: calc(100% + .5rem); right: 0; }
+
+  /* ---- Disclosure: a <details> accordion section, a full-width italic
+     header with a › / ⌄ mark and a hairline under each (help) ---- */
+  .disclosure { border-bottom: 1px solid var(--border); }
+  .disclosure > summary {
+    list-style: none; cursor: pointer; user-select: none;
+    display: flex; align-items: baseline; gap: .7rem; padding: 1.1rem 0;
+    font: italic 1.3rem var(--font-body); color: var(--accent); text-wrap: pretty;
+  }
+  .disclosure > summary::-webkit-details-marker { display: none; }
+  .disclosure > summary .mark { font: .8rem var(--font-ui); color: var(--text-dim); min-width: .8rem; }
+  .disclosure > summary .mark::before { content: "›"; display: inline-block; transition: transform .15s ease; }
+  .disclosure[open] > summary .mark::before { content: "⌄"; }
+  .disclosure-body { display: flex; flex-direction: column; gap: .8rem; padding: 0 0 1.5rem 1.5rem; }
+  .disclosure-body p { text-wrap: pretty; }
 
   /* ---- small-caps inline label (TRIGGER, CAST, YOUR READ) ---- */
   .sc-label {

@@ -22,6 +22,7 @@ function ensure() {
   if (tip) return tip;
   tip = document.createElement('div');
   tip.id = 'tip';
+  tip.className = 'tooltip';
   tip.setAttribute('role', 'tooltip');
   tip.hidden = true;
   document.body.appendChild(tip);

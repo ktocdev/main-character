@@ -222,7 +222,7 @@ export async function loadSettings() {
         entries. Turn off any that don’t fit your life, and the
         journal will still grow its own categories from what you write. Entries
         you’ve already tagged keep their tags either way.</p>
-      <div class="set-row"><div class="set-control" id="set-categories-control"></div></div>
+      <div class="set-row"><div class="set-control check-group" id="set-categories-control"></div></div>
     </section>
     <section class="set-group" data-set="models">
       <div class="rule eyebrow">models &amp; cost</div>
@@ -375,7 +375,7 @@ export async function loadSettings() {
       .split(',').map(s => s.trim()).filter(Boolean));
     for (const c of o.categories) {
       const row = document.createElement('label');
-      row.className = 'set-check';
+      row.className = 'check-row';
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.value = c.name;

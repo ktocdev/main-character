@@ -56,24 +56,9 @@
      scroll). This is only the backstop if that JS hasn't run yet. */
   #entry-text { min-height: 6.6rem; max-height: 85vh; overflow-y: auto; }
   .write-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .6rem; }
-  /* the no-reply toggle sits with the other controls */
-  #noreply-wrap {
-    display: inline-flex; align-items: center; gap: .4rem; cursor: pointer;
-    font: .85rem var(--font-ui); color: var(--text-dim); min-height: 2.2rem; padding: 0 .2rem;
-    white-space: nowrap;
-  }
   .saved-note { font: .85rem var(--font-ui); color: var(--accent-dim); text-wrap: pretty; }
-  /* the ⋯ menu, pinned right, opening upward */
-  #write-actions { position: relative; margin-left: auto; }
-  #write-actions summary {
-    list-style: none; display: inline-flex; align-items: center; justify-content: center;
-    width: 2.8rem; height: 2.2rem; cursor: pointer; color: var(--text-dim);
-    border: 1px solid var(--border); border-radius: var(--radius-base);
-    font: .95rem var(--font-ui); letter-spacing: .1em; background: transparent;
-  }
-  #write-actions summary::-webkit-details-marker { display: none; }
-  #write-actions summary:hover, #write-actions[open] summary { color: var(--text); background: var(--bg-raised); }
-  #write-actions .menu { bottom: calc(100% + .5rem); right: 0; }
+  /* the ⋯ ActionMenu (components.css), pinned right */
+  #write-actions { margin-left: auto; }
 
   /* ---- chat: the compact composer's toggle ---- */
   #lookup-smart[hidden] { display: none; }
