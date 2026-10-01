@@ -1,0 +1,233 @@
+{
+  "color/dark": {
+    "bg": {
+      "value": "#211d19",
+      "type": "color",
+      "description": "Page background — warm charcoal, never pure black"
+    },
+    "bg-raised": {
+      "value": "#2a2521",
+      "type": "color",
+      "description": "Cards, panels, dropdown menus — one step up from bg"
+    },
+    "bg-input": {
+      "value": "#322c27",
+      "type": "color",
+      "description": "Text inputs, textareas, chips, pressed/active nav"
+    },
+    "text": {
+      "value": "#e8e0d5",
+      "type": "color",
+      "description": "Primary text"
+    },
+    "text-dim": {
+      "value": "#a99f92",
+      "type": "color",
+      "description": "Secondary/meta text — timestamps, labels, help copy"
+    },
+    "accent": {
+      "value": "#d99e5b",
+      "type": "color",
+      "description": "\"Lamp amber\" — the one accent hue. Small surfaces only"
+    },
+    "accent-dim": {
+      "value": "#8a6a44",
+      "type": "color",
+      "description": "Quieter accent — eyebrows, dashed borders, date labels"
+    },
+    "border": {
+      "value": "#3d362f",
+      "type": "color",
+      "description": "All hairline borders and dividers"
+    },
+    "you": {
+      "value": "#c9b99f",
+      "type": "color",
+      "description": "The user's own words in a transcript"
+    },
+    "error": {
+      "value": "#c96a5a",
+      "type": "color",
+      "description": "The only danger/error state"
+    }
+  },
+  "color/light": {
+    "bg": {
+      "value": "#faf7f2",
+      "type": "color",
+      "description": "Page background — warm charcoal, never pure black"
+    },
+    "bg-raised": {
+      "value": "#ffffff",
+      "type": "color",
+      "description": "Cards, panels, dropdown menus — one step up from bg"
+    },
+    "bg-input": {
+      "value": "#f1ece4",
+      "type": "color",
+      "description": "Text inputs, textareas, chips, pressed/active nav"
+    },
+    "text": {
+      "value": "#38322b",
+      "type": "color",
+      "description": "Primary text"
+    },
+    "text-dim": {
+      "value": "#6b6258",
+      "type": "color",
+      "description": "Secondary/meta text — timestamps, labels, help copy"
+    },
+    "accent": {
+      "value": "#9c6021",
+      "type": "color",
+      "description": "\"Lamp amber\" — the one accent hue. Small surfaces only"
+    },
+    "accent-dim": {
+      "value": "#827020",
+      "type": "color",
+      "description": "Quieter accent — eyebrows, dashed borders, date labels"
+    },
+    "border": {
+      "value": "#e4dcd0",
+      "type": "color",
+      "description": "All hairline borders and dividers"
+    },
+    "you": {
+      "value": "#6a4a2a",
+      "type": "color",
+      "description": "The user's own words in a transcript"
+    },
+    "error": {
+      "value": "#a8493a",
+      "type": "color",
+      "description": "The only danger/error state"
+    }
+  },
+  "scale": {
+    "fontSize": {
+      "3xs": {
+        "value": "11.2",
+        "type": "fontSizes"
+      },
+      "2xs": {
+        "value": "12",
+        "type": "fontSizes"
+      },
+      "xs": {
+        "value": "12.8",
+        "type": "fontSizes"
+      },
+      "sm": {
+        "value": "13.6",
+        "type": "fontSizes"
+      },
+      "base": {
+        "value": "15.2",
+        "type": "fontSizes"
+      },
+      "md": {
+        "value": "16.8",
+        "type": "fontSizes"
+      },
+      "lg": {
+        "value": "18.4",
+        "type": "fontSizes"
+      },
+      "xl": {
+        "value": "22.4",
+        "type": "fontSizes"
+      }
+    },
+    "space": {
+      "1": {
+        "value": "4",
+        "type": "spacing"
+      },
+      "2": {
+        "value": "6.4",
+        "type": "spacing"
+      },
+      "3": {
+        "value": "8",
+        "type": "spacing"
+      },
+      "4": {
+        "value": "9.6",
+        "type": "spacing"
+      },
+      "5": {
+        "value": "12.8",
+        "type": "spacing"
+      },
+      "6": {
+        "value": "16",
+        "type": "spacing"
+      },
+      "7": {
+        "value": "19.2",
+        "type": "spacing"
+      },
+      "8": {
+        "value": "24",
+        "type": "spacing"
+      }
+    },
+    "radius": {
+      "sm": {
+        "value": "6",
+        "type": "borderRadius"
+      },
+      "base": {
+        "value": "8",
+        "type": "borderRadius"
+      },
+      "lg": {
+        "value": "10",
+        "type": "borderRadius"
+      },
+      "pill": {
+        "value": "999",
+        "type": "borderRadius"
+      },
+      "circle": {
+        "value": "50%",
+        "type": "borderRadius"
+      }
+    },
+    "fontFamily": {
+      "body": {
+        "value": "Old Standard TT",
+        "type": "fontFamilies"
+      },
+      "ui": {
+        "value": "CMU Sans Demi Condensed",
+        "type": "fontFamilies"
+      }
+    }
+  },
+  "$themes": [
+    {
+      "id": "dark",
+      "name": "Dark",
+      "selectedTokenSets": {
+        "color/dark": "enabled",
+        "scale": "enabled"
+      }
+    },
+    {
+      "id": "light",
+      "name": "Light",
+      "selectedTokenSets": {
+        "color/light": "enabled",
+        "scale": "enabled"
+      }
+    }
+  ],
+  "$metadata": {
+    "tokenSetOrder": [
+      "color/dark",
+      "color/light",
+      "scale"
+    ]
+  }
+}
