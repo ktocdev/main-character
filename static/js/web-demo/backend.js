@@ -55,6 +55,8 @@
   const END = "That's the end of the demo script. Refresh the page to start "
     + 'again, or clone Main Character from https://github.com/ktocdev/main-character '
     + 'to run it with your own journal.';
+  // An empty box past the end says so before anything is sent.
+  const END_HINT = "that's the end of the demo script. Refresh to start again";
 
   // The lookup log and the write box's draft live in localStorage, so a reload
   // would bring back text from a run of the script that no longer exists.
@@ -224,9 +226,15 @@
     }
     const at = step ? step.ts : ts;
     current.messages.push({role: 'you', kind: 'entry', entry_id: id, text, ts: at});
-    if (body.no_reply) return json({ok: true, entry_id: id, no_reply: true, duplicate: false});
+    if (body.no_reply) {
+      prefillWrite();   // the app cleared the box before it posted
+      return json({ok: true, entry_id: id, no_reply: true, duplicate: false});
+    }
     const reply = step ? step.reply : await unscripted(text, writeAt);
-    return stream(reply, saved, () => current.messages.push({role: 'companion', text: reply, ts: at}));
+    return stream(reply, saved, () => {
+      current.messages.push({role: 'companion', text: reply, ts: at});
+      prefillWrite();
+    });
   }
 
   async function chat(body) {
@@ -235,7 +243,10 @@
     const at = step ? step.ts : nowStamp();
     current.messages.push({role: 'you', kind: 'chat', text, ts: at});
     const reply = step ? step.reply : await unscripted(text, writeAt);
-    return stream(reply, {}, () => current.messages.push({role: 'companion', text: reply, ts: at}));
+    return stream(reply, {}, () => {
+      current.messages.push({role: 'companion', text: reply, ts: at});
+      prefillWrite();
+    });
   }
 
   // The write step a send answers to, if it is one, and the script moves
@@ -284,7 +295,12 @@
     const noReply = button.id === 'entry-send'
       && document.getElementById('entry-noreply')?.checked;
     const step = script.write[noReply ? nextEntry(writeAt) : writeAt];
-    if (!step) return;               // the script is over: sent as typed
+    if (!step) {
+      // The script is over: sent as typed. A no-reply save never streams,
+      // so the end message would have nowhere to show; take the reply path.
+      if (noReply) document.getElementById('entry-noreply').checked = false;
+      return;
+    }
     box.value = step.text;
     if (!noReply && button.id !== RIGHT_BUTTON[step.send]) {
       // the next step is an entry and they pressed send, or the other way round
@@ -301,6 +317,22 @@
     const step = script.lookup[lookupAt];
     if (step) box.value = step.text;
   }
+
+  // ---- the next message, shown before it's sent ----
+  // Each box holds the next scripted message, so what will be sent is never
+  // a surprise. It stays editable, and whatever is in it is swapped all the
+  // same. The box isn't grown to fit: a long entry put in as a reply lands
+  // would push that reply up out of view. Setting .value fires no input
+  // event, so the write tab's "Started …" stamp doesn't start either.
+  function prefill(id, step) {
+    const box = document.getElementById(id);
+    if (!box) return;
+    if (step) { box.value = step.text; return; }
+    box.value = '';
+    box.placeholder = END_HINT;
+  }
+  const prefillWrite = () => prefill('entry-text', script.write[writeAt]);
+  const prefillLookup = () => prefill('chat-text', script.lookup[lookupAt]);
 
   document.addEventListener('click', e => {
     const button = e.target.closest && e.target.closest('#entry-send, #chat-send, #lookup-send');
@@ -355,6 +387,7 @@
     // The new chapter starts blank, so an answer to a question asked in the
     // old one would make no sense: the next send is the next scripted entry.
     writeAt = nextEntry(writeAt);
+    prefillWrite();
     runPipeline(first);
     return json(result);
   }
@@ -516,7 +549,7 @@
       case '/api/entry': return writeEntry(body);
       case '/api/chat': return chat(body);
       case '/api/reflect': return reflect();
-      case '/api/lookup': return stream(await lookupReply(String(body.message || '').trim()));
+      case '/api/lookup': return stream(await lookupReply(String(body.message || '').trim()), {}, prefillLookup);
       case '/api/lookup/reset':
       case '/api/reset': return json({ok: true});
       case '/api/sessions/seed': return json({ok: true, seeded: 0});
@@ -525,6 +558,54 @@
       default: return json({error: READ_ONLY}, 403);
     }
   }
+
+  // ---- the notice ----
+  // The swap would surprise anyone who didn't know about it, so the demo
+  // opens by saying so, in the design system's Modal (a <dialog>, built here
+  // rather than in index.html, so the app's markup stays the app's). Nothing
+  // is stored, so it opens on every load. Shown once the app has drawn and
+  // the script is loaded, along with the first pre-fill.
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+
+  function notice() {
+    const d = el('dialog', 'modal');
+    d.id = 'demo-notice';
+    d.setAttribute('aria-labelledby', 'demo-notice-title');
+    const title = el('h2', 'modal-title', 'This demo follows a script');
+    title.id = 'demo-notice-title';
+    const form = el('form', 'modal-actions');
+    form.method = 'dialog';
+    const ok = el('button', 'send', 'start writing');
+    ok.autofocus = true;
+    form.append(ok);
+    d.append(
+      el('div', 'eyebrow', 'web demo'), title,
+      el('p', 'modal-body', 'Type anything and press send. Your text is swapped for '
+        + "the next entry in Jordan's week, and the reply was written for that entry. "
+        + "The box shows what's coming next. Nothing is saved, so refresh to start over."),
+      form);
+    d.addEventListener('close', () => {
+      d.remove();
+      document.getElementById('entry-text')?.focus();
+    });
+    document.body.append(d);
+    d.showModal();
+  }
+
+  const drawn = new Promise(r => {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', r, {once: true});
+    else r();
+  });
+  Promise.all([ready, drawn]).then(() => {
+    prefillWrite();
+    prefillLookup();
+    notice();
+  });
 
   window.fetch = async function (input, init) {
     const url = typeof input === 'string' ? input : (input && input.url) || String(input);
