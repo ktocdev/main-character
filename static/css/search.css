@@ -2,48 +2,28 @@
   /* Search: one scrolling column (Pattern A): bar, status line, hits. */
   #search-pane { display: flex; flex-direction: column; }
 
-  /* the compact bar: input and controls share one --bg-input box */
-  #search-bar {
-    margin: 0 0 .9rem; background: var(--bg-input); border: 1px solid var(--border);
-    border-radius: 12px; padding: .55rem .6rem .55rem .9rem;
-    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem;
-  }
-  #search-bar:focus-within { border-color: var(--accent-dim); }
-  #search-bar input {
-    flex: 1 1 12rem; min-width: 0; min-height: 1.8rem;
-    background: transparent; border: 0; border-radius: 0; padding: 0; line-height: 1.4;
-  }
-  #search-bar .controls { display: flex; align-items: center; gap: .5rem; margin-left: auto; }
-  /* the mode toggle: a 1.8rem pill; exact text fills it */
-  #search-mode { font-size: .78rem; height: 1.8rem; min-height: 0; padding: 0 .75rem; }
-  #search-mode.on, #search-mode[aria-pressed="true"] {
-    background: var(--bg-input); color: var(--text); border-color: var(--border);
-  }
-  #search-mode:hover { color: var(--text); background: var(--bg-raised); }
+  /* the bar is the SearchBar component (components.css) */
+  #search-bar { margin: 0 0 .9rem; }
 
   /* status line: N moments + the sort chip */
   #search-status {
     display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.2rem;
-    font: .8rem var(--font-ui); color: var(--text-dim); min-height: 1.4rem; margin-bottom: 1rem;
+    font: .8rem var(--font-ui); color: var(--text-muted); min-height: 1.4rem; margin-bottom: 1rem;
   }
   #search-status:empty { display: none; }
   #search-status .dots { margin-left: -.5rem; }
 
   /* a hit */
-  .search-hit { border-bottom: 1px solid var(--border); padding: 1.1rem 0; }
+  .search-hit { border-bottom: 1px solid var(--border-default); padding: 1.1rem 0; }
   .search-hit h3 {
-    font: 600 .9rem var(--font-ui); color: var(--text); cursor: pointer;
+    font: 600 .9rem var(--font-ui); color: var(--text-default); cursor: pointer;
     display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem;
   }
-  .search-hit h3:hover { color: var(--accent); }
-  .search-hit .hits-n { font-weight: normal; color: var(--text-dim); font-size: .78rem; }
-  .search-hit .related-tag {
-    font: .68rem var(--font-ui); letter-spacing: .04em; color: var(--accent-dim);
-    border: 1px solid var(--border); border-radius: var(--radius-pill); padding: .05rem .6rem;
-  }
+  .search-hit h3:hover { color: var(--text-accent); }
+  .search-hit .hits-n { font-weight: normal; color: var(--text-muted); font-size: .78rem; }
   .search-snip { font-size: .92rem; margin-top: .3rem; white-space: pre-wrap; text-wrap: pretty; }
-  .search-snip mark { background: none; color: var(--accent); font-weight: 600; }
+  .search-snip mark { background: none; color: var(--text-accent); font-weight: 600; }
 
   /* the empty, no-results and thinking states */
   #search-results .suggest { margin: 0; padding: 2.5rem 0 2rem; }
-  #search-results .suggest em { color: var(--text); }
+  #search-results .suggest em { color: var(--text-default); }

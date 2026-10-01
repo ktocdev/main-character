@@ -222,7 +222,7 @@ export async function loadSettings() {
         entries. Turn off any that don’t fit your life, and the
         journal will still grow its own categories from what you write. Entries
         you’ve already tagged keep their tags either way.</p>
-      <div class="set-row"><div class="set-control" id="set-categories-control"></div></div>
+      <div class="set-row"><div class="set-control check-group" id="set-categories-control"></div></div>
     </section>
     <section class="set-group" data-set="models">
       <div class="rule eyebrow">models &amp; cost</div>
@@ -296,6 +296,18 @@ export async function loadSettings() {
           there is no key and nothing to spend. Slow on a long journal.</p>
       </div>
       <div id="set-data-note"></div>
+    </section>
+    <section class="set-group" data-set="design">
+      <div class="rule eyebrow">design</div>
+      <div class="set-row">
+        <span class="set-label">Design system</span>
+        <div class="set-control">
+          <a class="quiet" id="set-design" href="/design">open the design system ›</a>
+        </div>
+        <p class="set-help">The tokens and components the journal is built
+          from, rendered live from its own stylesheets. For whoever works on
+          the app; nothing there touches your journal.</p>
+      </div>
     </section>`;
 
   // date format
@@ -363,7 +375,7 @@ export async function loadSettings() {
       .split(',').map(s => s.trim()).filter(Boolean));
     for (const c of o.categories) {
       const row = document.createElement('label');
-      row.className = 'set-check';
+      row.className = 'check-row';
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.value = c.name;
@@ -948,7 +960,7 @@ function themeInit() {
   });
 }
 
-const JUMPS = ['appearance', 'journal', 'categories', 'models', 'api key', 'data'];
+const JUMPS = ['appearance', 'journal', 'categories', 'models', 'api key', 'data', 'design'];
 function jumpTo(id) {
   const pane = $('settings');
   const el = pane.querySelector(`[data-set="${id}"]`);

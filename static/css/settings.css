@@ -5,61 +5,51 @@
      4px radius literal. */
   #settings { display: flex; flex-direction: column; padding-bottom: 0; }
   #settings-scroll { display: flex; flex-direction: column; gap: 2.4rem; padding: 1.4rem 0 2rem; }
-  #settings-intro { font-size: .95rem; color: var(--text-dim); text-wrap: pretty; }
+  #settings-intro { font-size: .95rem; color: var(--text-muted); text-wrap: pretty; }
 
   .set-group { display: flex; flex-direction: column; gap: 1.4rem; }
   .set-group > .rule { padding-bottom: .4rem; }
   .set-group > .set-help { margin: -.4rem 0 0; }
-  .set-row label, .set-row .set-label { display: block; font-size: 1rem; color: var(--text); margin-bottom: .35rem; }
+  .set-row label:not(.check-row), .set-row .set-label { display: block; font-size: 1rem; color: var(--text-default); margin-bottom: .35rem; }
   .set-control select, .set-control input[type=text], .set-control input[type=password] {
-    width: min(100%, 22rem); background: var(--bg-input); color: var(--text);
-    border: 1px solid var(--border); border-radius: 4px; padding: .4rem .7rem;
+    width: min(100%, 22rem); background: var(--bg-muted); color: var(--text-default);
+    border: 1px solid var(--border-default); border-radius: 4px; padding: .4rem .7rem;
     font: 1rem var(--font-body); min-height: 2.5rem; outline: none; line-height: 1.4;
   }
-  .set-control select:focus, .set-control input:focus { border-color: var(--accent-dim); }
+  .set-control select:focus, .set-control input:focus { border-color: var(--border-accent); }
   .set-control select:disabled, .set-control input:disabled { opacity: .55; cursor: not-allowed; }
   /* the API key spans the column, in monospace */
   #set-key { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9rem; }
   .set-control input.money { font-variant-numeric: tabular-nums; }
   .set-help {
-    margin: .45rem 0 0; font-size: .88rem; line-height: 1.5; color: var(--text-dim);
+    margin: .45rem 0 0; font-size: .88rem; line-height: 1.5; color: var(--text-muted);
     max-width: 34rem; text-wrap: pretty;
   }
-  .set-warn { color: var(--accent); font-size: .88rem; line-height: 1.5; margin: .45rem 0 0; max-width: 34rem; text-wrap: pretty; }
-  #settings code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82em; background: var(--bg-input); border-radius: 4px; padding: .1em .4em; }
+  .set-warn { color: var(--text-accent); font-size: .88rem; line-height: 1.5; margin: .45rem 0 0; max-width: 34rem; text-wrap: pretty; }
+  #settings code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82em; background: var(--bg-muted); border-radius: 4px; padding: .1em .4em; }
 
   /* budgets: this session $x of $y + a hairline, live against the typed value */
   .cap-line {
     display: flex; align-items: baseline; gap: .8rem; margin-top: .6rem; max-width: 34rem;
-    font: .8rem var(--font-ui); color: var(--text-dim); font-variant-numeric: tabular-nums;
+    font: .8rem var(--font-ui); color: var(--text-muted); font-variant-numeric: tabular-nums;
   }
   .cap-line span { white-space: nowrap; }
   .cap-line .hairline { flex: 1; }
   /* the one figure in the section that is a number rather than a setting */
-  .set-cost-total { font: 600 1.2rem var(--font-ui); color: var(--text); font-variant-numeric: tabular-nums; }
+  .set-cost-total { font: 600 1.2rem var(--font-ui); color: var(--text-default); font-variant-numeric: tabular-nums; }
   .set-cost-total + .set-help { margin-top: .3rem; }
 
-  /* category toggles: a checkbox and its definition on one row; the whole
-     row is the label */
-  #set-categories-control { display: flex; flex-direction: column; gap: .2rem; max-width: 34rem; }
-  label.set-check {
-    display: flex; align-items: flex-start; gap: .8rem; padding: .35rem .3rem; border-radius: var(--radius-sm);
-    cursor: pointer; font-size: .95rem; line-height: 1.5; color: var(--text-dim); margin: 0;
-  }
-  label.set-check:hover { background: var(--bg-raised); }
-  .set-check input { margin: .3rem 0 0; flex-shrink: 0; }
-  .set-check strong { font: 600 .9rem var(--font-ui); color: var(--text); }
-  .set-check:has(input:not(:checked)) strong { color: var(--text-dim); }
+  /* category toggles are the CheckboxFieldset (.check-group, components.css) */
 
   /* data actions: quiet buttons, the result as a notice card beneath */
-  .set-control > button.quiet { min-height: 2.4rem; padding: .3rem .9rem; font-size: .85rem; }
+  .set-control > :is(button, a).quiet { min-height: 2.4rem; padding: .3rem .9rem; font-size: .85rem; }
   .set-feedback { margin-top: .7rem; max-width: 34rem; padding: .7rem 1rem; font-size: .95rem; text-wrap: pretty; overflow-wrap: anywhere; }
-  .set-feedback.working { color: var(--text-dim); }
-  .set-feedback.error { color: var(--error); border-color: var(--error); }
+  .set-feedback.working { color: var(--text-muted); }
+  .set-feedback.error { color: var(--text-danger); border-color: var(--border-danger); }
 
   /* the sticky actions bar */
   #settings-actions {
-    position: sticky; bottom: 0; margin-top: auto; background: var(--bg); border-top: 1px solid var(--border);
+    position: sticky; bottom: 0; margin-top: auto; background: var(--bg-page); border-top: 1px solid var(--border-default);
     padding: .8rem 0 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .6rem; z-index: 2;
   }
   #settings-save { min-height: 2.4rem; padding: .3rem 1.1rem; font-size: .85rem; }
@@ -67,22 +57,22 @@
   #settings-actions .quiet { min-height: 2.4rem; padding: .3rem .9rem; font-size: .85rem; }
   .set-with-info { display: inline-flex; align-items: center; gap: .3rem; }
   .set-info {
-    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    background: none; border: 1px solid var(--border-default); color: var(--text-muted);
     border-radius: var(--radius-circle); width: 1.5rem; height: 1.5rem; padding: 0;
     font: .75rem var(--font-ui); line-height: 1; display: inline-flex; align-items: center; justify-content: center;
   }
-  .set-info:hover, .set-info:focus-visible { color: var(--text); border-color: var(--accent-dim); outline: none; }
-  .set-note { font: .85rem var(--font-ui); color: var(--text-dim); display: inline-flex; gap: .4rem; align-items: baseline; }
-  .set-note.ok { color: var(--accent); }
-  .set-note.error { color: var(--error); }
+  .set-info:hover, .set-info:focus-visible { color: var(--text-default); border-color: var(--border-accent); outline: none; }
+  .set-note { font: .85rem var(--font-ui); color: var(--text-muted); display: inline-flex; gap: .4rem; align-items: baseline; }
+  .set-note.ok { color: var(--text-accent); }
+  .set-note.error { color: var(--text-danger); }
 
   /* the ? card: native popover for light dismiss, styled as the tooltip
      card, placed above the bar by settings.js */
   .set-popover {
     position: fixed; margin: 0; width: max-content; max-width: min(26rem, 80vw);
-    background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-base);
-    padding: .7rem .9rem; color: var(--text); font: .8rem/1.5 var(--font-ui);
-    box-shadow: 0 6px 18px rgba(0,0,0,.25); text-wrap: pretty;
+    background: var(--bg-raised); border: 1px solid var(--border-default); border-radius: var(--radius-base);
+    padding: .7rem .9rem; color: var(--text-default); font: .8rem/1.5 var(--font-ui);
+    box-shadow: var(--shadow-sm); text-wrap: pretty;
   }
   .set-popover p + p { margin-top: .5rem; }
   .set-popover::backdrop { background: none; }

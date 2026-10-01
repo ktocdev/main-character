@@ -89,11 +89,11 @@
         <button class="send" id="entry-send" title="save as a journal entry (markdown backup now, journal memory at close)">save entry</button>
         <button class="send" id="chat-send" title="talk with the companion about it. It joins the chat and becomes journal memory too">send</button>
         <button class="quiet" id="reflect-btn" title="let the companion speak first and connect a dot or two across time">reflect</button>
-        <label id="noreply-wrap" title="save this entry without a companion reply (no Claude call, no cost)">
+        <label id="noreply-wrap" class="check-inline" title="save this entry without a companion reply (no Claude call, no cost)">
           <input type="checkbox" id="entry-noreply"> no reply
         </label>
         <span class="saved-note" id="entry-saved"></span>
-        <details id="write-actions">
+        <details id="write-actions" class="action-menu">
           <summary title="chapter actions" aria-label="chapter actions">⋯</summary>
           <div class="menu popover">
             <button class="quiet" id="reset" title="this is the summarize point. Your side of this chapter becomes a journal entry, memory updates in the background, and a new chapter opens">close chapter</button>
@@ -134,9 +134,9 @@
   <section class="tab" id="tab-chat">
     <div id="chat-log"></div>
     <div class="composer">
-      <div class="box">
+      <div class="chat-bar">
         <textarea id="chat-text" rows="2" placeholder="look something up in your journal…"></textarea>
-        <div class="box-row">
+        <div class="chat-bar-row">
           <span class="left">
             <button class="chip-toggle" id="lookup-smart" aria-pressed="false" title="smart replies: let it search again on its own before answering. Better at firsts, how often, and changes over time; each question can take several calls, so it costs more and takes a few seconds longer">smart replies</button>
           </span>
@@ -149,10 +149,10 @@
 
   <section class="tab" id="tab-search">
     <div id="search-pane" class="pane">
-      <form id="search-bar" role="search">
+      <form id="search-bar" class="search-bar" role="search">
         <input type="text" id="search-q" placeholder="search your whole journal…" autocomplete="off">
         <div class="controls">
-          <button type="button" class="chip-toggle" id="search-mode" aria-pressed="false"
+          <button type="button" class="chip-toggle soft" id="search-mode" aria-pressed="false"
             title="meaning: passages ranked by similarity to what you describe · exact text: literal matches, newest first">meaning</button>
           <button type="submit" class="send pill" id="search-go">search <span class="ret">↵</span></button>
         </div>
@@ -382,9 +382,9 @@
         <button class="text" id="help-all">expand all</button>
       </div>
 
-      <details class="help-sec" open>
+      <details class="disclosure" open>
       <summary id="h-write"><span class="mark"></span><span>write · the journal companion</span></summary>
-      <div class="help-body">
+      <div class="disclosure-body">
       <p>One chapter stays open for as long as it feels right, which is about a week in practice. The write
       screen is that whole conversation: the chapter it continues, your entries, the companion's
       replies, and everything you say back. <b>save entry</b> stores a journal entry (backed up to
@@ -406,9 +406,9 @@
       </div>
       </details>
 
-      <details class="help-sec">
+      <details class="disclosure">
       <summary id="h-chat"><span class="mark"></span><span>chat · look things up</span></summary>
-      <div class="help-body">
+      <div class="disclosure-body">
       <p>The chat screen is a tool, not the journal. Ask it to pull things out of your history
       ("when did I last see Sam?", "what did I say about the move?"). It runs the same
       retrieval as the companion, with its own finder prompt, but it's a <em>separate conversation</em>, so lookups never join
@@ -422,9 +422,9 @@
       </div>
       </details>
 
-      <details class="help-sec">
+      <details class="disclosure">
       <summary id="h-search"><span class="mark"></span><span>search · every match, instantly</span></summary>
-      <div class="help-body">
+      <div class="disclosure-body">
       <p>The search screen sweeps your <em>entire</em> journal locally, so it's free and instant with no API
       calls. <b>meaning</b> mode ranks passages by how semantically close they are to whatever you
       describe, in your own words ("times I felt proud of my work"), while <b>exact text</b> mode finds
@@ -439,9 +439,9 @@
       </div>
       </details>
 
-      <details class="help-sec">
+      <details class="disclosure">
       <summary id="h-history"><span class="mark"></span><span>history · every chapter, one at a time</span></summary>
-      <div class="help-body">
+      <div class="disclosure-body">
       <p>Lands on the open chapter: the conversation it continues (with the companion's replies interleaved,
       backfilled from your export), your entries, and the live thread. Every closed chapter sits in
       the list, and you can pick one to read it in full. Closed chapters keep both sides for reading, but
@@ -449,9 +449,9 @@
       </div>
       </details>
 
-      <details class="help-sec">
+      <details class="disclosure">
       <summary id="h-entities"><span class="mark"></span><span>entities · curation, in the efficient order</span></summary>
-      <div class="help-body help-steps">
+      <div class="disclosure-body help-steps">
 
       <div class="help-step">
         <span class="step-n">1</span>
@@ -522,9 +522,9 @@
       </div>
       </details>
 
-      <details class="help-sec">
+      <details class="disclosure">
       <summary id="h-fixes"><span class="mark"></span><span>which fix do I want?</span></summary>
-      <div class="help-body">
+      <div class="disclosure-body">
       <div class="help-fixes">
         <div class="row"><span class="when">Two names, same real thing, both names legit</span><span class="fix"><b>merge</b> <span class="t">keeps an alias, so either name still matches</span></span></div>
         <div class="row"><span class="when">Misspelling or typo that shouldn't be remembered</span><span class="fix"><b>correct</b> <span class="t">no alias</span></span></div>
@@ -536,9 +536,9 @@
       </div>
       </details>
 
-      <details class="help-sec">
+      <details class="disclosure">
       <summary id="h-categories"><span class="mark"></span><span>categories</span></summary>
-      <div class="help-body">
+      <div class="disclosure-body">
       <p>Every entry gets tagged with categories (work, relationships, health…) automatically when a
       chapter closes, and <em>tag new entries</em> re-runs it manually for anything untagged (already-tagged
       entries are cached and free). Pick a category to browse its entries and read its
@@ -550,9 +550,9 @@
       </div>
       </details>
 
-      <details class="help-sec">
+      <details class="disclosure">
       <summary id="h-patterns"><span class="mark"></span><span>patterns</span></summary>
-      <div class="help-body">
+      <div class="disclosure-body">
       <p><em>detect patterns</em> re-reads the weekly arcs + domain documents and names recurring
       shapes (emotional cycles, behavioral pipelines, relationship dynamics), each with dated
       instances and a confidence level. Patterns are injected into the companion's context only
@@ -561,9 +561,9 @@
       </div>
       </details>
 
-      <details class="help-sec">
+      <details class="disclosure">
       <summary id="h-dreams"><span class="mark"></span><span>dreams</span></summary>
-      <div class="help-body">
+      <div class="disclosure-body">
       <p>Dreams live in their own realm, a separate collection that waking questions can never
       accidentally surface. The extractor finds dreams inside your entries (at the summarize point,
       or via <em>extract dreams from history</em>), keeping the narrative, cast, and tones,
@@ -573,9 +573,9 @@
       </div>
       </details>
 
-      <details class="help-sec">
+      <details class="disclosure">
       <summary id="h-safety"><span class="mark"></span><span>safety notes</span></summary>
-      <div class="help-body">
+      <div class="disclosure-body">
       <p>Everything is undoable, since ↺/↻ on the entities screen cover every curation and observation change, 50 steps back.
       All your decisions live in <code>entity_graph/curation.json</code> and re-apply on every rebuild, so
       nothing you do here is ever lost by the system regenerating docs. The one exception

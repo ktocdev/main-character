@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — disclosure</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/design/design.css">
+<script>
+  try {
+    var _t = localStorage.getItem('rag_theme');
+    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+  } catch (e) {}
+</script>
+<style>
+  .spec-row .disclosure, .accordion { width: 40rem; max-width: 100%; }
+</style>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="/design">main character</a></h1>
+    <span class="status">disclosure · open / closed</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#states">open and closed</a>
+    <a href="#accordion">accordion</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Disclosure</h2>
+      <p class="lede">A section that opens and closes: a native <span class="mono">&lt;details&gt;</span> whose header is the section's italic accent title, with a small <span class="mono">›</span> that turns to <span class="mono">⌄</span> when open. A run of them, hairline between each, is help's accordion. Native, so it opens from the keyboard and for find-in-page with nothing extra.</p>
+    </section>
+
+    <section id="states">
+      <div class="rule eyebrow strong">Open and closed</div>
+      <div class="spec-row top">
+        <details class="disclosure" data-figma-set="Disclosure" data-figma-variant="open=false">
+          <summary><span class="mark"></span><span data-figma-text="title">chat · look things up</span></summary>
+          <div class="disclosure-body"><p data-figma-text="body">Ask your journal a question.</p></div>
+        </details>
+        <details class="disclosure" open data-figma-set="Disclosure" data-figma-variant="open=true">
+          <summary><span class="mark"></span><span data-figma-text="title">chat · look things up</span></summary>
+          <div class="disclosure-body"><p data-figma-text="body">Ask your journal a question: when you last saw someone, how often something comes up, what changed. It reads, it doesn't write; nothing said here becomes journal memory.</p></div>
+        </details>
+      </div>
+    </section>
+
+    <section id="accordion">
+      <div class="rule eyebrow strong">Accordion</div>
+      <p class="note">Live. Each opens on its own; help adds an expand-all at the end of its jump row and opens the right section when a pill or a link points inside a closed one.</p>
+      <div class="accordion">
+        <details class="disclosure" open>
+          <summary><span class="mark"></span><span>write · the journal companion</span></summary>
+          <div class="disclosure-body"><p>One chapter stays open for as long as it feels right, which is about a week in practice.</p></div>
+        </details>
+        <details class="disclosure">
+          <summary><span class="mark"></span><span>search · every match, instantly</span></summary>
+          <div class="disclosure-body"><p>Meaning finds passages close to what you describe; exact text finds the words themselves.</p></div>
+        </details>
+        <details class="disclosure">
+          <summary><span class="mark"></span><span>history · every chapter, one at a time</span></summary>
+          <div class="disclosure-body"><p>Every closed chapter, newest first, with the day's summary above its messages.</p></div>
+        </details>
+      </div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">details.disclosure[open]
+  summary
+    span.mark          › closed, ⌄ open (::before)
+    span               the title
+  div.disclosure-body  .8rem gap, indented 1.5rem</pre>
+      <div class="parts">
+        <div class="part">header</div><div class="rule-text">The body serif, italic, 1.3rem, --text-accent; 1.1rem above and below. The whole line is the target.</div>
+        <div class="part">mark</div><div class="rule-text">UI face .8rem in --text-muted, at least .8rem wide so the title doesn't shift when it changes.</div>
+        <div class="part">body</div><div class="rule-text">A column, .8rem between blocks, indented 1.5rem so it hangs under the title, with 1.5rem below.</div>
+        <div class="part">rule</div><div class="rule-text">A --border-default hairline under every section, open or closed.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Title <span class="mono">--text-accent</span>; mark <span class="mono">--text-muted</span>; rule <span class="mono">--border-default</span>; type <span class="mono">--font-body</span>, <span class="mono">--font-ui</span>. In Figma: <b>Disclosure</b>, <span class="mono">open</span>, with <span class="mono">title</span> and <span class="mono">body</span> properties.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/design/design.js"></script>
+</body>
+</html>

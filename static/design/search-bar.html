@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — search bar</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/design/design.css">
+<script>
+  try {
+    var _t = localStorage.getItem('rag_theme');
+    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+  } catch (e) {}
+</script>
+<style>
+  /* search's column is 46rem; the bar fills it */
+  .spec-row .search-bar { width: 40rem; }
+</style>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="/design">main character</a></h1>
+    <span class="status">search bar · 3 states · 2 modes</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#states">states and modes</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Search bar</h2>
+      <p class="lede">One <span class="mono">--bg-muted</span> box holding everything search needs: the query, the mode, and the button. The input gives up its own well and border to the box, so the box takes the focus colour: it is the field. Enter submits; the button is there for pointers. Below about 28rem the controls wrap under the query.</p>
+    </section>
+
+    <section id="states">
+      <div class="rule eyebrow strong">States and modes</div>
+      <p class="note">The mode is a soft <a href="/static/design/toggle.html">toggle</a> made a touch wider (1.8rem tall, .75rem sides). Off reads <b>meaning</b>: passages close to what you describe, ranked. On reads <b>exact text</b>: literal matches, newest first. The search button is a <a href="/static/design/button.html">send pill</a>.</p>
+      <div class="stack">
+        <div class="spec-row">
+          <form class="search-bar" role="search" data-figma-set="Search bar" data-figma-variant="state=empty, mode=meaning">
+            <input type="text" placeholder="search your whole journal…" data-figma-text="query">
+            <div class="controls">
+              <button type="button" class="chip-toggle soft" aria-pressed="false" data-figma-text="mode">meaning</button>
+              <button type="button" class="send pill" data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=default">search <span class="ret">↵</span></button>
+            </div>
+          </form>
+        </div>
+        <div class="spec-row">
+          <form class="search-bar" role="search" data-figma-set="Search bar" data-figma-variant="state=typed, mode=meaning">
+            <input type="text" value="running with Mika" data-figma-text="query">
+            <div class="controls">
+              <button type="button" class="chip-toggle soft" aria-pressed="false" data-figma-text="mode">meaning</button>
+              <button type="button" class="send pill" data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=default">search <span class="ret">↵</span></button>
+            </div>
+          </form>
+        </div>
+        <div class="spec-row">
+          <form class="search-bar is-focus-within" role="search" data-figma-set="Search bar" data-figma-variant="state=focus, mode=meaning">
+            <input type="text" value="running with Mika" class="is-focus" data-figma-text="query">
+            <div class="controls">
+              <button type="button" class="chip-toggle soft" aria-pressed="false" data-figma-text="mode">meaning</button>
+              <button type="button" class="send pill" data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=default">search <span class="ret">↵</span></button>
+            </div>
+          </form>
+        </div>
+        <div class="spec-row">
+          <form class="search-bar" role="search" data-figma-set="Search bar" data-figma-variant="state=empty, mode=exact">
+            <input type="text" placeholder="search your whole journal…" data-figma-text="query">
+            <div class="controls">
+              <button type="button" class="chip-toggle soft" aria-pressed="true" data-figma-text="mode">exact text</button>
+              <button type="button" class="send pill" data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=default">search <span class="ret">↵</span></button>
+            </div>
+          </form>
+        </div>
+        <div class="spec-row">
+          <form class="search-bar" role="search" data-figma-set="Search bar" data-figma-variant="state=typed, mode=exact">
+            <input type="text" value="Greenwood" data-figma-text="query">
+            <div class="controls">
+              <button type="button" class="chip-toggle soft" aria-pressed="true" data-figma-text="mode">exact text</button>
+              <button type="button" class="send pill" data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=default">search <span class="ret">↵</span></button>
+            </div>
+          </form>
+        </div>
+        <div class="spec-row">
+          <form class="search-bar is-focus-within" role="search" data-figma-set="Search bar" data-figma-variant="state=focus, mode=exact">
+            <input type="text" value="Greenwood" class="is-focus" data-figma-text="query">
+            <div class="controls">
+              <button type="button" class="chip-toggle soft" aria-pressed="true" data-figma-text="mode">exact text</button>
+              <button type="button" class="send pill" data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=default">search <span class="ret">↵</span></button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">form.search-bar[role=search]
+  input[type=text]              grows, at least 12rem; no well of its own
+  div.controls                  pushed right
+    button.chip-toggle.soft     the mode
+    button.send.pill            search ↵</pre>
+      <div class="parts">
+        <div class="part">box</div><div class="rule-text">--bg-muted, --border-default hairline, a 12px radius (a literal, shared with the chat bar), padding .55rem .6rem .55rem .9rem. The border turns --border-accent while anything inside has focus.</div>
+        <div class="part">query</div><div class="rule-text">The input with its well, border and padding taken away: body serif, 1.8rem tall, line-height 1.4.</div>
+        <div class="part">controls</div><div class="rule-text">.5rem apart, after a .9rem gap; they wrap below the query when the bar is narrow.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fill <span class="mono">--bg-muted</span>; rule <span class="mono">--border-default</span>, focus <span class="mono">--border-accent</span>; query <span class="mono">--text-default</span>, placeholder <span class="mono">--text-muted</span>. In Figma: <b>Search bar</b>, <span class="mono">state × mode</span>, with <span class="mono">query</span> and <span class="mono">mode</span> properties; the search button is a Button instance.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/design/design.js"></script>
+</body>
+</html>

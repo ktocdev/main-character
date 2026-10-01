@@ -192,7 +192,8 @@ export function showGroup(name) {
   ops.className = 'gp-ops';
   const filtering = filters.group === g.name;
   const flt = document.createElement('button');
-  flt.className = 'quiet' + (filtering ? ' on chip-toggle' : '');
+  flt.className = 'chip-toggle';
+  flt.setAttribute('aria-pressed', String(filtering));
   flt.textContent = filtering ? 'clear list filter' : 'show only these in the list';
   flt.title = 'narrow the left-hand entity list to this group’s members';
   flt.onclick = () => {
@@ -360,7 +361,8 @@ function groupEditor(g) {
   ops.className = 'grp-ops';
 
   const roll = document.createElement('button');
-  roll.className = 'quiet' + (g.rollup ? ' on chip-toggle' : '');
+  roll.className = 'chip-toggle';
+  roll.setAttribute('aria-pressed', String(!!g.rollup));
   roll.textContent = g.rollup ? 'unroll' : 'roll up';
   roll.title = g.rollup
     ? 'show this group’s members in the main list again'

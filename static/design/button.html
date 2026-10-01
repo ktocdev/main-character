@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — button</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/design/design.css">
+<script>
+  try {
+    var _t = localStorage.getItem('rag_theme');
+    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="/design">main character</a></h1>
+    <span class="status">button · 5 kinds · 4 sizes · 4 states</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#kinds">kinds</a>
+    <a href="#sizes">sizes</a>
+    <a href="#in-context">in context</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Button</h2>
+      <p class="lede">Five voices, from loudest to quietest: <b>send</b>, the one primary in a composer; <b>filled</b>, a quieter primary for confirm and apply; <b>quiet</b>, the default secondary; <b>text</b>, borderless, for clear and back links; and <b>danger</b>, a quiet button that only turns red when pointed at. No button is red all the time.</p>
+    </section>
+
+    <section id="kinds">
+      <div class="rule eyebrow strong">Kinds and states</div>
+      <p class="note">Each row is one kind at its default size, in its four states. Hover and focus are held still with the <span class="mono">.is-hover</span> and <span class="mono">.is-focus-visible</span> twins design.js makes from the app's own <span class="mono">:hover</span> and <span class="mono">:focus-visible</span> rules. Disabled is the real attribute.</p>
+      <div class="stack">
+        <div class="spec-row">
+          <button class="send" data-figma-set="Button" data-figma-variant="kind=send, size=md, state=default" data-figma-text="label">save entry</button>
+          <button class="send is-hover" data-figma-set="Button" data-figma-variant="kind=send, size=md, state=hover" data-figma-text="label">save entry</button>
+          <button class="send is-focus-visible" data-figma-set="Button" data-figma-variant="kind=send, size=md, state=focus" data-figma-text="label">save entry</button>
+          <button class="send" disabled data-figma-set="Button" data-figma-variant="kind=send, size=md, state=disabled" data-figma-text="label">save entry</button>
+        </div>
+        <div class="spec-row">
+          <button class="filled" data-figma-set="Button" data-figma-variant="kind=filled, size=md, state=default" data-figma-text="label">summarize</button>
+          <button class="filled is-hover" data-figma-set="Button" data-figma-variant="kind=filled, size=md, state=hover" data-figma-text="label">summarize</button>
+          <button class="filled is-focus-visible" data-figma-set="Button" data-figma-variant="kind=filled, size=md, state=focus" data-figma-text="label">summarize</button>
+          <button class="filled" disabled data-figma-set="Button" data-figma-variant="kind=filled, size=md, state=disabled" data-figma-text="label">summarize</button>
+        </div>
+        <div class="spec-row">
+          <button class="quiet" data-figma-set="Button" data-figma-variant="kind=quiet, size=md, state=default" data-figma-text="label">reflect</button>
+          <button class="quiet is-hover" data-figma-set="Button" data-figma-variant="kind=quiet, size=md, state=hover" data-figma-text="label">reflect</button>
+          <button class="quiet is-focus-visible" data-figma-set="Button" data-figma-variant="kind=quiet, size=md, state=focus" data-figma-text="label">reflect</button>
+          <button class="quiet" disabled data-figma-set="Button" data-figma-variant="kind=quiet, size=md, state=disabled" data-figma-text="label">reflect</button>
+        </div>
+        <div class="spec-row">
+          <button class="text" data-figma-set="Button" data-figma-variant="kind=text, size=md, state=default" data-figma-text="label">clear</button>
+          <button class="text is-hover" data-figma-set="Button" data-figma-variant="kind=text, size=md, state=hover" data-figma-text="label">clear</button>
+          <button class="text is-focus-visible" data-figma-set="Button" data-figma-variant="kind=text, size=md, state=focus" data-figma-text="label">clear</button>
+          <button class="text" disabled data-figma-set="Button" data-figma-variant="kind=text, size=md, state=disabled" data-figma-text="label">clear</button>
+        </div>
+        <div class="spec-row">
+          <button class="quiet danger" data-figma-set="Button" data-figma-variant="kind=danger, size=md, state=default" data-figma-text="label">dismiss</button>
+          <button class="quiet danger is-hover" data-figma-set="Button" data-figma-variant="kind=danger, size=md, state=hover" data-figma-text="label">dismiss</button>
+          <button class="quiet danger is-focus-visible" data-figma-set="Button" data-figma-variant="kind=danger, size=md, state=focus" data-figma-text="label">dismiss</button>
+          <button class="quiet danger" disabled data-figma-set="Button" data-figma-variant="kind=danger, size=md, state=disabled" data-figma-text="label">dismiss</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="sizes">
+      <div class="rule eyebrow strong">Sizes</div>
+      <p class="note"><b>pill</b> is send's compact form for the chat and search bars: 1.8rem, fully round, with an optional ↵. Quiet comes in three heights: 2.2rem (md, the default), 2rem (<span class="mono">.sm</span>) and 1.8rem (<span class="mono">.xs</span>, smaller type too). Text buttons are always 1.8rem.</p>
+      <div class="stack">
+        <div class="spec-row">
+          <button class="send pill" data-figma-set="Button" data-figma-variant="kind=send, size=pill, state=default" data-figma-text="label">send <span class="ret" data-figma-bool="show return">↵</span></button>
+          <button class="send pill is-hover" data-figma-set="Button" data-figma-variant="kind=send, size=pill, state=hover" data-figma-text="label">send <span class="ret" data-figma-bool="show return">↵</span></button>
+          <button class="send pill is-focus-visible" data-figma-set="Button" data-figma-variant="kind=send, size=pill, state=focus" data-figma-text="label">send <span class="ret" data-figma-bool="show return">↵</span></button>
+          <button class="send pill" disabled data-figma-set="Button" data-figma-variant="kind=send, size=pill, state=disabled" data-figma-text="label">send <span class="ret" data-figma-bool="show return">↵</span></button>
+        </div>
+        <div class="spec-row">
+          <button class="quiet sm" data-figma-set="Button" data-figma-variant="kind=quiet, size=sm, state=default" data-figma-text="label">suggest merges</button>
+          <button class="quiet sm is-hover" data-figma-set="Button" data-figma-variant="kind=quiet, size=sm, state=hover" data-figma-text="label">suggest merges</button>
+          <button class="quiet sm is-focus-visible" data-figma-set="Button" data-figma-variant="kind=quiet, size=sm, state=focus" data-figma-text="label">suggest merges</button>
+          <button class="quiet sm" disabled data-figma-set="Button" data-figma-variant="kind=quiet, size=sm, state=disabled" data-figma-text="label">suggest merges</button>
+        </div>
+        <div class="spec-row">
+          <button class="quiet xs" data-figma-set="Button" data-figma-variant="kind=quiet, size=xs, state=default" data-figma-text="label">add</button>
+          <button class="quiet xs is-hover" data-figma-set="Button" data-figma-variant="kind=quiet, size=xs, state=hover" data-figma-text="label">add</button>
+          <button class="quiet xs is-focus-visible" data-figma-set="Button" data-figma-variant="kind=quiet, size=xs, state=focus" data-figma-text="label">add</button>
+          <button class="quiet xs" disabled data-figma-set="Button" data-figma-variant="kind=quiet, size=xs, state=disabled" data-figma-text="label">add</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="in-context">
+      <div class="rule eyebrow strong">In context</div>
+      <p class="note">Write's control row: two sends beside a quiet, then a text button. Undo and redo use <span class="mono">.quiet.empty</span>, half strength while there is nothing to undo.</p>
+      <div class="in-context">
+        <div class="spec-row" style="align-items: center; gap: .5rem .6rem">
+          <button class="send">save entry</button>
+          <button class="send">send</button>
+          <button class="quiet">reflect</button>
+          <button class="quiet empty">undo</button>
+          <button class="text">clear</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">button.send[.pill]       primary · 2.2rem (pill 1.8rem)
+  span.ret               pill only, the ↵
+button.filled            secondary primary · 2.2rem
+button.quiet[.sm | .xs]  default secondary · 2.2 / 2 / 1.8rem
+button.text              borderless · 1.8rem
+button.quiet.danger      quiet, --text-danger on hover</pre>
+      <div class="parts">
+        <div class="part">send</div><div class="rule-text">--fill-accent fill, --text-on-accent text, --radius-lg. At most one per composer. Hover steps to --fill-accent-hover: brighter in dark, deeper in light.</div>
+        <div class="part">filled</div><div class="rule-text">--fill-accent-muted fill and rule, --text-on-accent text, --radius-base. Lifts to the full --fill-accent on hover, so it reads as a quieter send until pointed at.</div>
+        <div class="part">quiet</div><div class="rule-text">A --border-default hairline, --text-muted label, no fill. Hover brings the label to --text-default on --bg-raised.</div>
+        <div class="part">text</div><div class="rule-text">Quiet without the rule, at --radius-sm. Hover is the label colour only.</div>
+        <div class="part">danger</div><div class="rule-text">Quiet until hover, when the label turns --text-danger and the rule --border-danger. Always paired with an undo or a confirm.</div>
+        <div class="part">focus</div><div class="rule-text">Keyboard only (:focus-visible): a 2px --focus-ring outline, 2px off the edge. Never a ring on a mouse click.</div>
+        <div class="part">disabled</div><div class="rule-text">Send at 45% opacity, filled, quiet and danger at 50%; hover does nothing. Text has no disabled style of its own: hide it instead.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fills <span class="mono">--fill-accent</span>, <span class="mono">--fill-accent-hover</span>, <span class="mono">--fill-accent-muted</span>, <span class="mono">--bg-raised</span>; labels <span class="mono">--text-on-accent</span>, <span class="mono">--text-muted</span>, <span class="mono">--text-default</span>, <span class="mono">--text-danger</span>; rules <span class="mono">--border-default</span>, <span class="mono">--border-danger</span>; focus <span class="mono">--focus-ring</span>; radius <span class="mono">--radius-sm</span>, <span class="mono">--radius-base</span>, <span class="mono">--radius-lg</span>, <span class="mono">--radius-pill</span>; type <span class="mono">--font-ui</span>. In Figma: one <b>Button</b> set, <span class="mono">kind × size × state</span>, with a <span class="mono">label</span> text property and <span class="mono">show return</span> on the pill.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/design/design.js"></script>
+</body>
+</html>

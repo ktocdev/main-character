@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — select</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/settings.css">
+<link rel="stylesheet" href="/static/css/wizard.css">
+<link rel="stylesheet" href="/static/design/design.css">
+<script>
+  try {
+    var _t = localStorage.getItem('rag_theme');
+    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+  } catch (e) {}
+</script>
+<style>
+  .spec-row .set-control select, #wizard-body select { width: 16rem; }
+  /* The open list is drawn by the browser, outside the page, so it can't be
+     rendered live. This is a drawing of Chrome's list from a
+     screenshot: the rows are `select option` (--bg-muted, --text-default) from
+     components.css; the rule, the highlight and its text are Chrome's own
+     colours, the --platform-* tokens in design.css. */
+  .native-list {
+    display: flex; flex-direction: column; width: 16rem;
+    background: var(--bg-muted); border: 1px solid var(--platform-rule);
+  }
+  .native-list .opt {
+    display: flex; align-items: center; height: 1.85rem; padding: 0 .75rem;
+    color: var(--text-default); white-space: nowrap;
+  }
+  .native-list .opt.hi { background: var(--platform-highlight); color: var(--platform-highlight-text); }
+  .native-list.field { font: 1rem var(--font-body); }
+  .native-list.quiet { width: auto; font: .8rem var(--font-ui); }
+  .native-list.quiet .opt { height: 1.5rem; padding: 0 .55rem; }
+</style>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="/design">main character</a></h1>
+    <span class="status">select · 5 kinds · open list</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css · settings.css · wizard.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#kinds">kinds</a>
+    <a href="#open">open list</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Select</h2>
+      <p class="lede">The browser's own <span class="mono">&lt;select&gt;</span>, dressed in the palette. The closed control is ours. The open list belongs to the browser, so it follows <span class="mono">color-scheme</span> and takes <span class="mono">--bg-muted</span> and <span class="mono">--text-default</span> from the <span class="mono">select option</span> rule, but the highlight is the operating system's.</p>
+    </section>
+
+    <section id="kinds">
+      <div class="rule eyebrow strong">Kinds</div>
+      <p class="note"><b>quiet</b> is the tool-row select (entities' suggest and retype): UI face, <span class="mono">--text-muted</span>, 2.2rem, or 2rem as <span class="mono">.sm</span>. It has no hover and no focus style of its own. <b>tag-add</b> is the borderless "+ add" at the end of a tag editor, with a rule on hover. <b>field</b> and <b>wizard</b> are the settings and first-run selects, which share the input field's shape.</p>
+      <div class="stack">
+        <div class="spec-row">
+          <select class="quiet-select" data-figma-set="Select" data-figma-variant="kind=quiet, state=default" data-figma-text="value"><option>suggest merges for…</option><option>people</option><option>projects</option><option>places</option></select>
+          <select class="quiet-select sm" data-figma-set="Select" data-figma-variant="kind=quiet-sm, state=default" data-figma-text="value"><option>person</option><option>project</option><option>place</option></select>
+          <select class="tag-add" data-figma-set="Select" data-figma-variant="kind=tag-add, state=default" data-figma-text="value"><option>+ add</option><option>work</option><option>family</option><option>health</option></select>
+          <select class="tag-add is-hover" data-figma-set="Select" data-figma-variant="kind=tag-add, state=hover" data-figma-text="value"><option>+ add</option><option>work</option><option>family</option><option>health</option></select>
+        </div>
+        <div class="spec-row">
+          <div class="host set-control"><select data-figma-set="Select" data-figma-variant="kind=field, state=default" data-figma-text="value"><option>October 01, 2026 (long)</option><option>10/01/26 (short)</option><option>2026-10-01 (ISO)</option><option>today · 3 days ago (relative)</option></select></div>
+          <div class="host set-control"><select class="is-focus" data-figma-set="Select" data-figma-variant="kind=field, state=focus" data-figma-text="value"><option>October 01, 2026 (long)</option><option>10/01/26 (short)</option><option>2026-10-01 (ISO)</option><option>today · 3 days ago (relative)</option></select></div>
+          <div class="host set-control"><select disabled data-figma-set="Select" data-figma-variant="kind=field, state=disabled" data-figma-text="value"><option>October 01, 2026 (long)</option><option>10/01/26 (short)</option><option>2026-10-01 (ISO)</option><option>today · 3 days ago (relative)</option></select></div>
+        </div>
+        <div class="spec-row" id="wizard-body">
+          <select data-figma-set="Select" data-figma-variant="kind=wizard, state=default" data-figma-text="value"><option>Sonnet 5 — balanced</option><option>Opus 5.5 — deepest</option><option>Haiku 4.5 — fastest</option></select>
+          <select class="is-focus" data-figma-set="Select" data-figma-variant="kind=wizard, state=focus" data-figma-text="value"><option>Sonnet 5 — balanced</option><option>Opus 5.5 — deepest</option><option>Haiku 4.5 — fastest</option></select>
+        </div>
+      </div>
+    </section>
+
+    <section id="open">
+      <div class="rule eyebrow strong">Open list</div>
+      <p class="note">Drawn, not live: the list opens outside the page. The width is the select's, the text lines up with the select's own, and the row under the pointer is Chrome's <span class="mono">--platform-highlight</span> with <span class="mono">--platform-highlight-text</span> text, inside a <span class="mono">--platform-rule</span> rule, sampled from Chrome on Windows in both themes. They are the browser's colours, not ours, and the live list's highlight comes from the operating system; they are tokens only so this drawing, and Figma's Platform collection, follow the theme.</p>
+      <div class="spec-row top">
+        <div class="native-list field" data-figma-set="Select list" data-figma-variant="kind=field">
+          <div class="opt hi" data-figma-text="option 1">October 01, 2026 (long)</div>
+          <div class="opt" data-figma-text="option 2">10/01/26 (short)</div>
+          <div class="opt" data-figma-text="option 3" data-figma-bool="show option 3">use this computer's zone</div>
+        </div>
+        <div class="native-list quiet" data-figma-set="Select list" data-figma-variant="kind=quiet">
+          <div class="opt" data-figma-text="option 1">person</div>
+          <div class="opt hi" data-figma-text="option 2">project</div>
+          <div class="opt" data-figma-text="option 3" data-figma-bool="show option 3">place</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">select.quiet-select[.sm]   tool rows
+select.tag-add             a tag editor's "+ add"
+.set-control select        settings field
+#wizard-body select        first-run field
+  option                   --bg-muted, --text-default (the open list)</pre>
+      <div class="parts">
+        <div class="part">control</div><div class="rule-text">The closed box: a --bg-muted well for quiet, field and wizard; transparent for tag-add. The value is the selected option's text.</div>
+        <div class="part">chevron</div><div class="rule-text">The browser's, in the control's text colour. Not styled, so it keeps the platform's size and inset.</div>
+        <div class="part">focus</div><div class="rule-text">Field and wizard: the border turns --border-accent, as an input's does. Quiet has none.</div>
+        <div class="part">open list</div><div class="rule-text">The browser's popup, as wide as the control. Rows take the select option rule; the highlight is the platform's.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fill <span class="mono">--bg-muted</span>; rule <span class="mono">--border-default</span>, focus <span class="mono">--border-accent</span>; value <span class="mono">--text-muted</span> (quiet, tag-add) or <span class="mono">--text-default</span>; radius <span class="mono">--radius-base</span>, <span class="mono">--radius-sm</span>. In Figma: <b>Select</b> (<span class="mono">kind × state</span>, a <span class="mono">value</span> property, the chevron drawn as a vector) and <b>Select list</b> (<span class="mono">kind</span>, three option properties).</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/design/design.js"></script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — input</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/settings.css">
+<link rel="stylesheet" href="/static/css/wizard.css">
+<link rel="stylesheet" href="/static/design/design.css">
+<script>
+  try {
+    var _t = localStorage.getItem('rag_theme');
+    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+  } catch (e) {}
+</script>
+<style>
+  /* inputs fill their column in the app; here each gets a fixed column */
+  .spec-row input { width: 16rem; }
+</style>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="/design">main character</a></h1>
+    <span class="status">input · 6 sizes · 4 states</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css · settings.css · wizard.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#app">app inputs</a>
+    <a href="#forms">form fields</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Input</h2>
+      <p class="lede">A single-line field: a <span class="mono">--bg-muted</span> well with a <span class="mono">--border-default</span> hairline that turns <span class="mono">--border-accent</span> on focus. There is no focus ring and no glow; the border is the whole signal. The app's inputs take the type around them (the 17px body serif); settings and the first-run wizard set their own.</p>
+    </section>
+
+    <section id="app">
+      <div class="rule eyebrow strong">App inputs</div>
+      <p class="note">One shape in four heights: the default (padding-led, about 2.9rem at body size), <span class="mono">.input-sm</span> 2.4rem for filters, <span class="mono">.input-xs</span> 2.2rem for edit rows and <span class="mono">.input-2xs</span> 2rem for the batch bar and group forms. The two smallest drop to <span class="mono">--radius-base</span>.</p>
+      <div class="stack">
+        <div class="spec-row">
+          <input type="text" placeholder="name a new group…" data-figma-set="Input" data-figma-variant="size=md, state=empty" data-figma-text="value">
+          <input type="text" value="Greenwood Park" data-figma-set="Input" data-figma-variant="size=md, state=filled" data-figma-text="value">
+          <input type="text" value="Greenwood Park" class="is-focus" data-figma-set="Input" data-figma-variant="size=md, state=focus" data-figma-text="value">
+        </div>
+        <div class="spec-row">
+          <input type="text" class="input-sm" placeholder="filter entities…" data-figma-set="Input" data-figma-variant="size=sm, state=empty" data-figma-text="value">
+          <input type="text" class="input-sm" value="mika" data-figma-set="Input" data-figma-variant="size=sm, state=filled" data-figma-text="value">
+          <input type="text" class="input-sm is-focus" value="mika" data-figma-set="Input" data-figma-variant="size=sm, state=focus" data-figma-text="value">
+        </div>
+        <div class="spec-row">
+          <input type="text" class="input-xs" placeholder="add an alias" data-figma-set="Input" data-figma-variant="size=xs, state=empty" data-figma-text="value">
+          <input type="text" class="input-xs" value="Mik" data-figma-set="Input" data-figma-variant="size=xs, state=filled" data-figma-text="value">
+          <input type="text" class="input-xs is-focus" value="Mik" data-figma-set="Input" data-figma-variant="size=xs, state=focus" data-figma-text="value">
+        </div>
+        <div class="spec-row">
+          <input type="text" class="input-2xs" placeholder="group name" data-figma-set="Input" data-figma-variant="size=2xs, state=empty" data-figma-text="value">
+          <input type="text" class="input-2xs" value="running" data-figma-set="Input" data-figma-variant="size=2xs, state=filled" data-figma-text="value">
+          <input type="text" class="input-2xs is-focus" value="running" data-figma-set="Input" data-figma-variant="size=2xs, state=focus" data-figma-text="value">
+        </div>
+      </div>
+    </section>
+
+    <section id="forms">
+      <div class="rule eyebrow strong">Form fields</div>
+      <p class="note"><b>field</b> is the settings control: a 2.5rem serif field at 1rem with the 4px literal radius settings keeps, up to 22rem wide, and a disabled state at 55%. <b>wizard</b> is the first-run card's: the UI face at <span class="mono">--font-base</span>, <span class="mono">--radius-sm</span>, spacing from the scale.</p>
+      <div class="stack">
+        <div class="spec-row">
+          <div class="host set-control"><input type="text" placeholder="America/Chicago" data-figma-set="Input" data-figma-variant="size=field, state=empty" data-figma-text="value"></div>
+          <div class="host set-control"><input type="text" value="Jordan" data-figma-set="Input" data-figma-variant="size=field, state=filled" data-figma-text="value"></div>
+          <div class="host set-control"><input type="text" value="Jordan" class="is-focus" data-figma-set="Input" data-figma-variant="size=field, state=focus" data-figma-text="value"></div>
+          <div class="host set-control"><input type="text" value="Jordan" disabled data-figma-set="Input" data-figma-variant="size=field, state=disabled" data-figma-text="value"></div>
+        </div>
+        <div class="spec-row" id="wizard-body">
+          <input type="text" placeholder="your first name" data-figma-set="Input" data-figma-variant="size=wizard, state=empty" data-figma-text="value">
+          <input type="text" value="Jordan" data-figma-set="Input" data-figma-variant="size=wizard, state=filled" data-figma-text="value">
+          <input type="text" value="Jordan" class="is-focus" data-figma-set="Input" data-figma-variant="size=wizard, state=focus" data-figma-text="value">
+        </div>
+      </div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">input[type=text | password | search | number]
+  [.input-sm | .input-xs | .input-2xs]
+.set-control input       settings field
+#wizard-body input       first-run field</pre>
+      <div class="parts">
+        <div class="part">well</div><div class="rule-text">--bg-muted fill, --border-default hairline, --radius-lg (sm and md) or --radius-base (xs, 2xs). Full width of its column.</div>
+        <div class="part">value</div><div class="rule-text">--text-default, line-height 1.6. The type is inherited, so an input reads like the prose around it.</div>
+        <div class="part">placeholder</div><div class="rule-text">--text-muted at 70%, ending in an ellipsis when it invites typing.</div>
+        <div class="part">focus</div><div class="rule-text">The border turns --border-accent. No outline: inputs are the one control that never gets the focus ring.</div>
+        <div class="part">disabled</div><div class="rule-text">The settings field only: 55% with a not-allowed cursor. Elsewhere a field that can't be used is hidden.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fill <span class="mono">--bg-muted</span>; rule <span class="mono">--border-default</span>, focus <span class="mono">--border-accent</span>; value <span class="mono">--text-default</span>; placeholder <span class="mono">--text-muted</span>; radius <span class="mono">--radius-lg</span>, <span class="mono">--radius-base</span>, <span class="mono">--radius-sm</span>. In Figma: one <b>Input</b> set, <span class="mono">size × state</span>, with a <span class="mono">value</span> text property (the placeholder in the empty state).</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/design/design.js"></script>
+</body>
+</html>

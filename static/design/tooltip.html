@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — tooltip</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/design/design.css">
+<script>
+  try {
+    var _t = localStorage.getItem('rag_theme');
+    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="/design">main character</a></h1>
+    <span class="status">tooltip · one card · placed by room</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css · static/js/tooltip.js</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#card">the card</a>
+    <a href="#live">try it</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Tooltip</h2>
+      <p class="lede">One card for every <span class="mono">title</span> in the app. The browser's own tooltips come late, small and unstyled; this one is a <span class="mono">--bg-raised</span> card in the UI face, in full <span class="mono">--text-default</span> for contrast. Nothing to add per control: a <span class="mono">title</span> is enough, and <span class="mono">tooltip.js</span> takes it over on first hover or focus.</p>
+    </section>
+
+    <section id="card">
+      <div class="rule eyebrow strong">The card</div>
+      <p class="note">Sized to its text up to 16rem, then it wraps. Drawn here in place with <span class="mono">.tooltip</span>, the same rule as the live <span class="mono">#tip</span>.</p>
+      <div class="spec-row top">
+        <div class="tooltip" role="tooltip" data-figma-set="Tooltip" data-figma-variant="lines=one" data-figma-text="text">show the full entry</div>
+        <div class="tooltip" role="tooltip" data-figma-set="Tooltip" data-figma-variant="lines=wrap" data-figma-text="text">save this entry without a companion reply (no Claude call, no cost)</div>
+      </div>
+    </section>
+
+    <section id="live">
+      <div class="rule eyebrow strong">Try it</div>
+      <p class="note">Point at or tab to these. The rule of placement is one rule: above the control by default, below it when there is no room above (the first row under the header), above again for the sticky bottom bar. It never covers the pointer. Opening a popover or menu closes it; so does Escape, a click, or a scroll.</p>
+      <div class="in-context">
+        <div class="spec-row" style="align-items: center; gap: .5rem .6rem">
+          <button class="send" title="save as a journal entry (markdown backup now, journal memory at close)">save entry</button>
+          <button class="quiet" title="let the companion speak first and connect a dot or two across time">reflect</button>
+          <button class="chip-toggle" aria-pressed="false" title="smart replies: let it search again on its own before answering. Better at firsts, how often, and changes over time; each question can take several calls, so it costs more and takes a few seconds longer">smart replies</button>
+          <button class="text" title="clear this lookup conversation (it was never journal data)">clear</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">div#tip.tooltip[role=tooltip]   one per page, made by tooltip.js
+  text                          the control's title, moved to data-tip</pre>
+      <div class="parts">
+        <div class="part">card</div><div class="rule-text">--bg-raised, --border-default hairline, --radius-base, padding .4rem .7rem, a soft 0 6px 18px shadow at 25% black. max-width 16rem.</div>
+        <div class="part">text</div><div class="rule-text">UI face .8rem/1.4 in --text-default, left-aligned, never uppercase or tracked even when its control is.</div>
+        <div class="part">place</div><div class="rule-text">.45rem from the control, kept 8px inside the window. Above unless there is no room.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fill <span class="mono">--bg-raised</span>; rule <span class="mono">--border-default</span>; text <span class="mono">--text-default</span>; radius <span class="mono">--radius-base</span>; the shadow is a literal. In Figma: <b>Tooltip</b>, <span class="mono">lines</span> (one, wrap), with a <span class="mono">text</span> property. Placement is behaviour, so it isn't a variant: put the card where it would go.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="/static/design/design.js"></script>
+<script type="module">
+  import * as tooltip from '/static/js/tooltip.js';
+  tooltip.init();
+  tooltip.adopt(document.getElementById('live'));
+</script>
+</body>
+</html>

@@ -167,7 +167,7 @@ function renderSearchResults(q) {
     }
     if (hit.match === 'related') {
       const rel = document.createElement('span');
-      rel.className = 'related-tag';
+      rel.className = 'badge sm outline';
       rel.textContent = 'related';
       rel.title = "close in meaning, though it doesn't contain the exact words";
       h.appendChild(rel);
