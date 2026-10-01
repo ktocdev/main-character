@@ -140,3 +140,14 @@ def test_nothing_of_it_reaches_a_journal_that_is_not_the_demo(client, monkeypatc
     assert r.text != W[0]["reply"]
     assert messages()[-2]["ts"] != W[0]["ts"]
     assert position()["write_at"] == 0
+
+
+def test_only_the_demo_page_keeps_its_own_browser_storage(client, monkeypatch):
+    """The demo journal runs on the author's origin; its page is marked so
+    its draft and lookups never land in the author's keys (core.storeKey)."""
+    import server
+    mark = '<meta name="mc-journal" content="demo">'
+    monkeypatch.setattr(server, "SEED_INSTANCE", False)
+    assert mark not in client.get("/").text
+    monkeypatch.setattr(server, "SEED_INSTANCE", True)
+    assert mark in client.get("/").text

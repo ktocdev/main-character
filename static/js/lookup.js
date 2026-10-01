@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $ } from './core.js';
+import { $, storeKey } from './core.js';
+
+const LOG = storeKey('rag_lookup');
 import { streamInto } from './conversation.js';
 
 // ---- chat (lookup) ----
@@ -19,12 +21,12 @@ function saveLookupLog() {
     role: el.classList.contains('you') ? 'you' : 'companion',
     text: el.textContent,
   }));
-  localStorage.setItem('rag_lookup', JSON.stringify(msgs));
+  localStorage.setItem(LOG, JSON.stringify(msgs));
 }
 export function restoreLookupLog() {
   if ($('chat-log').querySelector('.msg')) return;
   try {
-    for (const m of JSON.parse(localStorage.getItem('rag_lookup') || '[]')) {
+    for (const m of JSON.parse(localStorage.getItem(LOG) || '[]')) {
       lookupMsg(m.role, m.text);
     }
   } catch { }
@@ -102,7 +104,7 @@ export function init() {
   $('lookup-clear').onclick = async () => {
     $('chat-log').innerHTML = '';
     renderEmpty();
-    localStorage.removeItem('rag_lookup');
+    localStorage.removeItem(LOG);
     try { await fetch('/api/lookup/reset', {method: 'POST'}); } catch { }
   };
 }

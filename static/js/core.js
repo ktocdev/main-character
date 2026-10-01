@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 export const $ = id => document.getElementById(id);
+// What this page keeps in the browser is per journal. The demo journal runs
+// on the author's own origin (the same port, after a restart), so without
+// this its draft would overwrite theirs. The server marks the demo's page
+// (server.home); the mark is read here, synchronously, because write.js
+// reads the draft at init, before status arrives.
+const DEMO_PAGE = document.querySelector('meta[name="mc-journal"]')?.content === 'demo';
+export const storeKey = name => (DEMO_PAGE ? 'demo:' : '') + name;
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 }[c]));

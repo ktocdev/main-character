@@ -31,7 +31,7 @@ load_dotenv()
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -212,7 +212,14 @@ class CategoryBuildIn(BaseModel):
 
 @app.get("/")
 def home():
-    return FileResponse(STATIC_DIR / "index.html")
+    if not SEED_INSTANCE:
+        return FileResponse(STATIC_DIR / "index.html")
+    # The demo journal shares the author's origin, so the page has to know,
+    # before any script runs, to keep its draft and lookups apart from
+    # theirs (core.storeKey).
+    html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    return HTMLResponse(html.replace(
+        "<head>", '<head>\n<meta name="mc-journal" content="demo">', 1))
 
 
 # The design system home: static pages that render the app's own tokens and

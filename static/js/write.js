@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, api, download, esc, refreshStatus } from './core.js';
+import { $, api, download, esc, refreshStatus, storeKey } from './core.js';
 import { state } from './state.js';
 import { addMsg, streamInto, composerBusy, anchorTop } from './conversation.js';
 import { renderSessionPart, addSessionBraid, loadHistory } from './history.js';
 import * as popover from './popover.js';
 import { tipOf, setTip } from './tooltip.js';
+
+const DRAFT = storeKey('rag_draft');
 
 // ---- draft persistence + growing textarea ----
 // the write box survives an accidental refresh or tab close; it grows with
@@ -37,12 +39,12 @@ function turnDone() {
 }
 function clearComposer() {
   $('entry-text').value = '';
-  localStorage.removeItem('rag_draft');
+  localStorage.removeItem(DRAFT);
   autosizeEntry();
 }
 function restoreDraft(text) {
   $('entry-text').value = text;
-  localStorage.setItem('rag_draft', text);
+  localStorage.setItem(DRAFT, text);
   autosizeEntry();
 }
 
@@ -52,7 +54,7 @@ function restoreDraft(text) {
 // keeps its id with the draft, so saving that same text again is recognised
 // as a retry of it -- not a second entry. Once a save is confirmed the id is
 // spent: writing the same words again later is a new entry, and counts.
-const PENDING_SAVE = 'rag_pending_save';
+const PENDING_SAVE = storeKey('rag_pending_save');
 function newSaveId() {
   if (crypto.randomUUID) return crypto.randomUUID();
   return Array.from(crypto.getRandomValues(new Uint8Array(16)),
@@ -309,12 +311,12 @@ function initStamp() {
 }
 
 export function init() {
-  $('entry-text').value = localStorage.getItem('rag_draft') || '';
+  $('entry-text').value = localStorage.getItem(DRAFT) || '';
   autosizeEntry();
   initStamp();
   if ($('entry-text').value) startStamp();   // a restored draft is already begun
   $('entry-text').addEventListener('input', () => {
-    localStorage.setItem('rag_draft', $('entry-text').value);
+    localStorage.setItem(DRAFT, $('entry-text').value);
     autosizeEntry();
   });
 
