@@ -40,6 +40,9 @@
     --accent: #d99e5b;      /* lamp amber */
     --accent-hover: #e8b377; /* the primary's hover: a step brighter */
     --accent-dim: #8a6a44;
+    /* a pressed solid toggle: the full accent in dark, where --accent-dim under
+       --bg text read as disabled (~3.4:1); light keeps --accent-dim (~4.6:1) */
+    --toggle-on: var(--accent);
     --border: #3d362f;
     --you: #c9b99f;
     --error: #c96a5a;       /* the app's one danger/error color */
@@ -85,7 +88,7 @@
       --bg: #faf7f2; --bg-raised: #ffffff; --bg-input: #f1ece4;
       --text: #38322b; --text-dim: #6b6258; --accent: #9c6021; --accent-hover: #82501b;
       --accent-dim: #827020; --border: #e4dcd0; --you: #6a4a2a;
-      --error: #a8493a; --card-thumb-hover: #faf7f2;
+      --error: #a8493a; --card-thumb-hover: #faf7f2; --toggle-on: var(--accent-dim);
     }
   }
   :root[data-theme="light"] {
@@ -93,6 +96,6 @@
     --bg: #faf7f2; --bg-raised: #ffffff; --bg-input: #f1ece4;
     --text: #38322b; --text-dim: #6b6258; --accent: #9c6021; --accent-hover: #82501b;
     --accent-dim: #827020; --border: #e4dcd0; --you: #6a4a2a;
-    --error: #a8493a; --card-thumb-hover: #faf7f2;
+    --error: #a8493a; --card-thumb-hover: #faf7f2; --toggle-on: var(--accent-dim);
   }
   :root[data-theme="dark"] { color-scheme: dark; }

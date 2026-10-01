@@ -106,7 +106,7 @@
   }
   .chip-toggle:hover { color: var(--text); }
   .chip-toggle.on, .chip-toggle[aria-pressed="true"] {
-    background: var(--accent-dim); color: var(--bg); border-color: var(--accent-dim);
+    background: var(--toggle-on); color: var(--bg); border-color: var(--toggle-on);
   }
   /* soft: on = a filled --bg-input pill in --text, for a mode switch whose
      two states are both ordinary (search's meaning / exact text) */

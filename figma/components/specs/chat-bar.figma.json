@@ -1805,14 +1805,14 @@
              "h": 28.8,
              "fills": [
               {
-               "hex": "#8a6a44",
-               "token": "accent-dim"
+               "hex": "#d99e5b",
+               "token": "accent"
               }
              ],
              "stroke": {
               "paint": {
-               "hex": "#8a6a44",
-               "token": "accent-dim"
+               "hex": "#d99e5b",
+               "token": "accent"
               },
               "weights": [
                1,
@@ -2349,14 +2349,14 @@
              "h": 28.8,
              "fills": [
               {
-               "hex": "#8a6a44",
-               "token": "accent-dim"
+               "hex": "#d99e5b",
+               "token": "accent"
               }
              ],
              "stroke": {
               "paint": {
-               "hex": "#8a6a44",
-               "token": "accent-dim"
+               "hex": "#d99e5b",
+               "token": "accent"
               },
               "weights": [
                1,

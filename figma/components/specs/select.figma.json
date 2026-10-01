@@ -136,7 +136,7 @@
      "tree": {
       "type": "frame",
       "name": "quiet-select",
-      "w": 72,
+      "w": 73,
       "h": 32,
       "fills": [
        {
@@ -215,7 +215,7 @@
          }
         ],
         "lineHeight": null,
-        "w": 54,
+        "w": 55,
         "h": 15.36,
         "sizing": {
          "h": "FILL",

@@ -10,6 +10,7 @@
   "mono": "Roboto Mono"
  },
  "fallback": {
+  "accent": "#d99e5b",
   "accent-dim": "#8a6a44",
   "bg": "#211d19",
   "bg-input": "#322c27",
@@ -300,14 +301,14 @@
       "h": 28.8,
       "fills": [
        {
-        "hex": "#8a6a44",
-        "token": "accent-dim"
+        "hex": "#d99e5b",
+        "token": "accent"
        }
       ],
       "stroke": {
        "paint": {
-        "hex": "#8a6a44",
-        "token": "accent-dim"
+        "hex": "#d99e5b",
+        "token": "accent"
        },
        "weights": [
         1,
@@ -392,14 +393,14 @@
       "h": 28.8,
       "fills": [
        {
-        "hex": "#8a6a44",
-        "token": "accent-dim"
+        "hex": "#d99e5b",
+        "token": "accent"
        }
       ],
       "stroke": {
        "paint": {
-        "hex": "#8a6a44",
-        "token": "accent-dim"
+        "hex": "#d99e5b",
+        "token": "accent"
        },
        "weights": [
         1,
@@ -484,14 +485,14 @@
       "h": 28.8,
       "fills": [
        {
-        "hex": "#8a6a44",
-        "token": "accent-dim"
+        "hex": "#d99e5b",
+        "token": "accent"
        }
       ],
       "stroke": {
        "paint": {
-        "hex": "#8a6a44",
-        "token": "accent-dim"
+        "hex": "#d99e5b",
+        "token": "accent"
        },
        "weights": [
         1,
