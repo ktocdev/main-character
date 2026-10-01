@@ -17,6 +17,7 @@ import * as cost from './cost.js';
 import * as help from './help.js';
 import * as wizard from './wizard.js';
 import * as nav from './nav.js';
+import * as demoScript from './demo-script.js';
 import * as tooltip from './tooltip.js';
 import * as popover from './popover.js';
 
@@ -86,3 +87,8 @@ if (state.configured) {
 } else {
   wizard.open();
 }
+
+// A demo journal (the local one, or the published web demo) follows a
+// script: what's typed is swapped for the next scripted message. Status says
+// which journal this is, so it starts here, after it.
+if (document.body.classList.contains('seed-instance')) demoScript.init();

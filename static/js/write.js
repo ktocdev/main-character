@@ -29,6 +29,12 @@ function autosizeEntry() {
   const max = Math.max(120, panelH - chrome - LOG_PEEK);
   t.style.height = Math.min(t.scrollHeight + 2, max) + 'px';
 }
+// A send has finished, whatever came of it. The demo journal's script
+// (demo-script.js) listens, to show the next scripted message; nothing
+// else does.
+function turnDone() {
+  document.dispatchEvent(new CustomEvent('mc:turn', {detail: {tab: 'write'}}));
+}
 function clearComposer() {
   $('entry-text').value = '';
   localStorage.removeItem('rag_draft');
@@ -94,6 +100,7 @@ export async function closeSession(question = 'Close this chapter?') {
   if (!r) return;
   $('write-log').innerHTML = '';
   $('entry-saved').textContent = `chapter closed and saved as "${r.title}".`;
+  document.dispatchEvent(new CustomEvent('mc:closed'));
   trackCloseProgress();
   state.sessionSel = 'current';
   if (state.activeTab === 'history') await loadHistory();
@@ -320,7 +327,7 @@ export function init() {
     const el = addMsg('companion thinking', '');
     anchorTop(you);   // stay on your own message while the reply streams in
     try { await streamInto(el, '/api/chat', {message: text}); }
-    finally { composerBusy(false); $('entry-text').focus(); }
+    finally { composerBusy(false); $('entry-text').focus(); turnDone(); }
     askToCloseIfLong();
   };
 
@@ -423,7 +430,7 @@ export function init() {
           $('entry-saved').textContent = unreached ? UNREACHED
             : 'save failed, but your draft is untouched';
         }
-      } finally { composerBusy(false); $('entry-text').focus(); }
+      } finally { composerBusy(false); $('entry-text').focus(); turnDone(); }
       return;
     }
 
@@ -462,6 +469,6 @@ export function init() {
         $('entry-saved').textContent = res ? 'save failed, but your draft is untouched'
           : UNREACHED;
       }
-    } finally { composerBusy(false); $('entry-text').focus(); }
+    } finally { composerBusy(false); $('entry-text').focus(); turnDone(); }
   };
 }

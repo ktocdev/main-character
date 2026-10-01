@@ -86,6 +86,8 @@ async function sendLookup() {
     saveLookupLog();
     $('lookup-send').disabled = false;
     $('chat-text').focus();
+    // for the demo journal's script (demo-script.js), as write.js's turnDone
+    document.dispatchEvent(new CustomEvent('mc:turn', {detail: {tab: 'ask'}}));
   }
 }
 export function init() {

@@ -34,6 +34,7 @@ import inspect
 import json
 import random
 import re
+import threading
 import time
 from pathlib import Path
 
@@ -64,6 +65,23 @@ DEFAULT_DELAY = 1.0
 # scroll anchoring and mid-stream interaction (Phase 2 items 1 and 5) are
 # actually observable.
 STREAM_CHUNK_DELAY = 0.035
+
+# The demo journal's script (demo_script.py) decides a reply before the
+# companion is called. The route sets it here, in the thread that then runs
+# the turn, and the turn's one stream takes it -- so the real companion code
+# still runs (history, context, the session append), just with the scripted
+# words. One-shot: the next call is back to the fixtures.
+_NEXT = threading.local()
+
+
+def say_next(text: str) -> None:
+    _NEXT.text = text
+
+
+def _take_next() -> str | None:
+    text = getattr(_NEXT, "text", None)
+    _NEXT.text = None
+    return text
 
 
 def _call_key(skip: frozenset = frozenset({"mock_client", "metering"})) -> str:
@@ -321,7 +339,8 @@ class _Messages:
         key = _call_key()
         time.sleep(DELAYS.get(key, DEFAULT_DELAY))
         prompt = _prompt_text(kwargs)
-        text = _recorded(key, kwargs) or _pick(key, prompt) or _fallback(kwargs)
+        text = (_take_next() or _recorded(key, kwargs) or _pick(key, prompt)
+                or _fallback(kwargs))
         return _Stream(text, prompt, kwargs.get("model", "mock"))
 
 
