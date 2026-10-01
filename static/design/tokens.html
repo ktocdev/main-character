@@ -4,72 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character · design tokens</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/tokens.css">
-<link rel="stylesheet" href="/static/css/base.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/design/design.css">
-<script>
-  try {
-    var _t = localStorage.getItem('rag_theme');
-    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
-  } catch (e) {}
-</script>
-<style>
-  /* The living spec: every token the app is built from, rendered live from
-     tokens.css. Colour is ramps, roles and a few component tokens; dark is
-     the default palette, light points the same roles at other ramp steps.
-     The .dk and .lt boxes pin every role to its dark or light step (a style
-     the script below writes from tokens.css), so both show side by side
-     whatever the page's theme. Part of the design system at /design; the
-     shell is design.css. */
-  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0 1rem; padding: 0 .2rem; }
-  .cols.head { font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
-  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .6rem 1rem; align-items: stretch; padding-bottom: .8rem; border-bottom: 1px solid var(--border-default); }
-  .row .name { font: 600 .95rem var(--font-ui); color: var(--text-default); }
-  .row .val { font: .8rem var(--font-ui); color: var(--text-muted); }
-  .row .role { font-size: .85rem; color: var(--text-muted); line-height: 1.45; text-wrap: pretty; }
-  .row .id { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
-  .swatch { display: flex; align-items: center; gap: .8rem; padding: .6rem .8rem; border-radius: 10px; }
-  .swatch, .spec { background: var(--bg-page); border: 1px solid var(--border-default); }
-  .swatch .chip-sq { width: 2.6rem; height: 2.6rem; flex-shrink: 0; border-radius: 8px; border: 1px solid rgba(128,128,128,.25); }
-  .swatch .aa { font-size: 1.4rem; line-height: 1; }
-  .swatch .hex { margin-left: auto; font: .8rem var(--font-ui); }
-  .swatch .hex, .swatch .pair { color: var(--text-muted); }
-  .specimens { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; margin-top: .4rem; }
-  .spec { padding: 1rem 1.2rem; border-radius: 10px; display: flex; flex-direction: column; gap: .4rem; }
-  .spec .ey { font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
-  .spec p { font-size: .95rem; }
-  .spec .meta { display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; margin-top: .6rem; font: .8rem var(--font-ui); }
-  .card2 { padding: 1.2rem; border-radius: 10px; background: var(--bg-raised); border: 1px solid var(--border-default); display: flex; flex-direction: column; gap: .6rem; }
-  .typerow { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .4rem 1rem; align-items: center; padding-bottom: .6rem; border-bottom: 1px solid var(--border-default); }
-  .typerow .sample { line-height: 1.3; color: var(--text-default); overflow-wrap: anywhere; }
-  .literals .plat { display: inline-flex; align-items: center; gap: .3rem; margin-right: .4rem; }
-  .literals .plat i { display: inline-block; width: 1.1rem; height: 1.1rem; border-radius: 3px; border: 1px solid rgba(128,128,128,.4); }
-  .callout { padding: 1rem 1.2rem; border-radius: 10px; border: 1px dashed var(--border-accent); display: flex; flex-direction: column; gap: .4rem; margin-top: .4rem; }
-  .sprow { display: grid; grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr); gap: .3rem 1rem; align-items: center; padding-bottom: .5rem; border-bottom: 1px solid var(--border-default); }
-  .bar { height: 1.2rem; flex-shrink: 0; border-radius: 2px; background: var(--fill-accent-muted); }
-  .radii { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; }
-  .rad { display: flex; gap: .8rem; align-items: center; }
-  .rad .box { height: 2.2rem; display: flex; align-items: center; justify-content: center; background: var(--bg-muted); border: 1px solid var(--border-default); font: .8rem var(--font-ui); color: var(--text-muted); }
-  .rad .fill { height: 2.2rem; width: 2.2rem; flex-shrink: 0; background: var(--fill-accent); }
-  .literals { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; font: .8rem var(--font-ui); color: var(--text-muted); padding: .8rem 1rem; border: 1px dashed var(--border-accent); border-radius: 10px; }
-  .literals .sq { display: inline-block; width: 1.6rem; height: 1.6rem; background: var(--bg-muted); border: 1px solid var(--border-default); vertical-align: middle; margin-right: .5rem; }
-  .motion { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
-  .ramp { display: flex; flex-direction: column; gap: .5rem; }
-  /* auto-fill, so every ramp's steps share one set of columns: 13 across the reading column */
-  .ramp .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(3.4rem, 1fr)); gap: .5rem .4rem; }
-  .ramp .step { display: flex; flex-direction: column; gap: .1rem; min-width: 0; font: .72rem var(--font-ui); color: var(--text-muted); }
-  .ramp .step .sq { height: 2.6rem; margin-bottom: .2rem; border-radius: 8px; border: 1px solid rgba(128,128,128,.25); }
-  .ramp .step b { font-weight: 600; color: var(--text-default); }
-  .swatch .pair { display: flex; flex-direction: column; gap: .1rem; margin-left: auto; text-align: right; font: .8rem var(--font-ui); }
-  .swatch .pair .hex { margin-left: 0; }
-</style>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/tokens.css">
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1><a href="/design">main character</a></h1>
+    <h1><a href="index.html">main character</a></h1>
     <span class="status">design tokens · 3 ramps · 19 color roles · 2 families · 8 type steps · 8 space steps · 5 radii · 2 motion</span>
   </div>
   <div class="right">
@@ -107,18 +53,18 @@
       <div id="role-map"></div>
       <div class="specimens">
         <div class="spec dk">
-          <div class="ey" style="color:var(--text-accent-muted)">you · september 1, 2026</div>
-          <p style="color:var(--text-you)">Wrote until the lamp was the only light left on.</p>
-          <div class="ey" style="color:var(--text-accent-muted); margin-top:.4rem">companion</div>
-          <p style="color:var(--text-default)">That is the second night this week you stayed with it.</p>
-          <div class="meta"><span style="color:var(--text-muted)">31 entries · 49 entities</span><span style="color:var(--text-accent)">saved</span><span style="color:var(--text-danger)">could not reach the model</span></div>
+          <div class="ey" data-style="color:var(--text-accent-muted)">you · september 1, 2026</div>
+          <p data-style="color:var(--text-you)">Wrote until the lamp was the only light left on.</p>
+          <div class="ey" data-style="color:var(--text-accent-muted); margin-top:.4rem">companion</div>
+          <p data-style="color:var(--text-default)">That is the second night this week you stayed with it.</p>
+          <div class="meta"><span data-style="color:var(--text-muted)">31 entries · 49 entities</span><span data-style="color:var(--text-accent)">saved</span><span data-style="color:var(--text-danger)">could not reach the model</span></div>
         </div>
         <div class="spec lt">
-          <div class="ey" style="color:var(--text-accent-muted)">you · september 1, 2026</div>
-          <p style="color:var(--text-you)">Wrote until the lamp was the only light left on.</p>
-          <div class="ey" style="color:var(--text-accent-muted); margin-top:.4rem">companion</div>
-          <p style="color:var(--text-default)">That is the second night this week you stayed with it.</p>
-          <div class="meta"><span style="color:var(--text-muted)">31 entries · 49 entities</span><span style="color:var(--text-accent)">saved</span><span style="color:var(--text-danger)">could not reach the model</span></div>
+          <div class="ey" data-style="color:var(--text-accent-muted)">you · september 1, 2026</div>
+          <p data-style="color:var(--text-you)">Wrote until the lamp was the only light left on.</p>
+          <div class="ey" data-style="color:var(--text-accent-muted); margin-top:.4rem">companion</div>
+          <p data-style="color:var(--text-default)">That is the second night this week you stayed with it.</p>
+          <div class="meta"><span data-style="color:var(--text-muted)">31 entries · 49 entities</span><span data-style="color:var(--text-accent)">saved</span><span data-style="color:var(--text-danger)">could not reach the model</span></div>
         </div>
       </div>
       <p class="note">Component tokens, only where a component needs a value its role doesn't give: <span class="mono">--toggle-on</span> is <span class="mono">--fill-accent</span> in both themes (light used to take the olive muted accent), and <span class="mono">--card-thumb-hover</span> is <span class="mono">--bg-muted</span> mixed 10% toward <span class="mono">--fill-accent</span> in dark, <span class="mono">--bg-page</span> in light. <span class="mono">--modal-scrim</span>, behind an open modal, is <span class="mono">--bg-page</span> at 75%, so it dims toward the page colour in either theme. Shadows are four whole box-shadows, the same in both themes: <span class="mono">--shadow-sm</span> (tooltip, settings popover), <span class="mono">--shadow-md</span> (cost panel), <span class="mono">--shadow-lg</span> (popover menu), <span class="mono">--shadow-xl</span> (the nav sheet).</p>
@@ -139,27 +85,27 @@
       <p class="note">Two families, no third. Serif is writing, yours and the companion's. Condensed sans is the machinery around it: buttons, labels, nav, meta.</p>
       <div class="specimens">
         <div class="card2">
-          <div class="row name" style="border:0;padding:0;display:block">--font-body</div>
+          <div class="row name" data-style="border:0;padding:0;display:block">--font-body</div>
           <div class="val">'Old Standard TT', Georgia, 'Times New Roman', serif · self-hosted · 400, 400 italic, 700</div>
-          <p style="margin-top:.4rem; font-size:1.4rem; line-height:1.3; text-wrap:pretty">After work, Jordan met Mika for a run at Greenwood Park.</p>
-          <p style="font-size:1.05rem; font-style:italic; color:var(--text-accent)">main character — the wordmark is this face, italic, in accent</p>
-          <p style="font-size:.95rem; font-weight:700">Bold is reserved for entry titles and category names.</p>
+          <p data-style="margin-top:.4rem; font-size:1.4rem; line-height:1.3; text-wrap:pretty">After work, Jordan met Mika for a run at Greenwood Park.</p>
+          <p data-style="font-size:1.05rem; font-style:italic; color:var(--text-accent)">main character — the wordmark is this face, italic, in accent</p>
+          <p data-style="font-size:.95rem; font-weight:700">Bold is reserved for entry titles and category names.</p>
           <div class="note">Journal entries, companion replies, help prose, AI-written summaries: anything meant to read as writing, even when a machine wrote it.</div>
         </div>
         <div class="card2">
-          <div class="row name" style="border:0;padding:0;display:block">--font-ui</div>
+          <div class="row name" data-style="border:0;padding:0;display:block">--font-ui</div>
           <div class="val">'CMU Sans Demi Condensed', system-ui, sans-serif · self-hosted · 400–600</div>
-          <p style="margin-top:.4rem; font:1.4rem/1.3 var(--font-ui)">write · ask · search · entities · categories</p>
-          <p style="font:600 .95rem var(--font-ui)">save entry &nbsp; send &nbsp; reflect &nbsp; detect patterns</p>
+          <p data-style="margin-top:.4rem; font:1.4rem/1.3 var(--font-ui)">write · ask · search · entities · categories</p>
+          <p data-style="font:600 .95rem var(--font-ui)">save entry &nbsp; send &nbsp; reflect &nbsp; detect patterns</p>
           <p class="eyebrow strong">july 30, 2026 · updating memory</p>
           <div class="note">Every button, label, nav item, status line, chip and meta line. The tell for "this is interface, not journal content."</div>
         </div>
       </div>
-      <div class="cols head" style="margin-top:.6rem"><div>step · covers</div><div>--font-ui</div><div>--font-body</div></div>
+      <div class="cols head" data-style="margin-top:.6rem"><div>step · covers</div><div>--font-ui</div><div>--font-body</div></div>
       <div id="type-scale"></div>
       <div class="callout">
-        <div style="display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap"><span class="row name" style="border:0;padding:0">body prose</span><span class="val">17px / 1.65 · literal, not on the scale</span></div>
-        <p style="font: 17px/1.65 var(--font-body); max-width:46rem; text-wrap:pretty">Here's what I notice you didn't: on 8/3, the recovery cost you a sick day. This time you went to work, sat through the meetings, and still made it to Groundwork after. You're not doing the same loop, you're doing a tighter one.</p>
+        <div data-style="display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap"><span class="row name" data-style="border:0;padding:0">body prose</span><span class="val">17px / 1.65 · literal, not on the scale</span></div>
+        <p data-style="font: 17px/1.65 var(--font-body); max-width:46rem; text-wrap:pretty">Here's what I notice you didn't: on 8/3, the recovery cost you a sick day. This time you went to work, sat through the meetings, and still made it to Groundwork after. You're not doing the same loop, you're doing a tighter one.</p>
         <div class="note">Set on <span class="mono">body</span> directly. Entries and companion replies keep this size; do not swap it for <span class="mono">--font-base</span>.</div>
       </div>
     </section>
@@ -176,8 +122,8 @@
       <div class="radii" id="radii"></div>
       <div class="literals">
         <span class="eyebrow strong">left literal on purpose</span>
-        <span><span class="sq" style="border-radius:4px"></span>4px · settings selects and inputs, help code</span>
-        <span><span class="sq" style="border-radius:12px"></span>12px · every content card: pattern, dream, triage, compact composer, search box</span>
+        <span><span class="sq" data-style="border-radius:4px"></span>4px · settings selects and inputs, help code</span>
+        <span><span class="sq" data-style="border-radius:12px"></span>12px · every content card: pattern, dream, triage, compact composer, search box</span>
       </div>
     </section>
 
@@ -186,9 +132,9 @@
       <p class="note">One idiom: a slow breathing fade, standing in for "something is happening, wait." No spinners, no skeletons. New async states reuse this.</p>
       <div class="motion">
         <div class="card2">
-          <div style="display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap"><span class="row name" style="border:0;padding:0">lamp-pulse</span><span class="val">1.6s ease-in-out infinite · opacity .25 ↔ 1</span></div>
+          <div data-style="display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap"><span class="row name" data-style="border:0;padding:0">lamp-pulse</span><span class="val">1.6s ease-in-out infinite · opacity .25 ↔ 1</span></div>
           <div class="eyebrow">companion</div>
-          <div class="dots" style="font-size:1.05rem; width:max-content">···</div>
+          <div class="dots" data-style="font-size:1.05rem; width:max-content">···</div>
           <div class="note"><span class="mono">.msg.thinking::after</span>: the pending reply, before the companion answers.</div>
         </div>
         <div class="card2">
@@ -208,159 +154,7 @@
   </main>
 </div>
 
-<script>
-  // ---- ramps, read live from tokens.css ----
-  const rootCs = getComputedStyle(document.documentElement);
-  const stepHex = name => rootCs.getPropertyValue('--' + name).trim();
-  const RAMPS = { umber: [0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950], amber: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950], rust: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] };
-  const rampEl = document.getElementById('ramp-list');
-  for (const [hue, steps] of Object.entries(RAMPS)) {
-    const r = document.createElement('div');
-    r.className = 'ramp';
-    r.innerHTML = `<div class="name" style="font:600 .95rem var(--font-ui); color:var(--text-default)">${hue}</div><div class="steps"></div>`;
-    for (const s of steps) {
-      const st = document.createElement('div');
-      st.className = 'step';
-      st.innerHTML = `<div class="sq" style="background:var(--${hue}-${s})"></div><b>${s}</b><span>${stepHex(`${hue}-${s}`)}</span>`;
-      r.querySelector('.steps').appendChild(st);
-    }
-    rampEl.appendChild(r);
-  }
-  // WCAG contrast between two hex colours
-  const lum = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [.2126, .7152, .0722][i], 0); };
-  const ratio = (a, b) => { const x = lum(a), y = lum(b); return ((Math.max(x, y) + .05) / (Math.min(x, y) + .05)).toFixed(1) + ':1'; };
-  // [role, job, kind]: kind says what the contrast is against. The steps
-  // each role points at come from tokens.css itself: the :root rule for
-  // dark, the data-theme="light" rule for light.
-  const JOBS = [
-    ['--bg-page', 'page background', 'surface'],
-    ['--bg-raised', 'cards, panels, menus', 'surface'],
-    ['--bg-muted', 'inputs, textareas, chips, pressed nav, the soft toggle on', 'surface'],
-    ['--text-default', 'primary text', 'text'],
-    ['--text-muted', 'meta, labels, help copy', 'text'],
-    ['--text-you', 'your own words in a transcript', 'text'],
-    ['--text-accent', 'italic headings, active labels', 'text'],
-    ['--text-accent-muted', 'eyebrows, date labels', 'text'],
-    ['--text-danger', 'error notes, delete on hover', 'text'],
-    ['--text-on-accent', 'the label on an amber fill', 'on'],
-    ['--fill-accent', 'the send button, the solid toggle on', 'fill'],
-    ['--fill-accent-hover', 'the send button on hover', 'fill'],
-    ['--fill-accent-muted', 'the filled button', 'fill'],
-    ['--fill-danger', 'danger fills', 'fill'],
-    ['--border-default', 'every hairline', 'line'],
-    ['--border-strong', 'a hairline lifted on hover', 'line'],
-    ['--border-accent', 'dashed borders', 'line'],
-    ['--border-danger', 'a danger outline: the danger button on hover, an error note', 'line'],
-    ['--focus-ring', 'the keyboard focus outline', 'line'],
-  ];
-  const tokenRules = [...document.styleSheets].filter(sh => /tokens\.css$/.test(sh.href || '')).flatMap(sh => [...sh.cssRules]);
-  const ruleFor = sel => tokenRules.find(r => r.selectorText === sel && r.style.getPropertyValue('--bg-page'));
-  const darkRule = ruleFor(':root'), lightRule = ruleFor(':root[data-theme="light"]');
-  const stepOf = (rule, role) => (/var\(--([a-z]+-\d+)\)/.exec(rule.style.getPropertyValue(role)) || [])[1];
-  const ROLES = JOBS.map(([role, job, kind]) => [role, stepOf(darkRule, role), stepOf(lightRule, role), job, kind]);
-  // pin every role to its dark step inside .dk and its light step inside .lt
-  const pin = document.createElement('style');
-  pin.textContent = ['dk', 'lt'].map((t, i) => `.${t} { ${ROLES.map(r => `${r[0]}: var(--${r[1 + i]});`).join(' ')} }`).join('\n');
-  document.head.appendChild(pin);
-  // the platform colours, from design.css's :root and light rules
-  const designRules = [...document.styleSheets].filter(sh => /design\.css$/.test(sh.href || '')).flatMap(sh => [...sh.cssRules]);
-  const platDark = designRules.find(r => r.selectorText === ':root' && r.style.getPropertyValue('--platform-well'));
-  const platLight = designRules.find(r => r.selectorText === ':root[data-theme="light"]');
-  const platEl = document.getElementById('platform');
-  for (const [name, what] of [['--platform-highlight', 'the open list\'s hovered row'], ['--platform-highlight-text', 'its text'], ['--platform-rule', 'the open list\'s rule, the unchecked box\'s rule'], ['--platform-well', 'the unchecked box\'s fill, and the tick']]) {
-    const d = platDark.style.getPropertyValue(name).trim(), l = platLight.style.getPropertyValue(name).trim();
-    const el = document.createElement('span');
-    el.innerHTML = `<span class="plat"><i style="background:${d}"></i><i style="background:${l}"></i></span><span class="mono"></span> · ${d} / ${l} · `;
-    el.querySelector('.mono').textContent = name;
-    el.append(what);
-    platEl.appendChild(el);
-  }
-  const step = (roles, theme, role) => roles.find(r => r[0] === role)[theme === 'dk' ? 1 : 2];
-  function cell(theme, s, kind, roles) {
-    const hex = stepHex(s), page = stepHex(step(roles, theme, '--bg-page')), on = stepHex(step(roles, theme, '--text-on-accent'));
-    const fillHex = stepHex(step(roles, theme, '--fill-accent'));
-    let chip = `<div class="chip-sq" style="background:${hex}"></div>`, note = '';
-    if (kind === 'text') { chip += `<span class="aa" style="color:${hex}">Aa</span>`; note = `${ratio(hex, page)} on page`; }
-    else if (kind === 'fill') { chip = `<div class="chip-sq" style="background:${hex}; color:${on}; display:grid; place-items:center; font:600 .95rem var(--font-ui)">Aa</div>`; note = `${ratio(on, hex)} under its label`; }
-    else if (kind === 'on') { chip = `<div class="chip-sq" style="background:${fillHex}; color:${hex}; display:grid; place-items:center; font:600 .95rem var(--font-ui)">Aa</div>`; note = `${ratio(hex, fillHex)} on --fill-accent`; }
-    else if (kind === 'line') note = `${ratio(hex, page)} on page`;
-    return `<div class="swatch ${theme}">${chip}<span class="pair"><span>${s}</span><span class="hex">${hex}${note ? ' · ' + note : ''}</span></span></div>`;
-  }
-  function drawRoles(roles) {
-    const el = document.getElementById('role-map');
-    el.textContent = '';
-    for (const [name, dk, lt, job, kind] of roles) {
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.innerHTML = `<div class="id"><div class="name"></div><div class="role"></div></div>${cell('dk', dk, kind, roles)}${cell('lt', lt, kind, roles)}`;
-      row.querySelector('.name').textContent = name;
-      row.querySelector('.role').textContent = job;
-      el.appendChild(row);
-    }
-  }
-  drawRoles(ROLES);
-
-  const fmt = rem => `${rem}rem · ${Math.round(rem * 16 * 10) / 10}px`;
-  const type = [
-    ['--font-3xs', .7, 'eyebrows, tracked uppercase labels (600); message labels use .75rem', 'YOU · SEPTEMBER 1, 2026'],
-    ['--font-2xs', .75, 'small buttons, tight meta', 'medium confidence · 8 weeks'],
-    ['--font-xs', .8, 'default UI text: buttons, status, meta. The workhorse.', 'restart the journal · 31 entries'],
-    ['--font-sm', .85, 'chips, help copy, secondary UI', 'emotional 30 · family 3'],
-    ['--font-base', .95, 'primary UI text, form labels, send button', 'save entry · send · reflect'],
-    ['--font-md', 1.05, 'sub-headings', 'Settings'],
-    ['--font-lg', 1.15, 'the masthead h1', 'main character'],
-    ['--font-xl', 1.4, 'the one focal heading', 'Is this the same Mika?'],
-  ];
-  const typeEl = document.getElementById('type-scale');
-  for (const [name, rem, covers, ui] of type) {
-    const row = document.createElement('div');
-    row.className = 'typerow';
-    row.innerHTML = `<div class="id"><div style="display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap"><span class="name" style="font:600 .95rem var(--font-ui); color:var(--text-default)"></span><span class="val"></span></div><div class="role"></div></div>
-      <div class="sample" style="font-family:var(--font-ui); font-size:${rem}rem"></div>
-      <div class="sample" style="font-family:var(--font-body); font-size:${rem}rem">The lamp was still on.</div>`;
-    row.querySelector('.name').textContent = name;
-    row.querySelector('.val').textContent = fmt(rem);
-    row.querySelector('.role').textContent = covers;
-    row.querySelectorAll('.sample')[0].textContent = ui;
-    typeEl.appendChild(row);
-  }
-  const space = [
-    ['--space-1', .25, 'icon and inline nudges'], ['--space-2', .4, 'tight inline gaps, the most common value'],
-    ['--space-3', .5, 'compact padding, chip padding'], ['--space-4', .6, 'composer gaps, button rows'],
-    ['--space-5', .8, 'standard component padding'], ['--space-6', 1, 'section spacing, pane padding'],
-    ['--space-7', 1.2, 'header gaps'], ['--space-8', 1.5, 'pane outer padding, major section margins'],
-  ];
-  const spaceEl = document.getElementById('space-scale');
-  for (const [name, rem, covers] of space) {
-    const row = document.createElement('div');
-    row.className = 'sprow';
-    row.innerHTML = `<div class="id"><span class="name" style="font:600 .95rem var(--font-ui); color:var(--text-default)"></span><span class="val"></span></div>
-      <div style="display:flex; align-items:center; gap:.8rem; min-width:0"><div class="bar" style="width:${rem}rem"></div><span class="role"></span></div>`;
-    row.querySelector('.name').textContent = name;
-    row.querySelector('.val').textContent = fmt(rem);
-    row.querySelector('.role').textContent = covers;
-    spaceEl.appendChild(row);
-  }
-  const radii = [
-    ['--radius-sm', '6px', 'flat-nav active, segmented control, list hover, text buttons', '6rem', 'quiet'],
-    ['--radius-base', '8px', 'quiet buttons, tooltip, list items, the menu trigger', '6rem', 'quiet'],
-    ['--radius-lg', '10px', 'send button, textareas, popovers, the cost panel', '6rem', 'send'],
-    ['--radius-pill', '999px', 'chips and pill buttons', '6rem', 'uneasy'],
-    ['--radius-circle', '50%', 'the cost meter ◌ and the ? button', '2.2rem', '?'],
-  ];
-  const radEl = document.getElementById('radii');
-  for (const [name, val, covers, w, label] of radii) {
-    const c = document.createElement('div');
-    c.className = 'card2';
-    c.innerHTML = `<div style="display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap"><span class="name" style="font:600 .95rem var(--font-ui); color:var(--text-default)"></span><span class="val"></span></div>
-      <div class="rad"><div class="box" style="width:${w}; border-radius:${val}"></div><div class="fill" style="border-radius:${val}"></div></div><div class="role"></div>`;
-    c.querySelector('.name').textContent = name;
-    c.querySelector('.val').textContent = val;
-    c.querySelector('.box').textContent = label;
-    c.querySelector('.role').textContent = covers;
-    radEl.appendChild(c);
-  }
-</script>
-<script type="module" src="/static/design/design.js"></script>
+<script src="pages/tokens.js"></script>
+<script type="module" src="design.js"></script>
 </body>
 </html>

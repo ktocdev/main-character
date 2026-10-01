@@ -4,22 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character — modal</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/tokens.css">
-<link rel="stylesheet" href="/static/css/base.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/design/design.css">
-<script>
-  try {
-    var _t = localStorage.getItem('rag_theme');
-    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
-  } catch (e) {}
-</script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1><a href="/design">main character</a></h1>
+    <h1><a href="index.html">main character</a></h1>
     <span class="status">modal · one card · one or two actions</span>
   </div>
   <div class="right">
@@ -49,7 +44,7 @@
 
     <section id="card">
       <div class="rule eyebrow strong">The card</div>
-      <p class="note">A <span class="mono">--bg-raised</span> card like the wizard's, 30rem wide at most and never closer than 1rem to the window's edge. Drawn here in place with <span class="mono">.modal</span>, the same rule as the open dialog. The buttons are <a href="/static/design/button.html">Buttons</a>: one send, and a quiet one when there is a way out besides Escape.</p>
+      <p class="note">A <span class="mono">--bg-raised</span> card like the wizard's, 30rem wide at most and never closer than 1rem to the window's edge. Drawn here in place with <span class="mono">.modal</span>, the same rule as the open dialog. The buttons are <a href="button.html">Buttons</a>: one send, and a quiet one when there is a way out besides Escape.</p>
       <div class="spec-row top">
         <div class="modal" data-figma-set="Modal" data-figma-variant="actions=one">
           <div class="eyebrow" data-figma-text="eyebrow">web demo</div>
@@ -113,15 +108,7 @@
     </section>
   </main>
 </div>
-<script type="module" src="/static/design/design.js"></script>
-<script type="module">
-  const dialog = document.getElementById('try-modal');
-  document.getElementById('open-modal').onclick = () => dialog.showModal();
-  // a click on the backdrop lands on the dialog itself, outside the card's box
-  dialog.addEventListener('click', e => {
-    const r = dialog.getBoundingClientRect();
-    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close();
-  });
-</script>
+<script type="module" src="design.js"></script>
+<script type="module" src="pages/modal.js"></script>
 </body>
 </html>

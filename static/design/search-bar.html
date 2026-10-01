@@ -4,26 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character — search bar</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/tokens.css">
-<link rel="stylesheet" href="/static/css/base.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/design/design.css">
-<script>
-  try {
-    var _t = localStorage.getItem('rag_theme');
-    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
-  } catch (e) {}
-</script>
-<style>
-  /* search's column is 46rem; the bar fills it */
-  .spec-row .search-bar { width: 40rem; }
-</style>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/search-bar.css">
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1><a href="/design">main character</a></h1>
+    <h1><a href="index.html">main character</a></h1>
     <span class="status">search bar · 3 states · 2 modes</span>
   </div>
   <div class="right">
@@ -52,7 +44,7 @@
 
     <section id="states">
       <div class="rule eyebrow strong">States and modes</div>
-      <p class="note">The mode is a soft <a href="/static/design/toggle.html">toggle</a> made a touch wider (1.8rem tall, .75rem sides). Off reads <b>meaning</b>: passages close to what you describe, ranked. On reads <b>exact text</b>: literal matches, newest first. The search button is a <a href="/static/design/button.html">send pill</a>.</p>
+      <p class="note">The mode is a soft <a href="toggle.html">toggle</a> made a touch wider (1.8rem tall, .75rem sides). Off reads <b>meaning</b>: passages close to what you describe, ranked. On reads <b>exact text</b>: literal matches, newest first. The search button is a <a href="button.html">send pill</a>.</p>
       <div class="stack">
         <div class="spec-row">
           <form class="search-bar" role="search" data-figma-set="Search bar" data-figma-variant="state=empty, mode=meaning">
@@ -131,6 +123,6 @@
     </section>
   </main>
 </div>
-<script type="module" src="/static/design/design.js"></script>
+<script type="module" src="design.js"></script>
 </body>
 </html>

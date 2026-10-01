@@ -63,6 +63,9 @@
   /* a row of specimens, each captioned by design.js with its variant */
   .spec-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.2rem 1.6rem; }
   .spec-row.top { align-items: flex-start; }
+  /* a row of live controls to point at (button, tooltip, toggle) */
+  .spec-row.inline { align-items: center; gap: .5rem .6rem; }
+  .spec-row.inline.tight { gap: .3rem; }
   .spec-cell { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; }
   .spec-cell > .cap { font: .72rem var(--font-ui); color: var(--text-muted); white-space: nowrap; }
   /* room above for a specimen whose popover opens upward */

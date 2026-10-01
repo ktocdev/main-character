@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* tokens.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+/* The living spec: every token the app is built from, rendered live from
+   tokens.css. Colour is ramps, roles and a few component tokens; dark is
+   the default palette, light points the same roles at other ramp steps.
+   The .dk and .lt boxes pin every role to its dark or light step (a style
+   the script below writes from tokens.css), so both show side by side
+   whatever the page's theme. Part of the design system at /design; the
+   shell is design.css. */
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0 1rem; padding: 0 .2rem; }
+.cols.head { font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .6rem 1rem; align-items: stretch; padding-bottom: .8rem; border-bottom: 1px solid var(--border-default); }
+.row .name { font: 600 .95rem var(--font-ui); color: var(--text-default); }
+.row .val { font: .8rem var(--font-ui); color: var(--text-muted); }
+.row .role { font-size: .85rem; color: var(--text-muted); line-height: 1.45; text-wrap: pretty; }
+.row .id { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.swatch { display: flex; align-items: center; gap: .8rem; padding: .6rem .8rem; border-radius: 10px; }
+.swatch, .spec { background: var(--bg-page); border: 1px solid var(--border-default); }
+.swatch .chip-sq { width: 2.6rem; height: 2.6rem; flex-shrink: 0; border-radius: 8px; border: 1px solid rgba(128,128,128,.25); }
+.swatch .aa { font-size: 1.4rem; line-height: 1; }
+.swatch .hex { margin-left: auto; font: .8rem var(--font-ui); }
+.swatch .hex, .swatch .pair { color: var(--text-muted); }
+.specimens { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; margin-top: .4rem; }
+.spec { padding: 1rem 1.2rem; border-radius: 10px; display: flex; flex-direction: column; gap: .4rem; }
+.spec .ey { font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
+.spec p { font-size: .95rem; }
+.spec .meta { display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; margin-top: .6rem; font: .8rem var(--font-ui); }
+.card2 { padding: 1.2rem; border-radius: 10px; background: var(--bg-raised); border: 1px solid var(--border-default); display: flex; flex-direction: column; gap: .6rem; }
+.typerow { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .4rem 1rem; align-items: center; padding-bottom: .6rem; border-bottom: 1px solid var(--border-default); }
+.typerow .sample { line-height: 1.3; color: var(--text-default); overflow-wrap: anywhere; }
+.literals .plat { display: inline-flex; align-items: center; gap: .3rem; margin-right: .4rem; }
+.literals .plat i { display: inline-block; width: 1.1rem; height: 1.1rem; border-radius: 3px; border: 1px solid rgba(128,128,128,.4); }
+.callout { padding: 1rem 1.2rem; border-radius: 10px; border: 1px dashed var(--border-accent); display: flex; flex-direction: column; gap: .4rem; margin-top: .4rem; }
+.sprow { display: grid; grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr); gap: .3rem 1rem; align-items: center; padding-bottom: .5rem; border-bottom: 1px solid var(--border-default); }
+.bar { height: 1.2rem; flex-shrink: 0; border-radius: 2px; background: var(--fill-accent-muted); }
+.radii { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; }
+.rad { display: flex; gap: .8rem; align-items: center; }
+.rad .box { height: 2.2rem; display: flex; align-items: center; justify-content: center; background: var(--bg-muted); border: 1px solid var(--border-default); font: .8rem var(--font-ui); color: var(--text-muted); }
+.rad .fill { height: 2.2rem; width: 2.2rem; flex-shrink: 0; background: var(--fill-accent); }
+.literals { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; font: .8rem var(--font-ui); color: var(--text-muted); padding: .8rem 1rem; border: 1px dashed var(--border-accent); border-radius: 10px; }
+.literals .sq { display: inline-block; width: 1.6rem; height: 1.6rem; background: var(--bg-muted); border: 1px solid var(--border-default); vertical-align: middle; margin-right: .5rem; }
+.motion { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
+.ramp { display: flex; flex-direction: column; gap: .5rem; }
+/* auto-fill, so every ramp's steps share one set of columns: 13 across the reading column */
+.ramp .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(3.4rem, 1fr)); gap: .5rem .4rem; }
+.ramp .step { display: flex; flex-direction: column; gap: .1rem; min-width: 0; font: .72rem var(--font-ui); color: var(--text-muted); }
+.ramp .step .sq { height: 2.6rem; margin-bottom: .2rem; border-radius: 8px; border: 1px solid rgba(128,128,128,.25); }
+.ramp .step b { font-weight: 600; color: var(--text-default); }
+.swatch .pair { display: flex; flex-direction: column; gap: .1rem; margin-left: auto; text-align: right; font: .8rem var(--font-ui); }
+.swatch .pair .hex { margin-left: 0; }

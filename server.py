@@ -31,7 +31,8 @@ load_dotenv()
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               RedirectResponse, StreamingResponse)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -223,10 +224,12 @@ def home():
 
 
 # The design system home: static pages that render the app's own tokens and
-# components (static/design/). Linked from the bottom of Settings.
+# components (static/design/). Linked from the bottom of Settings. A redirect
+# rather than the file, so the pages' relative links resolve from the
+# directory they live in (they're relative so the web demo can publish them).
 @app.get("/design")
 def design():
-    return FileResponse(STATIC_DIR / "design" / "index.html")
+    return RedirectResponse("/static/design/index.html")
 
 
 # Which process is answering. The restart poll cannot use "the server

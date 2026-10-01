@@ -4,26 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character — textarea</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/tokens.css">
-<link rel="stylesheet" href="/static/css/base.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/design/design.css">
-<script>
-  try {
-    var _t = localStorage.getItem('rag_theme');
-    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
-  } catch (e) {}
-</script>
-<style>
-  /* write's entry box at its resting height (autosize grows it in the app) */
-  .spec-row textarea { width: 24rem; height: 6.6rem; }
-</style>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/textarea.css">
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1><a href="/design">main character</a></h1>
+    <h1><a href="index.html">main character</a></h1>
     <span class="status">textarea · 3 states</span>
   </div>
   <div class="right">
@@ -52,7 +44,7 @@
 
     <section id="states">
       <div class="rule eyebrow strong">States</div>
-      <p class="note">Shown at write's resting height, 6.6rem. Focus is the input's: the border turns <span class="mono">--border-accent</span>, no ring. The chat bar's textarea is the same element with the well taken away: see <a href="/static/design/chat-bar.html">chat bar</a>.</p>
+      <p class="note">Shown at write's resting height, 6.6rem. Focus is the input's: the border turns <span class="mono">--border-accent</span>, no ring. The chat bar's textarea is the same element with the well taken away: see <a href="chat-bar.html">chat bar</a>.</p>
       <div class="spec-row top">
         <textarea placeholder="write freely…" data-figma-set="Textarea" data-figma-variant="state=empty" data-figma-text="value"></textarea>
         <textarea data-figma-set="Textarea" data-figma-variant="state=filled" data-figma-text="value">Ran the long loop at Greenwood Park with Mika this morning. Slower than last week, and I didn't mind.</textarea>
@@ -78,6 +70,6 @@
     </section>
   </main>
 </div>
-<script type="module" src="/static/design/design.js"></script>
+<script type="module" src="design.js"></script>
 </body>
 </html>
