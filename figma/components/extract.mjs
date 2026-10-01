@@ -115,9 +115,7 @@ for (const [slug, title] of PAGES) {
   const text = JSON.stringify(spec, null, 1) + '\n';
   if (check) {
     // git may check the file out with CRLF (core.autocrlf); compare the text
-    const old = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/
-/g, '
-') : '';
+    const old = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n') : '';
     if (old !== text) { console.log(`${slug}: differs from ${path.relative(process.cwd(), file)}`); failed = true; }
     else console.log(`${slug}: ok`);
   } else {
