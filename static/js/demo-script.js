@@ -107,7 +107,7 @@ function notice() {
   title.id = 'demo-notice-title';
   const form = el('form', 'modal-actions');
   form.method = 'dialog';
-  const ok = el('button', 'send', 'start writing');
+  const ok = el('button', 'send', 'start demo');
   ok.autofocus = true;
   form.append(ok);
   d.append(el('div', 'eyebrow', script.notice.eyebrow), title,

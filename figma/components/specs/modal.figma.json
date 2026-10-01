@@ -231,10 +231,10 @@
           "variant": "kind=send, size=md, state=default",
           "texts": [
            {
-            "chars": "start writing",
+            "chars": "start demo",
             "runs": [
              {
-              "len": 13,
+              "len": 10,
               "style": {
                "font": "ui",
                "weight": 400,
@@ -255,7 +255,7 @@
           "tree": {
            "type": "frame",
            "name": "send",
-           "w": 111.7,
+           "w": 103.09,
            "h": 35.19,
            "fills": [
             {
@@ -301,10 +301,10 @@
             {
              "type": "text",
              "name": "text",
-             "chars": "start writing",
+             "chars": "start demo",
              "runs": [
               {
-               "len": 13,
+               "len": 10,
                "style": {
                 "font": "ui",
                 "weight": 400,
@@ -322,7 +322,7 @@
              ],
              "lineHeight": null,
              "align": "CENTER",
-             "w": 73.328125,
+             "w": 64.71875,
              "h": 20,
              "lines": 1,
              "sizing": {
@@ -333,7 +333,7 @@
            ],
            "sizing": null
           },
-          "w": 111.7,
+          "w": 103.09,
           "h": 35.19,
           "name": "send",
           "sizing": {
