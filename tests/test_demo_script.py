@@ -146,8 +146,11 @@ def test_only_the_demo_page_keeps_its_own_browser_storage(client, monkeypatch):
     """The demo journal runs on the author's origin; its page is marked so
     its draft and lookups never land in the author's keys (core.storeKey)."""
     import server
-    mark = '<meta name="mc-journal" content="demo">'
+    mark = '<meta name="mc-journal" content="demo"'
     monkeypatch.setattr(server, "SEED_INSTANCE", False)
     assert mark not in client.get("/").text
     monkeypatch.setattr(server, "SEED_INSTANCE", True)
-    assert mark in client.get("/").text
+    page = client.get("/").text
+    assert mark in page
+    # which trip this is, so the page can drop what an earlier trip kept
+    assert f'data-trip="{server.INSTANCE_ID}"' in page

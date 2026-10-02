@@ -217,10 +217,12 @@ def home():
         return FileResponse(STATIC_DIR / "index.html")
     # The demo journal shares the author's origin, so the page has to know,
     # before any script runs, to keep its draft and lookups apart from
-    # theirs (core.storeKey).
+    # theirs (core.storeKey) -- and which trip into the demo this is, since
+    # nothing it keeps should outlive one.
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
     return HTMLResponse(html.replace(
-        "<head>", '<head>\n<meta name="mc-journal" content="demo">', 1))
+        "<head>", '<head>\n<meta name="mc-journal" content="demo" '
+                  f'data-trip="{INSTANCE_ID}">', 1))
 
 
 # The design system home: static pages that render the app's own tokens and
