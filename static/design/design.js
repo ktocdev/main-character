@@ -20,6 +20,7 @@ export const PAGES = [
   ['disclosure', 'disclosure.html'],
   ['search bar', 'search-bar.html'],
   ['chat bar', 'chat-bar.html'],
+  ['modal', 'modal.html'],
 ];
 
 // ---- theme ----
@@ -59,12 +60,14 @@ if (nav) {
     d.className = 'eyebrow'; d.textContent = text;
     top.appendChild(d);
   };
+  // Relative links: the pages sit side by side, under /static/design/ here
+  // and under design/ in the published web demo.
   eyebrow('design system');
-  add('home', '/design', location.pathname === '/design');
+  add('home', 'index.html', here === 'index.html');
   let components = false;
   for (const [label, file, group] of PAGES) {
     if (!group && !components) { eyebrow('components'); components = true; }
-    add(label, '/static/design/' + file, here === file);
+    add(label, file, here === file);
   }
   nav.prepend(top);
 }

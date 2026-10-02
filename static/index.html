@@ -66,11 +66,11 @@
   <section class="tab active" id="tab-write">
     <div id="write-log"></div>
     <div id="seed-banner" hidden>
-      <span>your seed summary candidate is ready. It's the life summary every chapter opens with, so read it through and edit it before it goes live.</span>
+      <span>your life summary candidate is ready. Read it through and edit it before it goes live.</span>
       <div class="actions">
-        <button class="send" id="seed-banner-edit">edit seed summary</button>
+        <button class="send" id="seed-banner-edit">edit life summary</button>
         <button class="quiet" id="seed-banner-download">download</button>
-        <button class="quiet" id="seed-banner-upload">upload edited seed</button>
+        <button class="quiet" id="seed-banner-upload">upload edited summary</button>
       </div>
     </div>
     <div id="close-progress" hidden></div>
@@ -97,9 +97,9 @@
           <summary title="chapter actions" aria-label="chapter actions">⋯</summary>
           <div class="menu popover">
             <button class="quiet" id="reset" title="this is the summarize point. Your side of this chapter becomes a journal entry, memory updates in the background, and a new chapter opens">close chapter</button>
-            <button class="quiet" id="seed-edit" title="edit the seed summary (the co-edited life summary that opens every chapter) right here in the app">edit seed summary</button>
-            <button class="quiet" id="seed-download" title="download the live seed summary, the co-edited life summary that opens every chapter" hidden>download current seed</button>
-            <button class="quiet" id="seed-upload-btn" title="upload your edited seed summary to make it the live seed for every new turn (the old one is backed up)">upload seed</button>
+            <button class="quiet" id="seed-edit" title="edit the life summary, which you co-edit and every chapter opens with, right here in the app">edit life summary</button>
+            <button class="quiet" id="seed-download" title="download your life summary, the co-edited summary every chapter opens with" hidden>download life summary</button>
+            <button class="quiet" id="seed-upload-btn" title="upload your edited life summary to use it for every new turn (the old one is backed up)">upload life summary</button>
             <input type="file" id="seed-upload-file" accept=".md,.txt,text/markdown,text/plain" hidden>
           </div>
         </details>
@@ -119,7 +119,7 @@
       </div>
       <textarea id="seed-editor-text" placeholder="loading…" spellcheck="true"></textarea>
       <div id="seed-editor-actions">
-        <button class="send" id="seed-save" title="make this the live seed that every new chapter opens with (the current one is backed up)">save seed summary</button>
+        <button class="send" id="seed-save" title="make this the life summary every new chapter opens with (the current one is backed up)">save life summary</button>
         <button class="quiet" id="seed-copy" title="copy the whole document to the clipboard">copy</button>
         <button class="quiet" id="seed-dl" title="download what's in the box right now, edits and all">download</button>
         <button class="quiet" id="seed-upload2" title="load a file from disk into the box (does not save)">upload</button>
@@ -407,9 +407,9 @@
       </details>
 
       <details class="disclosure">
-      <summary id="h-chat"><span class="mark"></span><span>chat · look things up</span></summary>
+      <summary id="h-chat"><span class="mark"></span><span>ask · look things up</span></summary>
       <div class="disclosure-body">
-      <p>The chat screen is a tool, not the journal. Ask it to pull things out of your history
+      <p>The ask screen is a tool, not the journal. Use it to pull things out of your history
       ("when did I last see Sam?", "what did I say about the move?"). It runs the same
       retrieval as the companion, with its own finder prompt, but it's a <em>separate conversation</em>, so lookups never join
       the open chapter and never become journal memory. <b>clear</b> wipes it whenever you like.
@@ -429,8 +429,8 @@
       calls. <b>meaning</b> mode ranks passages by how semantically close they are to whatever you
       describe, in your own words ("times I felt proud of my work"), while <b>exact text</b> mode finds
       literal matches, newest first, with a ×N count when an entry contains several. Click any
-      result to read the full entry in place. This is the exhaustive counterpart to the chat
-      screen. Chat retrieves a handful of excerpts and reasons about them, while search shows you
+      result to read the full entry in place. This is the exhaustive counterpart to the ask
+      screen. Ask retrieves a handful of excerpts and reasons about them, while search shows you
       <em>everything</em>. Dreams never appear here because they live in their own realm (dreams tab).</p>
       <p>There are two honest limits. Highlighting is literal (a typo'd word won't light up even though
       meaning-search still finds the right passages), and dates are the <em>conversation's</em>
@@ -509,9 +509,9 @@
         <div class="step-h"><h3>ongoing habit</h3></div>
         <div class="step-body"><p>Memory now updates at the <em>summarize point</em>. Closing a chapter tags it, extracts
         its entities, refreshes the week's arc, its summary, and the domain documents, scans it
-        for dreams, and integrates the chapter into a <em>seed summary candidate</em>, the rolling
-        co-edited life summary. When a banner on the write tab announces it, read the candidate
-        through, edit it, and save it. The saved document is the seed every chapter opens with,
+        for dreams, and integrates the chapter into a <em>life summary candidate</em>, a draft of the rolling
+        summary you co-edit. When a banner on the write tab announces it, read the candidate
+        through, edit it, and save it. The saved document is what every chapter opens with,
         and nothing automatic ever overwrites it. <em>detect patterns</em> in the
         patterns tab still re-reads everything for new recurring shapes when you ask. Closed chapters
         create new entities that arrive <em>unreviewed</em>, so an occasional minute in triage keeps

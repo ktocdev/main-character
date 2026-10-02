@@ -31,7 +31,8 @@ load_dotenv()
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               RedirectResponse, StreamingResponse)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -39,6 +40,7 @@ import caps
 import categories
 import companion
 import config
+import demo_script
 import entities
 import entry_catalog
 import metering
@@ -211,14 +213,25 @@ class CategoryBuildIn(BaseModel):
 
 @app.get("/")
 def home():
-    return FileResponse(STATIC_DIR / "index.html")
+    if not SEED_INSTANCE:
+        return FileResponse(STATIC_DIR / "index.html")
+    # The demo journal shares the author's origin, so the page has to know,
+    # before any script runs, to keep its draft and lookups apart from
+    # theirs (core.storeKey) -- and which trip into the demo this is, since
+    # nothing it keeps should outlive one.
+    html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    return HTMLResponse(html.replace(
+        "<head>", '<head>\n<meta name="mc-journal" content="demo" '
+                  f'data-trip="{INSTANCE_ID}">', 1))
 
 
 # The design system home: static pages that render the app's own tokens and
-# components (static/design/). Linked from the bottom of Settings.
+# components (static/design/). Linked from the bottom of Settings. A redirect
+# rather than the file, so the pages' relative links resolve from the
+# directory they live in (they're relative so the web demo can publish them).
 @app.get("/design")
 def design():
-    return FileResponse(STATIC_DIR / "design" / "index.html")
+    return RedirectResponse("/static/design/index.html")
 
 
 # Which process is answering. The restart poll cannot use "the server
@@ -341,19 +354,26 @@ def chat(body: ChatIn):
     except caps.CapExceeded as exc:
         return _refused(exc)
 
+    # The demo journal's script: a scripted follow-up carries its own time
+    step = (demo_script.take_write("chat", body.message)
+            if demo_script.active() else None)
+    when = parse_stamp(step["ts"]) if step else None
+
     def gen():
         # a send is conversation, never a saved entry -- it still joins
         # journal memory at close, it just doesn't count as one
         sessions.append_message("you", body.message, collection=STATE["collection"],
-                                kind="chat")
+                                kind="chat", when=when)
+        _say_scripted(demo_script.write_reply(step) if demo_script.active() else None)
         yield from companion.stream_reply(
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["messages"], body.message,
         )
-        # no `when` here on purpose: a chat turn carries no user-supplied
-        # stamp — only a write-mode entry can be backdated — so the reply
-        # is stamped at the moment it was actually generated.
-        sessions.append_message("companion", STATE["messages"][-1]["content"])
+        # no user-supplied `when` here on purpose: a chat turn carries no
+        # stamp — only a write-mode entry can be backdated — so the reply is
+        # stamped at the moment it was actually generated (or, in the demo
+        # journal, at its scripted time).
+        sessions.append_message("companion", STATE["messages"][-1]["content"], when=when)
     return StreamingResponse(_metered_stream(gen()),
                              media_type="text/plain; charset=utf-8")
 
@@ -384,13 +404,36 @@ def lookup(body: LookupIn):
     turn = (companion.stream_smart_lookup if body.smart and not config.MOCK_MODE
             else companion.stream_lookup)
 
+    scripted = (demo_script.lookup_reply(body.message.strip())
+                if demo_script.active() else None)
+
     def gen():
+        _say_scripted(scripted)
         yield from turn(
             STATE["client"], STATE["collection"], STATE["entity_index"],
             STATE["lookup"], body.message,
         )
     return StreamingResponse(_metered_stream(gen()),
                              media_type="text/plain; charset=utf-8")
+
+
+def _say_scripted(text: str | None) -> None:
+    """Hand the demo script's reply to the canned client for the turn about
+    to run in this thread (mock_client.say_next). None leaves the turn to the
+    fixtures."""
+    if text:
+        import mock_client
+        mock_client.say_next(text)
+
+
+@app.get("/api/demo/script")
+def demo_script_state():
+    """The demo journal's script, for the page that swaps and pre-fills
+    (static/js/demo-script.js): the texts and where the visitor is, never the
+    replies. Only a demo journal has one."""
+    if not demo_script.active():
+        return JSONResponse({"error": "not the demo journal"}, status_code=404)
+    return demo_script.public(INSTANCE_ID)
 
 
 @app.post("/api/lookup/reset")
@@ -407,7 +450,7 @@ def reset_lookup():
 # the steps are listed in that order. Progress is what the mock-mode per-call
 # delays exist to make visible; against a real key each stage is genuinely long.
 CLOSE_STEPS = [
-    ("seed", "writing your seed summary candidate"),
+    ("seed", "writing your life summary candidate"),
     ("categories", "tagging the entry"),
     ("entities", "extracting people, places and projects"),
     ("summaries", "refreshing weekly arcs and summaries"),
@@ -547,7 +590,10 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
                             status_code=400)
     entry_id = body.save_id or uuid.uuid4().hex
 
-    when = parse_stamp(body.ts) if body.ts else None
+    # The demo journal's script: a scripted entry carries its own date
+    step = (demo_script.take_write("entry", text, body.no_reply)
+            if demo_script.active() else None)
+    when = parse_stamp(step["ts"]) if step else (parse_stamp(body.ts) if body.ts else None)
     # Whatever happens to the reply, these say the entry itself is stored.
     # The browser reads them off the response head, which arrives before the
     # stream -- so a reply that dies halfway can't pass for a failed save.
@@ -627,6 +673,7 @@ def write_entry(body: EntryIn, background_tasks: BackgroundTasks):
 
     def gen():
         try:
+            _say_scripted(demo_script.write_reply(step) if demo_script.active() else None)
             yield from companion.stream_reply(
                 STATE["client"], STATE["collection"], STATE["entity_index"],
                 STATE["messages"], entry_message, include_dreams=body.dream,
@@ -785,6 +832,8 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
         _close_finish()
         return JSONResponse({"error": str(e)}, status_code=400)
     STATE["messages"] = []
+    if demo_script.active():
+        demo_script.after_close()
     # First, before the pipeline is queued. The pipeline is arguably the
     # closing session's cost -- it happened because of those entries -- but
     # billing it there means resetting after it finishes, and the accumulator
@@ -1622,9 +1671,11 @@ def seed_download(which: str = "current"):
     import seed
     path = seed.CANDIDATE_FILE if which == "candidate" else seed.SEED_FILE
     if not path.exists():
-        return JSONResponse({"error": f"no {which} seed yet"}, status_code=404)
+        return JSONResponse({"error": f"no {which} life summary yet"}, status_code=404)
     return FileResponse(
-        path, media_type="text/markdown", filename=path.name,
+        # the file on disk keeps its old name; the download says what it is
+        path, media_type="text/markdown",
+        filename="life_summary.candidate.md" if which == "candidate" else "life_summary.md",
         headers={"Cache-Control": "no-store"},
     )
 

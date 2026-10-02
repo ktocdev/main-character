@@ -4,22 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character — toggle</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/tokens.css">
-<link rel="stylesheet" href="/static/css/base.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/design/design.css">
-<script>
-  try {
-    var _t = localStorage.getItem('rag_theme');
-    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
-  } catch (e) {}
-</script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1><a href="/design">main character</a></h1>
+    <h1><a href="index.html">main character</a></h1>
     <span class="status">toggle · 2 tones · on / off · 3 states</span>
   </div>
   <div class="right">
@@ -44,7 +39,7 @@
   <main class="doc wide">
     <section>
       <h2>Toggle</h2>
-      <p class="lede">A pill that stays down when pressed: one click turns it on, the next turns it off. It carries <span class="mono">aria-pressed</span>, and its label never changes with its state; the fill says which state it is in. Entities' filters, chat's smart replies, search's mode, a group's roll up.</p>
+      <p class="lede">A pill that stays down when pressed: one click turns it on, the next turns it off. It carries <span class="mono">aria-pressed</span>, and its label never changes with its state; the fill says which state it is in. Entities' filters, ask's smart replies, search's mode, a group's roll up.</p>
     </section>
 
     <section id="tones">
@@ -74,7 +69,7 @@
       <div class="rule eyebrow strong">Try it</div>
       <p class="note">Entities' filter row, live: click to turn each on and off. Search's mode is the one toggle whose label changes, because its two states are two named modes rather than on and off.</p>
       <div class="in-context">
-        <div class="spec-row" id="live-row" style="align-items: center; gap: .3rem">
+        <div class="spec-row inline tight" id="live-row">
           <button class="chip-toggle" aria-pressed="true">people</button>
           <button class="chip-toggle" aria-pressed="false">projects</button>
           <button class="chip-toggle" aria-pressed="false">places</button>
@@ -104,12 +99,7 @@
     </section>
   </main>
 </div>
-<script type="module" src="/static/design/design.js"></script>
-<script type="module">
-  document.getElementById('live-row').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
-  });
-</script>
+<script type="module" src="design.js"></script>
+<script type="module" src="pages/toggle.js"></script>
 </body>
 </html>

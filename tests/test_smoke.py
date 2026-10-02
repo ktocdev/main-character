@@ -64,6 +64,8 @@ def test_every_delayed_call_type_has_a_fixture():
 def test_fixtures_are_non_empty_json():
     import mock_client
     for path in mock_client.FIXTURE_DIR.glob("*.json"):
+        if path.name == "demo_script.json":
+            continue   # the web demo's script, not a replay bucket (backend.js)
         responses = json.loads(path.read_text(encoding="utf-8"))["responses"]
         assert responses, f"{path.name} has no responses"
 

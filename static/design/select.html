@@ -4,44 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character — select</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/tokens.css">
-<link rel="stylesheet" href="/static/css/base.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/css/settings.css">
-<link rel="stylesheet" href="/static/css/wizard.css">
-<link rel="stylesheet" href="/static/design/design.css">
-<script>
-  try {
-    var _t = localStorage.getItem('rag_theme');
-    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
-  } catch (e) {}
-</script>
-<style>
-  .spec-row .set-control select, #wizard-body select { width: 16rem; }
-  /* The open list is drawn by the browser, outside the page, so it can't be
-     rendered live. This is a drawing of Chrome's list from a
-     screenshot: the rows are `select option` (--bg-muted, --text-default) from
-     components.css; the rule, the highlight and its text are Chrome's own
-     colours, the --platform-* tokens in design.css. */
-  .native-list {
-    display: flex; flex-direction: column; width: 16rem;
-    background: var(--bg-muted); border: 1px solid var(--platform-rule);
-  }
-  .native-list .opt {
-    display: flex; align-items: center; height: 1.85rem; padding: 0 .75rem;
-    color: var(--text-default); white-space: nowrap;
-  }
-  .native-list .opt.hi { background: var(--platform-highlight); color: var(--platform-highlight-text); }
-  .native-list.field { font: 1rem var(--font-body); }
-  .native-list.quiet { width: auto; font: .8rem var(--font-ui); }
-  .native-list.quiet .opt { height: 1.5rem; padding: 0 .55rem; }
-</style>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/settings.css">
+<link rel="stylesheet" href="../css/wizard.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/select.css">
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1><a href="/design">main character</a></h1>
+    <h1><a href="index.html">main character</a></h1>
     <span class="status">select · 5 kinds · open list</span>
   </div>
   <div class="right">
@@ -129,6 +105,6 @@ select.tag-add             a tag editor's "+ add"
     </section>
   </main>
 </div>
-<script type="module" src="/static/design/design.js"></script>
+<script type="module" src="design.js"></script>
 </body>
 </html>

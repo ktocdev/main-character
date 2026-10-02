@@ -1,0 +1,7 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* checkbox.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+.spec-row .check-row { width: 30rem; }
+.spec-row .check-group { width: 30rem; }
+/* the wizard's rows sit on its --bg-raised card */
+.on-card { background: var(--bg-raised); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 1rem 1.5rem; }

@@ -29,7 +29,7 @@ plus a few things it always gets.
 | `sessions/current.json` | The open chapter: entries, messages and replies | No, but the companion gets it as the conversation |
 | `journal_entries/` | Every entry as markdown | Through the passage index |
 | `chroma_data/` | Local vector indexes: the journal (each entry stored in chunks of up to ~6,000 characters), the passage index (the same entries in short, overlapping passages, used only for search), the summaries, and dreams | Yes |
-| `summaries/` | Entry summaries, weekly arcs, domain docs, the seed summary | Through the summary index |
+| `summaries/` | Entry summaries, weekly arcs, domain docs, the life summary (`seed_summary.md`) | Through the summary index |
 | `entity_graph/` | People, projects and places, with a profile doc each | Through the summary index, and by name |
 | `patterns/`, `categories/`, `dreams/` | Pattern library, tags, dream realm | Dreams have their own index |
 
@@ -95,7 +95,7 @@ The call has three parts.
   your own words, so only those may be quoted; summaries, profiles and
   patterns are the app's outline. When it has only a summary or a date, it
   says where to read the entry: History by date, or the search tab.
-- The seed summary: the rolling life summary you co-edit.
+- The life summary, which you co-edit.
 
 **The conversation so far**: every entry, message and reply in the open chapter.
 
@@ -124,7 +124,7 @@ genuinely echoes it.
 
 ### Why it can know *when*, but not *what exactly*
 
-The seed summary and the open chapter are always there. Everything older arrives
+The life summary and the open chapter are always there. Everything older arrives
 through twelve passages and three summaries. When a summary matches but the
 passage it summarizes does not, the companion has the outline and the date,
 not your words. It can tell you when you wrote something, and you can read it
@@ -162,7 +162,7 @@ The steps run one after another, and a failed step does not stop the rest.
 
 | Step | What Claude is asked to do | Code |
 |---|---|---|
-| Seed | Draft an updated seed summary from the closed chapter. It is saved as a candidate for you to review, and never replaces the seed on its own | `seed.generate_candidate` |
+| Life summary | Draft an updated life summary from the closed chapter. It is saved as a candidate for you to review, and never replaces yours on its own | `seed.generate_candidate` |
 | Categories | Tag the new entry | `categories.build` |
 | Entities | Extract people, places and projects from the new entry. Entries already processed are cached and skipped | `entities.build` |
 | Summaries | Write the new entry's summary, and regenerate weekly arcs and domain docs whose entries changed. Then embed the new and changed summaries and entity profiles into the summary index, locally | `summarizer.build` |
@@ -174,7 +174,7 @@ Everything here is incremental. That is why a close costs more than any one
 reply, and why the processing model, not the companion, uses most of the
 tokens.
 
-## The chat screen
+## The ask screen
 
 `POST /api/lookup`, `companion.stream_lookup`. It uses the same search and
 context block as a companion reply, but keeps its own conversation and its
@@ -185,8 +185,8 @@ open chapter and never become journal memory, and the open chapter isn't searche
 until it is closed. It is the place to ask things like "when did I last
 mention…", then go to History to read the entry in full.
 
-**Smart replies**, a toggle by the chat screen's send button (off by default,
-sent with each question, remembered in the browser), makes the chat screen a
+**Smart replies**, a toggle by the ask screen's send button (off by default,
+sent with each question, remembered in the browser), makes the ask screen a
 tool-use loop: `companion.stream_smart_lookup`. The first search and context
 block are the same, but Claude also gets three tools
 (`lookup_tools.py`): `search_journal` (by meaning or by exact words, within

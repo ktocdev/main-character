@@ -23,6 +23,11 @@ export const TABS = [
   ['help', 'shortcuts and how it works'],
   ['settings', 'theme, models, backups'],
 ];
+// A tab is named by its id, except where the name changed and the id
+// didn't: the lookup screen is "ask" to the reader and `chat` in the code
+// (tab-chat, #chat-text, main.js), as the life summary is `seed`.
+const LABELS = {chat: 'ask'};
+export const label = id => LABELS[id] || id;
 const GROUPS = [
   ['write', ['write', 'chat']],
   ['read back', ['search', 'entities', 'categories', 'patterns', 'dreams', 'history']],
@@ -40,7 +45,7 @@ function build() {
   for (const [id] of TABS) {
     const b = document.createElement('button');
     b.dataset.tab = id;
-    b.textContent = id;
+    b.textContent = label(id);
     b.onclick = () => select(id);
     flat.appendChild(b);
   }
@@ -71,7 +76,7 @@ function build() {
       b.className = 'list-item';
       b.dataset.tab = id;
       b.innerHTML = `<span class="li-title"></span><span class="li-desc"></span>`;
-      b.querySelector('.li-title').textContent = id;
+      b.querySelector('.li-title').textContent = label(id);
       b.querySelector('.li-desc').textContent = desc;
       b.onclick = () => { closeMenu(); select(id); };
       g.appendChild(b);
@@ -107,7 +112,7 @@ export function markActive(id) {
   document.querySelectorAll('nav [data-tab]').forEach(b =>
     b.classList.toggle('active', b.dataset.tab === id));
   const lbl = document.querySelector('#nav-trigger .lbl');
-  if (lbl) lbl.textContent = id;
+  if (lbl) lbl.textContent = label(id);
 }
 
 export function current() { return active; }

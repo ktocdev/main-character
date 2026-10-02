@@ -4,22 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character — tooltip</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/tokens.css">
-<link rel="stylesheet" href="/static/css/base.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/design/design.css">
-<script>
-  try {
-    var _t = localStorage.getItem('rag_theme');
-    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
-  } catch (e) {}
-</script>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1><a href="/design">main character</a></h1>
+    <h1><a href="index.html">main character</a></h1>
     <span class="status">tooltip · one card · placed by room</span>
   </div>
   <div class="right">
@@ -60,7 +55,7 @@
       <div class="rule eyebrow strong">Try it</div>
       <p class="note">Point at or tab to these. The rule of placement is one rule: above the control by default, below it when there is no room above (the first row under the header), above again for the sticky bottom bar. It never covers the pointer. Opening a popover or menu closes it; so does Escape, a click, or a scroll.</p>
       <div class="in-context">
-        <div class="spec-row" style="align-items: center; gap: .5rem .6rem">
+        <div class="spec-row inline">
           <button class="send" title="save as a journal entry (markdown backup now, journal memory at close)">save entry</button>
           <button class="quiet" title="let the companion speak first and connect a dot or two across time">reflect</button>
           <button class="chip-toggle" aria-pressed="false" title="smart replies: let it search again on its own before answering. Better at firsts, how often, and changes over time; each question can take several calls, so it costs more and takes a few seconds longer">smart replies</button>
@@ -86,11 +81,7 @@
     </section>
   </main>
 </div>
-<script type="module" src="/static/design/design.js"></script>
-<script type="module">
-  import * as tooltip from '/static/js/tooltip.js';
-  tooltip.init();
-  tooltip.adopt(document.getElementById('live'));
-</script>
+<script type="module" src="design.js"></script>
+<script type="module" src="pages/tooltip.js"></script>
 </body>
 </html>

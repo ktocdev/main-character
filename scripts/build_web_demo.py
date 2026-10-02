@@ -37,6 +37,8 @@ STATIC = ROOT / "static"
 DEFAULT_OUT = ROOT / "dist" / "web-demo"
 INSTALLER = ROOT / "seed_corpus" / "import_seed_corpus.py"
 REPLIES = ROOT / "mock_fixtures" / "companion._stream_turn.json"
+# What the demo sends in place of whatever the visitor types (backend.js)
+SCRIPT = ROOT / "mock_fixtures" / "demo_script.json"
 
 DATA_DIRS = {
     "JOURNAL": "journal_entries", "CHROMA": "chroma_data",
@@ -215,11 +217,13 @@ def stage_capture(tmp: Path, data_dir: Path):
         assert (status["entries"], status["open_entries"]) == (32, 0), status
 
     replies = json.loads(REPLIES.read_text(encoding="utf-8"))["responses"]
+    script = json.loads(SCRIPT.read_text(encoding="utf-8"))
     data_dir.mkdir(parents=True, exist_ok=True)
     write_json(data_dir / "before.json", {
         "reads": before,
         "search": search_before,
         "replies": [r if isinstance(r, str) else json.dumps(r) for r in replies],
+        "script": {k: script[k] for k in ("write", "lookup", "chips")},
         "close": {
             "response": closed.json(),
             "steps": [{"key": k, "label": label} for k, label in server.CLOSE_STEPS],
@@ -247,9 +251,18 @@ MAIN_SCRIPT = '<script type="module" src="js/main.js"></script>'
 
 def write_site(out: Path):
     """static/ with its URLs made relative, so it works from any subpath."""
-    # design/ is the token reference page, which has its own <style> block
-    # and is for whoever works on the app, not for the published demo.
-    shutil.copytree(STATIC, out, ignore=shutil.ignore_patterns("__pycache__", "design"))
+    # design/ is the design system, published with the demo. Its pages use
+    # relative URLs and no inline code, so they need only their two links
+    # out of design/ pointed at the demo: back to the journal, and in.
+    shutil.copytree(STATIC, out, ignore=shutil.ignore_patterns("__pycache__"))
+    home = out / "design" / "index.html"
+    html = home.read_text(encoding="utf-8")
+    assert 'href="/"' in html, "the design home no longer links back to the journal"
+    home.write_text(html.replace('href="/"', 'href="../index.html"'), encoding="utf-8")
+    settings = out / "js" / "settings.js"
+    js = settings.read_text(encoding="utf-8")
+    assert 'href="/design"' in js, "settings no longer links to the design system"
+    settings.write_text(js.replace('href="/design"', 'href="design/index.html"'), encoding="utf-8")
 
     index = out / "index.html"
     html = index.read_text(encoding="utf-8").replace('"/static/', '"')

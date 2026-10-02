@@ -80,6 +80,9 @@
     --toggle-on: var(--fill-accent);      /* a pressed solid toggle */
     /* the item card visual's hover fill: a small warm shift (~#3a3029) */
     --card-thumb-hover: color-mix(in oklch, var(--bg-muted) 90%, var(--fill-accent));
+    /* what a modal dims the page with: the page colour, mostly opaque, so
+       it follows the theme (a dark veil in dark, a pale one in light) */
+    --modal-scrim: color-mix(in oklch, var(--bg-page) 75%, transparent);
 
     /* fonts */
     --font-ui: 'CMU Sans Demi Condensed', system-ui, sans-serif;

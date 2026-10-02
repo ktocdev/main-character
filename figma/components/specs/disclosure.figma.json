@@ -125,10 +125,10 @@
          {
           "type": "text",
           "name": "span",
-          "chars": "chat · look things up",
+          "chars": "ask · look things up",
           "runs": [
            {
-            "len": 21,
+            "len": 20,
             "style": {
              "font": "serif",
              "weight": 400,
@@ -142,7 +142,7 @@
            }
           ],
           "lineHeight": null,
-          "w": 179.84375,
+          "w": 172.640625,
           "h": 26,
           "lines": 1,
           "prop": "title",
@@ -270,10 +270,10 @@
          {
           "type": "text",
           "name": "span",
-          "chars": "chat · look things up",
+          "chars": "ask · look things up",
           "runs": [
            {
-            "len": 21,
+            "len": 20,
             "style": {
              "font": "serif",
              "weight": 400,
@@ -287,7 +287,7 @@
            }
           ],
           "lineHeight": null,
-          "w": 179.84375,
+          "w": 172.640625,
           "h": 26,
           "lines": 1,
           "prop": "title",

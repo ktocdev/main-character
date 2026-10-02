@@ -21,7 +21,7 @@ const DRAFT_KEY = 'mc_seed_draft';
 // carry a 15 KB seed (encoding roughly doubles it, past what gateways allow),
 // so this is copy-then-open, not a real prefill -- the button label says so.
 const CLAUDE_PROMPT =
-  'Below is my journal\'s "seed summary", a rolling life summary my journaling '
+  'Below is my journal\'s "life summary", a rolling summary of my life that my journaling '
   + 'companion reads at the start of every conversation. Help me revise it: keep '
   + 'the same first-person voice and roughly the same length, and return only the '
   + 'updated summary document, nothing else.\n\n---\n\n';
@@ -70,12 +70,12 @@ function showSeedView() {
 function renderMeta(s) {
   const meta = $('seed-editor-meta');
   if (editorState.srcWhich === 'candidate') {
-    meta.textContent = `Editing the seed summary candidate, created ${s && s.candidate_updated || 'date unknown'}. `
-      + 'Saving makes it your live seed.';
+    meta.textContent = `Editing the life summary candidate, created ${s && s.candidate_updated || 'date unknown'}. `
+      + 'Saving makes it your life summary.';
   } else if (s && s.exists) {
-    meta.textContent = `Editing your live seed summary, last saved ${s.updated || 'date unknown'}.`;
+    meta.textContent = `Editing your life summary, last saved ${s.updated || 'date unknown'}.`;
   } else {
-    meta.textContent = 'Editing your seed summary. None is saved yet, so saving creates it.';
+    meta.textContent = 'Editing your life summary. None is saved yet, so saving creates it.';
   }
 }
 
@@ -115,7 +115,7 @@ export async function openSeedEditor() {
   ta.value = hasDraft ? draft.text : baseline;
   // Only true when nothing exists yet to load (no live seed, no candidate,
   // no draft) -- otherwise the box always ends up with text in it.
-  ta.placeholder = ta.value ? '' : 'nothing saved yet, so write your first seed summary here';
+  ta.placeholder = ta.value ? '' : 'nothing saved yet, so write your first life summary here';
   renderMeta(s);
   renderDraftNote(s, hasDraft);
   ta.focus();
@@ -140,11 +140,11 @@ async function save() {
   const text = $('seed-editor-text').value;
   // Mirror the server's floor so the friendly note fires before the 400 alert.
   if (text.trim().length < 200) {
-    setNote('that looks too short to be a seed summary, so nothing was saved');
+    setNote('that looks too short to be a life summary, so nothing was saved');
     return;
   }
-  if (!confirm('Save this as your seed summary?\n\nEvery new chapter will open with it. '
-    + 'The current seed is backed up, and any pending candidate is retired.')) return;
+  if (!confirm('Save this as your life summary?\n\nEvery new chapter will open with it. '
+    + 'The current one is backed up, and any pending candidate is retired.')) return;
   clearTimeout(draftTimer);   // a debounce still pending from typing must not
   draftTimer = null;          // re-write the draft after this commits
   const r = await api('/api/seed/upload', { text });
@@ -169,12 +169,12 @@ function download() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'seed_summary.md';
+  a.download = 'life_summary.md';
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  setNote('downloaded seed_summary.md (this box, not the file on disk)');
+  setNote('downloaded life_summary.md (this box, not the file on disk)');
 }
 
 function triggerUpload() { $('seed-editor-file').click(); }

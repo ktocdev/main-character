@@ -83,7 +83,7 @@ Where it all sits:
 | `journal_entries/` | Your entries and dreams, as markdown |
 | `chroma_data/` | The search index. Derived and rebuildable |
 | `entity_graph/` | Extracted people, projects and places, with profiles |
-| `summaries/` | Entry summaries, weekly arcs, domain docs, the seed summary |
+| `summaries/` | Entry summaries, weekly arcs, domain docs, the life summary (`seed_summary.md`) |
 | `categories/`, `patterns/`, `dreams/`, `sessions/` | The rest of the pipeline's output |
 
 All of these directories are gitignored. Nothing leaves your machine except the prompt text sent to the Anthropic API when you write.
@@ -108,7 +108,7 @@ If you want a journal several people can use, start from a different codebase.
 <summary><b>The full feature list</b></summary>
 
 ### Memory
-- **Semantic retrieval.** Context is assembled in layers: recent entries and the seed summary first, then passages matched by meaning and by keyword from anywhere in an entry, matching summaries, entity docs, then the pattern library. A whole new entry is searched piece by piece, so its ending finds connections as well as its opening.
+- **Semantic retrieval.** Context is assembled in layers: recent entries and the life summary first, then passages matched by meaning and by keyword from anywhere in an entry, matching summaries, entity docs, then the pattern library. A whole new entry is searched piece by piece, so its ending finds connections as well as its opening.
 - **Sessions.** One chat stays open for days. Entries, replies and follow-ups braid into it and survive restarts. Closing the session triggers summarization: your side becomes a journal entry, the braid is archived, and the memory pipeline runs in the background.
 - **Reflection.** The companion opens a conversation by connecting threads across your history instead of waiting to be asked.
 
@@ -123,7 +123,7 @@ If you want a journal several people can use, start from a different codebase.
 - **Entry summaries.** Two or three sentences per entry, cached incrementally.
 - **Weekly arcs.** A short narrative per week, stitched from entry summaries.
 - **Domain summaries.** A roughly 500-word doc per category, updated over time.
-- **Seed summary.** A rolling life summary you co-edit, which opens every chapter. Each close drafts an update for you to review. It never replaces yours on its own.
+- **Life summary.** A rolling summary you co-edit, which opens every chapter. Each close drafts an update for you to review. It never replaces yours on its own.
 
 ### Categories
 - **Automatic tagging** against ten built-in categories. Each can be turned off.

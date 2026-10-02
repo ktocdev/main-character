@@ -42,6 +42,35 @@
   let closing = null;          // {running, done: Set, finished}
   let seed = null;             // {current, updated, candidate, candidateUpdated}
 
+  // ---- the script ----
+  // Whatever a visitor types, the next scripted message is what gets sent,
+  // and its reply was written for it (mock_fixtures/demo_script.json). The
+  // page's half -- the swap, the pre-fill, the notice -- is demo-script.js,
+  // shared with the local demo journal; this is the server's half, as
+  // demo_script.py is locally: where the visitor is, and which reply a send
+  // gets. Change one, change the other. The write tab and the ask tab keep
+  // their own place in their scripts; the write script carries on across a
+  // close.
+  let script = {write: [], lookup: [], chips: []};
+  let writeAt = 0;             // the next write step
+  let lookupAt = 0;            // the next lookup question
+  const END = "That's the end of the demo script. Refresh the page to start "
+    + 'again, or clone Main Character from https://github.com/ktocdev/main-character '
+    + 'to run it with your own journal.';
+  // An empty box past the end says so before anything is sent.
+  const END_HINT = "that's the end of the demo script. Refresh to start again";
+  const NOTICE = 'Type anything and press send. Your text is swapped for the next '
+    + "entry in Jordan's week, and the reply was written for that entry. The box "
+    + "shows what's coming next. Nothing is saved, so refresh to start over.";
+
+  // The lookup log and the write box's draft live in localStorage, so a reload
+  // would bring back text from a run of the script that no longer exists.
+  // Nothing is stored in the web demo; start clean.
+  // The notice's "already seen" goes too, so it opens on every load.
+  for (const key of ['rag_lookup', 'rag_draft', 'rag_pending_save', 'rag_demo_notice']) {
+    try { localStorage.removeItem(key); } catch { }
+  }
+
   async function load(path) {
     const res = await realFetch(path);
     if (!res.ok) throw new Error(`web demo: could not load ${path} (${res.status})`);
@@ -51,6 +80,7 @@
   const ready = Promise.all([load('data/before.json'), load('data/after.json')])
     .then(([b, a]) => {
       rec = b;
+      if (b.script) script = b.script;
       before = b.reads;
       after = a.reads;
       searchAfter = a.search;
@@ -194,22 +224,79 @@
     }
     savedIds.add(id);
     visitorSaved++;
-    current.messages.push({role: 'you', kind: 'entry', entry_id: id, text, ts});
+    const step = takeWrite('entry', text, body.no_reply);
+    // A no-reply save with no entry left to swap in ends the write script:
+    // the follow-ups still pending belong to a reply that moved on.
+    if (!step && body.no_reply && nextEntry(writeAt) >= script.write.length) {
+      writeAt = script.write.length;
+    }
+    const at = step ? step.ts : ts;
+    current.messages.push({role: 'you', kind: 'entry', entry_id: id, text, ts: at});
     if (body.no_reply) return json({ok: true, entry_id: id, no_reply: true, duplicate: false});
-    const reply = await pickReply(text);
-    return stream(reply, saved, () => current.messages.push({role: 'companion', text: reply, ts}));
+    const reply = step ? step.reply : await unscripted(text, writeAt);
+    return stream(reply, saved, () => current.messages.push({role: 'companion', text: reply, ts: at}));
   }
 
   async function chat(body) {
     const text = String(body.message || '');
-    current.messages.push({role: 'you', kind: 'chat', text, ts: nowStamp()});
-    const reply = await pickReply(text);
-    return stream(reply, {}, () => current.messages.push({role: 'companion', text: reply, ts: nowStamp()}));
+    const step = takeWrite('chat', text, false);
+    const at = step ? step.ts : nowStamp();
+    current.messages.push({role: 'you', kind: 'chat', text, ts: at});
+    const reply = step ? step.reply : await unscripted(text, writeAt);
+    return stream(reply, {}, () => current.messages.push({role: 'companion', text: reply, ts: at}));
+  }
+
+  // The write step a send answers to, if it is one, and the script moves
+  // past it. A no-reply entry also skips that entry's follow-ups: there is
+  // no reply for them to follow up on.
+  function takeWrite(send, text, noReply) {
+    const i = send === 'entry' && noReply ? nextEntry(writeAt) : writeAt;
+    const step = script.write[i];
+    if (!step || step.send !== send || step.text !== text) return null;
+    writeAt = noReply ? nextEntry(i + 1) : i + 1;
+    return step;
+  }
+
+  // The first entry step at or after `i` (the script's length when none is left).
+  function nextEntry(i) {
+    while (i < script.write.length && script.write[i].send !== 'entry') i++;
+    return i;
+  }
+
+  // Past the end of a script, every send gets the same message. Before it, a
+  // send only misses the script if something went around the swap; it gets
+  // the old hashed reply rather than nothing.
+  function unscripted(text, at, steps = script.write) {
+    return at >= steps.length ? END : pickReply(text);
+  }
+
+  // server.lookup, from the script. A suggestion chip is answered as itself,
+  // any number of times, without moving the script.
+  function lookupReply(text) {
+    const chip = script.chips.find(c => c.text === text);
+    if (chip) return (phase === 'after' && chip.reply_after) || chip.reply;
+    const step = script.lookup[lookupAt];
+    if (step && step.text === text) { lookupAt++; return step.reply; }
+    return unscripted(text, lookupAt, script.lookup);
   }
 
   async function reflect() {
     const reply = await pickReply('reflect\n' + current.messages.length);
     return stream(reply, {}, () => current.messages.push({role: 'companion', text: reply, ts: nowStamp()}));
+  }
+
+  // GET /api/demo/script, as demo_script.public: the texts and where the
+  // visitor is, never the replies. The notice's key never changes, and the
+  // "seen" record is cleared on load, so the notice opens on every load.
+  function scriptState() {
+    return {
+      write: script.write.map(w => ({send: w.send, text: w.text})),
+      lookup: script.lookup.map(q => q.text),
+      chips: script.chips.map(c => c.text),
+      write_at: writeAt, lookup_at: lookupAt,
+      end_hint: END_HINT,
+      notice: {eyebrow: 'web demo', body: NOTICE, key: 'web-demo'},
+    };
   }
 
   // ---- close ----
@@ -245,6 +332,9 @@
     }
     closes++;
     current = {started: nowStamp(), parts: [], messages: []};
+    // The new chapter starts blank, so an answer to a question asked in the
+    // old one would make no sense: the next send is the next scripted entry.
+    writeAt = nextEntry(writeAt);
     runPipeline(first);
     return json(result);
   }
@@ -284,8 +374,8 @@
 
   function seedDownload(which) {
     const text = which === 'candidate' ? seed.candidate : seed.current;
-    if (text === null) return json({error: `no ${which} seed yet`}, 404);
-    const name = which === 'candidate' ? 'seed_summary.candidate.md' : 'seed_summary.md';
+    if (text === null) return json({error: `no ${which} life summary yet`}, 404);
+    const name = which === 'candidate' ? 'life_summary.candidate.md' : 'life_summary.md';
     return new Response(text, {headers: {
       'Content-Type': 'text/markdown; charset=utf-8',
       'Content-Disposition': `attachment; filename="${name}"`,
@@ -296,7 +386,7 @@
   function seedUpload(body) {
     const text = String(body.text || '').trim();
     if (text.length < 200) {
-      return json({error: 'that file looks empty, so the seed was not replaced'}, 400);
+      return json({error: 'that file looks empty, so the life summary was not replaced'}, 400);
     }
     seed.current = text + '\n';
     seed.updated = nowStamp();
@@ -397,6 +487,7 @@
       case '/api/seed': return seedStatus();
       case '/api/seed/download': return seedDownload(q.get('which') === 'candidate' ? 'candidate' : 'current');
       case '/api/search': return search(q.get('q') || '', q.get('mode') || 'semantic');
+      case '/api/demo/script': return json(scriptState());
       default: return fromCapture(keyOf(u));
     }
   }
@@ -406,7 +497,7 @@
       case '/api/entry': return writeEntry(body);
       case '/api/chat': return chat(body);
       case '/api/reflect': return reflect();
-      case '/api/lookup': return stream(await pickReply(String(body.message || '')));
+      case '/api/lookup': return stream(await lookupReply(String(body.message || '').trim()));
       case '/api/lookup/reset':
       case '/api/reset': return json({ok: true});
       case '/api/sessions/seed': return json({ok: true, seeded: 0});

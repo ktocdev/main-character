@@ -4,26 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character — chat bar</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/tokens.css">
-<link rel="stylesheet" href="/static/css/base.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/design/design.css">
-<script>
-  try {
-    var _t = localStorage.getItem('rag_theme');
-    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
-  } catch (e) {}
-</script>
-<style>
-  /* chat's composer is 46rem less its side padding */
-  .spec-row .chat-bar { width: 40rem; }
-</style>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/chat-bar.css">
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1><a href="/design">main character</a></h1>
+    <h1><a href="index.html">main character</a></h1>
     <span class="status">chat bar · 4 states · smart replies on / off</span>
   </div>
   <div class="right">
@@ -47,12 +39,12 @@
   <main class="doc wide">
     <section>
       <h2>Chat bar</h2>
-      <p class="lede">Chat's compact composer: one <span class="mono">--bg-muted</span> box, a two-line textarea on top and a row of small controls under it. Smart replies sits on the left; clear and send sit on the right. It's the search bar's sibling: the same box, the same focus colour, stacked rather than in a line.</p>
+      <p class="lede">Ask's compact composer: one <span class="mono">--bg-muted</span> box, a two-line textarea on top and a row of small controls under it. Smart replies sits on the left; clear and send sit on the right. It's the search bar's sibling: the same box, the same focus colour, stacked rather than in a line.</p>
     </section>
 
     <section id="states">
       <div class="rule eyebrow strong">States</div>
-      <p class="note"><b>sending</b> is the moment between Enter and the reply: send is disabled until the answer starts. Smart replies is a solid <a href="/static/design/toggle.html">toggle</a>, hidden in the demo where replies are canned. Clear is a text <a href="/static/design/button.html">button</a>.</p>
+      <p class="note"><b>sending</b> is the moment between Enter and the reply: send is disabled until the answer starts. Smart replies is a solid <a href="toggle.html">toggle</a>, hidden in the demo where replies are canned. Clear is a text <a href="button.html">button</a>.</p>
       <div class="stack">
         <div class="spec-row">
           <div class="chat-bar" data-figma-set="Chat bar" data-figma-variant="state=empty, smart=false">
@@ -130,6 +122,6 @@
     </section>
   </main>
 </div>
-<script type="module" src="/static/design/design.js"></script>
+<script type="module" src="design.js"></script>
 </body>
 </html>

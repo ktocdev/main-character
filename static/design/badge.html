@@ -4,29 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character — badge</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/tokens.css">
-<link rel="stylesheet" href="/static/css/base.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/css/card.css">
-<link rel="stylesheet" href="/static/css/search.css">
-<link rel="stylesheet" href="/static/css/dreams.css">
-<link rel="stylesheet" href="/static/design/design.css">
-<script>
-  try {
-    var _t = localStorage.getItem('rag_theme');
-    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
-  } catch (e) {}
-</script>
-<style>
-  .ctx { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; align-items: start; }
-  .ctx .search-hit { padding: 0; border: 0; }
-</style>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/card.css">
+<link rel="stylesheet" href="../css/search.css">
+<link rel="stylesheet" href="../css/dreams.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/badge.css">
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1><a href="/design">main character</a></h1>
+    <h1><a href="index.html">main character</a></h1>
     <span class="status">badge · 3 tones · 3 sizes</span>
   </div>
   <div class="right">
@@ -99,7 +91,7 @@
 
     <section id="not-badges">
       <div class="rule eyebrow strong">Not badges</div>
-      <p class="note">Two pills that look close but are controls, with their own pages: a <b>chip</b> is a button that selects (filter rows, jump pills: <a href="/static/design/button-group.html">button group</a>); a <b>toggle</b> stays pressed (<a href="/static/design/toggle.html">toggle</a>). The tag editor's removable <span class="mono">.tag</span>, with its ×, belongs to entities.</p>
+      <p class="note">Two pills that look close but are controls, with their own pages: a <b>chip</b> is a button that selects (filter rows, jump pills: <a href="button-group.html">button group</a>); a <b>toggle</b> stays pressed (<a href="toggle.html">toggle</a>). The tag editor's removable <span class="mono">.tag</span>, with its ×, belongs to entities.</p>
     </section>
 
     <section id="anatomy">
@@ -119,13 +111,7 @@ button.badge…                 when it also filters</pre>
     </section>
   </main>
 </div>
-<script type="module" src="/static/design/design.js"></script>
-<script type="module">
-  import { itemCard } from '/static/js/card.js';
-  document.getElementById('card-out').appendChild(itemCard({
-    type: 'summary', title: 'Week of September 22', href: '#', size: 'sm',
-    badges: ['Sep 22–28', '7 entries'],
-  }));
-</script>
+<script type="module" src="design.js"></script>
+<script type="module" src="pages/badge.js"></script>
 </body>
 </html>

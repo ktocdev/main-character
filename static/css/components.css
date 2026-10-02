@@ -444,6 +444,26 @@
   .disclosure-body { display: flex; flex-direction: column; gap: .8rem; padding: 0 0 1.5rem 1.5rem; }
   .disclosure-body p { text-wrap: pretty; }
 
+  /* ---- Modal: a native <dialog> opened with showModal(), which brings
+     the focus trap, Escape and ::backdrop. .modal is the card itself, so
+     the design pages can draw it in place, as with .tooltip ---- */
+  .modal {
+    box-sizing: border-box; width: min(30rem, calc(100vw - 2rem));
+    background: var(--bg-raised); color: var(--text-default);
+    border: 1px solid var(--border-default); border-radius: var(--radius-lg);
+    padding: var(--space-8); box-shadow: var(--shadow-xl);
+    display: flex; flex-direction: column; gap: var(--space-4);
+  }
+  dialog.modal { margin: auto; max-height: calc(100dvh - 2rem); overflow-y: auto; }
+  dialog.modal:not([open]) { display: none; }
+  dialog.modal::backdrop { background: var(--modal-scrim); }
+  .modal-title { margin: 0; font: italic 1.3rem var(--font-body); color: var(--text-accent); text-wrap: pretty; }
+  .modal-body { margin: 0; line-height: 1.55; text-wrap: pretty; }
+  .modal-actions {
+    display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3);
+    padding-top: var(--space-4);   /* padding, not margin: Figma has no margins */
+  }
+
   /* ---- small-caps inline label (TRIGGER, CAST, YOUR READ) ---- */
   .sc-label {
     font: .72rem var(--font-ui); letter-spacing: .05em; text-transform: uppercase;

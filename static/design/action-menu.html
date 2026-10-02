@@ -4,29 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Main Character — action menu</title>
-<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/css/tokens.css">
-<link rel="stylesheet" href="/static/css/base.css">
-<link rel="stylesheet" href="/static/css/components.css">
-<link rel="stylesheet" href="/static/design/design.css">
-<script>
-  try {
-    var _t = localStorage.getItem('rag_theme');
-    if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
-  } catch (e) {}
-</script>
-<style>
-  /* hosts that only supply the .popover ancestor a menu item keys on */
-  .host.popover { position: static; background: none; border: 0; padding: 0; box-shadow: none; }
-  /* a menu shown on its own, in the flow rather than over the page */
-  .spec-row > .popover[data-figma-set], .spec-cell > .popover[data-figma-set] { position: static; }
-  .spec-row.menus { justify-content: flex-start; padding-left: 12rem; }
-</style>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/action-menu.css">
 </head>
 <body>
 <header>
   <div class="masthead">
-    <h1><a href="/design">main character</a></h1>
+    <h1><a href="index.html">main character</a></h1>
     <span class="status">action menu · trigger · menu · item</span>
   </div>
   <div class="right">
@@ -129,6 +118,6 @@
     </section>
   </main>
 </div>
-<script type="module" src="/static/design/design.js"></script>
+<script type="module" src="design.js"></script>
 </body>
 </html>
