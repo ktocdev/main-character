@@ -1,0 +1,5 @@
+{
+  "responses": [
+    "{\"clusters\":[{\"index\":0,\"keep\":true,\"name\":\"Coda At Groundwork\",\"reason\":\"Jordan repeatedly works on the Coda practice-tracking project and the stalled portfolio update from the same coffee shop, Groundwork, while the office appears only as an unrelated work backdrop.\"},{\"index\":1,\"keep\":true,\"name\":\"The Reorg\",\"reason\":\"All four entries trace the same organizational upheaval moving Jordan from internal tools to legacy marketing pages under Priya starting the 21st.\"},{\"index\":2,\"keep\":true,\"name\":\"Dashboard Redesign\",\"reason\":\"All three entries follow the same dashboard project through repeated reworks and criticism from Marcus until it finally shipped.\"}]}"
+  ]
+}

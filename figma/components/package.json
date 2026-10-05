@@ -1,0 +1,14 @@
+{
+  "name": "main-character-figma-components",
+  "private": true,
+  "type": "module",
+  "description": "Extracts the design system pages into Figma specs, and tests the plugin against a stand-in Figma API.",
+  "scripts": {
+    "extract": "node extract.mjs",
+    "check": "node extract.mjs --check",
+    "test": "node test/run.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.50.0"
+  }
+}

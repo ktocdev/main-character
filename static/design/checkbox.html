@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — checkbox</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/checkbox.css">
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="index.html">main character</a></h1>
+    <span class="status">checkbox · inline · row · fieldset</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#box">the box</a>
+    <a href="#inline">inline</a>
+    <a href="#row">row</a>
+    <a href="#fieldset">fieldset</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Checkbox</h2>
+      <p class="lede">The browser's own checkbox at 1rem, tinted with <span class="mono">accent-color: var(--fill-accent)</span>. <span class="mono">color-scheme</span> picks the browser's dark or light box, so unchecked it is the platform's grey well, and checked it fills with the lamp amber. It always comes with words: beside a control, or as a row with a definition.</p>
+    </section>
+
+    <section id="box">
+      <div class="rule eyebrow strong">The box</div>
+      <p class="note">Unchecked, Chrome's box is a <span class="mono">--platform-well</span> well in a <span class="mono">--platform-rule</span> rule (#3b3b3b in #858585 dark, #ffffff in #767676 light). They are the browser's colours, not ours: tokens only so Figma can follow the theme, in its Platform collection. Checked fills with <span class="mono">--fill-accent</span> and the browser picks a mark colour that contrasts with it.</p>
+      <div class="spec-row">
+        <input type="checkbox" data-figma-set="Checkbox" data-figma-variant="checked=false">
+        <input type="checkbox" checked data-figma-set="Checkbox" data-figma-variant="checked=true">
+      </div>
+    </section>
+
+    <section id="inline">
+      <div class="rule eyebrow strong">Inline</div>
+      <p class="note"><span class="mono">label.check-inline</span>: a box and a short UI label, 2.2rem tall so it lines up with the buttons beside it. Write's "no reply".</p>
+      <div class="spec-row">
+        <label class="check-inline" data-figma-set="Check inline" data-figma-variant="checked=false"><input type="checkbox" data-figma-instance="Checkbox" data-figma-variant="checked=false"> <span data-figma-text="label">no reply</span></label>
+        <label class="check-inline" data-figma-set="Check inline" data-figma-variant="checked=true"><input type="checkbox" checked data-figma-instance="Checkbox" data-figma-variant="checked=true"> <span data-figma-text="label">no reply</span></label>
+      </div>
+    </section>
+
+    <section id="row">
+      <div class="rule eyebrow strong">Row</div>
+      <p class="note"><span class="mono">label.check-row</span>: the whole row is the label. A UI-face name, a dot, and its definition in the dim serif. Unchecked, the name dims to match. <b>serif</b> is settings' row, with a <span class="mono">--bg-raised</span> hover. <b>ui</b> (<span class="mono">.check-row.ui</span>) is the wizard's: all UI face at <span class="mono">--font-xs</span>, no hover fill.</p>
+      <div class="stack">
+        <div class="spec-row top">
+          <label class="check-row" data-figma-set="Check row" data-figma-variant="kind=serif, checked=true, state=default"><input type="checkbox" checked data-figma-instance="Checkbox" data-figma-variant="checked=true"><span data-figma-text="text"><strong>family</strong> · parents, siblings, nieces and nephews, extended family</span></label>
+          <label class="check-row is-hover" data-figma-set="Check row" data-figma-variant="kind=serif, checked=true, state=hover"><input type="checkbox" checked data-figma-instance="Checkbox" data-figma-variant="checked=true"><span data-figma-text="text"><strong>family</strong> · parents, siblings, nieces and nephews, extended family</span></label>
+        </div>
+        <div class="spec-row top">
+          <label class="check-row" data-figma-set="Check row" data-figma-variant="kind=serif, checked=false, state=default"><input type="checkbox" data-figma-instance="Checkbox" data-figma-variant="checked=false"><span data-figma-text="text"><strong>family</strong> · parents, siblings, nieces and nephews, extended family</span></label>
+          <label class="check-row is-hover" data-figma-set="Check row" data-figma-variant="kind=serif, checked=false, state=hover"><input type="checkbox" data-figma-instance="Checkbox" data-figma-variant="checked=false"><span data-figma-text="text"><strong>family</strong> · parents, siblings, nieces and nephews, extended family</span></label>
+        </div>
+        <div class="spec-row top on-card">
+          <label class="check-row ui" data-figma-set="Check row" data-figma-variant="kind=ui, checked=true, state=default"><input type="checkbox" checked data-figma-instance="Checkbox" data-figma-variant="checked=true"><span data-figma-text="text"><strong>family</strong> · parents, siblings, nieces and nephews, extended family</span></label>
+          <label class="check-row ui" data-figma-set="Check row" data-figma-variant="kind=ui, checked=false, state=default"><input type="checkbox" data-figma-instance="Checkbox" data-figma-variant="checked=false"><span data-figma-text="text"><strong>family</strong> · parents, siblings, nieces and nephews, extended family</span></label>
+        </div>
+      </div>
+    </section>
+
+    <section id="fieldset">
+      <div class="rule eyebrow strong">Fieldset</div>
+      <p class="note"><span class="mono">.check-group</span> stacks rows .2rem apart, up to 34rem (<span class="mono">.ui</span>: no gap, full width). Settings' and the wizard's category lists are this, one row per built-in category.</p>
+      <div class="spec-row top">
+        <div class="check-group" data-figma-set="Checkbox fieldset" data-figma-variant="kind=serif">
+          <label class="check-row" data-figma-instance="Check row" data-figma-variant="kind=serif, checked=true, state=default"><input type="checkbox" checked><span data-figma-text="text"><strong>health</strong> · physical or mental health, injuries, illness, sleep</span></label>
+          <label class="check-row" data-figma-instance="Check row" data-figma-variant="kind=serif, checked=true, state=default"><input type="checkbox" checked><span data-figma-text="text"><strong>family</strong> · parents, siblings, extended family</span></label>
+          <label class="check-row" data-figma-instance="Check row" data-figma-variant="kind=serif, checked=false, state=default"><input type="checkbox"><span data-figma-text="text"><strong>pets</strong> · the author's own pets and animals</span></label>
+        </div>
+        <div class="on-card">
+          <div class="check-group ui" data-figma-set="Checkbox fieldset" data-figma-variant="kind=ui">
+            <label class="check-row ui" data-figma-instance="Check row" data-figma-variant="kind=ui, checked=true, state=default"><input type="checkbox" checked><span data-figma-text="text"><strong>health</strong> · physical or mental health, injuries, illness, sleep</span></label>
+            <label class="check-row ui" data-figma-instance="Check row" data-figma-variant="kind=ui, checked=true, state=default"><input type="checkbox" checked><span data-figma-text="text"><strong>family</strong> · parents, siblings, extended family</span></label>
+            <label class="check-row ui" data-figma-instance="Check row" data-figma-variant="kind=ui, checked=false, state=default"><input type="checkbox"><span data-figma-text="text"><strong>pets</strong> · the author's own pets and animals</span></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">input[type=checkbox]       1rem, accent-color --fill-accent
+label.check-inline         box + short label (no reply)
+div.check-group[.ui]       the fieldset
+  label.check-row[.ui]     one row; the whole row toggles
+    input[type=checkbox]
+    span > strong + " · " + definition</pre>
+      <div class="parts">
+        <div class="part">box</div><div class="rule-text">The platform's checkbox. Not redrawn: accent-color and color-scheme are the only styling, so it keeps native focus and keyboard behaviour.</div>
+        <div class="part">name</div><div class="rule-text">UI face 600 in --text-default; --text-muted while unchecked (:has(input:not(:checked))).</div>
+        <div class="part">definition</div><div class="rule-text">--text-muted: the serif at .95rem in a serif row, the UI face at --font-xs in a ui row.</div>
+        <div class="part">hover</div><div class="rule-text">Serif rows only: a --bg-raised fill at --radius-sm.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fill and tick <span class="mono">--fill-accent</span>; name <span class="mono">--text-default</span>; definition and unchecked name <span class="mono">--text-muted</span>; hover <span class="mono">--bg-raised</span>; radius <span class="mono">--radius-sm</span>; spacing <span class="mono">--space-2</span>, <span class="mono">--space-3</span> (ui). In Figma: <b>Checkbox</b> (<span class="mono">checked</span>), <b>Check inline</b>, <b>Check row</b> (<span class="mono">kind × checked × state</span>) and <b>Checkbox fieldset</b> (<span class="mono">kind</span>), each built from instances of the one before.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="design.js"></script>
+</body>
+</html>

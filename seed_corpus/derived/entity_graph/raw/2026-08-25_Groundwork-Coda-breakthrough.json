@@ -1,0 +1,69 @@
+{
+  "people": [
+    {
+      "name": "Dev",
+      "relationship": "friend",
+      "observations": [
+        "Suggested the 'free play' mode for Coda",
+        "Will see the new prototype and is expected to love it"
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Stopped by Groundwork on her way home from a run",
+        "Wanted to plan another open mic",
+        "Jordan agreed to another open mic without hesitating, surprising both of them",
+        "Said Jordan seems different lately"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Mentioned as part of what makes up Jordan's life outside work"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Coda",
+      "domain": "creative",
+      "status": "active",
+      "observations": [
+        "Had a breakthrough on handling the 'free play' mode",
+        "Designed a system to drop timestamps during unstructured practice sessions and add notes afterward",
+        "Designed ability to clip and categorize snippets from marked moments",
+        "Built a working prototype in about an hour and a half",
+        "Prototype includes a START button, running timer with timestamp marker, and a snippet screen"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Groundwork",
+      "kind": "coffee shop",
+      "observations": [
+        "Jordan has been coming here after work consistently",
+        "Barista starts making Jordan's cortado when they walk in",
+        "Had the Coda breakthrough here while stirring coffee",
+        "Mika stopped by here"
+      ]
+    },
+    {
+      "name": "apartment",
+      "kind": "home",
+      "observations": [
+        "Jordan decided to keep this apartment"
+      ]
+    },
+    {
+      "name": "park",
+      "kind": "park",
+      "observations": [
+        "Located three blocks from Jordan's apartment"
+      ]
+    }
+  ]
+}

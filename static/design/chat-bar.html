@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — chat bar</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/chat-bar.css">
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="index.html">main character</a></h1>
+    <span class="status">chat bar · 4 states · smart replies on / off</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#states">states</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Chat bar</h2>
+      <p class="lede">Ask's compact composer: one <span class="mono">--bg-muted</span> box, a two-line textarea on top and a row of small controls under it. Smart replies sits on the left; clear and send sit on the right. It's the search bar's sibling: the same box, the same focus colour, stacked rather than in a line.</p>
+    </section>
+
+    <section id="states">
+      <div class="rule eyebrow strong">States</div>
+      <p class="note"><b>sending</b> is the moment between Enter and the reply: send is disabled until the answer starts. Smart replies is a solid <a href="toggle.html">toggle</a>, hidden in the demo where replies are canned. Clear is a text <a href="button.html">button</a>.</p>
+      <div class="stack">
+        <div class="spec-row">
+          <div class="chat-bar" data-figma-set="Chat bar" data-figma-variant="state=empty, smart=false">
+            <textarea rows="2" placeholder="look something up in your journal…" data-figma-text="message"></textarea>
+            <div class="chat-bar-row">
+              <span class="left"><button class="chip-toggle" aria-pressed="false" data-figma-instance="Toggle" data-figma-variant="tone=solid, pressed=false, state=default">smart replies</button></span>
+              <button class="text" data-figma-instance="Button" data-figma-variant="kind=text, size=md, state=default">clear</button>
+              <button class="send pill" data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=default">send <span class="ret">↵</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="spec-row">
+          <div class="chat-bar" data-figma-set="Chat bar" data-figma-variant="state=typed, smart=false">
+            <textarea rows="2" data-figma-text="message">when did I last run with Mika?</textarea>
+            <div class="chat-bar-row">
+              <span class="left"><button class="chip-toggle" aria-pressed="false" data-figma-instance="Toggle" data-figma-variant="tone=solid, pressed=false, state=default">smart replies</button></span>
+              <button class="text" data-figma-instance="Button" data-figma-variant="kind=text, size=md, state=default">clear</button>
+              <button class="send pill" data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=default">send <span class="ret">↵</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="spec-row">
+          <div class="chat-bar is-focus-within" data-figma-set="Chat bar" data-figma-variant="state=focus, smart=false">
+            <textarea rows="2" class="is-focus" data-figma-text="message">when did I last run with Mika?</textarea>
+            <div class="chat-bar-row">
+              <span class="left"><button class="chip-toggle" aria-pressed="false" data-figma-instance="Toggle" data-figma-variant="tone=solid, pressed=false, state=default">smart replies</button></span>
+              <button class="text" data-figma-instance="Button" data-figma-variant="kind=text, size=md, state=default">clear</button>
+              <button class="send pill" data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=default">send <span class="ret">↵</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="spec-row">
+          <div class="chat-bar is-focus-within" data-figma-set="Chat bar" data-figma-variant="state=focus, smart=true">
+            <textarea rows="2" class="is-focus" data-figma-text="message">how often did I mention the move in August?</textarea>
+            <div class="chat-bar-row">
+              <span class="left"><button class="chip-toggle" aria-pressed="true" data-figma-instance="Toggle" data-figma-variant="tone=solid, pressed=true, state=default">smart replies</button></span>
+              <button class="text" data-figma-instance="Button" data-figma-variant="kind=text, size=md, state=default">clear</button>
+              <button class="send pill" data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=default">send <span class="ret">↵</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="spec-row">
+          <div class="chat-bar" data-figma-set="Chat bar" data-figma-variant="state=sending, smart=true">
+            <textarea rows="2" placeholder="look something up in your journal…" data-figma-text="message"></textarea>
+            <div class="chat-bar-row">
+              <span class="left"><button class="chip-toggle" aria-pressed="true" data-figma-instance="Toggle" data-figma-variant="tone=solid, pressed=true, state=default">smart replies</button></span>
+              <button class="text" data-figma-instance="Button" data-figma-variant="kind=text, size=md, state=default">clear</button>
+              <button class="send pill" disabled data-figma-instance="Button" data-figma-variant="kind=send, size=pill, state=disabled">send <span class="ret">↵</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">div.composer                    the column it sits in, max 46rem
+  div.chat-bar                  the box
+    textarea                    rows=2, at least 3.2rem; no well of its own
+    div.chat-bar-row            right-aligned, wraps
+      span.left                 pushed left
+        button.chip-toggle      smart replies
+      button.text               clear
+      button.send.pill          send ↵</pre>
+      <div class="parts">
+        <div class="part">box</div><div class="rule-text">--bg-muted, --border-default hairline, the 12px literal radius, padding .7rem .9rem .55rem, .4rem between the text and the row. The border turns --border-accent while anything inside has focus.</div>
+        <div class="part">message</div><div class="rule-text">The textarea with its well taken away: body serif, line-height 1.6, at least 3.2rem.</div>
+        <div class="part">row</div><div class="rule-text">.9rem between controls; the left group takes the spare room.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fill <span class="mono">--bg-muted</span>; rule <span class="mono">--border-default</span>, focus <span class="mono">--border-accent</span>; message <span class="mono">--text-default</span>, placeholder <span class="mono">--text-muted</span>. In Figma: <b>Chat bar</b>, <span class="mono">state × smart</span>, with a <span class="mono">message</span> property; the toggle and both buttons are instances.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="design.js"></script>
+</body>
+</html>

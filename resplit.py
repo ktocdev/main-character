@@ -1,5 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Resplit — Phase 3 one-shot migration: per-day entry granularity.
+Resplit — per-day entry granularity.
 
 One imported Claude conversation used to be one "entry" spanning up to a
 week under a single date. This script re-splits every imported
@@ -453,6 +454,10 @@ def main():
     write_day_braids(matches, manifest)
     update_session_base(manifest)
     write_manifest(manifest)
+    import passages
+    stats = passages.sync(collection)
+    print(f"  search passages: {stats['documents']} ({stats['embedded']} embedded, "
+          f"{stats['removed']} removed)")
     print(f"\n  MIGRATION COMPLETE — {collection.count()} chunks in store")
 
     if not args.migrate_only:

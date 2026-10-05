@@ -1,0 +1,44 @@
+{
+  "people": [
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Met Jordan at Greenwood Park after work for a run",
+        "Training for a half marathon",
+        "Ahead of Jordan on the run but loops back for her",
+        "Ran about 3 miles with Jordan",
+        "Listened quietly while Jordan talked about the restructuring, then made a sharp observation",
+        "Said Jordan stops working on Coda when work gets shaky and feels better when picking it back up",
+        "Suggested Coda could be Jordan's portfolio update",
+        "Got smoothies with Jordan after the run",
+        "Told Jordan about a new coworker who keeps stealing her lunch from the fridge"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Coda",
+      "domain": "personal",
+      "status": "active",
+      "observations": [
+        "Jordan tends to stop working on it when work gets shaky",
+        "Mika suggested it could serve as Jordan's portfolio update",
+        "Jordan did 20 minutes of work on it before bed",
+        "Jordan fixed a color contrast issue on the log cards"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Greenwood Park",
+      "kind": "park",
+      "observations": [
+        "Jordan met Mika there after work for a run",
+        "Described as gorgeous with golden late-afternoon light",
+        "Had kids on the playground and dogs around",
+        "Has a pond with a bench where Jordan and Mika cooled down"
+      ]
+    }
+  ]
+}

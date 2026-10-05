@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Seed summary — the co-edited rolling life summary.
 
@@ -11,7 +12,8 @@ uploaded file is canonical — nothing auto-generated ever overwrites it.
   summaries/seed_summary.md            the live seed (author-owned)
   summaries/seed_summary.candidate.md  the post-close integrate output,
                                        awaiting review/edit/upload
-  summaries/seed_backups/              prior seeds, kept on every upload
+  summaries/seed_backups/              prior seeds and superseded
+                                       candidates — nothing is deleted
 
 Usage:
     python seed.py bootstrap <previous.md> <archive.json>
@@ -34,13 +36,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from config import AUTHOR, MC_PROCESSING_MODEL as MODEL, SUMMARY_DIR, get_client, processing_thinking_kwargs
+from config import (AUTHOR, MC_PROCESSING_MODEL as MODEL, SUMMARY_DIR,
+                    get_client, now_local, processing_thinking_kwargs)
 
 MAX_TOKENS = 32_000
 SEED_FILE = SUMMARY_DIR / "seed_summary.md"
 CANDIDATE_FILE = SUMMARY_DIR / "seed_summary.candidate.md"
 BACKUP_DIR = SUMMARY_DIR / "seed_backups"
 BRAID_MAX_CHARS = 300_000  # newest kept if a braid somehow exceeds this
+
+VOICE = """\
+Voice: tell it as their story — {author} is the complex, flawed, \
+rooted-for main character; honest about mistakes, always on their side. \
+Name patterns and land resolved threads on grounded hope tied to what \
+actually happened — never empty uplift. Anchor to dates; use their words \
+and people's names as they do."""
 
 INTEGRATE_PROMPT = """\
 You maintain {author}'s rolling life summary — the one document a \
@@ -52,15 +62,59 @@ resolved. Preserve the section structure and the voice of the current \
 summary. Update the "Updated" date line to {today}. Output only the \
 updated summary document, nothing else.
 
-Voice: tell it as their story — {author} is the complex, flawed, \
-rooted-for main character; honest about mistakes, always on their side. \
-Name patterns and land resolved threads on grounded hope tied to what \
-actually happened — never empty uplift. Anchor to dates; use their words \
-and people's names as they do.
+""" + VOICE + """
 
 <current_summary>
 {previous}
 </current_summary>
+
+<latest_chat>
+{chat_braid}
+</latest_chat>"""
+
+# The first seed has no previous structure to preserve, and every later
+# integrate inherits whatever shape this produces — so this is the one
+# prompt that spells the skeleton out.
+FIRST_PROMPT = """\
+You are writing the FIRST version of {author}'s rolling life summary — \
+the one document a companion reads to know who they are and where things \
+stand. There is no previous summary; build it from the chat below (both \
+sides), which is everything known so far.
+
+Use these sections, in this order, keeping only the ones the material \
+actually supports:
+
+# {author}'s Journal Summary
+**Updated {today}**
+
+## Current Status
+Who they are and where life stands right now — the orienting paragraph.
+
+## <life domain>
+One section per domain with real material (work, a project, a \
+relationship, health). Give the dominant thread a dated spine, oldest \
+first, so later updates can extend it instead of rewriting it.
+
+## People
+One bullet per recurring person: who they are and what they mean.
+
+## Self-Knowledge: Patterns & Truths
+### Named this period — what became visible in these entries
+### Carried forward — open threads still live
+### Core truths — what holds across time
+
+## Dreams
+Only if any were recorded.
+
+## Upcoming & To-Do
+Commitments made and decisions still open.
+
+Every later update inherits this structure, so keep it clean and leave \
+out any section you have nothing real to put in. Write only what the chat \
+supports — no invented history. Output only the summary document, nothing \
+else.
+
+""" + VOICE + """
 
 <latest_chat>
 {chat_braid}
@@ -85,23 +139,37 @@ def load_seed() -> str:
     return SEED_FILE.read_text(encoding="utf-8") if SEED_FILE.exists() else ""
 
 
+def _retire_candidate() -> None:
+    """Move a pending candidate into the backups instead of dropping it.
+    Both callers legitimately supersede it — an upload completes the
+    ritual, a second close writes a fresher one — but neither can tell
+    whether the author ever read it, so nothing is deleted outright."""
+    if not CANDIDATE_FILE.exists():
+        return
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = now_local().strftime("%Y-%m-%d_%H%M%S")
+    (BACKUP_DIR / f"seed_summary.candidate.{stamp}.md").write_text(
+        CANDIDATE_FILE.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    CANDIDATE_FILE.unlink()
+
+
 def save_seed(text: str) -> dict:
     """The upload point: the edited file becomes the live seed. The prior
     seed is backed up first; the pending candidate (now superseded) is
-    cleared."""
+    retired into the backups alongside it — see _retire_candidate."""
     text = text.strip()
     if len(text) < 200:
-        raise ValueError("that file looks empty — not replacing the seed with it")
+        raise ValueError("that file looks empty, so the life summary was not replaced")
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
     if SEED_FILE.exists():
         BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        stamp = now_local().strftime("%Y-%m-%d_%H%M%S")
         (BACKUP_DIR / f"seed_summary.{stamp}.md").write_text(
             SEED_FILE.read_text(encoding="utf-8"), encoding="utf-8"
         )
     SEED_FILE.write_text(text + "\n", encoding="utf-8")
-    if CANDIDATE_FILE.exists():
-        CANDIDATE_FILE.unlink()
+    _retire_candidate()
     return {"chars": len(text)}
 
 
@@ -170,18 +238,32 @@ def _call(prompt: str) -> str:
     return "".join(parts).strip()
 
 
-def integrate(previous_summary_text: str, chat_braid_text: str) -> str:
+def integrate(previous_summary_text: str, chat_braid_text: str,
+              today: str = "") -> str:
     """Fold one chat (both sides) into the rolling summary."""
     return _call(INTEGRATE_PROMPT.format(
-        author=AUTHOR, today=datetime.now().strftime("%B %d, %Y"),
+        author=AUTHOR, today=today or _today(),
         previous=previous_summary_text, chat_braid=chat_braid_text,
+    ))
+
+
+def _today() -> str:
+    return now_local().strftime("%B %d, %Y")
+
+
+def create_first(chat_braid_text: str, today: str = "") -> str:
+    """The first seed, built from a closed chat alone. Nobody arrives with
+    a summary already written — they write, then summarize when ready."""
+    return _call(FIRST_PROMPT.format(
+        author=AUTHOR, today=today or _today(),
+        chat_braid=chat_braid_text,
     ))
 
 
 def consolidate(summary_text: str) -> str:
     """Compress the rolling summary when it has grown too long."""
     return _call(CONSOLIDATE_PROMPT.format(
-        author=AUTHOR, today=datetime.now().strftime("%B %d, %Y"),
+        author=AUTHOR, today=_today(),
         previous=summary_text,
     ))
 
@@ -193,11 +275,19 @@ def generate_candidate(archive_key: str) -> Path:
     archive = sessions.load_archive(archive_key)
     if archive is None:
         raise ValueError(f"archive '{archive_key}' not found")
-    previous = load_seed()
-    if not previous:
-        raise ValueError("no live seed yet — bootstrap one first (python seed.py)")
-    updated = integrate(previous, archive_braid_text(archive))
+    braid = archive_braid_text(archive)
+    previous = load_seed().strip()   # a whitespace-only file is not a seed
+    # dated by the close it summarizes, not by when this ran — a backdated
+    # or replayed session must not stamp the seed with today
+    closed = archive.get("closed", "")
+    from config import parse_stamp
+    when = parse_stamp(closed)
+    today = when.strftime("%B %d, %Y") if when else ""
+    # no seed yet means this is the author's first close — write one
+    updated = (integrate(previous, braid, today) if previous
+               else create_first(braid, today))
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
+    _retire_candidate()   # superseded by a fresher close, not lost
     CANDIDATE_FILE.write_text(updated + "\n", encoding="utf-8")
     return CANDIDATE_FILE
 

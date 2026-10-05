@@ -1,5 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Category System — Phase 2 of the RAG Journal.
+Category System.
 
 Tags every journal conversation with the built-in life-domain categories
 from persona-spec.md §5 using the Claude API. Entries can span multiple
@@ -44,7 +45,7 @@ INDEX_FILE = CATEGORY_DIR / "index.json"
 # categories are a later roadmap item and deliberately not handled here.
 CATEGORIES = {
     "work": "job, career, coworkers, job searching, professional projects and stress",
-    "dating": "dates, romantic interest, relationships, breakups, exes in a romantic context",
+    "relationships": "romantic life — dates, crushes, a partner or spouse, milestones and conflicts in a romance, breakups, exes; not friendships (social) or relatives (family)",
     "health": "physical or mental health, injuries, illness, sleep, medication, exercise, doctors",
     "creative": "art, music, singing, drawing, writing, coding side projects, creative hobbies",
     "social": "friends, outings, parties, bars, shows, events, plans with people",
@@ -78,28 +79,51 @@ Categories:
 {text}
 </entry>"""
 
-TAG_SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "properties": {
-        "categories": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "name": {"type": "string", "enum": list(CATEGORIES)},
-                    "evidence": {
-                        "type": "string",
-                        "description": "Short phrase: what in the entry earned this tag",
+def enabled_categories() -> dict:
+    """The built-in categories the tagger currently offers: CATEGORIES minus
+    whatever Settings has disabled (config.DISABLED_CATEGORIES).
+
+    Read live rather than bound at import so a test can set it; in the running
+    app it is frozen at import like every other setting, so a change needs a
+    restart. Only *tagging* narrows to this set -- build_index, update_chroma
+    and the summarizer keep using the full CATEGORIES, so an entry already
+    tagged with a now-disabled category keeps that tag, its count and its
+    domain summary. Disabling stops a category being offered; it never erases
+    what history already carries.
+    """
+    import config
+    disabled = set(config.DISABLED_CATEGORIES)
+    enabled = {name: desc for name, desc in CATEGORIES.items() if name not in disabled}
+    # The Settings UI refuses to disable every category, but MC_DISABLED_CATEGORIES
+    # is also a plain .env value -- hand-editing it isn't stopped the same way.
+    # An empty enum breaks every tag_conversation() call, so fail open here too.
+    return enabled or dict(CATEGORIES)
+
+
+def _tag_schema(names) -> dict:
+    """The tagging JSON schema, with its category enum set to `names`."""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "categories": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "name": {"type": "string", "enum": list(names)},
+                        "evidence": {
+                            "type": "string",
+                            "description": "Short phrase: what in the entry earned this tag",
+                        },
                     },
+                    "required": ["name", "evidence"],
                 },
-                "required": ["name", "evidence"],
             },
         },
-    },
-    "required": ["categories"],
-}
+        "required": ["categories"],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -108,14 +132,16 @@ TAG_SCHEMA = {
 
 def tag_conversation(client, conv: dict) -> dict:
     """Tag one conversation. Returns {category_name: evidence}."""
-    definitions = "\n".join(f"- {name}: {desc}" for name, desc in CATEGORIES.items())
+    enabled = enabled_categories()
+    definitions = "\n".join(f"- {name}: {desc}" for name, desc in enabled.items())
+    schema = _tag_schema(enabled)
     tags = {}
     for segment in _segments(conv["text"]):
         response = client.messages.create(
             model=MODEL,
             max_tokens=2000,
             **processing_thinking_kwargs(),
-            output_config={"format": {"type": "json_schema", "schema": TAG_SCHEMA}},
+            output_config={"format": {"type": "json_schema", "schema": schema}},
             messages=[{
                 "role": "user",
                 "content": TAG_PROMPT.format(
@@ -130,6 +156,14 @@ def tag_conversation(client, conv: dict) -> dict:
         # results are ordered most-central first; cap as a backstop against
         # over-tagging (a tag on everything is a tag on nothing)
         for item in json.loads(raw).get("categories", [])[:6]:
+            # The schema already constrains this on a real call, but mock mode
+            # replays recorded text without one -- a fixture captured before a
+            # category was renamed or disabled would otherwise inject a name
+            # that is no longer offered, and build_index() silently drops an
+            # unknown one from counts rather than erroring. Checking `enabled`
+            # (a subset of CATEGORIES) covers both the rename and the disable.
+            if item["name"] not in enabled:
+                continue
             tags.setdefault(item["name"], item["evidence"])
     return tags
 

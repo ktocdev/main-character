@@ -4,22 +4,143 @@
     font-weight: 400 600;
     font-display: swap;
   }
+  /* Old Standard TT, served from here rather than Google Fonts: the app makes
+     no third-party requests, and the published web demo can run under a
+     `default-src 'self'` CSP. SIL OFL 1.1, see fonts/OldStandard-OFL.txt. */
+  @font-face {
+    font-family: 'Old Standard TT';
+    src: url('/static/fonts/OldStandard-Regular.ttf') format('truetype');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Old Standard TT';
+    src: url('/static/fonts/OldStandard-Bold.ttf') format('truetype');
+    font-weight: 700; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Old Standard TT';
+    src: url('/static/fonts/OldStandard-Italic.ttf') format('truetype');
+    font-weight: 400; font-style: italic; font-display: swap;
+  }
+  /* Colour comes in three tiers: ramps (the hex values), roles (what a
+     colour is for, pointing at ramp steps) and a few component tokens
+     (pointing at roles). Dark is the default palette. The light palette
+     below applies either when the OS asks for light *and* the reader hasn't
+     pinned dark, or when the Appearance setting pins light outright
+     (data-theme on <html>, set from localStorage by the inline head script
+     and settings.js). An explicit pin always beats the OS; "Auto" clears
+     the attribute and hands it back. Plain CSS can't share one rule between
+     the two light selectors, so the light role list is written twice; it
+     holds only aliases, so keep the two copies identical. */
   :root {
     color-scheme: light dark;  /* native controls (select popups, checkboxes, scrollbars) follow the theme */
-    --bg: #211d19;          /* warm charcoal, not pitch black */
-    --bg-raised: #2a2521;
-    --bg-input: #322c27;
-    --text: #e8e0d5;
-    --text-dim: #a99f92;
-    --accent: #d99e5b;      /* lamp amber */
-    --accent-dim: #8a6a44;
-    --border: #3d362f;
-    --you: #c9b99f;
+
+    /* ramps: the only hex values in the palette. Three hues, built in OKLCH
+       so the steps look evenly spaced. Every dark value is a step as it was;
+       the steps between them are interpolated. Never used directly: the
+       roles below point at them, and only the roles are used. */
+    --umber-0: #ffffff;   --umber-50: #faf7f2;  --umber-100: #f1ece4; --umber-200: #e8e0d5;
+    --umber-300: #c9b99f; --umber-400: #a99f92; --umber-500: #898075; --umber-600: #6b6258;
+    --umber-700: #534c43; --umber-800: #3d362f; --umber-850: #322c27; --umber-900: #2a2521;
+    --umber-950: #211d19;
+    --amber-50: #fef5ea;  --amber-100: #fee9d0; --amber-200: #f8d2a5; --amber-300: #e8b377;
+    --amber-400: #d99e5b; --amber-500: #b58248; --amber-600: #8a6a44; --amber-700: #86531e;
+    --amber-800: #6a4a2a; --amber-900: #4f3722; --amber-950: #352517;
+    --rust-50: #fff4f2;   --rust-100: #fee7e2;  --rust-200: #fdccc2;  --rust-300: #f4aa9c;
+    --rust-400: #e28979;  --rust-500: #c96a5a;  --rust-600: #a8493a;  --rust-700: #883a2d;
+    --rust-800: #6a2d23;  --rust-900: #4d211a;  --rust-950: #351813;
+
+    /* roles: what a colour is for. Dark is the default; the light blocks
+       below point the same roles at the light end of the ramps. */
+    --bg-page: var(--umber-950);          /* warm charcoal, not pitch black */
+    --bg-raised: var(--umber-900);        /* cards, panels, menus */
+    --bg-muted: var(--umber-850);         /* inputs, textareas, chips, pressed nav, the soft toggle on */
+    --text-default: var(--umber-200);
+    --text-muted: var(--umber-400);       /* meta, labels, help copy */
+    --text-you: var(--umber-300);         /* your own words in a transcript */
+    --text-accent: var(--amber-400);      /* lamp amber: italic headings, active labels */
+    --text-accent-muted: var(--amber-600); /* eyebrows, date labels */
+    --text-danger: var(--rust-500);       /* the app's one danger/error color */
+    --text-on-accent: var(--umber-950);   /* the label on an amber fill */
+    --fill-accent: var(--amber-400);      /* the send button */
+    --fill-accent-hover: var(--amber-300); /* its hover: a step brighter */
+    --fill-accent-muted: var(--amber-600); /* the filled button */
+    --fill-danger: var(--rust-500);
+    --border-default: var(--umber-800);   /* every hairline */
+    --border-strong: var(--umber-400);    /* a hairline lifted on hover */
+    --border-accent: var(--amber-600);    /* the dashed borders */
+    --border-danger: var(--rust-500);     /* a danger outline */
+    --focus-ring: var(--amber-600);
+    --shadow-sm: 0 6px 18px rgba(0,0,0,.25);   /* tooltip, settings popover */
+    --shadow-md: 0 8px 24px rgba(0,0,0,.25);   /* cost panel */
+    --shadow-lg: 0 10px 30px rgba(0,0,0,.35);  /* popover menu */
+    --shadow-xl: 0 16px 40px rgba(0,0,0,.3);   /* the nav panel sheet */
+
+    /* components: only where one needs a value its role doesn't give */
+    --toggle-on: var(--fill-accent);      /* a pressed solid toggle */
+    /* the item card visual's hover fill: a small warm shift (~#3a3029) */
+    --card-thumb-hover: color-mix(in oklch, var(--bg-muted) 90%, var(--fill-accent));
+    /* what a modal dims the page with: the page colour, mostly opaque, so
+       it follows the theme (a dark veil in dark, a pale one in light) */
+    --modal-scrim: color-mix(in oklch, var(--bg-page) 75%, transparent);
+
+    /* fonts */
+    --font-ui: 'CMU Sans Demi Condensed', system-ui, sans-serif;
+    --font-body: 'Old Standard TT', Georgia, 'Times New Roman', serif;
+
+    /* type — UI chrome scale (prose uses body { font: 17px/1.65 ... } directly) */
+    --font-3xs:  .7rem;
+    --font-2xs:  .75rem;
+    --font-xs:   .8rem;
+    --font-sm:   .85rem;
+    --font-base: .95rem;
+    --font-md:   1.05rem;
+    --font-lg:   1.15rem;
+    --font-xl:   1.4rem;
+
+    /* spacing */
+    --space-1: .25rem;
+    --space-2: .4rem;
+    --space-3: .5rem;
+    --space-4: .6rem;
+    --space-5: .8rem;
+    --space-6: 1rem;
+    --space-7: 1.2rem;
+    --space-8: 1.5rem;
+
+    /* radius */
+    --radius-sm:     6px;
+    --radius-base:   8px;
+    --radius-lg:     10px;
+    --radius-pill:   999px;
+    --radius-circle: 50%;
+
+    /* motion: the hover fade (item card visual and title) */
+    --dur-hover: .25s;
   }
   @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #faf7f2; --bg-raised: #ffffff; --bg-input: #f1ece4;
-      --text: #38322b; --text-dim: #8c8378; --accent: #b5732f;
-      --accent-dim: #d9b183; --border: #e4dcd0; --you: #6b5d49;
+    :root:not([data-theme="dark"]) {
+      --bg-page: var(--umber-50); --bg-raised: var(--umber-0); --bg-muted: var(--umber-100);
+      --text-default: var(--umber-800); --text-muted: var(--umber-600); --text-you: var(--amber-800);
+      --text-accent: var(--amber-700); --text-accent-muted: var(--amber-600); --text-danger: var(--rust-600);
+      --text-on-accent: var(--umber-50);
+      --fill-accent: var(--amber-700); --fill-accent-hover: var(--amber-800);
+      --fill-accent-muted: var(--amber-600); --fill-danger: var(--rust-600);
+      --border-default: var(--umber-200); --border-strong: var(--umber-600);
+      --border-accent: var(--amber-600); --border-danger: var(--rust-600); --focus-ring: var(--amber-600);
+      --card-thumb-hover: var(--bg-page);
     }
   }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg-page: var(--umber-50); --bg-raised: var(--umber-0); --bg-muted: var(--umber-100);
+    --text-default: var(--umber-800); --text-muted: var(--umber-600); --text-you: var(--amber-800);
+    --text-accent: var(--amber-700); --text-accent-muted: var(--amber-600); --text-danger: var(--rust-600);
+    --text-on-accent: var(--umber-50);
+    --fill-accent: var(--amber-700); --fill-accent-hover: var(--amber-800);
+    --fill-accent-muted: var(--amber-600); --fill-danger: var(--rust-600);
+    --border-default: var(--umber-200); --border-strong: var(--umber-600);
+    --border-accent: var(--amber-600); --border-danger: var(--rust-600); --focus-ring: var(--amber-600);
+    --card-thumb-hover: var(--bg-page);
+  }
+  :root[data-theme="dark"] { color-scheme: dark; }

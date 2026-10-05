@@ -1,0 +1,6 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* button-group.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+/* a host that only supplies the ancestor a chip's hover rule keys on */
+.host.jump-pills { position: static; padding: 0; border: 0; background: none; }
+.spec-row .jump-pills[data-figma-set] { width: 40rem; position: static; }
