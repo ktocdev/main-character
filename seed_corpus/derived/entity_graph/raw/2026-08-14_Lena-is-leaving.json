@@ -1,0 +1,76 @@
+{
+  "people": [
+    {
+      "name": "Lena",
+      "relationship": "coworker",
+      "observations": [
+        "Took Jordan to lunch to tell them in person she accepted a job offer elsewhere",
+        "Starts her new job in three weeks",
+        "Has been miserable for months",
+        "Is the person Jordan debriefs with after bad meetings",
+        "Texts \"you crushed it\" after demos",
+        "Said she stayed longer than she should have because of Jordan",
+        "Said \"Coda could be the thing\""
+      ]
+    },
+    {
+      "name": "Marcus",
+      "relationship": "coworker",
+      "observations": [
+        "Gives whiplash feedback",
+        "Described as silent at work"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Coda",
+      "domain": "work",
+      "status": "unknown",
+      "observations": [
+        "Lena said Coda could be the thing",
+        "Second person to say this about Coda in two weeks"
+      ]
+    },
+    {
+      "name": "exit plan",
+      "domain": "personal",
+      "status": "active",
+      "observations": [
+        "Jordan told Lena they are working on their exit plan from the job"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "sandwich place",
+      "kind": "restaurant",
+      "observations": [
+        "Lena told Jordan about her new job offer here over lunch"
+      ]
+    },
+    {
+      "name": "office",
+      "kind": "workplace",
+      "observations": [
+        "Jordan returned to their desk after lunch and felt everything was different",
+        "Same screens, same Slack channels, same Marcus silence"
+      ]
+    },
+    {
+      "name": "Greenwood Park",
+      "kind": "park",
+      "observations": [
+        "Jordan went for a short walk here on the way home",
+        "Sat on a bench and watched joggers go by"
+      ]
+    },
+    {
+      "name": "apartment",
+      "kind": "home",
+      "observations": [
+        "Jordan avoided going straight back here after work"
+      ]
+    }
+  ]
+}

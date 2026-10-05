@@ -1,0 +1,29 @@
+{
+  "people": [
+    {
+      "name": "Mom",
+      "relationship": "mother",
+      "observations": [
+        "Called tonight to ask about visiting for Labor Day weekend.",
+        "Asked if Jordan had thought about renewing the lease since it's up in October.",
+        "Talked about Dad's knees.",
+        "Mentioned her book club.",
+        "Mentioned the neighbor's dog getting into her garden."
+      ]
+    }
+  ],
+  "projects": [],
+  "places": [
+    {
+      "name": "apartment",
+      "kind": "home",
+      "observations": [
+        "Bedroom door doesn't close all the way.",
+        "There's a stain on the ceiling from the upstairs neighbor's leak that maintenance never fixed.",
+        "Dining table is a folding card table with a plant on it.",
+        "Lease is up in October.",
+        "Pepper sat on the kitchen counter for the entire call, which she's not allowed to do."
+      ]
+    }
+  ]
+}

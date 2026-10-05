@@ -1,0 +1,52 @@
+{
+  "people": [
+    {
+      "name": "Marcus",
+      "relationship": "coworker",
+      "observations": [
+        "Jordan avoided facing Marcus after something happened the previous day, leading Jordan to call in sick."
+      ]
+    },
+    {
+      "name": "Mikayla",
+      "relationship": "friend",
+      "observations": [
+        "Ran into Jordan at Groundwork around noon while picking up coffee on her way to the gym.",
+        "Could tell Jordan had been in a funk but didn't push.",
+        "Sat with Jordan for 15 minutes and talked about nothing.",
+        "Sent Jordan a selfie from the gym after Jordan texted a thank-you."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Coda project",
+      "domain": "creative",
+      "status": "active",
+      "observations": [
+        "Jordan opened the Coda project at Groundwork and spent three hours working on it.",
+        "Built a practice-session timer with a visual metronome.",
+        "The metronome is a pulsing circle that expands and contracts at a set BPM."
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Groundwork",
+      "kind": "coffee shop",
+      "observations": [
+        "Jordan went to Groundwork around 10am intending to just get coffee and leave.",
+        "Jordan ended up spending three hours there working on the Coda project.",
+        "Ran into Mikayla there around noon."
+      ]
+    },
+    {
+      "name": "apartment",
+      "kind": "home",
+      "observations": [
+        "Jordan felt fog lift each time after leaving the apartment to go make something.",
+        "Jordan crawled into bed at 9pm the night before."
+      ]
+    }
+  ]
+}

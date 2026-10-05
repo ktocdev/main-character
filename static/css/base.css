@@ -1,47 +1,155 @@
-  * { box-sizing: border-box; margin: 0; }
+  /* SPDX-License-Identifier: AGPL-3.0-or-later */
+  /* The shell: reset, scrollbars, banner, header (masthead + nav + cost
+     meter), main. Everything a screen composes lives in components.css;
+     this file is what is on screen before any tab renders.
 
-  /* scrollbars — dark, low-contrast, matching the lamp palette */
-  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+     Redesign source: docs/design_handoff_main_character (JRNL-58). The
+     header never scrolls; content panes scroll. */
+
+  * { box-sizing: border-box; margin: 0; }
+  /* `hidden` always wins: several components set display on their own
+     class, and a hidden control that still shows is the worse failure. */
+  [hidden] { display: none !important; }
+
+  /* scrollbars: thin, low-contrast, matching the lamp palette */
+  * { scrollbar-width: thin; scrollbar-color: var(--border-default) transparent; }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: var(--border); border-radius: 999px;
-    border: 2px solid var(--bg); background-clip: padding-box;
+    background: var(--border-default); border-radius: var(--radius-pill);
+    border: 2px solid var(--bg-page); background-clip: padding-box;
   }
-  ::-webkit-scrollbar-thumb:hover { background-color: var(--accent-dim); }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--fill-accent-muted); }
   ::-webkit-scrollbar-corner { background: transparent; }
+
+  html { height: 100%; }
   body {
-    background: var(--bg); color: var(--text);
-    font: 17px/1.65 'Old Standard TT', Georgia, 'Times New Roman', serif;
-    height: 100dvh; display: flex; flex-direction: column;
+    background: var(--bg-page); color: var(--text-default);
+    font: 17px/1.65 var(--font-body);   /* body prose is a literal, not on the scale */
+    height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
   }
+  a { color: var(--text-muted); text-decoration: none; }
+  a:hover { color: var(--text-accent); }
+
+  /* Buttons rely on :focus-visible; inputs shift their border instead
+     (components.css). Never a ring on mouse click. */
+  button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--focus-ring); outline-offset: 2px;
+  }
+  button { font-family: var(--font-ui); cursor: pointer; }
+  button:disabled { cursor: default; }
+
+  /* ---- banner ---- */
+  /* The demo journal and the published web demo, which is the demo served
+     without a server behind it. Hidden unless /api/status reports the seed
+     instance. Sits above the header inside the body flex column, pushing the
+     app down rather than overlaying it. Text is set in core.js. */
+  #app-banner { display: none; }
+  body.seed-instance #app-banner {
+    display: block; flex-shrink: 0; text-align: center;
+    padding: .35rem 1rem;
+    background: var(--fill-accent); color: var(--text-on-accent);
+    font: .8rem/1.4 var(--font-ui); text-wrap: pretty;
+  }
+
+  /* ---- header: masthead + nav + cost meter ---- */
   header {
-    display: flex; align-items: baseline; gap: 1.5rem;
-    padding: 1rem 1.5rem .8rem; border-bottom: 1px solid var(--border);
+    flex-shrink: 0; position: relative; z-index: 3;
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem 1.2rem;
+    padding: .9rem clamp(1rem, 3vw, 1.5rem) .8rem;
+    border-bottom: 1px solid var(--border-default); background: var(--bg-page);
   }
-  header h1 { font-size: 1.15rem; font-weight: normal; font-style: italic; color: var(--accent); }
-  header .status { font-size: .8rem; color: var(--text-dim); font-family: 'CMU Sans Demi Condensed', system-ui, sans-serif; }
-  nav { margin-left: auto; display: flex; gap: .25rem; }
-  nav button {
-    background: none; border: none; color: var(--text-dim);
-    font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif; padding: .35rem .8rem;
-    border-radius: 6px; cursor: pointer;
+  .masthead { display: flex; align-items: baseline; gap: .9rem; min-width: 0; }
+  header h1 {
+    font-size: 1.15rem; font-weight: normal; font-style: italic;
+    color: var(--text-accent); white-space: nowrap;
   }
-  nav button.active { background: var(--bg-input); color: var(--text); }
-  main { flex: 1; overflow: hidden; display: flex; }
-  .tab { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+  header .status { font: .8rem var(--font-ui); color: var(--text-muted); white-space: nowrap; }
+
+  nav {
+    margin-left: auto; display: flex; align-items: center; gap: .15rem;
+    font: .95rem var(--font-ui);
+  }
+  /* flat: eleven buttons (container >= 1080px) */
+  .nav-flat { display: flex; align-items: center; gap: .15rem; }
+  .nav-flat button {
+    border: 0; background: transparent; color: var(--text-muted);
+    font: inherit; padding: .35rem .75rem; border-radius: var(--radius-sm);
+  }
+  .nav-flat button:hover { color: var(--text-default); }
+  .nav-flat button.active { background: var(--bg-muted); color: var(--text-default); }
+  /* a paused tab is kept in the nav as a reminder (main.js) */
+  .nav-flat button.paused { opacity: .5; }
+
+  /* megamenu: one trigger + a full-width panel (container < 1080px) */
+  .nav-menu { display: none; }
+  #nav-trigger {
+    border: 1px solid var(--border-default); background: transparent; color: var(--text-default);
+    font: inherit; padding: .3rem .8rem; border-radius: var(--radius-base);
+    display: flex; align-items: center; gap: .5rem;
+  }
+  #nav-trigger:hover { background: var(--bg-raised); }
+  #nav-trigger[aria-expanded="true"] { background: var(--bg-muted); }
+  #nav-trigger .lbl { color: var(--text-muted); }
+  #nav-trigger .caret { font-size: .75rem; color: var(--text-muted); }
+  #nav-panel {
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: var(--bg-raised); border-bottom: 1px solid var(--border-default);
+    box-shadow: var(--shadow-xl);
+    padding: 1rem clamp(1rem, 3vw, 1.5rem) 1.2rem;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1rem 2rem; max-height: calc(100dvh - 8rem); overflow-y: auto;
+  }
+  #nav-panel[hidden] { display: none; }
+  .nav-group { display: flex; flex-direction: column; gap: .2rem; }
+  .nav-group .eyebrow.strong {
+    padding: .3rem .6rem .5rem; border-bottom: 1px solid var(--border-default); margin-bottom: .3rem;
+  }
+  .nav-group .list-item { padding: .5rem .6rem; flex-direction: column; align-items: flex-start; gap: .05rem; }
+  .nav-group .list-item:hover { background: var(--bg-muted); }
+  .nav-group .list-item .li-title { font: .95rem var(--font-ui); color: var(--text-muted); white-space: normal; }
+  .nav-group .list-item .li-desc { font: .8rem var(--font-ui); color: var(--text-muted); white-space: normal; line-height: 1.3; }
+  .nav-group .list-item.active { background: var(--bg-muted); }
+  .nav-group .list-item.active .li-title { color: var(--text-default); }
+  @media (max-width: 1079.98px) {
+    .nav-flat { display: none; }
+    .nav-menu { display: flex; }
+  }
+
+  /* Cost: an icon, never a figure. The nav is in view the whole time
+     someone is writing, and a dollar amount parked there changes what the
+     app feels like -- so the number lives one click away and goes away. */
+  .cost-wrap { position: relative; display: inline-flex; }
+  #cost-toggle {
+    border: 0; background: transparent; color: var(--text-muted);
+    font: inherit; font-size: 1rem; width: 2rem; height: 2rem;
+    border-radius: var(--radius-circle); opacity: .7; margin-left: .3rem;
+  }
+  #cost-toggle:hover, #cost-toggle[aria-expanded="true"] { opacity: 1; background: var(--bg-muted); }
+  #cost-panel {
+    position: absolute; top: calc(100% + .4rem); right: 0; z-index: 5;
+    background: var(--bg-muted); border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg); padding: .6rem .9rem; white-space: nowrap;
+    font-family: var(--font-ui); box-shadow: var(--shadow-md);
+  }
+  #cost-panel[hidden] { display: none; }
+  .cost-line { font-size: .95rem; color: var(--text-default); font-variant-numeric: tabular-nums; }
+  .cost-note { font-size: .75rem; color: var(--text-muted); margin-top: .1rem; }
+  /* mock-mode status: tinted so it reads as a state, not a footnote, and
+     allowed to wrap so it does not stretch the nowrap panel. */
+  .cost-mock { color: var(--text-accent-muted); white-space: normal; max-width: 16rem; }
+
+  /* ---- main ---- */
+  main { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .tab { flex: 1; min-height: 0; display: none; flex-direction: column; overflow: hidden; }
   .tab.active { display: flex; }
 
-
-  /* Mock-mode banner — hidden unless /api/status reports mock:true, so the
-     markup can live in index.html unconditionally. Sits above the header
-     inside the body flex column, pushing the app down rather than
-     overlaying it, so it can't be scrolled out of sight or covered. */
-  #mock-banner { display: none; }
-  body.mock-mode #mock-banner {
-    display: block; text-align: center;
-    padding: .4rem 1rem;
-    background: var(--accent-dim, #6b5b3e); color: var(--bg);
-    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
-    letter-spacing: .02em;
-  }
+  /* The published web demo has no server behind it (static/js/web-demo/).
+     Restarting, installing the demo, the API key and the data folder all
+     mean nothing in a browser tab, so their controls go. The design system
+     stays: the build publishes it (scripts/build_web_demo.py). */
+  body.web-demo #settings-restart,
+  body.web-demo #settings-seed,
+  body.web-demo #settings-restart-info,
+  body.web-demo .set-group:has(#set-key),
+  body.web-demo .set-group:has(#set-export) { display: none; }

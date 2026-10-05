@@ -1,0 +1,60 @@
+{
+  "people": [
+    {
+      "name": "Dev",
+      "relationship": "date",
+      "observations": [
+        "Met Jordan for coffee and a walk at Greenwood Park",
+        "Is a session musician who plays bass for a few different bands",
+        "Teaches music lessons on the side",
+        "Easy to talk to; silences don't feel awkward with them",
+        "Got excited when Jordan told them about Coda",
+        "Asked questions about how the practice tracking feature would work, like reminders to revisit stuff not touched in a while",
+        "Said they'd try Coda when it's ready",
+        "Sat with Jordan on the bench by the pond",
+        "Pointed out a heron standing still in the shallows",
+        "Watched the heron with Jordan without talking",
+        "Had to leave to go teach a lesson"
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Talked Jordan out of cancelling on Dev"
+      ]
+    },
+    {
+      "name": "Mikayla",
+      "relationship": "friend",
+      "observations": [
+        "Jordan sat with her on the same pond bench the previous week"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Coda",
+      "domain": "personal",
+      "status": "active",
+      "observations": [
+        "Jordan described it to Dev almost by accident while explaining what they do outside of work",
+        "Has a practice tracking feature being discussed",
+        "Dev asked whether it could remind users to revisit stuff they haven't touched in a while",
+        "Dev said they'd try it when it's ready"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Greenwood Park",
+      "kind": "venue",
+      "observations": [
+        "Jordan met Dev there for coffee and a walk",
+        "They walked the loop trail together",
+        "They sat on a bench by the pond",
+        "Jordan saw a heron in the shallows there with Dev"
+      ]
+    }
+  ]
+}

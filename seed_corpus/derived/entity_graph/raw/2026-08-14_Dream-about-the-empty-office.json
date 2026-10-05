@@ -1,0 +1,73 @@
+{
+  "people": [
+    {
+      "name": "Marcus",
+      "relationship": "coworker",
+      "observations": [
+        "Was out of office Thursday so standup was just Lena and the devs",
+        "Did not answer in the dream when Jordan called his name",
+        "in a dream: was absent from the office along with everyone else"
+      ]
+    },
+    {
+      "name": "Lena",
+      "relationship": "coworker",
+      "observations": [
+        "Attended standup with the devs while Marcus was out",
+        "Showed Jordan a prototype she'd been working on quietly",
+        "Looked surprised when Jordan told her the prototype was good",
+        "Did not answer in the dream when Jordan called her name",
+        "in a dream: was absent from the office along with everyone else"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Was staring at Jordan from the foot of the bed after Jordan woke up at 4am"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "nav component",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "Discussed productively at standup without anyone overriding anyone",
+        "Lena showed a prototype related to this work"
+      ]
+    },
+    {
+      "name": "restructuring",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "Jordan thinks the restructuring is affecting them more than they've admitted"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "office",
+      "kind": "workplace",
+      "observations": [
+        "Site of a normal standup meeting on Thursday",
+        "in a dream: every desk was cleared with no monitors, keyboards, or coffee cups",
+        "in a dream: overhead fluorescent lights were flickering",
+        "in a dream: fast mechanical typing sound came from everywhere with nobody present",
+        "in a dream: Jordan's desk had a sticky note reading 'we moved' with no address",
+        "in a dream: the elevator was gone, replaced by a smooth wall"
+      ]
+    },
+    {
+      "name": "Greenwood Park",
+      "kind": "park",
+      "observations": [
+        "Jordan went for an early run there after waking from the dream",
+        "Barely anyone was there",
+        "The air was cool and the trail was quiet"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* search-bar.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+/* search's column is 46rem; the bar fills it */
+.spec-row .search-bar { width: 40rem; }

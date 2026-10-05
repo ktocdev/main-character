@@ -1,0 +1,56 @@
+{
+  "people": [
+    {
+      "name": "Marcus",
+      "relationship": "coworker",
+      "observations": [
+        "Told Marcus he had a headache and left work early",
+        "Note: name reused for both boss and mention of telling 'Marcus' about headache - see below"
+      ]
+    },
+    {
+      "name": "Lena",
+      "relationship": "coworker",
+      "observations": [
+        "Tried to back Jordan up during the design review but was steamrolled too"
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Jordan did not call Mika after the bad day"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Curled up against Jordan's leg while Jordan stared at the wall",
+        "Slept on Jordan's chest, which she only does when Jordan is down"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "internal dashboard layout",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "Jordan presented the new internal dashboard layout at a design review",
+        "Marcus criticized the layout for not aligning with a direction that was never actually discussed"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "home",
+      "kind": "home",
+      "observations": [
+        "Jordan came home at 4pm after the design review",
+        "Sat on the couch in the dark for about two hours",
+        "Went to bed at 9 without eating dinner"
+      ]
+    }
+  ]
+}

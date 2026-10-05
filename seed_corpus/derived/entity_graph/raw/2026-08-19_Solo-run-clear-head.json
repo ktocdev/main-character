@@ -1,0 +1,46 @@
+{
+  "people": [
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Batted at Jordan's shoelaces while Jordan stretched on the new green rug."
+      ]
+    },
+    {
+      "name": "Dev",
+      "relationship": "friend",
+      "observations": [
+        "Jordan previously went to the Thai place with Dev."
+      ]
+    }
+  ],
+  "projects": [],
+  "places": [
+    {
+      "name": "Greenwood Park",
+      "kind": "park",
+      "observations": [
+        "Jordan did a solo run there this evening.",
+        "Did the full loop plus the hill trail extension for the first time.",
+        "View from the top of the hill trail shows the whole skyline.",
+        "Park is a ten-minute jog from Jordan's apartment."
+      ]
+    },
+    {
+      "name": "Groundwork",
+      "kind": "venue",
+      "observations": [
+        "Located three blocks from Jordan's apartment."
+      ]
+    },
+    {
+      "name": "Thai place",
+      "kind": "restaurant",
+      "observations": [
+        "Jordan ordered dinner from there.",
+        "Jordan previously went there with Dev."
+      ]
+    }
+  ]
+}

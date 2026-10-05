@@ -1,5 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Organic Category Creation — Phase 2 of the RAG Journal.
+Organic Category Creation.
 
 Categories that emerge from the data instead of being predefined. Two
 routes in:
@@ -110,7 +111,7 @@ def entity_records() -> dict:
     "weeks": set} for places and projects, curation applied."""
     curation = load_curation()
     records = {}
-    for path in RAW_DIR.glob("*.json"):
+    for path in sorted(RAW_DIR.glob("*.json")):
         key = path.stem
         date = key[:10]
         data = json.loads(path.read_text(encoding="utf-8"))

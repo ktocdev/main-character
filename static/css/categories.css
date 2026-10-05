@@ -1,84 +1,56 @@
-  /* Categories */
-  #categories { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
-  #cat-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-  #cat-status { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
-  #cat-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.2rem; }
-  .cat-chip {
-    background: var(--bg-input); border: 1px solid var(--border); color: var(--text-dim);
-    border-radius: 999px; padding: .15rem .8rem; font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif; cursor: pointer;
-  }
-  .cat-chip.active { border-color: var(--accent); color: var(--accent); }
-  .cat-hint { color: var(--text-dim); font-style: italic; }
-  .cat-entry { border-bottom: 1px solid var(--border); padding: .7rem 0; }
-  .cat-entry h3 { font-size: .95rem; font-weight: 600; cursor: pointer; }
-  .cat-entry h3:hover { color: var(--accent); }
-  .cat-ev { color: var(--text-dim); font-size: .85rem; font-style: italic; }
-  .cat-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .35rem; align-items: center; }
-  .cat-add {
-    background: none; border: none; color: var(--text-dim);
-    font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; cursor: pointer;
-  }
-  .cat-full {
-    white-space: pre-wrap; background: var(--bg-input); border-radius: 8px;
-    padding: .8rem 1rem; margin-top: .6rem; font-size: .9rem;
-  }
-  .cat-domain {
-    background: var(--bg-raised); border: 1px solid var(--border);
-    border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.2rem;
-  }
-  .cat-domain-title {
-    font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: .05em; margin-bottom: .4rem;
-  }
-  .cat-domain-body { white-space: pre-wrap; font-size: .92rem; }
-  .cat-chip.custom { border-style: dashed; }
-  .cat-proposal {
-    border: 1px dashed var(--accent-dim); border-radius: 10px;
-    padding: .8rem 1rem; margin-bottom: .8rem; background: var(--bg-raised);
-  }
-  .cat-proposal b { color: var(--accent); }
-  .prop-meta { font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin-left: .5rem; }
-  .prop-members { font-size: .9rem; margin-top: .2rem; }
-  .prop-reason { color: var(--text-dim); font-style: italic; font-size: .85rem; margin-top: .15rem; }
-  .prop-actions { display: flex; gap: .4rem; margin-top: .5rem; }
-  #cat-custom-row {
-    display: flex; flex-direction: column; gap: .4rem; align-items: flex-start; margin-bottom: .8rem;
-  }
-  .custom-label { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
-  .custom-cat { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
-  .custom-cat .cc-name { font: .9rem 'CMU Sans Demi Condensed', system-ui, sans-serif; font-weight: 600; }
-  .custom-cat .cc-meta { font: .78rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); font-style: italic; }
-  .custom-cat .quiet { padding: .1rem .5rem; font-size: .75rem; }
-  .kw-chip {
-    background: var(--bg-input); border: 1px solid var(--border); border-radius: 999px;
-    padding: .05rem .55rem; font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim);
-  }
-  .kw-chip.member { border-color: var(--accent-dim); color: var(--accent); }
-  .kw-chip button {
-    background: none; border: none; color: inherit; cursor: pointer;
-    font-size: .85rem; padding: 0; opacity: .6;
-  }
-  .kw-chip button:hover { opacity: 1; }
-  .cat-def {
-    display: flex; flex-wrap: wrap; gap: .3rem; align-items: center;
-    background: var(--bg-input); border-radius: 8px; padding: .5rem .8rem;
-    margin-bottom: .8rem; font: .82rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim);
-  }
-  .cat-def .lbl { text-transform: uppercase; letter-spacing: .05em; font-size: .72rem; }
-  #cat-newform { display: flex; gap: .4rem; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; }
-  #cat-newform input {
-    background: var(--bg-input); border: 1px solid var(--border); color: var(--text);
-    border-radius: 6px; padding: .3rem .6rem; font: .85rem 'CMU Sans Demi Condensed', system-ui, sans-serif;
-  }
-  .cat-summary {
-    font-style: italic; color: var(--text-dim);
-    border-bottom: 1px solid var(--border); padding-bottom: .6rem; margin-bottom: .6rem;
-  }
-  #cat-paused {
-    background: var(--bg-raised); border: 1px dashed var(--accent-dim); border-radius: 10px;
-    padding: 1rem 1.2rem; color: var(--text-dim); font: .92rem/1.55 'CMU Sans Demi Condensed', system-ui, sans-serif;
-  }
-  #cat-paused b { color: var(--accent); }
-  #categories.paused > :not(#cat-paused) { display: none; }
-  nav button.paused { opacity: .5; }
+  /* SPDX-License-Identifier: AGPL-3.0-or-later */
+  /* Categories: list + detail (Pattern B), the same geometry as entities.
+     The list *is* the old chip row: one 44px row per category, sorted by
+     entries, with proposals in their own section on top. */
 
+  /* the paused notice (main.js shows it while categories are switched off) */
+  #cat-paused { flex: 1; width: 100%; max-width: 46rem; margin: 0 auto; padding: clamp(1rem, 3vw, 1.5rem); }
+  #categories.paused > .split { display: none; }
+  #categories { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+  /* ---- sidebar ---- */
+  #cat-tools .row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+  #cat-status { margin-left: auto; font: .78rem var(--font-ui); color: var(--text-muted); }
+  #cat-status .dots { margin-left: .1rem; }
+  #cat-proposed .list-item .li-title { font-weight: 600; }
+  #cat-newform-wrap { padding: .8rem .9rem 0; }
+  #cat-newform {
+    display: flex; flex-direction: column; gap: .4rem; padding: .7rem;
+    border: 1px solid var(--border-default); border-radius: var(--radius-lg);
+  }
+  #cat-newform .row { display: flex; gap: .4rem; }
+  .yours { font: .7rem/1 var(--font-ui); color: var(--text-muted); border: 1px dashed var(--border-default); border-radius: var(--radius-pill); padding: .15rem .45rem; }
+
+  /* ---- detail ---- */
+  #cat-detail .title-row .quiet { margin-left: auto; }
+  #cat-notice { margin-top: .6rem; }
+  #cat-notice:empty { display: none; }
+  .cat-kw { margin-top: .7rem; }
+  .cat-kw .tag-editor input { width: 9rem; min-height: 1.9rem; }
+  /* the domain document */
+  .cat-doc { margin-top: .9rem; }
+  .cat-doc p { margin: 0 0 .9rem; font-size: .98rem; text-wrap: pretty; white-space: pre-wrap; }
+  .cat-doc h4 { font: 600 .95rem var(--font-ui); margin: 1.1rem 0 .3rem; color: var(--text-default); }
+  .cat-nodoc { margin: .9rem 0 0; color: var(--text-muted); font-style: italic; text-wrap: pretty; }
+  .cat-doc .working { margin-top: .9rem; font: .85rem var(--font-ui); color: var(--text-muted); }
+  /* the entries */
+  #cat-entries .rule { margin-top: 1.8rem; }
+  .cat-entry { padding: 1rem 0; border-bottom: 1px solid var(--border-default); }
+  .cat-entry h3 {
+    display: flex; align-items: baseline; gap: .6rem; width: 100%; text-align: left;
+    border: 0; background: transparent; color: var(--text-default); font: 600 .95rem var(--font-ui);
+    padding: 0; cursor: pointer;
+  }
+  .cat-entry h3:hover { color: var(--text-accent); }
+  .cat-entry h3 .caret { margin-left: auto; font-weight: 400; font-size: .75rem; color: var(--text-muted); flex-shrink: 0; }
+  .cat-ev { margin-top: .15rem; font-size: .9rem; color: var(--text-muted); font-style: italic; text-wrap: pretty; }
+  .cat-entry .tag-editor { margin-top: .55rem; }
+  .cat-none { margin: 1rem 0 0; color: var(--text-muted); font-style: italic; text-wrap: pretty; }
+  /* a proposal's detail */
+  .prop-title { margin-top: .3rem; }
+  .prop-title .title-meta { margin: 0; }
+  .prop-foot { margin-top: 1.2rem; }
+  .prop-members { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1rem; }
+  .prop-members .chip { color: var(--text-muted); }
+  .prop-reason { margin: 1.2rem 0 0; color: var(--text-muted); font-style: italic; text-wrap: pretty; }
+  .prop-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1.4rem; }
