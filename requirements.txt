@@ -7,5 +7,5 @@ tzdata>=2024.1         # IANA zone database — zoneinfo ships none on
                        # Windows, so MC_TIMEZONE is a silent no-op without it
 
 # Web UI
-fastapi>=0.115         # local web server (server.py)
+fastapi>=0.141.1         # local web server (server.py)
 uvicorn>=0.30          # ASGI runner
