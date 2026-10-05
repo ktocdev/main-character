@@ -1,0 +1,83 @@
+{
+  "people": [
+    {
+      "name": "Priya",
+      "relationship": "manager",
+      "observations": [
+        "Starts managing Jordan on the 21st",
+        "Jordan will have three days with her as manager before interviewing elsewhere"
+      ]
+    },
+    {
+      "name": "Dev",
+      "relationship": "friend",
+      "observations": [
+        "Jordan told Dev the truth about something heavy on the 27th"
+      ]
+    },
+    {
+      "name": "Mom",
+      "relationship": "mother",
+      "observations": [
+        "Jordan told Mom the truth at the pond"
+      ]
+    },
+    {
+      "name": "Lena",
+      "relationship": "friend",
+      "observations": [
+        "Told Jordan 'let me do this' in the parking garage"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Sleeping on the green rug with white feetsies curled blissfully"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Northlight",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "If it happens, commute changes significantly and Jordan may need a car",
+        "Onsite interview is the 24th"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Groundwork",
+      "kind": "cafe",
+      "observations": [
+        "Jordan signed the lease renewal at the window table with a cortado going cold"
+      ]
+    },
+    {
+      "name": "the office building (dream)",
+      "kind": "dream location",
+      "observations": [
+        "in a dream: same empty floor, same fluorescent flicker, same mechanical typing coming from nowhere",
+        "in a dream: found the stairs past the kitchen and walked down and out, no water, no sideways elevator",
+        "in a dream: this is the third time having this dream about being trapped in the building"
+      ]
+    },
+    {
+      "name": "the pond",
+      "kind": "outdoor location",
+      "observations": [
+        "Jordan told Mom the truth at the pond"
+      ]
+    },
+    {
+      "name": "the parking garage",
+      "kind": "venue",
+      "observations": [
+        "Lena told Jordan 'let me do this' in the parking garage"
+      ]
+    }
+  ]
+}

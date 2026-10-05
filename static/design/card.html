@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — card</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/card.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/card.css">
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="index.html">main character</a></h1>
+    <span class="status">card · 3 sizes · 2 orientations · 7 types</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/card.css · static/js/card.js</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <!-- the site links come from design.js (PAGES) -->
+    <div class="eyebrow">on this page</div>
+    <a href="#sizes">sizes</a>
+    <a href="#horizontal">horizontal</a>
+    <a href="#wrapping">wrapping</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Card</h2>
+      <p class="lede">One card shape for anything the journal can point at: summaries, categories, dream categories, favorites, and people, places and projects. A visual on top, the context below it. Three sizes, each with a fixed height, each filling its grid column. Below 670px every card turns horizontal on its own.</p>
+    </section>
+
+    <section id="sizes">
+      <div class="rule eyebrow strong">Sizes</div>
+      <p class="note">Shown in a 46rem column, the width of the splash page's <span class="mono">#how</span> section. Width has a floor and fills its track, with no max, so a row never leaves a gap. Height is fixed; long content clamps instead of stretching the card.</p>
+      <div class="frame stack" id="sizes-out"></div>
+    </section>
+
+    <section id="horizontal">
+      <div class="rule eyebrow strong">Horizontal</div>
+      <p class="note">Below 670px every row drops to one column and every card flips: visual on the left, content on the right, full width. The title goes to one line with an ellipsis; the description keeps two. Medium and large share this shape; small gets its own, with no description. <span class="mono">.horizontal</span> forces it at any width (lists, side panels); <span class="mono">.vertical</span> opts out.</p>
+      <div class="frame stack" id="horizontal-out"></div>
+    </section>
+
+    <section id="wrapping">
+      <div class="rule eyebrow strong">Wrapping</div>
+      <p class="note">Every type in a <span class="mono">.card-row</span> up to 72rem wide: 6 small, 5 medium or 3 large per row. People show their initials; past the size's badge limit (2 / 3 / 4) the last slot becomes <span class="mono">+N</span>. Resize the window to watch the rows reflow.</p>
+      <div class="frame w72 stack" id="wrapping-out"></div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+      <p class="note">The root is <span class="mono">.item-card</span> because <span class="mono">.card</span> is already the plain panel under dreams, patterns and triage. The parts keep the handoff's names, so the Figma layers can use the same ones.</p>
+<pre class="tree">article.item-card[.sm | .lg][.horizontal | .vertical]
+  a.card-visual        aria-hidden, tabindex=-1, holds the glyph
+  div.card-body
+    div.card-type      eyebrow
+    a.card-title       the one tab stop
+    p.card-desc        plain text, never inside a link
+    div.card-badges
+      span.badge.card-badge  × n
+      span.card-more   "+N"</pre>
+      <div class="parts" id="parts"></div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Everything is bound to <span class="mono">tokens.css</span>. The card added two tokens: <span class="mono">--card-thumb-hover</span>, the visual's hover fill (dark: <span class="mono">--bg-muted</span> mixed 10% toward <span class="mono">--fill-accent</span>; light: <span class="mono">--bg-page</span>), and <span class="mono">--dur-hover</span> .25s, the app's first duration token. Card fill <span class="mono">--bg-raised</span>; visual and badge fill <span class="mono">--bg-muted</span>; hairlines <span class="mono">--border-default</span>; title <span class="mono">--text-default</span>; description and badges <span class="mono">--text-muted</span>; glyph, title hover and focus ring <span class="mono">--text-accent</span>; eyebrow <span class="mono">--text-accent-muted</span>; radius <span class="mono">--radius-lg</span> and <span class="mono">--radius-pill</span>.</p>
+    </section>
+  </main>
+</div>
+
+<script type="module" src="pages/card.js"></script>
+<script type="module" src="design.js"></script>
+</body>
+</html>

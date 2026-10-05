@@ -1,0 +1,5 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* badge.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+.ctx { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; align-items: start; }
+.ctx .search-hit { padding: 0; border: 0; }

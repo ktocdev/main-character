@@ -1,0 +1,21 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* select.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+.spec-row .set-control select, #wizard-body select { width: 16rem; }
+/* The open list is drawn by the browser, outside the page, so it can't be
+   rendered live. This is a drawing of Chrome's list from a
+   screenshot: the rows are `select option` (--bg-muted, --text-default) from
+   components.css; the rule, the highlight and its text are Chrome's own
+   colours, the --platform-* tokens in design.css. */
+.native-list {
+  display: flex; flex-direction: column; width: 16rem;
+  background: var(--bg-muted); border: 1px solid var(--platform-rule);
+}
+.native-list .opt {
+  display: flex; align-items: center; height: 1.85rem; padding: 0 .75rem;
+  color: var(--text-default); white-space: nowrap;
+}
+.native-list .opt.hi { background: var(--platform-highlight); color: var(--platform-highlight-text); }
+.native-list.field { font: 1rem var(--font-body); }
+.native-list.quiet { width: auto; font: .8rem var(--font-ui); }
+.native-list.quiet .opt { height: 1.5rem; padding: 0 .55rem; }

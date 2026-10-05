@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character · design system</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/index.css">
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="index.html">main character</a></h1>
+    <span class="status">design system</span>
+  </div>
+  <div class="right">
+    <a href="/">← back to the journal</a>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <!-- the site links come from design.js (PAGES) -->
+  </nav>
+
+  <main class="doc">
+    <section>
+      <h2>Design system</h2>
+      <p class="lede">The pieces the journal is built from, each rendered live from the app's own stylesheets. Nothing here is a mockup: if a page looks wrong, the app looks wrong too. (The one exception is the select's open list, which the browser draws outside the page; that page says so.) Every component also exports to Figma: see <span class="mono">figma/components/</span>.</p>
+    </section>
+
+    <section>
+      <div class="rule eyebrow strong">Foundations</div>
+      <div class="pages">
+        <a class="card" href="tokens.html">
+          <span class="eyebrow">foundation</span>
+          <span class="ttl">Tokens</span>
+          <p>Color in both themes, the two type families and their scale, spacing, radius and motion.</p>
+          <span class="src">static/css/tokens.css</span>
+        </a>
+      </div>
+    </section>
+
+    <section>
+      <div class="rule eyebrow strong">Components</div>
+      <div class="pages">
+        <a class="card" href="card.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Card</span>
+          <p>One card for anything the journal can point at, in three sizes, with a horizontal form below 670px.</p>
+          <span class="src">static/css/card.css · static/js/card.js</span>
+        </a>
+        <a class="card" href="button.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Button</span>
+          <p>Five voices from send to text, in four sizes and four states.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+        <a class="card" href="input.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Input</span>
+          <p>The single-line well in four app heights, plus the settings and wizard fields.</p>
+          <span class="src">static/css/components.css · settings.css · wizard.css</span>
+        </a>
+        <a class="card" href="textarea.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Textarea</span>
+          <p>Where entries are written: the input’s well, many lines tall.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+        <a class="card" href="select.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Select</span>
+          <p>The native select in five dresses, and a drawing of its open list.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+        <a class="card" href="checkbox.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Checkbox</span>
+          <p>The tinted native box, inline with a label, as a definition row, and as a fieldset.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+        <a class="card" href="toggle.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Toggle</span>
+          <p>A pill that stays pressed, in solid and soft tones.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+        <a class="card" href="badge.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Badge</span>
+          <p>A small read-only label pill in three tones and three sizes.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+        <a class="card" href="button-group.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Button group</span>
+          <p>Chips, the filter row, the sticky jump row and the segmented control.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+        <a class="card" href="tooltip.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Tooltip</span>
+          <p>One card for every title, placed by the room around its control.</p>
+          <span class="src">static/css/components.css · static/js/tooltip.js</span>
+        </a>
+        <a class="card" href="action-menu.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Action menu</span>
+          <p>The ⋯ trigger, the popover menu and its items.</p>
+          <span class="src">static/css/components.css · static/js/popover.js</span>
+        </a>
+        <a class="card" href="disclosure.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Disclosure</span>
+          <p>A native details section, and the accordion help is made of.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+        <a class="card" href="search-bar.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Search bar</span>
+          <p>The query, the mode and the button in one box.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+        <a class="card" href="chat-bar.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Chat bar</span>
+          <p>Ask’s compact composer: a textarea over a row of small controls.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+        <a class="card" href="modal.html">
+          <span class="eyebrow">component</span>
+          <span class="ttl">Modal</span>
+          <p>A native dialog for the one thing to read first: the web demo’s notice.</p>
+          <span class="src">static/css/components.css</span>
+        </a>
+      </div>
+    </section>
+  </main>
+</div>
+<script type="module" src="design.js"></script>
+</body>
+</html>

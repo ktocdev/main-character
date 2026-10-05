@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character · design tokens</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/tokens.css">
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="index.html">main character</a></h1>
+    <span class="status">design tokens · 3 ramps · 19 color roles · 2 families · 8 type steps · 8 space steps · 5 radii · 2 motion</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/tokens.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <!-- the site links come from design.js (PAGES) -->
+    <div class="eyebrow">on this page</div>
+    <a href="#color">color</a>
+    <a href="#ramps">ramps</a>
+    <a href="#type">type</a>
+    <a href="#space">spacing</a>
+    <a href="#radius">radius</a>
+    <a href="#motion">motion</a>
+  </nav>
+
+  <main class="doc">
+    <section>
+      <h2>Tokens</h2>
+      <p class="lede">Every token the app is built from, rendered live. Colour comes in three tiers: ramps hold the only hex values, roles say what a colour is for and point at ramp steps, and a few component tokens point at roles. Dark is the default palette; light points the same roles at other steps, not a separate design. Two font families, one motion idiom. Nothing here is proposed: it is what <span class="mono">tokens.css</span> already says.</p>
+    </section>
+
+    <section id="color">
+      <div class="rule eyebrow strong">Color</div>
+      <p class="note">Nineteen roles, named <span class="mono">--{bg, text, fill, border, focus}-{role}</span>. CSS uses only these, never a ramp step. Each points at a step of the <a href="#ramps">ramps</a>: dark applies when nothing else is set; light applies when the OS prefers it or <span class="mono">data-theme="light"</span> is pinned on <span class="mono">&lt;html&gt;</span>. Contrast is against the page (text and rules) or under <span class="mono">--text-on-accent</span> (fills); AA for text is 4.5:1. In Figma they are the Semantic collection, each an alias to its step.</p>
+      <div class="cols head"><div>role · job</div><div>dark (default)</div><div>light</div></div>
+      <div id="role-map"></div>
+      <div class="specimens">
+        <div class="spec dk">
+          <div class="ey" data-style="color:var(--text-accent-muted)">you · september 1, 2026</div>
+          <p data-style="color:var(--text-you)">Wrote until the lamp was the only light left on.</p>
+          <div class="ey" data-style="color:var(--text-accent-muted); margin-top:.4rem">companion</div>
+          <p data-style="color:var(--text-default)">That is the second night this week you stayed with it.</p>
+          <div class="meta"><span data-style="color:var(--text-muted)">31 entries · 49 entities</span><span data-style="color:var(--text-accent)">saved</span><span data-style="color:var(--text-danger)">could not reach the model</span></div>
+        </div>
+        <div class="spec lt">
+          <div class="ey" data-style="color:var(--text-accent-muted)">you · september 1, 2026</div>
+          <p data-style="color:var(--text-you)">Wrote until the lamp was the only light left on.</p>
+          <div class="ey" data-style="color:var(--text-accent-muted); margin-top:.4rem">companion</div>
+          <p data-style="color:var(--text-default)">That is the second night this week you stayed with it.</p>
+          <div class="meta"><span data-style="color:var(--text-muted)">31 entries · 49 entities</span><span data-style="color:var(--text-accent)">saved</span><span data-style="color:var(--text-danger)">could not reach the model</span></div>
+        </div>
+      </div>
+      <p class="note">Component tokens, only where a component needs a value its role doesn't give: <span class="mono">--toggle-on</span> is <span class="mono">--fill-accent</span> in both themes (light used to take the olive muted accent), and <span class="mono">--card-thumb-hover</span> is <span class="mono">--bg-muted</span> mixed 10% toward <span class="mono">--fill-accent</span> in dark, <span class="mono">--bg-page</span> in light. <span class="mono">--modal-scrim</span>, behind an open modal, is <span class="mono">--bg-page</span> at 75%, so it dims toward the page colour in either theme. Shadows are four whole box-shadows, the same in both themes: <span class="mono">--shadow-sm</span> (tooltip, settings popover), <span class="mono">--shadow-md</span> (cost panel), <span class="mono">--shadow-lg</span> (popover menu), <span class="mono">--shadow-xl</span> (the nav sheet).</p>
+      <div class="literals" id="platform">
+        <span class="eyebrow strong">platform, not ours</span>
+        <span>Chrome's own colours, which the select and checkbox pages draw because the page can't style them. Sampled on Windows; tokens in <span class="mono">design.css</span> only, so the drawings and Figma's Platform collection follow the theme.</span>
+      </div>
+    </section>
+
+    <section id="ramps">
+      <div class="rule eyebrow strong">Ramps</div>
+      <p class="note">Three hues, built in OKLCH so the steps look evenly spaced: <b>umber</b> for every background, text and rule, <b>amber</b> for the lamp, <b>rust</b> for danger. These are the only hex values in the palette. Each dark value is a step exactly as it was before the ramps (2026-10), so dark looks the same; the steps between them are interpolated. Light takes the light end of the same ramps. Its neutrals sit on steps or within a just-noticeable difference of one (text and hairlines moved by less than that), and its accents were re-picked from amber, which retired the olive #827020: <span class="mono">--text-accent</span> is amber-700 (6.0:1, was #9c6021 at 4.8:1) and <span class="mono">--text-accent-muted</span> amber-600, the same step in both themes (4.7:1 in light, was 4.6:1). amber-600 is duller than its neighbours because dark's muted accent, #8a6a44, is anchored there. A new hue gets its own hue-named ramp beside these. In Figma they are the Primitives collection, hidden from the pickers.</p>
+      <div id="ramp-list" class="stack"></div>
+    </section>
+
+    <section id="type">
+      <div class="rule eyebrow strong">Typography</div>
+      <p class="note">Two families, no third. Serif is writing, yours and the companion's. Condensed sans is the machinery around it: buttons, labels, nav, meta.</p>
+      <div class="specimens">
+        <div class="card2">
+          <div class="row name" data-style="border:0;padding:0;display:block">--font-body</div>
+          <div class="val">'Old Standard TT', Georgia, 'Times New Roman', serif · self-hosted · 400, 400 italic, 700</div>
+          <p data-style="margin-top:.4rem; font-size:1.4rem; line-height:1.3; text-wrap:pretty">After work, Jordan met Mika for a run at Greenwood Park.</p>
+          <p data-style="font-size:1.05rem; font-style:italic; color:var(--text-accent)">main character — the wordmark is this face, italic, in accent</p>
+          <p data-style="font-size:.95rem; font-weight:700">Bold is reserved for entry titles and category names.</p>
+          <div class="note">Journal entries, companion replies, help prose, AI-written summaries: anything meant to read as writing, even when a machine wrote it.</div>
+        </div>
+        <div class="card2">
+          <div class="row name" data-style="border:0;padding:0;display:block">--font-ui</div>
+          <div class="val">'CMU Sans Demi Condensed', system-ui, sans-serif · self-hosted · 400–600</div>
+          <p data-style="margin-top:.4rem; font:1.4rem/1.3 var(--font-ui)">write · ask · search · entities · categories</p>
+          <p data-style="font:600 .95rem var(--font-ui)">save entry &nbsp; send &nbsp; reflect &nbsp; detect patterns</p>
+          <p class="eyebrow strong">july 30, 2026 · updating memory</p>
+          <div class="note">Every button, label, nav item, status line, chip and meta line. The tell for "this is interface, not journal content."</div>
+        </div>
+      </div>
+      <div class="cols head" data-style="margin-top:.6rem"><div>step · covers</div><div>--font-ui</div><div>--font-body</div></div>
+      <div id="type-scale"></div>
+      <div class="callout">
+        <div data-style="display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap"><span class="row name" data-style="border:0;padding:0">body prose</span><span class="val">17px / 1.65 · literal, not on the scale</span></div>
+        <p data-style="font: 17px/1.65 var(--font-body); max-width:46rem; text-wrap:pretty">Here's what I notice you didn't: on 8/3, the recovery cost you a sick day. This time you went to work, sat through the meetings, and still made it to Groundwork after. You're not doing the same loop, you're doing a tighter one.</p>
+        <div class="note">Set on <span class="mono">body</span> directly. Entries and companion replies keep this size; do not swap it for <span class="mono">--font-base</span>.</div>
+      </div>
+    </section>
+
+    <section id="space">
+      <div class="rule eyebrow strong">Spacing</div>
+      <p class="note">Eight steps, chosen by frequency: every step is a value the app already used, nothing was rounded. The long tail of one-off nudges stays literal. Column horizontal padding on every screen is <span class="mono">clamp(1rem, 3vw, 1.5rem)</span>.</p>
+      <div id="space-scale"></div>
+    </section>
+
+    <section id="radius">
+      <div class="rule eyebrow strong">Radius</div>
+      <p class="note">Three tiers: small controls, default components, pill and circle. Rendered at real component height (2.2rem); at that size 8–10px reads rounder than the number suggests. That is correct, not drift.</p>
+      <div class="radii" id="radii"></div>
+      <div class="literals">
+        <span class="eyebrow strong">left literal on purpose</span>
+        <span><span class="sq" data-style="border-radius:4px"></span>4px · settings selects and inputs, help code</span>
+        <span><span class="sq" data-style="border-radius:12px"></span>12px · every content card: pattern, dream, triage, compact composer, search box</span>
+      </div>
+    </section>
+
+    <section id="motion">
+      <div class="rule eyebrow strong">Motion</div>
+      <p class="note">One idiom: a slow breathing fade, standing in for "something is happening, wait." No spinners, no skeletons. New async states reuse this.</p>
+      <div class="motion">
+        <div class="card2">
+          <div data-style="display:flex; gap:.6rem; align-items:baseline; flex-wrap:wrap"><span class="row name" data-style="border:0;padding:0">lamp-pulse</span><span class="val">1.6s ease-in-out infinite · opacity .25 ↔ 1</span></div>
+          <div class="eyebrow">companion</div>
+          <div class="dots" data-style="font-size:1.05rem; width:max-content">···</div>
+          <div class="note"><span class="mono">.msg.thinking::after</span>: the pending reply, before the companion answers.</div>
+        </div>
+        <div class="card2">
+          <div class="eyebrow strong">updating memory</div>
+          <div class="checklist">
+            <div class="step done"><span class="mark">·</span><span>saved the entry</span></div>
+            <div class="step done"><span class="mark">·</span><span>tagged entities</span></div>
+            <div class="step running"><span class="mark">…</span><span>refreshing weekly arc</span></div>
+            <div class="step"><span class="mark">·</span><span>detecting patterns</span></div>
+            <div class="step"><span class="mark">·</span><span>writing summary</span></div>
+          </div>
+          <div class="note">Pending steps sit at .5 opacity; running and done are full, differing only by mark.</div>
+        </div>
+      </div>
+      <div class="note">One hover fade: <span class="mono">--dur-hover</span> .25s ease, on the item card's visual (background to <span class="mono">--card-thumb-hover</span>) and title (color to <span class="mono">--text-accent</span>). The only other transition is a one-off <span class="mono">transform .15s ease</span> on the help caret.</div>
+    </section>
+  </main>
+</div>
+
+<script src="pages/tokens.js"></script>
+<script type="module" src="design.js"></script>
+</body>
+</html>

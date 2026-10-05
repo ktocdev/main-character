@@ -1,0 +1,34 @@
+{
+  "generated": "2026-09-19T10:17",
+  "proposals": [
+    {
+      "id": "b7b6f97f4e",
+      "name": "The Reorg",
+      "reason": "All entries track Jordan's anxiety and shifting team assignments through the same company restructuring.",
+      "members": [
+        "internal tools team",
+        "restructuring",
+        "legacy marketing pages",
+        "reorg"
+      ],
+      "weeks": 4,
+      "coherence": 0.613,
+      "confidence": "medium",
+      "status": "proposed"
+    },
+    {
+      "id": "e6b7578498",
+      "name": "Dashboard Saga",
+      "reason": "All entries follow the repeated redesign and criticism cycle of the same internal dashboard project.",
+      "members": [
+        "internal dashboard layout",
+        "Dashboard",
+        "Dashboard rebuild"
+      ],
+      "weeks": 4,
+      "coherence": 0.636,
+      "confidence": "high",
+      "status": "proposed"
+    }
+  ]
+}

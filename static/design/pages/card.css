@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* card.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+/* The item card specimen: every size, both orientations and the wrapping
+   rows, drawn by static/js/card.js with static/css/card.css, the same
+   code the app will use. Spec: docs/design_handoff_card/README.md. */
+.frame { max-width: 46rem; }
+.frame.w72 { max-width: 72rem; }

@@ -1,0 +1,135 @@
+{
+  "people": [
+    {
+      "name": "Ana",
+      "relationship": "recruiter/interviewer at Northlight",
+      "observations": [
+        "Conducted a 45-minute phone screen with Jordan for Northlight",
+        "Asked about the dashboard work at Jordan's job",
+        "Laughed at the phrase 'moving target' in a way suggesting she has met a Marcus",
+        "Asked what Jordan builds when nobody's assigning it",
+        "Pulled up the Coda case study during the call",
+        "Asked about the trophy-case feature and how long Jordan had used it before that session",
+        "Said 'good, I wanted to know if you'd pretend you had' in response to Jordan's answer",
+        "Said most portfolios describe user research as confirming the designer was right",
+        "Invited Jordan to an onsite interview in about two weeks",
+        "Said the onsite is a full day with four interviews plus a portfolio presentation to the design team",
+        "Said Northlight is moving fast and needs someone by October"
+      ]
+    },
+    {
+      "name": "Marcus",
+      "relationship": "manager",
+      "observations": [
+        "Referenced as the manager Jordan was designing to guess the preferences of during the first two failed dashboard rounds"
+      ]
+    },
+    {
+      "name": "Priya",
+      "relationship": "manager",
+      "observations": [
+        "Jordan will still report to Priya starting the 21st"
+      ]
+    },
+    {
+      "name": "Lena",
+      "relationship": "friend",
+      "observations": [
+        "Told about the phone screen within twenty minutes of the run"
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Told about the phone screen within twenty minutes of the run"
+      ]
+    },
+    {
+      "name": "Dev",
+      "relationship": "friend",
+      "observations": [
+        "Told about the phone screen within twenty minutes of the run"
+      ]
+    },
+    {
+      "name": "Mom",
+      "relationship": "mother",
+      "observations": [
+        "Told about the phone screen within twenty minutes of the run"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Northlight interview process",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "Phone screen with Ana lasted 45 minutes",
+        "Took the call from Jordan's apartment during lunch break with the door shut",
+        "Jordan gave an honest account of the dashboard work instead of a polished version",
+        "Jordan explained the first two dashboard rounds failed due to designing at a moving target",
+        "Jordan explained the third round worked after focusing on user needs instead of manager preferences",
+        "Jordan discussed the Coda project for eleven minutes during the call",
+        "Ana invited Jordan to an onsite interview in about two weeks",
+        "Onsite will include four interviews and a portfolio presentation to the design team",
+        "Ana said Northlight needs someone by October"
+      ]
+    },
+    {
+      "name": "Dashboard project",
+      "domain": "work",
+      "status": "completed",
+      "observations": [
+        "First two rounds failed because Jordan was designing at a moving target",
+        "Third round succeeded after Jordan stopped guessing what the manager wanted and designed for users instead"
+      ]
+    },
+    {
+      "name": "Coda",
+      "domain": "creative",
+      "status": "active",
+      "observations": [
+        "Jordan talked about Coda for eleven minutes during the interview",
+        "Coda has a case study Ana pulled up during the call",
+        "The case study includes a free-play section and a trophy-case feature",
+        "Jordan had been using the trophy-case feature daily for nine days before a key session and still hadn't recognized its effect"
+      ]
+    },
+    {
+      "name": "reorg",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "Ten days ago the reorg felt overwhelming to Jordan",
+        "Jordan is still set to report to Priya starting the 21st",
+        "Jordan is still headed for legacy marketing under the reorg"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Northlight",
+      "kind": "workplace",
+      "observations": [
+        "Site of Jordan's phone screen interview with Ana"
+      ]
+    },
+    {
+      "name": "Jordan's apartment",
+      "kind": "home",
+      "observations": [
+        "Jordan took the interview call from here during lunch break with the door shut"
+      ]
+    },
+    {
+      "name": "Greenwood Park",
+      "kind": "venue",
+      "observations": [
+        "Jordan went for a run here after work to burn off adrenaline",
+        "Jordan did the hill trail here and had a reflective realization at the top"
+      ]
+    }
+  ]
+}

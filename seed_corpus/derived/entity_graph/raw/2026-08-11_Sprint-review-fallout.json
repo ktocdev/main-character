@@ -1,0 +1,57 @@
+{
+  "people": [
+    {
+      "name": "Marcus",
+      "relationship": "coworker",
+      "observations": [
+        "Gave feedback on the dashboard iteration, calling it \"too safe\" this time",
+        "Gave opposite criticism from the previous week"
+      ]
+    },
+    {
+      "name": "Lena",
+      "relationship": "coworker",
+      "observations": [
+        "Shot Jordan a sympathetic look across the table during the sprint review"
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Was supposed to get dinner with Jordan",
+        "Was cancelled on via text",
+        "Responded 'of course' with a heart emoji to the rain check text",
+        "Identified as the one person who would've actually helped"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Tried to play with a hair tie near Jordan's feet"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Dashboard",
+      "domain": "work",
+      "status": "active",
+      "observations": [
+        "Reworked after Marcus's feedback",
+        "Presented at sprint review and criticized as 'too safe'"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Home",
+      "kind": "home",
+      "observations": [
+        "Jordan came home and didn't turn on the lights or eat",
+        "Sat on the floor by the window watching the street"
+      ]
+    }
+  ]
+}

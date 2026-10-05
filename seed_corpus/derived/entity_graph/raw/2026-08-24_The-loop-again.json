@@ -1,0 +1,55 @@
+{
+  "people": [
+    {
+      "name": "Marcus",
+      "relationship": "coworker",
+      "observations": [
+        "Delivered restructuring news to Jordan in a one-on-one with little emotion",
+        "Said there would be 'clarity by end of month'",
+        "Told Jordan to 'continue executing in the meantime'"
+      ]
+    },
+    {
+      "name": "Dev",
+      "relationship": "friend",
+      "observations": [
+        "Was supposed to get lunch with Jordan tomorrow",
+        "Jordan cancelled on Dev with an excuse about being busy",
+        "Said 'no worries' to the cancellation"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Climbed into Jordan's lap around 6pm",
+        "Purred loudly enough to vibrate Jordan's sternum",
+        "Jordan sat with her for an hour"
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Jordan texted her 'hey' around 8pm without explaining why",
+        "Showed up 40 minutes later with pad thai",
+        "Didn't ask any questions about what was wrong",
+        "Sat on the floor eating with Jordan",
+        "Told Jordan that after her open mic three people asked who Jordan was",
+        "Said 'you have fans, Jordan'",
+        "Stayed until 10pm",
+        "Jordan feels she is the person who always pulls them back from withdrawal"
+      ]
+    }
+  ],
+  "projects": [],
+  "places": [
+    {
+      "name": "Groundwork",
+      "kind": "venue",
+      "observations": [
+        "Jordan plans to go there tomorrow"
+      ]
+    }
+  ]
+}

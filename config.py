@@ -1,5 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Config — centralized settings for RAG Journal.
+Config — centralized settings.
 
 Single source of truth for what used to be scattered across modules: the
 two-model split (companion vs. processing), the companion's effort level,
@@ -13,10 +14,20 @@ Settings UI read from — one place to update when a new model ships.
 """
 
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+# Mock mode is read here, before load_dotenv, and nowhere else: only the real
+# process environment can turn it on. Canned replies exist to serve the demo
+# journal, which sets this in the child environment it boots (server.SEED_ENV),
+# as do run_demo.sh, the test suite and CI. A .env cannot, because .env is the
+# real journal's config file and the pairing it used to allow -- canned replies
+# against your own entries, where storage is not mocked and the writes are
+# real -- is the one this is here to make unreachable.
+_ENV_MOCK = os.environ.get("MC_MOCK")
 
 load_dotenv()
 
@@ -29,35 +40,89 @@ _PROJECT_ROOT = Path(__file__).parent
 # Two workloads, two settings: the companion is the one user-visible voice,
 # so quality matters most there. Processing (entity extraction, summaries,
 # arcs, categories, patterns, dreams, organic naming, seed integration) is
-# structured/mechanical, runs in bulk, and dominates token spend — Sonnet 5
+# structured/mechanical, runs in bulk, and dominates token spend — Sonnet 5.5
 # is the default there because that work doesn't need Opus-tier reasoning.
 
-MC_COMPANION_MODEL = os.getenv("MC_COMPANION_MODEL", "claude-opus-4-6").strip()
-MC_PROCESSING_MODEL = os.getenv("MC_PROCESSING_MODEL", "claude-sonnet-5").strip()
+MC_COMPANION_MODEL = os.getenv("MC_COMPANION_MODEL", "claude-opus-5-5").strip()
+MC_PROCESSING_MODEL = os.getenv("MC_PROCESSING_MODEL", "claude-sonnet-5-5").strip()
 
-MC_COMPANION_EFFORT = os.getenv("MC_COMPANION_EFFORT", "high").strip()
+# Medium, not high: at high, Opus 5.5 answers every thread in an entry and
+# runs long. Measured 2026-09-29 against the replies Opus 4.6 gave at high:
+# medium plus the prompt's Length section matched their length (~105 words
+# on average); high alone ran ~170.
+MC_COMPANION_EFFORT = os.getenv("MC_COMPANION_EFFORT", "medium").strip()
+
+# Smart replies, the chat tab's toggle: Claude gets the journal's search tools
+# and can search, read and search again before answering. This caps the
+# calls per question; the companion model answers.
+SMART_REPLY_ROUNDS = 5
 
 # Model -> valid `effort` levels. Haiku 4.5 doesn't take the parameter at
 # all; Opus 4.6 predates `xhigh`. A Settings picker must derive its options
 # from this map rather than offering a static list, or a request 400s.
 MODEL_EFFORT_LEVELS = {
+    "claude-opus-5-5": ["low", "medium", "high", "max", "xhigh"],
     "claude-opus-4-6": ["low", "medium", "high", "max"],
     "claude-opus-4-7": ["low", "medium", "high", "max", "xhigh"],
     "claude-opus-4-8": ["low", "medium", "high", "max", "xhigh"],
     "claude-opus-5": ["low", "medium", "high", "max", "xhigh"],
+    "claude-sonnet-5-5": ["low", "medium", "high", "max", "xhigh"],
     "claude-sonnet-5": ["low", "medium", "high", "max", "xhigh"],
     "claude-haiku-4-5": [],
+}
+
+# Model -> the name a person recognizes. The API ids are what get written
+# to .env; these are what the pickers show.
+MODEL_LABELS = {
+    "claude-opus-5-5": "Opus 5.5",
+    "claude-opus-4-6": "Opus 4.6",
+    "claude-opus-4-7": "Opus 4.7",
+    "claude-opus-4-8": "Opus 4.8",
+    "claude-opus-5": "Opus 5",
+    "claude-sonnet-5-5": "Sonnet 5.5",
+    "claude-sonnet-5": "Sonnet 5",
+    "claude-haiku-4-5": "Haiku 4.5",
+}
+
+# Model -> USD list price per million tokens, input and output.
+#
+# These started as labels beside the Settings pickers, so a cloner could see
+# what a choice costs relative to the others. `metering.py` now computes every
+# dollar figure the app shows from them, so a wrong row here is a wrong number
+# on screen rather than a wrong label -- but still nothing *bills* or refuses a
+# call against them; that is Phase 2 item 10. Anthropic's pricing page is the
+# authority: check these against it when adding a model, and treat a figure
+# here as an estimate that goes stale, never as a quote. `cache_read` is the
+# share of the input price a cache hit costs, where a model differs from the
+# usual 0.1 (metering.CACHE_READ_RATIO). Checked 2026-09-29.
+MODEL_PRICES = {
+    "claude-opus-5-5": {"in": 4.0, "out": 20.0, "cache_read": 0.05},
+    "claude-opus-4-6": {"in": 5.0, "out": 25.0},
+    "claude-opus-4-7": {"in": 5.0, "out": 25.0},
+    "claude-opus-4-8": {"in": 5.0, "out": 25.0},
+    "claude-opus-5": {"in": 5.0, "out": 25.0},
+    "claude-sonnet-5-5": {"in": 2.0, "out": 10.0},
+    "claude-sonnet-5": {"in": 2.0, "out": 10.0},
+    "claude-haiku-4-5": {"in": 1.0, "out": 5.0},
 }
 
 # Model -> whether the `thinking` parameter is supported at all. Where
 # it's supported, Opus 4.6/4.7/4.8 default to *off* when the parameter is
 # omitted; Sonnet 5 and Opus 5 default to *adaptive* when omitted. Haiku
-# 4.5 rejects the parameter outright.
+# 4.5 rejects the parameter outright. "always": thinking can't be turned
+# off -- Opus 5.5 answers `{"type": "disabled"}` with a 400 -- so a call
+# that wants it off leaves the parameter out instead. "between_tools":
+# thinking turns off, but under that name -- Sonnet 5.5 400s on
+# `{"type": "disabled"}` and asks for `{"type": "between_tools"}`, which
+# skips thinking before the reply (any short updates between tool calls
+# come back as thinking blocks).
 MODEL_THINKING_SUPPORT = {
+    "claude-opus-5-5": "always",
     "claude-opus-4-6": True,
     "claude-opus-4-7": True,
     "claude-opus-4-8": True,
     "claude-opus-5": True,
+    "claude-sonnet-5-5": "between_tools",
     "claude-sonnet-5": True,
     "claude-haiku-4-5": False,
 }
@@ -75,15 +140,28 @@ def companion_effort_kwargs(model: str = None, effort: str = None) -> dict:
     return {}
 
 
+# The processing picker's lineup. Processing is structured bulk work where
+# trading down is the point, and its calls are sized for thinking switched
+# off, which Opus 5.5 can't do. Opus is left out for now (owner's call,
+# 2026-09-26); the companion picker offers everything above.
+PROCESSING_MODELS = ["claude-sonnet-5-5", "claude-sonnet-5", "claude-haiku-4-5"]
+
+
 def processing_thinking_kwargs(model: str = None) -> dict:
     """The `thinking` kwarg for a processing call on the given model
     (default: the configured processing model). Processing calls want
     thinking explicitly disabled on models that support the parameter —
     several call sites are sized tight enough that adaptive thinking would
     eat the budget and truncate the response — and omitted entirely on
-    models that reject the parameter (Haiku 4.5)."""
+    models that reject the parameter (Haiku 4.5). Sonnet 5.5 spells "off"
+    as `between_tools`."""
     model = model or MC_PROCESSING_MODEL
-    if MODEL_THINKING_SUPPORT.get(model, True):
+    support = MODEL_THINKING_SUPPORT.get(model, True)
+    if support == "always":
+        return {}
+    if support == "between_tools":
+        return {"thinking": {"type": "between_tools"}}
+    if support:
         return {"thinking": {"type": "disabled"}}
     return {}
 
@@ -98,11 +176,36 @@ PORT = int(os.getenv("MC_PORT", "8144"))
 # ---------------------------------------------------------------------------
 # DATA DIRECTORIES
 # ---------------------------------------------------------------------------
-# RAG_JOURNAL_DIR / RAG_CHROMA_DIR keep their existing env var names (predate
-# this module); the rest are new and use the MC_ prefix.
+# Every data directory is MC_-prefixed. Three of these were RAG_-prefixed
+# until the public release (they predated this module, and the inconsistency
+# was carried rather than chosen); renaming them was a now-or-never call,
+# since doing it after strangers have working .env files is a breaking
+# change with an audience.
+#
+# _refuse_legacy_names is the migration aid for the one install that
+# predates the rename. It refuses rather than falling back, because the
+# failure it prevents is silent: an unread MC_AUTHOR_NAME does not error,
+# it just starts extracting an entity for the author, and an unread
+# MC_JOURNAL_DIR opens an empty journal that looks like data loss. Delete
+# this once the pre-release .env files are gone.
 
-JOURNAL_DIR = Path(os.getenv("RAG_JOURNAL_DIR", _PROJECT_ROOT / "journal_entries"))
-CHROMA_DIR = Path(os.getenv("RAG_CHROMA_DIR", _PROJECT_ROOT / "chroma_data"))
+def _refuse_legacy_names():
+    renamed = {"RAG_AUTHOR_NAME": "MC_AUTHOR_NAME",
+               "RAG_JOURNAL_DIR": "MC_JOURNAL_DIR",
+               "RAG_CHROMA_DIR": "MC_CHROMA_DIR"}
+    stale = [(old, new) for old, new in renamed.items() if os.getenv(old)]
+    if stale:
+        raise SystemExit(
+            "\n.env uses env var names that were renamed before release:\n"
+            + "".join(f"  {old}  ->  {new}\n" for old, new in stale)
+            + "\nRename them in .env and start again. Nothing else changed;\n"
+              "the values are still correct.")
+
+
+_refuse_legacy_names()
+
+JOURNAL_DIR = Path(os.getenv("MC_JOURNAL_DIR", _PROJECT_ROOT / "journal_entries"))
+CHROMA_DIR = Path(os.getenv("MC_CHROMA_DIR", _PROJECT_ROOT / "chroma_data"))
 ENTITY_DIR = Path(os.getenv("MC_ENTITY_DIR", _PROJECT_ROOT / "entity_graph"))
 SUMMARY_DIR = Path(os.getenv("MC_SUMMARY_DIR", _PROJECT_ROOT / "summaries"))
 CATEGORY_DIR = Path(os.getenv("MC_CATEGORY_DIR", _PROJECT_ROOT / "categories"))
@@ -114,17 +217,130 @@ SESSION_DIR = Path(os.getenv("MC_SESSION_DIR", _PROJECT_ROOT / "sessions"))
 # RETRIEVAL TUNING
 # ---------------------------------------------------------------------------
 
-N_SEMANTIC = int(os.getenv("MC_N_SEMANTIC", "6"))     # semantically similar chunks per question
+N_SEMANTIC = int(os.getenv("MC_N_SEMANTIC", "12"))    # passages found by meaning per question
 N_RECENT = int(os.getenv("MC_N_RECENT", "3"))         # most recent chunks always included
 EXCERPT_CHARS = int(os.getenv("MC_EXCERPT_CHARS", "2000"))
+# The search-only passage index (passages.py). Target passage size in the
+# embedder's tokens, capped at what the model reads; and how many passages on
+# each side of a hit are shown with it ("search small, read bigger"). Chosen
+# on the real journal's test set (the handoff's steps 1 and 1a).
+PASSAGE_TOKENS = int(os.getenv("MC_PASSAGE_TOKENS", "120"))
+PASSAGE_NEIGHBORS = int(os.getenv("MC_PASSAGE_NEIGHBORS", "1"))
+# The model that embeds the passage index, the summaries and dreams, one of
+# passages.MODELS. Changing it makes the next rebuild_index.py re-embed all
+# three; until then, search falls back to the journal chunks rather than mix
+# two models.
+EMBED_MODEL = os.getenv("MC_EMBED_MODEL", "snowflake/snowflake-arctic-embed-s").strip()
+# Where that model is downloaded to: once per machine, like chroma's own
+# model under ~/.cache/chroma. Kept short -- Hugging Face's cache layout
+# nests deep enough to pass Windows' 260-character path limit.
+MODEL_CACHE = Path(os.getenv("MC_MODEL_CACHE", Path.home() / ".cache" / "main-character"))
 MAX_TOKENS = int(os.getenv("MC_MAX_TOKENS", "8000"))  # companion reply budget
+
+# ---------------------------------------------------------------------------
+# SPEND CAPS
+# ---------------------------------------------------------------------------
+# Ceilings, enforced in `caps.py`. Blank means "use the default below"; an
+# explicit 0 means off. Both defaults sit deliberately above ordinary use --
+# above a long session, above a heavy month -- because these exist to catch a
+# runaway (a loop, a pasted novel, a pipeline fanning out further than
+# expected) rather than to ration normal writing. A cap sized to normal use
+# fires on a good week, and a journal that refuses to answer is a worse
+# failure than a surprising bill.
+#
+# The figures are a starting point, not a measurement: they were set before
+# any real month had been metered. Anyone with a few months of `spend_ledger`
+# behind them should replace them with something their own use argues for.
+
+
+def _positive(name: str, default: float) -> float:
+    """A non-negative number from the environment, or the default.
+
+    Unparsable falls back to the default rather than to 0/off. The Settings
+    route validates what it writes, so a bad value here came from a hand
+    edit -- and reading `MC_MAX_MONTHLY_SPEND=fifty` as "no limit" would
+    remove a ceiling the author believed they had just set.
+    """
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    return value if value >= 0 else default
+
+
+# Both in dollars, deliberately. The session ceiling started out in tokens
+# and was unusable as a setting: nobody knows whether 5,000,000 tokens is an
+# afternoon or a month, so the only thing an author could do with the number
+# was leave it alone. A ceiling nobody can hold an opinion about is not a
+# control, and the meter already tracks session dollars.
+# Named rather than inlined into the calls below: the Settings pane has to
+# say what "blank" will do, and "blank uses the default" without the figure is
+# not an answer -- it sends someone to this file to find out what they just
+# agreed to.
+DEFAULT_SESSION_SPEND = 10.0
+DEFAULT_MONTHLY_SPEND = 100.0
+
+MAX_SESSION_SPEND = _positive("MC_MAX_SESSION_SPEND", DEFAULT_SESSION_SPEND)
+MAX_MONTHLY_SPEND = _positive("MC_MAX_MONTHLY_SPEND", DEFAULT_MONTHLY_SPEND)
+
+# Where the monthly ledger lives. One small JSON file rather than a directory
+# like the others -- it holds one number per month and nothing else.
+SPEND_FILE = Path(os.getenv("MC_SPEND_FILE", _PROJECT_ROOT / "spend_ledger.json"))
+
+# When the open chapter holds this many characters of your own writing (what
+# a close turns into journal entries, dreams aside), the write tab asks
+# whether to close it. Until a close, nothing in the chapter can be searched,
+# and every reply resends all of it. 30,000 is a little over the median
+# chapter the author had closed by hand. Blank uses the default; 0 never asks.
+DEFAULT_CHAPTER_CLOSE_CHARS = 30_000
+CHAPTER_CLOSE_CHARS = int(_positive("MC_CHAPTER_CLOSE_CHARS", DEFAULT_CHAPTER_CLOSE_CHARS))
+
+# The longest text a single entry, chat turn or lookup may carry. A rejection
+# is the point: silently truncating a journal entry loses writing the author
+# believes was saved, which is worse than the paste that prompted it. Sized so
+# that no entry anyone types can reach it and no accidental paste of a whole
+# document can get through -- roughly 25k tokens. Same convention as the
+# spend caps above: blank uses the default, 0 turns it off -- server.py's
+# _too_long() is where that 0 is read as "no ceiling" rather than as one.
+MAX_INPUT_CHARS = int(_positive("MC_MAX_INPUT_CHARS", 100_000))
 
 # ---------------------------------------------------------------------------
 # MISC
 # ---------------------------------------------------------------------------
 
-MOCK_MODE = os.getenv("MC_MOCK", "0").strip() == "1"
-AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
+MOCK_MODE = (_ENV_MOCK or "0").strip() == "1"
+
+# load_dotenv has just copied a .env MC_MOCK into os.environ, where the rest of
+# the app would find it. It is not honoured, and staying quiet about that is
+# the worst of the options: someone who wrote MC_MOCK=1 is expecting canned
+# replies, and the bill is the wrong place to learn otherwise.
+if _ENV_MOCK is None and os.environ.get("MC_MOCK", "0").strip() == "1":
+    os.environ.pop("MC_MOCK", None)
+    print("MC_MOCK in .env is ignored: canned replies are the demo "
+          "journal only. To look around without a key, run "
+          "`python seed_corpus/import_seed_corpus.py --demo`, then load "
+          "the demo journal from Settings.", file=sys.stderr)
+
+AUTHOR = os.getenv("MC_AUTHOR_NAME", "").strip() or "the journal author"
+
+
+# ---------------------------------------------------------------------------
+# CATEGORIES
+# ---------------------------------------------------------------------------
+# Which built-in life-domain categories the tagger offers on new entries.
+# Stored as the *disabled* set, not the enabled one, and blank means all on:
+# a category added to the built-in list in a future version is then on by
+# default, where an enabled list written by an older build would silently
+# leave it off. Disabling one only stops it being offered going forward --
+# entries already tagged with it keep those tags (categories.py never re-tags
+# on its own), and its counts and domain summary still render.
+DISABLED_CATEGORIES = [
+    c.strip() for c in os.getenv("MC_DISABLED_CATEGORIES", "").split(",")
+    if c.strip()
+]
 
 
 # ---------------------------------------------------------------------------
@@ -141,6 +357,38 @@ AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
 
 TIMEZONE = os.getenv("MC_TIMEZONE", "").strip()
 DATE_FORMAT = os.getenv("MC_DATE_FORMAT", "%B %d, %Y").strip()
+
+# The date styles the Settings picker offers. Storage is ISO regardless —
+# these only decide how a stamp is *displayed*, so the set is deliberately
+# small: a free-text strftime box would let someone save a format that
+# renders every date as an empty string with no way back but a file edit.
+DATE_FORMATS = {
+    "%B %d, %Y": "long",     # August 25, 2026
+    "%m/%d/%y": "short",     # 08/25/26
+}
+
+# Reserved for Phase 10. The slot exists now so that shipping a second
+# language is a config change rather than a Settings rebuild; until then
+# this is the only accepted value.
+LANGUAGE = os.getenv("MC_LANGUAGE", "en").strip() or "en"
+LANGUAGES = {"en": "English"}
+
+
+def date_style(fmt: str = None) -> str:
+    """'long' or 'short' for the given format — what the browser needs to
+    render a stamp the same way the server would.
+
+    A format outside DATE_FORMATS can still be hand-set in .env, and the
+    Settings picker will not have offered it. Those fall back to the rule
+    /api/status used before the styles were named — a month name means long —
+    rather than reading as long unconditionally, which would render a custom
+    numeric format like %m/%d/%Y as "August 25, 2026" in the browser while
+    every server-side stamp stayed numeric.
+    """
+    fmt = fmt if fmt is not None else DATE_FORMAT
+    if fmt in DATE_FORMATS:
+        return DATE_FORMATS[fmt]
+    return "long" if "%B" in fmt else "short"
 
 
 def _zone():
@@ -192,6 +440,26 @@ def parse_stamp(text: str) -> datetime | None:
 # ---------------------------------------------------------------------------
 
 
+def is_configured() -> bool:
+    """Whether this journal has what it needs to talk to Claude.
+
+    Read as "can get_client() succeed?" — the SDK raises at *construction*
+    when no key is present, so a fresh clone with no .env would otherwise
+    take the server down on startup before anything could ask the author
+    for one. `server.startup()` checks this before building the client, and
+    /api/status reports it so the first-run wizard knows to open.
+
+    A function rather than a constant because both callers want the truth
+    now: a key written by the wizard lands in .env, and the restart that
+    follows is what makes it true for the next process.
+
+    Mock mode counts as configured. It never constructs the SDK at all, so
+    it needs no key -- and the demo instance runs mock, which is what keeps
+    the wizard from opening over a journal that is working fine.
+    """
+    return MOCK_MODE or bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
+
+
 def get_client():
     """The single construction point for the Anthropic client.
 
@@ -201,11 +469,26 @@ def get_client():
     app boot with no `ANTHROPIC_API_KEY` at all, since the SDK raises on
     construction when the key is missing.
 
-    Phase 2 item 10 puts the spend-cap check here, in front of the
-    returned client, so the ceiling can't be bypassed by a call site.
+    The returned client is wrapped by `metering.py`, which counts what each
+    call cost on the way back. Wrapping here rather than at the call sites is
+    the same argument as mock mode: one swap instead of fourteen, and a new
+    call site is metered by default rather than by remembering to.
+
+    Mock mode is metered too. The counts are fictional, but the plumbing that
+    carries them is the same plumbing -- a cost view that only works against
+    the real API is one nobody can develop against.
+
+    The spend caps ride in the same wrapper (`caps.check()`, called from the
+    metering proxy) rather than in a second one around it. Two reasons: the
+    ceiling then cannot be bypassed by a call site, for the same reason the
+    counting cannot; and another proxy layer would put another frame in front
+    of every call, which is exactly what `metering._bucket` and
+    `mock_client._call_key` read to decide what a call *is*. That collision
+    has already broken every mock fixture once.
     """
+    import metering
     if MOCK_MODE:
         from mock_client import MockClient
-        return MockClient()
+        return metering.wrap(MockClient())
     import anthropic
-    return anthropic.Anthropic()
+    return metering.wrap(anthropic.Anthropic())

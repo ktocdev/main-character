@@ -1,0 +1,8 @@
+{
+  "name": "Main Character – Text Styles",
+  "id": "main-character-text-styles",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma", "dev"],
+  "documentAccess": "dynamic-page"
+}

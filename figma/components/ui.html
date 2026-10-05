@@ -1,0 +1,54 @@
+<style>
+  body {
+    margin: 0; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+    font: 12px/1.45 Inter, system-ui, sans-serif;
+    color: var(--figma-color-text); background: var(--figma-color-bg);
+  }
+  p { margin: 0; color: var(--figma-color-text-secondary); }
+  button {
+    font: inherit; font-weight: 600; padding: 7px 12px; border: 0; border-radius: 6px;
+    color: var(--figma-color-text-onbrand); background: var(--figma-color-bg-brand); cursor: pointer;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  #picked { color: var(--figma-color-text-secondary); }
+  #log {
+    flex: 1; min-height: 0; margin: 0; padding: 8px; overflow: auto; white-space: pre-wrap;
+    font: 11px/1.5 ui-monospace, Menlo, Consolas, monospace;
+    background: var(--figma-color-bg-secondary); border-radius: 6px;
+  }
+  .warn { color: var(--figma-color-text-warning); }
+  .error { color: var(--figma-color-text-danger); }
+  .ok { color: var(--figma-color-text-success); }
+</style>
+<p>Choose one or more specs from <code>figma/components/specs/</code> in rag-journal (all of them for the
+  whole library). Each becomes component sets on the current page, bound to this file's token variables by
+  name. They build in dependency order, so pick the parts along with anything made of them.</p>
+<input type="file" id="file" accept=".json,application/json" multiple>
+<div id="picked"></div>
+<button id="go" disabled>Build components</button>
+<pre id="log"></pre>
+<script>
+  const file = document.getElementById('file');
+  const go = document.getElementById('go');
+  const out = document.getElementById('log');
+  const picked = document.getElementById('picked');
+  let specs = [];
+  file.onchange = async () => {
+    specs = await Promise.all([...file.files].map(f => f.text()));
+    picked.textContent = [...file.files].map(f => f.name.replace('.figma.json', '')).join(', ');
+    go.disabled = !specs.length;
+  };
+  go.onclick = () => {
+    out.textContent = '';
+    parent.postMessage({ pluginMessage: { type: 'build', specs } }, '*');
+  };
+  onmessage = e => {
+    const m = e.data.pluginMessage;
+    if (!m || m.type !== 'log') return;
+    const line = document.createElement('div');
+    line.className = m.kind;
+    line.textContent = m.text;
+    out.appendChild(line);
+    out.scrollTop = out.scrollHeight;
+  };
+</script>

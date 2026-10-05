@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Capture mock-mode fixtures from real Claude output.
 
@@ -192,11 +193,11 @@ LEAK_PATTERNS = [
 def _identity_patterns() -> list[tuple[str, str]]:
     """The real author's name, which the generic patterns above can't know.
     This is the likeliest leak of all: capture with the data dirs pointed
-    at the corpus but `RAG_AUTHOR_NAME` left alone, and every summary comes
+    at the corpus but `MC_AUTHOR_NAME` left alone, and every summary comes
     back written about the real person.
 
     Read from .env rather than the environment, because capture runs with
-    RAG_AUTHOR_NAME overridden to the corpus author — trusting the live
+    MC_AUTHOR_NAME overridden to the corpus author — trusting the live
     value would check for the fictional name and miss the real one.
 
     Deliberately not third-party-names.txt: it holds generic words like
@@ -209,7 +210,7 @@ def _identity_patterns() -> list[tuple[str, str]]:
             line = line.strip()
             if line.startswith("export "):
                 line = line[len("export "):].lstrip()
-            if not line.startswith("RAG_AUTHOR_NAME="):
+            if not line.startswith("MC_AUTHOR_NAME="):
                 continue
             value = line.split("=", 1)[1].strip()
             if value[:1] in ("'", '"'):           # quoted: take the quoted run
@@ -233,8 +234,11 @@ ROOT = Path(__file__).parent
 # real API calls too, so they need the same grep before they're pushed.
 SCAN_GLOBS = [
     "mock_fixtures/*.json",
+    "mock_fixtures/demo_close/*.json",
     "seed_corpus/sessions/**/*.json",
     "seed_corpus/summaries/**/*.md",
+    "seed_corpus/derived/**/*.json",
+    "seed_corpus/derived/**/*.md",
 ]
 
 
@@ -273,7 +277,7 @@ def check() -> int:
         # leak of all is the one thing unexamined.
         print(
             "\nWARNING: no real author name to check for.\n"
-            "  RAG_AUTHOR_NAME isn't set in .env, so the real-name grep "
+            "  MC_AUTHOR_NAME isn't set in .env, so the real-name grep "
             "matched nothing\n  because it had nothing to match. If you set "
             "it in your shell instead,\n  put it in .env too — the check "
             "reads .env on purpose (capture overrides\n  the live value to "

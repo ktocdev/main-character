@@ -1,0 +1,100 @@
+{
+  "people": [
+    {
+      "name": "Lena",
+      "relationship": "friend",
+      "observations": [
+        "Texted Jordan at 9:40am saying she submitted a referral for Jordan for the product designer role at Northlight.",
+        "Told Jordan to talk to Ana, who runs design.",
+        "Told Ana that Jordan fixed their whole dashboard while being managed by a weathervane.",
+        "Said on the 14th that maybe Coda is the portfolio update."
+      ]
+    },
+    {
+      "name": "Ana",
+      "relationship": "contact at Northlight",
+      "observations": [
+        "Runs design at Northlight.",
+        "Jordan is supposed to talk to her about the referral."
+      ]
+    },
+    {
+      "name": "Dev",
+      "relationship": "coworker",
+      "observations": [
+        "Asked if Coda could track when he noodles, which led to the timestamp idea.",
+        "On Thursday, used Coda as a bug tracker while Jordan had built it as a trophy case."
+      ]
+    },
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Said on July 31st that maybe Coda is the portfolio update."
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Was already asleep on the pillow Jordan was planning to use."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Northlight application",
+      "domain": "work",
+      "status": "completed",
+      "observations": [
+        "Lena submitted a referral for Jordan for the product designer role.",
+        "Jordan spent the evening working on the application.",
+        "Jordan submitted the application at 11:20pm.",
+        "Cover letter was short and didn't pretend passion for the mission statement."
+      ]
+    },
+    {
+      "name": "portfolio update",
+      "domain": "work",
+      "status": "completed",
+      "observations": [
+        "Jordan had been dreading this since July, treating it as an enormous unstarted mountain.",
+        "Jordan opened it and found the Meridian work solid, three case studies of internal tools that measurably worked.",
+        "The Coda case study was the piece that made it good.",
+        "Jordan wrote up the Coda case study properly for the first time, including the problem, practice log, metronome, quick-start cards, and free-play mode."
+      ]
+    },
+    {
+      "name": "Coda",
+      "domain": "creative",
+      "status": "active",
+      "observations": [
+        "Includes a practice log, metronome, and quick-start cards.",
+        "Has a free-play mode that originated from Dev asking if it could track when he noodles.",
+        "Free-play mode included a timestamp idea.",
+        "On Thursday, Dev used it as a bug tracker while Jordan had built it as a trophy case.",
+        "Jordan dogfooded the feature daily for nine days and could not see the issue because they were the wrong user.",
+        "Jordan built it at a coffee shop to feel better on bad days.",
+        "Mika suggested on July 31st that Coda could be the portfolio update.",
+        "Lena suggested on the 14th that Coda could be the portfolio update."
+      ]
+    },
+    {
+      "name": "Meridian work",
+      "domain": "work",
+      "status": "completed",
+      "observations": [
+        "Consists of three case studies of internal tools that measurably worked."
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "coffee shop",
+      "kind": "venue",
+      "observations": [
+        "Jordan built Coda there to feel better on bad days."
+      ]
+    }
+  ]
+}

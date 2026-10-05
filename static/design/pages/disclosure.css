@@ -1,0 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* disclosure.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+.spec-row .disclosure, .accordion { width: 40rem; max-width: 100%; }

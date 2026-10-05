@@ -1,5 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Entity Graph — Phase 2 of the RAG Journal.
+Entity Graph.
 
 Extracts people, projects, and places from imported journal conversations
 using the Claude API, then aggregates them into per-entity markdown docs
@@ -554,7 +555,7 @@ def build_entity_docs(records: list[dict]) -> dict:
 
         index[ent["name"]] = {
             "type": kind,
-            "path": str(path.relative_to(ENTITY_DIR)),
+            "path": path.relative_to(ENTITY_DIR).as_posix(),
             "mentions": len(ent["timeline"]),
             "aliases": sorted(ent["aliases"]),
             "groups": gnames,
