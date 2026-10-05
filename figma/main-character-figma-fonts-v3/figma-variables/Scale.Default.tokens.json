@@ -1,0 +1,270 @@
+{
+  "font-size": {
+    "font-3xs": {
+      "$type": "number",
+      "$value": 11.2,
+      "$description": "0.7rem · Eyebrow / tracked uppercase labels",
+      "$extensions": {
+        "com.figma.scopes": [
+          "FONT_SIZE"
+        ]
+      }
+    },
+    "font-2xs": {
+      "$type": "number",
+      "$value": 12,
+      "$description": "0.75rem · Small buttons, tight meta",
+      "$extensions": {
+        "com.figma.scopes": [
+          "FONT_SIZE"
+        ]
+      }
+    },
+    "font-xs": {
+      "$type": "number",
+      "$value": 12.8,
+      "$description": "0.8rem · Default UI text — the workhorse",
+      "$extensions": {
+        "com.figma.scopes": [
+          "FONT_SIZE"
+        ]
+      }
+    },
+    "font-sm": {
+      "$type": "number",
+      "$value": 13.6,
+      "$description": "0.85rem · Secondary body text, help copy, chip labels",
+      "$extensions": {
+        "com.figma.scopes": [
+          "FONT_SIZE"
+        ]
+      }
+    },
+    "font-base": {
+      "$type": "number",
+      "$value": 15.2,
+      "$description": "0.95rem · Primary UI text, form labels, message text",
+      "$extensions": {
+        "com.figma.scopes": [
+          "FONT_SIZE"
+        ]
+      }
+    },
+    "font-md": {
+      "$type": "number",
+      "$value": 16.8,
+      "$description": "1.05rem · Tab sub-headings",
+      "$extensions": {
+        "com.figma.scopes": [
+          "FONT_SIZE"
+        ]
+      }
+    },
+    "font-lg": {
+      "$type": "number",
+      "$value": 18.4,
+      "$description": "1.15rem · Section headings, wordmark",
+      "$extensions": {
+        "com.figma.scopes": [
+          "FONT_SIZE"
+        ]
+      }
+    },
+    "font-xl": {
+      "$type": "number",
+      "$value": 22.4,
+      "$description": "1.4rem · The one focal heading (triage card)",
+      "$extensions": {
+        "com.figma.scopes": [
+          "FONT_SIZE"
+        ]
+      }
+    }
+  },
+  "space": {
+    "space-1": {
+      "$type": "number",
+      "$value": 4,
+      "$description": "0.25rem · Icon / inline nudges",
+      "$extensions": {
+        "com.figma.scopes": [
+          "GAP",
+          "WIDTH_HEIGHT"
+        ]
+      }
+    },
+    "space-2": {
+      "$type": "number",
+      "$value": 6.4,
+      "$description": "0.4rem · Tight inline gaps — most common",
+      "$extensions": {
+        "com.figma.scopes": [
+          "GAP",
+          "WIDTH_HEIGHT"
+        ]
+      }
+    },
+    "space-3": {
+      "$type": "number",
+      "$value": 8,
+      "$description": "0.5rem · Compact padding, chip padding",
+      "$extensions": {
+        "com.figma.scopes": [
+          "GAP",
+          "WIDTH_HEIGHT"
+        ]
+      }
+    },
+    "space-4": {
+      "$type": "number",
+      "$value": 9.6,
+      "$description": "0.6rem · Composer gaps, button rows",
+      "$extensions": {
+        "com.figma.scopes": [
+          "GAP",
+          "WIDTH_HEIGHT"
+        ]
+      }
+    },
+    "space-5": {
+      "$type": "number",
+      "$value": 12.8,
+      "$description": "0.8rem · Standard component padding",
+      "$extensions": {
+        "com.figma.scopes": [
+          "GAP",
+          "WIDTH_HEIGHT"
+        ]
+      }
+    },
+    "space-6": {
+      "$type": "number",
+      "$value": 16,
+      "$description": "1rem · Section spacing, pane padding",
+      "$extensions": {
+        "com.figma.scopes": [
+          "GAP",
+          "WIDTH_HEIGHT"
+        ]
+      }
+    },
+    "space-7": {
+      "$type": "number",
+      "$value": 19.2,
+      "$description": "1.2rem · Header gaps",
+      "$extensions": {
+        "com.figma.scopes": [
+          "GAP",
+          "WIDTH_HEIGHT"
+        ]
+      }
+    },
+    "space-8": {
+      "$type": "number",
+      "$value": 24,
+      "$description": "1.5rem · Pane outer padding, major section margins",
+      "$extensions": {
+        "com.figma.scopes": [
+          "GAP",
+          "WIDTH_HEIGHT"
+        ]
+      }
+    }
+  },
+  "radius": {
+    "radius-sm": {
+      "$type": "number",
+      "$value": 6,
+      "$description": "Small controls — chips-as-buttons, list hover, segmented, active nav",
+      "$extensions": {
+        "com.figma.scopes": [
+          "CORNER_RADIUS"
+        ]
+      }
+    },
+    "radius-base": {
+      "$type": "number",
+      "$value": 8,
+      "$description": "Default component radius — button.quiet",
+      "$extensions": {
+        "com.figma.scopes": [
+          "CORNER_RADIUS"
+        ]
+      }
+    },
+    "radius-lg": {
+      "$type": "number",
+      "$value": 10,
+      "$description": "Dominant radius — send button, textareas, cards, panels",
+      "$extensions": {
+        "com.figma.scopes": [
+          "CORNER_RADIUS"
+        ]
+      }
+    },
+    "radius-pill": {
+      "$type": "number",
+      "$value": 999,
+      "$description": "Pills and chips",
+      "$extensions": {
+        "com.figma.scopes": [
+          "CORNER_RADIUS"
+        ]
+      }
+    },
+    "radius-circle": {
+      "$type": "number",
+      "$value": 999,
+      "$description": "CSS is 50%; Figma has no % radius — use on square frames only",
+      "$extensions": {
+        "com.figma.scopes": [
+          "CORNER_RADIUS"
+        ]
+      }
+    }
+  },
+  "font-family": {
+    "body": {
+      "$type": "string",
+      "$value": "Old Standard TT",
+      "$description": "Writing — entries, companion replies, prose. CSS fallback: Georgia, serif",
+      "$extensions": {
+        "com.figma.scopes": [
+          "FONT_FAMILY"
+        ]
+      }
+    },
+    "ui": {
+      "$type": "string",
+      "$value": "CMU Sans Demi Condensed",
+      "$description": "Interface — buttons, labels, nav, meta. CSS fallback: system-ui, sans-serif",
+      "$extensions": {
+        "com.figma.scopes": [
+          "FONT_FAMILY"
+        ]
+      }
+    }
+  },
+  "line-height": {
+    "prose": {
+      "$type": "number",
+      "$value": 28.05,
+      "$description": "Body prose 17px × 1.65",
+      "$extensions": {
+        "com.figma.scopes": [
+          "LINE_HEIGHT"
+        ]
+      }
+    },
+    "tight": {
+      "$type": "number",
+      "$value": 130,
+      "$description": "Headings/samples — 130%",
+      "$extensions": {
+        "com.figma.scopes": [
+          "LINE_HEIGHT"
+        ]
+      }
+    }
+  }
+}

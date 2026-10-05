@@ -1,0 +1,5 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* chat-bar.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+/* ask's composer is 46rem less its side padding */
+.spec-row .chat-bar { width: 40rem; }

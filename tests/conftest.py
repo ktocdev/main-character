@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Point every data dir at a throwaway tmp dir *before* config is imported.
 
 `config.py` reads the environment at import time, so this has to run
@@ -28,8 +29,8 @@ for _stale in Path(tempfile.gettempdir()).glob("mc-tests-*"):
 # setting them here wins over whatever .env the working copy has.
 os.environ.update({
     "MC_MOCK": "1",
-    "RAG_JOURNAL_DIR": str(_TMP / "journal_entries"),
-    "RAG_CHROMA_DIR": str(_TMP / "chroma_data"),
+    "MC_JOURNAL_DIR": str(_TMP / "journal_entries"),
+    "MC_CHROMA_DIR": str(_TMP / "chroma_data"),
     "MC_ENTITY_DIR": str(_TMP / "entity_graph"),
     "MC_SUMMARY_DIR": str(_TMP / "summaries"),
     "MC_CATEGORY_DIR": str(_TMP / "categories"),

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The two routes the backdating work changed, neither of which had a test.
 
 test_smoke.py proves the app boots; nothing exercised /api/entry or
@@ -65,7 +66,7 @@ def test_backup_files_under_the_stamped_day(client):
     the date it was typed, which defeats backdating it."""
     from rag_journal import JOURNAL_DIR
     client.post("/api/entry", json={"text": "written up late", "ts": BACKDATED})
-    assert (JOURNAL_DIR / "2024-03-05_0815_entry.md").exists()
+    assert list(JOURNAL_DIR.glob("2024-03-05_0815_*_entry.md"))
 
 
 def test_absent_stamp_falls_back_to_now(client):

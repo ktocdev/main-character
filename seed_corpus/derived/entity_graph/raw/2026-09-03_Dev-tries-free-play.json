@@ -1,0 +1,54 @@
+{
+  "people": [
+    {
+      "name": "Dev",
+      "relationship": "friend",
+      "observations": [
+        "Came over and used Coda for real for the first time",
+        "Practiced with the bass for forty minutes in Jordan's living room",
+        "Marked eleven moments during their session, each a place where something went wrong",
+        "Said 'this is my list for tomorrow' about the marked moments",
+        "Has a gig on the 19th with a setlist and a bandleader",
+        "Practices toward a deadline, treating practice as triage",
+        "Said 'oh - I do that same run every time I don't know what to play' at mark six",
+        "Discovered a years-old crutch within ninety seconds of reviewing their data",
+        "Played the moment marked as the worst one straight through four times until it improved"
+      ]
+    },
+    {
+      "name": "Pepper",
+      "relationship": "pet",
+      "observations": [
+        "Left the room at the high slapped notes during Dev's practice",
+        "Came back at the end, as if making her position clear"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Coda",
+      "domain": "creative",
+      "status": "active",
+      "observations": [
+        "Jordan built the app and has been running personal sessions through free play for nine days",
+        "Jordan sideloaded the build onto Dev's phone for their first real use",
+        "The marker button was originally a small 44pt button, changed to a full-width strip by day three",
+        "Has an auto-stop at 90 minutes, added after it killed a session once",
+        "Review screen labels marked moments as 'highlights' with a header saying 'your best moments'",
+        "Export feature is called a 'highlight reel'",
+        "Dev used the highlight feature as a bug tracker instead of a trophy case",
+        "Jordan realized the app never modeled a person who practices toward a deadline versus for emotional reasons",
+        "Jordan is considering a fix where marks stay neutral until labeled during the review step"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "name": "Jordan's living room",
+      "kind": "home",
+      "observations": [
+        "Dev practiced bass here for forty minutes while Jordan pretended to read"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* input.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+/* inputs fill their column in the app; here each gets a fixed column */
+.spec-row input { width: 16rem; }

@@ -1,0 +1,40 @@
+{
+  "people": [
+    {
+      "name": "Mika",
+      "relationship": "friend",
+      "observations": [
+        "Picked Jordan up before the open mic so Jordan couldn't bail",
+        "Hit it off immediately with Dev, discussing an obscure documentary about Nigerian funk music",
+        "Yelled something supportive and embarrassing when Jordan finished performing",
+        "Kept saying \"I TOLD you\" with a triumphant look",
+        "Stayed for two more hours after the performance"
+      ]
+    },
+    {
+      "name": "Dev",
+      "relationship": "friend",
+      "observations": [
+        "Was already at The Lantern sitting near the front with a beer when Jordan and Mika arrived",
+        "Hit it off immediately with Mika, discussing an obscure documentary about Nigerian funk music",
+        "Whistled when Jordan finished performing",
+        "Bought Jordan a celebratory drink after the performance",
+        "Stayed for two more hours after the performance"
+      ]
+    }
+  ],
+  "projects": [],
+  "places": [
+    {
+      "name": "The Lantern",
+      "kind": "venue",
+      "observations": [
+        "Hosted an open mic night on 8/21",
+        "Jordan performed sixth, playing guitar and singing \"Fast Car\"",
+        "A woman played ukulele and sang an original song that made Jordan tear up",
+        "A guy did a 9-minute spoken word piece about his electric bill",
+        "Jordan and friends stayed for two more hours after Jordan's performance"
+      ]
+    }
+  ]
+}

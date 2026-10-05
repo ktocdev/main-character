@@ -1,0 +1,55 @@
+#!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Friendly front door for macOS and Linux. From the repo root:
+#
+#   ./journal install   create .venv, install the lock file, make .env
+#   ./journal start     run the journal on http://127.0.0.1:8144
+#   ./journal restart   restart the running journal, as Settings' button does
+#
+# The 8145 sandbox (sandbox-reset, sandbox) is PowerShell and Windows-only;
+# see journal.cmd.
+set -e
+cd "$(dirname "$0")"
+VENV_PY=.venv/bin/python
+
+case "$1" in
+  install)
+    if [ ! -x "$VENV_PY" ]; then
+      PY=$(command -v python3 || command -v python) \
+        || { echo "python not found -- install Python 3.12 or newer first"; exit 1; }
+      "$PY" -c "import sys; sys.exit(sys.version_info < (3, 12))" \
+        || { echo "Python 3.12 or newer is required"; exit 1; }
+      echo "creating .venv"
+      "$PY" -m venv .venv
+    fi
+    echo "installing dependencies -- large and slow the first time"
+    "$VENV_PY" -m pip install -r requirements.lock
+    if [ ! -f .env ]; then
+      cp .env.example .env
+      echo "created .env -- uncomment ANTHROPIC_API_KEY in it and paste your key"
+    fi
+    echo
+    echo "installed. Run: ./journal start"
+    ;;
+  start)
+    [ -x "$VENV_PY" ] || { echo "not installed yet -- run: ./journal install"; exit 1; }
+    exec "$VENV_PY" server.py
+    ;;
+  restart)
+    [ -x "$VENV_PY" ] || { echo "not installed yet -- run: ./journal install"; exit 1; }
+    exec "$VENV_PY" scripts/restart_journal.py
+    ;;
+  sandbox-reset|sandbox)
+    echo "the 8145 sandbox is Windows-only (PowerShell) -- use journal.cmd"
+    exit 1
+    ;;
+  *)
+    echo "usage: ./journal <command>"
+    echo
+    echo "  install   create .venv, install dependencies, make .env"
+    echo "  start     run the journal on http://127.0.0.1:8144"
+    echo "  restart   restart the running journal, as Settings' button does"
+    exit 1
+    ;;
+esac

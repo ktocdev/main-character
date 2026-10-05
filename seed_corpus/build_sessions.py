@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Re-live the seed corpus through the real app.
 
@@ -44,14 +45,14 @@ ENTRIES = HERE / "journal_entries"
 # sandbox every data dir before the project imports read config
 for _var, _sub in [
     ("MC_SESSION_DIR", "sessions"), ("MC_SUMMARY_DIR", "summaries"),
-    ("RAG_CHROMA_DIR", "chroma_data"), ("RAG_JOURNAL_DIR", "journal_entries"),
+    ("MC_CHROMA_DIR", "chroma_data"), ("MC_JOURNAL_DIR", "journal_entries"),
     ("MC_ENTITY_DIR", "entity_graph"), ("MC_CATEGORY_DIR", "categories"),
     ("MC_PATTERN_DIR", "patterns"), ("MC_DREAM_DIR", "dreams"),
 ]:
     os.environ[_var] = str(BUILD / _sub)
 # hard set, not setdefault - the real author's name must never reach a
 # braid or a seed that ships
-os.environ["RAG_AUTHOR_NAME"] = "Jordan"
+os.environ["MC_AUTHOR_NAME"] = "Jordan"
 
 sys.path.insert(0, str(HERE.parent))
 
@@ -67,6 +68,8 @@ SESSIONS = [
      "title": "Lena leaving and the open mic"},
     {"n": 3, "start": "2026-08-27", "end": "2026-09-14",
      "title": "The holding pen and a door"},
+    {"n": 4, "start": "2026-09-15", "end": "2026-09-17",
+     "title": "The waiting week"},
 ]
 
 # when each entry was written. Keyed by filename stem, not date - two
@@ -102,6 +105,9 @@ TIMES = {
     "2026-09-09_Lenas referral": "23:20",
     "2026-09-11_Phone screen with Northlight": "19:50",
     "2026-09-14_Signing the lease": "20:40",
+    "2026-09-15_Rebuilding free play": "21:15",
+    "2026-09-16_Booking the open mic": "22:00",
+    "2026-09-17_Building the presentation": "20:30",
 }
 
 # Entries Jordan keeps talking after, via send rather than save - the
@@ -167,6 +173,20 @@ FOLLOWUPS = {
         "I keep coming back to the fact that I used the feature every day "
         "and Dev saw it in one session. I want to understand what that "
         "actually says about how I design, not just feel bad about it.",
+    ],
+    "2026-09-16_Booking the open mic": [
+        "one more thing about the picks - Dev tried one on the low B "
+        "string and said it changes the attack completely, warmer. and "
+        "then they used it for the rest of practice. Dad would have "
+        "liked that.",
+    ],
+    "2026-09-17_Building the presentation": [
+        "I just went back and read the Coda case study I wrote on the 9th "
+        "and the version I'm putting in the deck is different. better. the "
+        "9th version was honest but defensive - 'I missed this but here's "
+        "why it's not that bad.' the deck version is just 'I missed this "
+        "and here's what I learned.' that's the whole difference and it "
+        "took me eight days to get there.",
     ],
     "2026-09-06_Moms visit": [
         "you're right, I skipped it. what I'd be doing is Coda, or something "
@@ -294,7 +314,9 @@ def run_session(spec, entries, collection, client, entity_index,
         print(f"  resuming: {len(done)} entries touched, {len(braid)} messages")
 
     def checkpoint():
-        sessions.save_current({"started": started, "base": [], "_api": api_msgs,
+        sessions.save_current({"started": started,
+                               "entry_schema": sessions.ENTRY_SCHEMA,
+                               "base": [], "_api": api_msgs,
                                "_done": done, "messages": braid})
 
     for e in days:
@@ -307,8 +329,14 @@ def run_session(spec, entries, collection, client, entity_index,
         if sent >= len(turns):
             continue
 
-        def say(text, label):
-            msg = {"role": "you", "text": text, "ts": stamp}
+        def say(text, label, saved=False):
+            # The entry file itself is Jordan's one **save entry** for the
+            # day; follow-ups and interjections are sends. The id is the
+            # file's stem, so a rebuild names the same entry the same way.
+            msg = {"role": "you", "kind": "chat", "text": text, "ts": stamp}
+            if saved:
+                msg.update(kind="entry",
+                           entry_id="demo-" + re.sub(r"[^A-Za-z0-9-]+", "-", e["stem"]))
             if e["dream"]:
                 msg["dream"] = True
             braid.append(msg)
@@ -319,7 +347,7 @@ def run_session(spec, entries, collection, client, entity_index,
             return reply
 
         for i in range(sent, len(turns)):
-            reply = say(turns[i], f"turn {i + 1}")
+            reply = say(turns[i], f"turn {i + 1}", saved=i == 0)
             # Jordan calls out the phrase before saying anything else
             line = interjection_for(reply)
             if line:

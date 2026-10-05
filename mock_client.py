@@ -1,10 +1,15 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Mock client — a drop-in stand-in for `anthropic.Anthropic()`.
 
-Enabled by `MC_MOCK=1`. `config.get_client()` returns this instead of the
-real SDK client, so no call site knows the difference: the same
-`messages.create()` / `messages.stream()` surface, the same response shape
-(`.content` blocks, `.stop_reason`, `.usage`), and no network access.
+Enabled by `MC_MOCK=1` in the process environment, which in practice means
+the demo journal and nothing else: a `.env` cannot turn it on, so canned
+replies never run against a real journal (see `config.py`).
+
+`config.get_client()` returns this instead of the real SDK client, so no
+call site knows the difference: the same `messages.create()` /
+`messages.stream()` surface, the same response shape (`.content` blocks,
+`.stop_reason`, `.usage`), and no network access.
 
 Two things it deliberately does NOT do:
 
@@ -29,6 +34,7 @@ import inspect
 import json
 import random
 import re
+import threading
 import time
 from pathlib import Path
 
@@ -60,15 +66,35 @@ DEFAULT_DELAY = 1.0
 # actually observable.
 STREAM_CHUNK_DELAY = 0.035
 
+# The demo journal's script (demo_script.py) decides a reply before the
+# companion is called. The route sets it here, in the thread that then runs
+# the turn, and the turn's one stream takes it -- so the real companion code
+# still runs (history, context, the session append), just with the scripted
+# words. One-shot: the next call is back to the fixtures.
+_NEXT = threading.local()
 
-def _call_key(skip: frozenset = frozenset({"mock_client"})) -> str:
+
+def say_next(text: str) -> None:
+    _NEXT.text = text
+
+
+def _take_next() -> str | None:
+    text = getattr(_NEXT, "text", None)
+    _NEXT.text = None
+    return text
+
+
+def _call_key(skip: frozenset = frozenset({"mock_client", "metering"})) -> str:
     """`module.function` of the first frame outside the plumbing — the
     natural identity of a call type, and stable without threading a marker
     kwarg through 14 call sites (which the real SDK would reject).
 
     `skip` exists so `capture_fixtures.py` can wrap the real client and
     still derive the same keys, rather than recording everything under
-    its own frame."""
+    its own frame. `metering` is in the default set for the same reason:
+    `config.get_client()` wraps the mock client too, and its frame would
+    otherwise be the first one found -- filing every call under
+    `metering.create`, which no fixture and no `DELAYS` entry matches."""
     for frame in inspect.stack()[1:]:
         module = Path(frame.filename).stem
         if module not in skip:
@@ -95,6 +121,29 @@ def _prompt_text(kwargs: dict) -> str:
 # ---------------------------------------------------------------------------
 
 _fixture_cache: dict[str, list] = {}
+
+
+def request_fingerprint(key: str, kwargs: dict) -> str:
+    """Match captured demo calls by their inputs, never by bucket position.
+
+    Domain prose includes the wall-clock date; it isn't journal content and
+    must not invalidate a replay tomorrow. All entry dates remain significant.
+    Model/latency/token settings don't change the identity of the input.
+    """
+    request = {k: kwargs[k] for k in ("system", "messages", "output_config")
+               if k in kwargs}
+    text = json.dumps(request, sort_keys=True, ensure_ascii=False)
+    if key == "summarizer.build_domains":
+        text = re.sub(r"Today is \d{4}-\d{2}-\d{2}\.", "Today is <capture-date>.", text)
+    return hashlib.sha256((key + "\n" + text).encode("utf-8")).hexdigest()
+
+
+def _recorded(key: str, kwargs: dict) -> str | None:
+    path = FIXTURE_DIR / "demo_close" / f"{request_fingerprint(key, kwargs)}.json"
+    if not path.is_file():
+        return None
+    record = json.loads(path.read_text(encoding="utf-8"))
+    return record["text"] if record["key"] == key else None
 
 
 def _fixtures(key: str) -> list:
@@ -171,8 +220,8 @@ def _pick(key: str, prompt: str) -> str | None:
 MOCK_PROSE = (
     "[mock] This is placeholder text from mock mode, not a real model "
     "response. It exists so the UI has something of realistic length to "
-    "render, stream, and lay out. Set MC_MOCK=0 and provide an API key for "
-    "real output, or capture fixtures with capture_fixtures.py."
+    "render, stream, and lay out. Restart back to your own journal and add "
+    "an API key for real output, or capture fixtures with capture_fixtures.py."
 )
 
 
@@ -283,14 +332,15 @@ class _Messages:
         key = _call_key()
         time.sleep(DELAYS.get(key, DEFAULT_DELAY))
         prompt = _prompt_text(kwargs)
-        text = _pick(key, prompt) or _fallback(kwargs)
+        text = _recorded(key, kwargs) or _pick(key, prompt) or _fallback(kwargs)
         return _Response(text, prompt, kwargs.get("model", "mock"))
 
     def stream(self, **kwargs):
         key = _call_key()
         time.sleep(DELAYS.get(key, DEFAULT_DELAY))
         prompt = _prompt_text(kwargs)
-        text = _pick(key, prompt) or _fallback(kwargs)
+        text = (_take_next() or _recorded(key, kwargs) or _pick(key, prompt)
+                or _fallback(kwargs))
         return _Stream(text, prompt, kwargs.get("model", "mock"))
 
 

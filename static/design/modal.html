@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — modal</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="index.html">main character</a></h1>
+    <span class="status">modal · one card · one or two actions</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css · static/js/web-demo/backend.js</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#card">the card</a>
+    <a href="#live">try it</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Modal</h2>
+      <p class="lede">For the rare thing that has to be read before anything else. It's a native <span class="mono">&lt;dialog&gt;</span> opened with <span class="mono">showModal()</span>, so focus stays inside, Escape closes it and the page behind is dimmed and inert. The one modal today is the web demo's opening notice, which says the demo follows a script. The app's own questions, such as closing a chapter, still use the browser's <span class="mono">confirm()</span>; the second card shows how one would look here.</p>
+    </section>
+
+    <section id="card">
+      <div class="rule eyebrow strong">The card</div>
+      <p class="note">A <span class="mono">--bg-raised</span> card like the wizard's, 30rem wide at most and never closer than 1rem to the window's edge. Drawn here in place with <span class="mono">.modal</span>, the same rule as the open dialog. The buttons are <a href="button.html">Buttons</a>: one send, and a quiet one when there is a way out besides Escape.</p>
+      <div class="spec-row top">
+        <div class="modal" data-figma-set="Modal" data-figma-variant="actions=one">
+          <div class="eyebrow" data-figma-text="eyebrow">web demo</div>
+          <h2 class="modal-title" data-figma-text="title">This demo follows a script</h2>
+          <p class="modal-body" data-figma-text="body">Type anything and press send. Your text is swapped for the next entry in Jordan's week, and the reply was written for that entry. The box shows what's coming next. Nothing is saved, so refresh to start over.</p>
+          <div class="modal-actions">
+            <button class="send" data-figma-instance="Button" data-figma-variant="kind=send, size=md, state=default">start demo</button>
+          </div>
+        </div>
+        <div class="modal" data-figma-set="Modal" data-figma-variant="actions=two">
+          <div class="eyebrow" data-figma-text="eyebrow">chapter</div>
+          <h2 class="modal-title" data-figma-text="title">Close this chapter?</h2>
+          <p class="modal-body" data-figma-text="body">Your side of it becomes a journal entry, and the memory pipeline runs in the background. The next chapter starts empty.</p>
+          <div class="modal-actions">
+            <button class="quiet" data-figma-instance="Button" data-figma-variant="kind=quiet, size=md, state=default">not yet</button>
+            <button class="send" data-figma-instance="Button" data-figma-variant="kind=send, size=md, state=default">close it</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="live">
+      <div class="rule eyebrow strong">Try it</div>
+      <p class="note">Opens the real dialog over this page. Escape, the button, or a click on the dimmed page closes it, and focus goes back to the control that opened it. The dimmed layer is <span class="mono">::backdrop</span>, which is drawn only around an open dialog, so Figma gets the card alone.</p>
+      <div class="in-context">
+        <div class="spec-row">
+          <button class="quiet" id="open-modal">open the modal</button>
+        </div>
+      </div>
+      <dialog class="modal" id="try-modal" aria-labelledby="try-modal-title">
+        <div class="eyebrow">web demo</div>
+        <h2 class="modal-title" id="try-modal-title">This demo follows a script</h2>
+        <p class="modal-body">Type anything and press send. Your text is swapped for the next entry in Jordan's week, and the reply was written for that entry. The box shows what's coming next. Nothing is saved, so refresh to start over.</p>
+        <form class="modal-actions" method="dialog">
+          <button class="send" autofocus>start demo</button>
+        </form>
+      </dialog>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">dialog.modal[aria-labelledby]   opened with showModal()
+  div.eyebrow                   optional: what it's about
+  h2.modal-title                the question or the news
+  p.modal-body                  one short paragraph
+  form.modal-actions[method=dialog]
+    button.quiet                optional: the way out
+    button.send                 the primary, last</pre>
+      <div class="parts">
+        <div class="part">card</div><div class="rule-text">--bg-raised, --border-default hairline, --radius-lg, padding 1.5rem, --shadow-xl. width min(30rem, 100vw − 2rem); taller than the window, it scrolls inside.</div>
+        <div class="part">title</div><div class="rule-text">The app's heading voice: body serif italic, 1.3rem, --text-accent.</div>
+        <div class="part">body</div><div class="rule-text">Body serif at the page size, line-height 1.55, in --text-default.</div>
+        <div class="part">actions</div><div class="rule-text">Right-aligned, .5rem apart, .6rem below the body; they wrap on a narrow window. The primary is last, and it takes focus when the dialog opens.</div>
+        <div class="part">scrim</div><div class="rule-text">::backdrop in --modal-scrim: the page colour at 75%.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fill <span class="mono">--bg-raised</span>; rule <span class="mono">--border-default</span>; title <span class="mono">--text-accent</span>, body <span class="mono">--text-default</span>, eyebrow <span class="mono">--text-accent-muted</span>; scrim <span class="mono">--modal-scrim</span>. In Figma: <b>Modal</b>, <span class="mono">actions</span>, with <span class="mono">eyebrow</span>, <span class="mono">title</span> and <span class="mono">body</span> properties; the buttons are Button instances.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="design.js"></script>
+<script type="module" src="pages/modal.js"></script>
+</body>
+</html>

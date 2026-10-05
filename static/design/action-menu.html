@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — action menu</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/action-menu.css">
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="index.html">main character</a></h1>
+    <span class="status">action menu · trigger · menu · item</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css · static/js/popover.js</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#item">item</a>
+    <a href="#menu">menu</a>
+    <a href="#trigger">action menu</a>
+    <a href="#behaviour">behaviour</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Action menu</h2>
+      <p class="lede">The ⋯ button that holds the actions too rare to sit in a row: closing the chapter, editing, downloading or uploading the life summary. A native <span class="mono">&lt;details&gt;</span> whose summary is the trigger and whose menu is a raised <span class="mono">.popover</span> opening upward, right-aligned to it. The nav's overflow menu and the cost panel use the same popover card.</p>
+    </section>
+
+    <section id="item">
+      <div class="rule eyebrow strong">Item</div>
+      <p class="note">A quiet button made taller (44px, the touch minimum) and left-aligned. Hover fills <span class="mono">--bg-muted</span>, a step up from the card it sits on.</p>
+      <div class="spec-row">
+        <div class="host popover"><button class="quiet" data-figma-set="Menu item" data-figma-variant="state=default" data-figma-text="label">close chapter</button></div>
+        <div class="host popover"><button class="quiet is-hover" data-figma-set="Menu item" data-figma-variant="state=hover" data-figma-text="label">close chapter</button></div>
+        <div class="host popover"><button class="quiet is-focus-visible" data-figma-set="Menu item" data-figma-variant="state=focus" data-figma-text="label">close chapter</button></div>
+      </div>
+    </section>
+
+    <section id="menu">
+      <div class="rule eyebrow strong">Menu</div>
+      <p class="note"><span class="mono">.popover</span>: a <span class="mono">--bg-raised</span> card at <span class="mono">--radius-lg</span>, .5rem padding, items .35rem apart, under a deep 0 10px 30px shadow. As wide as its longest item.</p>
+      <div class="spec-row top">
+        <div class="popover" data-figma-set="Menu" data-figma-variant="items=3">
+          <button class="quiet" data-figma-instance="Menu item" data-figma-variant="state=default" data-figma-text="item 1">close chapter</button>
+          <button class="quiet" data-figma-instance="Menu item" data-figma-variant="state=default" data-figma-text="item 2">edit life summary</button>
+          <button class="quiet" data-figma-instance="Menu item" data-figma-variant="state=default" data-figma-text="item 3">upload life summary</button>
+        </div>
+        <div class="popover" data-figma-set="Menu" data-figma-variant="items=4">
+          <button class="quiet" data-figma-instance="Menu item" data-figma-variant="state=default" data-figma-text="item 1">close chapter</button>
+          <button class="quiet" data-figma-instance="Menu item" data-figma-variant="state=default" data-figma-text="item 2">edit life summary</button>
+          <button class="quiet" data-figma-instance="Menu item" data-figma-variant="state=default" data-figma-text="item 3">upload life summary</button>
+          <button class="quiet" data-figma-instance="Menu item" data-figma-variant="state=default" data-figma-text="item 4">download current summary</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="trigger">
+      <div class="rule eyebrow strong">Action menu</div>
+      <p class="note">The trigger is a 2.8 × 2.2rem box with a tracked ⋯, quiet-styled: hover, and open, bring it to <span class="mono">--text-default</span> on <span class="mono">--bg-raised</span>. Open, the menu sits .5rem above it, its right edge on the trigger's. In Figma the menu is placed outside the component's frame, as it is on screen.</p>
+      <div class="spec-row menus">
+        <details class="action-menu" data-figma-set="Action menu" data-figma-variant="open=false, state=default">
+          <summary aria-label="chapter actions">⋯</summary>
+        </details>
+        <details class="action-menu" data-figma-set="Action menu" data-figma-variant="open=false, state=hover">
+          <summary class="is-hover" aria-label="chapter actions">⋯</summary>
+        </details>
+        <details class="action-menu" open data-figma-set="Action menu" data-figma-variant="open=true, state=default">
+          <summary aria-label="chapter actions">⋯</summary>
+          <div class="menu popover" data-figma-instance="Menu" data-figma-variant="items=3">
+            <button class="quiet" data-figma-text="item 1">close chapter</button>
+            <button class="quiet" data-figma-text="item 2">edit life summary</button>
+            <button class="quiet" data-figma-text="item 3">upload life summary</button>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section id="behaviour">
+      <div class="rule eyebrow strong">Behaviour</div>
+      <p class="note">Popovers, menus and tooltips are mutually exclusive (<span class="mono">popover.js</span>): opening one closes the rest; Escape, or a click anywhere outside, closes it. Choosing an item closes the menu before the action runs.</p>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">details.action-menu[open]
+  summary                 the ⋯ trigger
+  div.menu.popover        opens upward, right-aligned
+    button.quiet × n      44px items</pre>
+      <div class="parts">
+        <div class="part">trigger</div><div class="rule-text">--border-default hairline, --radius-base, --text-muted ⋯ at .95rem, letter-spacing .1em.</div>
+        <div class="part">menu</div><div class="rule-text">--bg-raised, --border-default, --radius-lg, padding .5rem, gap .35rem, shadow 0 10px 30px at 35% black.</div>
+        <div class="part">item</div><div class="rule-text">A quiet button: 44px tall, .85rem, left-aligned, --bg-muted on hover.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fills <span class="mono">--bg-raised</span>, <span class="mono">--bg-muted</span>; labels <span class="mono">--text-muted</span>, <span class="mono">--text-default</span>; rule <span class="mono">--border-default</span>; radius <span class="mono">--radius-base</span>, <span class="mono">--radius-lg</span>; the shadow is a literal. In Figma: <b>Menu item</b> (<span class="mono">state</span>), <b>Menu</b> (<span class="mono">items</span>, made of Menu items) and <b>Action menu</b> (<span class="mono">open × state</span>, holding a Menu when open).</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="design.js"></script>
+</body>
+</html>

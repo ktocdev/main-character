@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* action-menu.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+/* hosts that only supply the .popover ancestor a menu item keys on */
+.host.popover { position: static; background: none; border: 0; padding: 0; box-shadow: none; }
+/* a menu shown on its own, in the flow rather than over the page */
+.spec-row > .popover[data-figma-set], .spec-cell > .popover[data-figma-set] { position: static; }
+.spec-row.menus { justify-content: flex-start; padding-left: 12rem; }
