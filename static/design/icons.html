@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — icons</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/card.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/icons.css">
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="index.html">main character</a></h1>
+    <span class="status">icons · 30 · filled and outline</span>
+  </div>
+  <div class="right">
+    <span>source: static/icons/ · static/js/card.js</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <!-- the site links come from design.js (PAGES) -->
+    <div class="eyebrow">on this page</div>
+    <a href="#map">assignments</a>
+    <a href="#cards">in a card</a>
+    <a href="#set">the full set</a>
+    <a href="#usage">usage</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Icons</h2>
+      <p class="lede">One icon for each card type, and for each built-in category, dream tone and thing category. Cards draw the filled set by default; people show their initials instead.</p>
+    </section>
+
+    <section id="map">
+      <div class="rule eyebrow strong">Assignments</div>
+      <p class="note">Each row: filled, outline and the file. The mapping lives in <span class="mono">static/js/card.js</span> (<span class="mono">TYPE_ICONS</span>, <span class="mono">SUBTYPE_ICONS</span>); this page mirrors it, and a row that disagrees is flagged in red.</p>
+      <div class="stack" id="map-out"></div>
+    </section>
+
+    <section id="cards">
+      <div class="rule eyebrow strong">In a card</div>
+      <p class="note">Small cards drawn by <span class="mono">static/js/card.js</span>, which picks the icon from the card's <span class="mono">type</span> and <span class="mono">subtype</span>. <span class="mono">iconStyle: 'outline'</span> switches set.</p>
+      <div class="segmented" id="style" role="group" aria-label="icon style">
+        <button data-s="filled" aria-pressed="true">Filled</button>
+        <button data-s="outline" aria-pressed="false">Outline</button>
+      </div>
+      <div class="frame stack" id="cards-out"></div>
+    </section>
+
+    <section id="set">
+      <div class="rule eyebrow strong">The full set</div>
+      <p class="note">Every icon in <span class="mono">static/icons/</span>, filled then outline, with what uses it and the set it comes from. <span class="mono">peace-bold</span> has one version, used in both.</p>
+      <div class="icon-grid" id="set-out"></div>
+    </section>
+
+    <section id="usage">
+      <div class="rule eyebrow strong">Usage</div>
+      <p class="note">The icons are square SVGs drawn in <span class="mono">currentColor</span>. On a card, <span class="mono">span.card-icon</span> draws the file as a CSS mask filled with <span class="mono">currentColor</span>, so it takes the visual's accent and hover colours (an <span class="mono">&lt;img&gt;</span> would not), sized at .9em of the visual's glyph size. They are always <span class="mono">aria-hidden</span>: the card's eyebrow and title already say what the item is.</p>
+      <p class="note">To change or add one: put <span class="mono">name.svg</span> and <span class="mono">name-filled.svg</span> in <span class="mono">static/icons/</span>, point the entry in <span class="mono">card.js</span> at it, and update its row in <span class="mono">pages/icons.js</span>. A single-version icon goes in <span class="mono">ONE_VERSION</span>.</p>
+      <p class="note">Sources, all MIT: TDesign Icons by Tencent (most), Phosphor Icons (<span class="mono">alien</span>, <span class="mono">peace-bold</span>), Boxicons (<span class="mono">category</span>, <span class="mono">hand</span>, <span class="mono">rocket</span>) and Bootstrap Icons (<span class="mono">bookmark-heart</span>). The originals are in <span class="mono">mc-icons/</span>.</p>
+    </section>
+  </main>
+</div>
+
+<script type="module" src="pages/icons.js"></script>
+<script type="module" src="design.js"></script>
+</body>
+</html>

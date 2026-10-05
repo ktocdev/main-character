@@ -1,0 +1,48 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* icons.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+.frame { max-width: 72rem; }
+
+/* an inlined icon, sized by its holder */
+.ico { display: inline-flex; width: 1.5rem; height: 1.5rem; flex: none; }
+.ico svg { width: 100%; height: 100%; }
+
+/* ---- assignments ---- */
+/* name and note, filled, outline, file: one reading width, not the page's */
+.map-group { display: flex; flex-direction: column; max-width: 48rem; }
+.map-group > .note { margin: .2rem 0 .6rem; }
+.map-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) 2.75rem 2.75rem minmax(8rem, 11rem);
+  align-items: center; gap: .5rem 1rem; padding: .5rem 0; border-bottom: 1px solid var(--border-default);
+}
+.map-row.head { padding: 0 0 .3rem; font: .72rem var(--font-ui); color: var(--text-muted); }
+.map-row .map-key { display: flex; flex-direction: column; align-items: flex-start; gap: .15rem; }
+.map-row .file { font-size: .8rem; display: flex; flex-direction: column; gap: .15rem; }
+.why { font: .72rem/1.4 var(--font-ui); color: var(--text-muted); text-wrap: pretty; }
+.why.drift { color: var(--text-danger); }
+.tile {
+  width: 2.75rem; height: 2.75rem; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-muted); border: 1px solid var(--border-default); border-radius: var(--radius-md);
+  color: var(--text-accent);
+}
+/* Old Standard's ascent is taller than its descent, so capitals sit high on
+   a line-height of 1; this drops them to the tile's centre */
+.tile.initials { font: 700 1.15rem/1 var(--font-body); padding-top: .23em; }
+@media (max-width: 669px) {
+  .map-row { grid-template-columns: 2.75rem 2.75rem minmax(0, 1fr); }
+  .map-row .map-key { grid-column: 1 / -1; }
+  .map-row.head { display: none; }
+}
+
+/* ---- in a card ---- */
+#style { align-self: flex-start; }
+
+/* ---- the full set ---- */
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: .75rem; }
+.set-cell {
+  display: flex; flex-direction: column; gap: .4rem; padding: .7rem .8rem;
+  background: var(--bg-raised); border: 1px solid var(--border-default); border-radius: var(--radius-lg);
+}
+.set-cell .pair { display: flex; gap: .9rem; color: var(--text-accent); }
+.set-cell .pair .ico { width: 1.75rem; height: 1.75rem; }
+.set-cell .mono { font-size: .78rem; }
