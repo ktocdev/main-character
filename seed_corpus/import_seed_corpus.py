@@ -1,13 +1,17 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 Import the seed corpus into the local data stores.
 
 Reads the markdown entries from journal_entries/ and the dream entry from
 its _Realm: dream_ marker, then populates:
-  - chroma_data/  (journal_entries + journal_dreams collections)
-  - journal_entries/  (markdown backups)
+  - chroma_data/  (journal_entries, its search passages and journal_dreams
+    collections) -- only entries dated before OPEN_SESSION_FROM; the rest
+    belong to the open session and are never embedded here
+  - journal_entries/  (markdown backups of every entry, open ones included)
   - sessions/archive/  (the three closed sessions, both-sided braids)
-  - sessions/current.json  (the empty session the last close opened)
-  - summaries/  (the live seed, its backup, the pending candidate)
+  - sessions/current.json  (the open session: the days written since the
+    last close, not yet closed)
+  - summaries/  (the reviewed live seed and its backups)
 
 The session archives and seed summaries are not written here — they are
 produced by build_sessions.py, which chats the corpus through the real
@@ -18,9 +22,10 @@ Usage:
     python seed_corpus/import_seed_corpus.py --dry-run
     python seed_corpus/import_seed_corpus.py --wipe
 
---wipe clears journal_entries collection, journal_dreams collection,
-journal_entries/ dir, and entity_graph/ before importing (the clean-
-slate path for capture_fixtures.py). Because it deletes outright, it
+--wipe clears the journal_entries, journal_passages, journal_dreams and
+journal_summaries collections, the journal_entries/ dir, and the
+entity_graph/, categories/, patterns/ and dreams/ dirs before importing (the
+clean-slate path for capture_fixtures.py). Because it deletes outright, it
 refuses to run unless the data dirs point somewhere under seed_corpus/ —
 use `bash seed_corpus/run_capture.sh --wipe`, which sets them for you.
 
@@ -30,6 +35,7 @@ the moment it finds session archives or a seed it didn't ship.
 
 import argparse
 import json
+import os
 import re
 import shutil
 import sys
@@ -38,10 +44,40 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+# --demo has to be handled before config is imported, not in main(): config
+# reads the environment once at import time, and the import below is that
+# moment. Parsed off sys.argv by hand for the same reason -- argparse runs
+# far too late to matter.
+#
+# It exists so installing the demo is one command on every platform. The
+# alternative is eight MC_*/RAG_* exports the reader has to get right, which
+# is a bash script on Windows, i.e. not an instruction a README can give.
+if "--demo" in sys.argv:
+    _I = Path(__file__).resolve().parent / "install"
+    os.environ.update({
+        "MC_JOURNAL_DIR": str(_I / "journal_entries"),
+        "MC_CHROMA_DIR": str(_I / "chroma_data"),
+        "MC_ENTITY_DIR": str(_I / "entity_graph"),
+        "MC_SUMMARY_DIR": str(_I / "summaries"),
+        "MC_CATEGORY_DIR": str(_I / "categories"),
+        "MC_PATTERN_DIR": str(_I / "patterns"),
+        "MC_DREAM_DIR": str(_I / "dreams"),
+        "MC_SESSION_DIR": str(_I / "sessions"),
+        # The corpus is Jordan's. Left alone, entity extraction would skip
+        # entities matching the real author's name -- see run_capture.sh.
+        "MC_AUTHOR_NAME": "Jordan",
+    })
+
 from bulk_import import import_entry, entry_chunk_id, chunk_entry
 from config import ENTITY_DIR, CATEGORY_DIR, PATTERN_DIR, DREAM_DIR
 from config import SESSION_DIR, SUMMARY_DIR, CHROMA_DIR
 from rag_journal import get_collection, JOURNAL_DIR
+
+# Entries dated from here on belong to the demo's OPEN session, not to journal
+# memory. They ship as markdown backups -- which is exactly what a real journal
+# has on disk after "save entry" -- and enter chroma only if the visitor closes
+# the chat, the same way they would for a real author.
+OPEN_SESSION_FROM = "2026-09-15"
 
 
 def parse_entry(path: Path) -> dict:
@@ -65,7 +101,8 @@ def wipe():
     print("wiping local data stores...")
     import chromadb
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    for name in ["journal_entries", "journal_dreams", "journal_summaries"]:
+    for name in ["journal_entries", "journal_passages", "journal_dreams",
+                 "journal_summaries"]:
         try:
             client.delete_collection(name)
             print(f"  deleted collection: {name}")
@@ -85,55 +122,85 @@ def wipe():
 
 
 def import_dream(entry: dict):
-    from dreams import get_dream_collection, DREAM_DIR
-    import hashlib, json
+    from dreams import put_entry
+    import hashlib
     date = entry["date"]
     text = entry["text"]
     entry_id = f"dreamentry_{date}_{hashlib.md5(text[:200].encode()).hexdigest()[:8]}"
 
-    get_dream_collection().upsert(
-        ids=[entry_id],
-        documents=[text],
-        metadatas=[{
-            "date": date, "time": "03:15", "realm": "dream",
-            "title": entry["title"], "source": "seed_corpus",
-        }],
-    )
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
     filepath = JOURNAL_DIR / f"{date}_dream.md"
     filepath.write_text(
         f"# {entry['title']}\n_Date: {date}_\n_Realm: dream_\n\n{text}",
         encoding="utf-8",
     )
+    put_entry(entry_id, text, {
+        "date": date, "time": "03:15", "realm": "dream",
+        "title": entry["title"], "source": "seed_corpus",
+    })
     return entry_id
 
 
 def session_files() -> list[tuple[Path, Path]]:
     """The seed loop's own history, produced by build_sessions.py: three
     closed sessions with both-sided braids, the live seed those closes
-    generated, the seed it replaced, and the candidate still awaiting
-    review. Copied as-is — none of it is regenerated at import.
+    generated and Jordan reviewed, and the seeds it replaced.
+    Copied as-is — none of it is regenerated at import.
 
-    current.json ships too, and has to. Without it the first run falls into
-    load_current's first-run path, which builds a base from the newest
-    imported conversation — a session that looks like it continues 9/14
-    rather than one the 9/14 close just opened. That contradicts the pending
-    candidate sitting next to it: a real close ends with save_current(_fresh())
-    and an empty base. Shipping the file makes the demo state the corpus's
-    own, instead of whatever the first person to launch it happened to
-    generate."""
+    current.json ships too, and it is not empty. The demo opens three days
+    *after* the 9/14 close: Jordan reviewed and uploaded that summary before
+    writing the 9/15-9/17 entries, so they have the latest seed's context.
+    No candidate awaits review. The open session holds those entries as
+    messages with an empty base. Messages rather than base because
+    only messages count as new material: a base-only session cannot be
+    closed, and closing is what the demo invites.
+
+    Shipping it also keeps load_current's first-run path out of the way,
+    which would otherwise build a base from the newest imported
+    conversation and make the demo's state whatever the first person to
+    launch it happened to generate."""
     here = Path(__file__).parent
     pairs = [(here / "sessions" / "archive", SESSION_DIR / "archive"),
              (here / "summaries" / "seed_backups",
               SUMMARY_DIR / "seed_backups")]
     files = [(here / "summaries" / n, SUMMARY_DIR / n)
-             for n in ("seed_summary.md", "seed_summary.candidate.md")]
+             for n in ("seed_summary.md",)]
     files.append((here / "sessions" / "current.json",
                   SESSION_DIR / "current.json"))
 
     for src_dir, dst_dir in pairs:
         for src in sorted(src_dir.glob("*")):
             files.append((src, dst_dir / src.name))
+    return files
+
+
+def derived_files() -> list[tuple[Path, Path]]:
+    """Everything Claude worked out about the corpus: the entity graph,
+    category assignments, summary layers, the pattern library, the dream index.
+    Captured through September 14 by capture_demo_close.py under derived/, then copied
+    in here the same way the sessions are.
+
+    They ship because the demo has to install without an API key. The
+    entries and the chroma index are free to build locally -- embeddings
+    are local -- but every one of these files is Claude output, so a
+    cloner who ran the capture themselves would need a key and would
+    spend real money to reproduce what is already fixed content. Without
+    them the demo boots with 29 indexed entries and an empty Entities tab, which
+    reads as a broken app rather than a sparse one.
+
+    chroma_data/ deliberately stays out, the same way export.py leaves the
+    index out: it is derived from the entries, it is the one bulky part,
+    and import rebuilds it on the spot for nothing."""
+    here = Path(__file__).parent / "derived"
+    dests = {"entity_graph": ENTITY_DIR, "categories": CATEGORY_DIR,
+             "patterns": PATTERN_DIR, "dreams": DREAM_DIR,
+             "summaries": SUMMARY_DIR}
+    files = []
+    for name, dst_root in dests.items():
+        src_root = here / name
+        for src in sorted(src_root.rglob("*")):
+            if src.is_file():
+                files.append((src, Path(dst_root) / src.relative_to(src_root)))
     return files
 
 
@@ -154,9 +221,13 @@ def refuse_if_real_journal(files: list[tuple[Path, Path]]):
         intruders.append(live.name)
     # the open session is installed now, so it can also be overwritten. Only
     # unsaved turns make it precious — a base-only or empty session is what
-    # any first run invents, and replacing that is the point.
+    # any first run invents, and replacing that is the point. The corpus's
+    # own open session has turns too, so an untouched copy of it is ours.
     open_session = SESSION_DIR / "current.json"
-    if open_session.exists():
+    shipped = here / "sessions" / "current.json"
+    if open_session.exists() and not (
+            shipped.exists()
+            and open_session.read_bytes() == shipped.read_bytes()):
         try:
             live_msgs = json.loads(
                 open_session.read_text(encoding="utf-8")).get("messages") or []
@@ -192,12 +263,13 @@ def refuse_if_unsandboxed():
                 "bash seed_corpus/run_capture.sh does this for you.")
 
 
-def install_sessions(files: list[tuple[Path, Path]], dry_run: bool):
+def install_files(files: list[tuple[Path, Path]], dry_run: bool):
     print()
     for src, dst in files:
         if not src.exists():
-            print(f"  MISSING {src.name} — run build_sessions.py first")
-            continue
+            print(f"  MISSING {src.name} — run build_sessions.py "
+                  f"(sessions) or capture_fixtures.py (derived) first")
+            raise FileNotFoundError(src)
         if dry_run:
             print(f"  [dry] {src.name} -> {dst}")
         else:
@@ -209,6 +281,10 @@ def install_sessions(files: list[tuple[Path, Path]], dry_run: bool):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--demo", action="store_true",
+                        help="install into seed_corpus/install/ -- the demo "
+                             "journal the app restarts into. Handled at import "
+                             "time; see the note at the top of this file.")
     parser.add_argument("--wipe", action="store_true",
                         help="clear local data before importing")
     args = parser.parse_args()
@@ -219,17 +295,23 @@ def main():
         sys.exit(f"no .md files in {entries_dir}")
 
     # Both guards run before the first destructive or writing call. They
-    # used to sit inside install_sessions(), i.e. after --wipe had already
+    # used to sit inside install_files(), i.e. after --wipe had already
     # deleted the entries they were meant to protect.
     to_install = session_files()
     refuse_if_real_journal(to_install)
     if args.wipe:
         refuse_if_unsandboxed()
 
+    marker = CHROMA_DIR / ".install-complete"
+    if not args.dry_run:
+        marker.unlink(missing_ok=True)
+
     if args.wipe and not args.dry_run:
         wipe()
 
-    entries = [parse_entry(f) for f in files]
+    parsed = [(f, parse_entry(f)) for f in files]
+    open_files = [f for f, e in parsed if e["date"] >= OPEN_SESSION_FROM]
+    entries = [e for _, e in parsed if e["date"] < OPEN_SESSION_FROM]
     journal = [e for e in entries if not e["is_dream"]]
     dreams = [e for e in entries if e["is_dream"]]
 
@@ -252,10 +334,32 @@ def main():
             eid = import_dream(e)
             print(f"  {e['date']}  {eid}  DREAM  {e['title'][:50]}")
 
-    install_sessions(to_install, args.dry_run)
+    # The open session's entries: backup only, dreams included. See
+    # OPEN_SESSION_FROM -- embedding them would let search find unclosed
+    # material and a visitor's close add them a second time.
+    print(f"\n{len(open_files)} open-session entr"
+          f"{'y' if len(open_files) == 1 else 'ies'} (backup only, not embedded)")
+    install_files([(f, JOURNAL_DIR / f.name) for f in open_files],
+                  args.dry_run)
+
+    install_files(to_install, args.dry_run)
+    install_files(derived_files(), args.dry_run)
+
+    if not args.dry_run:
+        # The demo ships every summary layer, not just the rolling seed.
+        # Populate retrieval locally from these captured docs (no API calls).
+        import passages
+        import summarizer
+        import dreams as dream_store
+        passages.sync(collection)
+        summarizer.sync_summary_embeddings(quiet=True)
+        dream_store.build_index()
+        marker.touch()
 
     print(f"\ndone. {'(dry run, nothing written)' if args.dry_run else ''}")
-    if not args.dry_run:
+    if not args.dry_run and args.wipe:
+        # Only the capture path needs this. A plain install is already
+        # complete — derived/ supplied everything Claude would have.
         print("next: python capture_fixtures.py --stages tag,entities,summaries,dreams,patterns,organic --i-am-running-the-seed-corpus")
 
 

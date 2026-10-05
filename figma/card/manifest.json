@@ -1,0 +1,11 @@
+{
+  "name": "Main Character: Card",
+  "id": "main-character-card-import",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "permissions": ["teamlibrary"],
+  "networkAccess": { "allowedDomains": ["none"] }
+}

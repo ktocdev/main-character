@@ -1,19 +1,28 @@
-  /* Patterns */
-  #patterns { max-width: 46rem; margin: 0 auto; width: 100%; padding: 1.5rem; overflow-y: auto; }
-  #pat-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
-  #pat-status { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); }
-  .pattern {
-    border: 1px solid var(--border); border-radius: 10px;
-    background: var(--bg-raised); padding: 1rem 1.2rem; margin-bottom: 1rem;
+  /* SPDX-License-Identifier: AGPL-3.0-or-later */
+  /* Patterns: one column of cards (Pattern A). Header row, kind filter,
+     the cards, a footnote restating the help text. */
+  #pat-kinds { margin-top: .9rem; }
+  #pat-notice { margin-top: .9rem; }
+  #pat-notice:empty { display: none; }
+  #pat-list { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.2rem; }
+  .pattern .head { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem .8rem; }
+  .pattern h3 { font-size: 1.15rem; font-weight: 600; color: var(--text-accent); min-width: 0; text-wrap: pretty; }
+  .pattern .kind { font: .78rem var(--font-ui); color: var(--text-muted); white-space: nowrap; }
+  .pattern .dismiss { margin-left: auto; min-height: 1.8rem; padding: .2rem .6rem; font-size: .78rem; }
+  .pattern p { margin: .6rem 0 0; text-wrap: pretty; }
+  .pat-trigger { color: var(--text-muted); font-style: italic; font-size: .92rem; }
+  .pat-toggle {
+    margin-top: .9rem; border: 0; background: transparent; color: var(--text-muted);
+    font: .78rem var(--font-ui); padding: 0; display: inline-flex; align-items: center; gap: .4rem; min-height: 1.6rem;
   }
-  .pattern h3 {
-    font-size: 1.05rem; font-weight: 600; color: var(--accent);
-    display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
+  .pat-toggle:hover { color: var(--text-default); }
+  .pat-toggle .caret { font-size: .7rem; }
+  .pat-instances {
+    margin-top: .5rem; display: grid; grid-template-columns: max-content minmax(0, 1fr);
+    gap: .35rem .9rem; font: .82rem/1.5 var(--font-ui); color: var(--text-muted);
+    border-top: 1px solid var(--border-default); padding-top: .7rem;
   }
-  .pat-kind { font: .75rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); font-weight: normal; }
-  .pat-dismiss { margin-left: auto; }
-  .pattern p { margin: .4rem 0; font-size: .95rem; }
-  .pat-trigger { color: var(--text-dim); font-style: italic; font-size: .88rem; }
-  .pat-instances { font: .8rem 'CMU Sans Demi Condensed', system-ui, sans-serif; color: var(--text-dim); margin-top: .5rem; }
-  .pat-instances div { padding: .12rem 0; }
-
+  .pat-instances[hidden] { display: none; }
+  .pat-instances .d { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text-default); }
+  .pat-instances .n { text-wrap: pretty; }
+  #pat-empty { margin-top: 1.2rem; }

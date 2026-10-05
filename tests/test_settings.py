@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The settings surface: the .env writer and the two routes over it.
 
 Every test here points env_file.ENV_PATH at a throwaway file. Nothing in
@@ -37,7 +38,7 @@ STARTING_ENV = (
     "ANTHROPIC_API_KEY=fake-key-original\n"
     "\n"
     "# who the entries are by\n"
-    "RAG_AUTHOR_NAME=Jordan\n"
+    "MC_AUTHOR_NAME=Jordan\n"
     "ANTHROPIC_BASE_URL=https://api.anthropic.com\n"
 )
 
@@ -69,10 +70,10 @@ def test_comments_and_unknown_keys_survive_a_save(env):
 
 
 def test_an_existing_key_is_rewritten_in_place(env):
-    env_file.update_env({"RAG_AUTHOR_NAME": "Katina"})
+    env_file.update_env({"MC_AUTHOR_NAME": "Katina"})
     lines = env.read_text(encoding="utf-8").splitlines()
     # still directly under its own comment, not appended to the end
-    assert lines[lines.index("# who the entries are by") + 1] == "RAG_AUTHOR_NAME=Katina"
+    assert lines[lines.index("# who the entries are by") + 1] == "MC_AUTHOR_NAME=Katina"
 
 
 def test_clearing_a_value_removes_the_assignment(env):
@@ -135,8 +136,8 @@ def test_a_quoted_value_ends_at_its_closing_quote(env):
 
 
 def test_a_hash_inside_a_quoted_value_survives_a_round_trip(env):
-    env_file.update_env({"RAG_AUTHOR_NAME": "Jordan # not a comment"})
-    assert env_file.read_env()["RAG_AUTHOR_NAME"] == "Jordan # not a comment"
+    env_file.update_env({"MC_AUTHOR_NAME": "Jordan # not a comment"})
+    assert env_file.read_env()["MC_AUTHOR_NAME"] == "Jordan # not a comment"
 
 
 def test_an_unlisted_date_format_keeps_the_style_it_renders_as():
@@ -361,6 +362,27 @@ def test_a_negative_spend_cap_is_refused(env, client):
     assert "MC_MAX_SESSION_SPEND" not in env_file.read_env()
 
 
+def test_processing_offers_only_sonnet_and_haiku(env, client):
+    """Opus is kept off the processing picker (config.PROCESSING_MODELS):
+    processing calls are sized for thinking switched off, which Opus 5.5
+    can't do. The companion picker still offers every model."""
+    models = client.get("/api/settings").json()["options"]["models"]
+    assert sorted(m["value"] for m in models if m["processing"]) == [
+        "claude-haiku-4-5", "claude-sonnet-5", "claude-sonnet-5-5"]
+    assert "claude-opus-5-5" in [m["value"] for m in models]
+
+
+def test_an_opus_processing_model_is_refused(env, client):
+    for model in ("claude-opus-5-5", "claude-opus-4-6"):
+        r = client.post("/api/settings",
+                        json={"values": {"MC_PROCESSING_MODEL": model}})
+        assert r.status_code == 400, model
+    assert "MC_PROCESSING_MODEL" not in env_file.read_env()
+    ok = client.post("/api/settings", json={"values": {
+        "MC_COMPANION_MODEL": "claude-opus-5-5", "MC_COMPANION_EFFORT": "xhigh"}})
+    assert ok.status_code == 200
+
+
 def test_an_unknown_model_is_refused(env, client):
     r = client.post("/api/settings",
                     json={"values": {"MC_PROCESSING_MODEL": "claude-imaginary-9"}})
@@ -404,7 +426,7 @@ def test_a_streaming_reply_holds_the_restart_off(env, client, monkeypatch):
         seen.append(server._BUSY["count"])
         yield "a reply, arriving"
 
-    monkeypatch.setattr(server.companion, "stream_reply", fake)
+    monkeypatch.setattr(server.companion, "stream_lookup", fake)
 
     r = client.post("/api/lookup", json={"message": "when did I last write?"})
     assert r.status_code == 200
@@ -420,7 +442,7 @@ def test_the_count_is_given_back_when_a_stream_dies(env, client, monkeypatch):
         yield "half a "
         raise RuntimeError("the model call failed mid-stream")
 
-    monkeypatch.setattr(server.companion, "stream_reply", fake)
+    monkeypatch.setattr(server.companion, "stream_lookup", fake)
 
     before = server._BUSY["count"]
     with pytest.raises(RuntimeError):
@@ -442,7 +464,10 @@ def test_the_seed_destination_lives_only_in_the_child_environment(
     any later restart lands on real data."""
     (tmp_path / "chroma_data").mkdir()
     (tmp_path / "chroma_data" / "chroma.sqlite3").touch()
+    (tmp_path / "chroma_data" / ".install-complete").touch()
     monkeypatch.setattr(server, "SEED_ROOT", tmp_path)
+    from seed_corpus import reset_demo_state
+    monkeypatch.setattr(reset_demo_state, "restore", lambda path: None)
     # not object(): this one gets all the way to `srv.should_exit = True`,
     # which a bare object cannot carry
     monkeypatch.setitem(server.SERVER, "instance", SimpleNamespace())
@@ -455,21 +480,61 @@ def test_the_seed_destination_lives_only_in_the_child_environment(
 
     child = server.restart_env()
     assert child["MC_SEED_INSTANCE"] == "1"
-    assert child["RAG_JOURNAL_DIR"].endswith("journal_entries")
+    assert child["MC_JOURNAL_DIR"].endswith("journal_entries")
 
 
 def test_a_plain_restart_always_leaves_the_seed_instance(env, monkeypatch):
     """The way home is any restart at all. The keys are dropped
     unconditionally and only put back when the seed is asked for by name, so a
     demo is one restart deep and cannot be wandered into permanently."""
+    monkeypatch.setattr(server, "SEED_INSTANCE", True)
     monkeypatch.setitem(server.os.environ, "MC_SEED_INSTANCE", "1")
-    monkeypatch.setitem(server.os.environ, "RAG_JOURNAL_DIR",
+    monkeypatch.setitem(server.os.environ, "MC_JOURNAL_DIR",
                         "seed_corpus/install/journal_entries")
+    monkeypatch.delitem(server.os.environ, server.HOME_DIRS_KEY, raising=False)
     monkeypatch.setitem(server.RESTART, "into", "journal")
 
     child = server.restart_env()
     assert "MC_SEED_INSTANCE" not in child
-    assert "RAG_JOURNAL_DIR" not in child
+    assert "MC_JOURNAL_DIR" not in child
+
+
+def test_a_plain_restart_keeps_a_journal_s_own_data_dirs(env, monkeypatch):
+    """The sandbox launcher points all eight data dirs somewhere of its own.
+    Dropping them on restart moved the journal onto the repo-root defaults
+    mid-test -- the wizard's own save-and-restart included."""
+    monkeypatch.setattr(server, "SEED_INSTANCE", False)
+    monkeypatch.setitem(server.os.environ, "MC_JOURNAL_DIR", "/sandbox/_d/j")
+    monkeypatch.setitem(server.RESTART, "into", "journal")
+    monkeypatch.setitem(server.RESTART, "keys", set())
+
+    child = server.restart_env()
+    assert child["MC_JOURNAL_DIR"] == "/sandbox/_d/j"
+
+
+def test_the_way_home_from_the_seed_restores_the_journal_s_data_dirs(
+        env, monkeypatch):
+    """Into the seed and back again lands on the journal it left, not on the
+    defaults: the child carries the dirs the seed's own overwrote."""
+    monkeypatch.setitem(server.RESTART, "keys", set())
+    monkeypatch.setattr(server, "SEED_INSTANCE", False)
+    for k in server.DATA_DIR_KEYS:
+        monkeypatch.delitem(server.os.environ, k, raising=False)
+    monkeypatch.setitem(server.os.environ, "MC_JOURNAL_DIR", "/sandbox/_d/j")
+    monkeypatch.setitem(server.RESTART, "into", "seed")
+    seed = server.restart_env()
+    assert seed["MC_JOURNAL_DIR"] == server.SEED_ENV["MC_JOURNAL_DIR"]
+
+    monkeypatch.setattr(server, "SEED_INSTANCE", True)
+    for k in [*server.SEED_ENV, server.HOME_DIRS_KEY]:
+        monkeypatch.setitem(server.os.environ, k, seed[k])
+    monkeypatch.setitem(server.RESTART, "into", "journal")
+    home = server.restart_env()
+    assert home["MC_JOURNAL_DIR"] == "/sandbox/_d/j"
+    assert "MC_SEED_INSTANCE" not in home
+    assert server.HOME_DIRS_KEY not in home
+    # a dir the journal never set stays unset, rather than keeping the seed's
+    assert "MC_CHROMA_DIR" not in home
 
 
 def test_an_uninstalled_seed_corpus_is_refused_not_booted_empty(
@@ -520,7 +585,8 @@ def test_background_work_is_released_when_the_stream_dies(env, client, monkeypat
         raise RuntimeError("the model call failed mid-stream")
 
     monkeypatch.setattr(server.companion, "stream_reply", boom)
-    monkeypatch.setattr(dreams, "store_dream_entry", lambda *a, **k: "d1")
+    monkeypatch.setattr(dreams, "store_dream_entry",
+                        lambda *a, **k: ("d1", Path("d1.md")))
     monkeypatch.setattr(dreams, "ingest_dream_entry", lambda *a, **k: None)
     monkeypatch.setattr(server.sessions, "append_message", lambda *a, **k: None)
 
@@ -536,3 +602,96 @@ def test_a_save_records_its_keys_for_the_restart(env, client):
     server.RESTART["keys"].clear()
     client.post("/api/settings", json={"values": {"MC_DATE_FORMAT": "%m/%d/%y"}})
     assert "MC_DATE_FORMAT" in server.RESTART["keys"]
+
+
+# ---- categories ----
+
+def test_get_lists_the_built_in_categories(env, client):
+    """The toggles render from this, so every built-in has to arrive with its
+    definition, and the disabled line is reported like any other setting -- in
+    both `values` (the file) and `active` (the process)."""
+    import categories as cats
+    body = client.get("/api/settings").json()
+    offered = body["options"]["categories"]
+    assert [c["name"] for c in offered] == list(cats.CATEGORIES)
+    assert all(c["description"] for c in offered)
+    assert "MC_DISABLED_CATEGORIES" in body["values"]
+    assert "MC_DISABLED_CATEGORIES" in body["active"]
+
+
+def test_disabling_categories_round_trips_and_is_normalised(env, client):
+    """Stored in built-in order regardless of the order the toggles were sent,
+    so the line is stable and the pending-marker comparison stays honest."""
+    r = client.post("/api/settings",
+                    json={"values": {"MC_DISABLED_CATEGORIES": "pets,relationships"}})
+    assert r.status_code == 200
+    # relationships precedes pets in the built-in list
+    assert env_file.read_env()["MC_DISABLED_CATEGORIES"] == "relationships,pets"
+    after = client.get("/api/settings").json()
+    assert after["values"]["MC_DISABLED_CATEGORIES"] == "relationships,pets"
+
+
+def test_disabling_an_unknown_category_is_refused(env, client):
+    r = client.post("/api/settings", json={
+        "values": {"MC_DISABLED_CATEGORIES": "work,not_a_category"}})
+    assert r.status_code == 400
+    assert "MC_DISABLED_CATEGORIES" not in env_file.read_env()
+
+
+def test_disabling_every_category_is_refused(env, client):
+    """An empty enum is a schema the API rejects, and a tagger that can offer
+    nothing is a worse state than any one category being on: one has to stay."""
+    import categories as cats
+    r = client.post("/api/settings", json={
+        "values": {"MC_DISABLED_CATEGORIES": ",".join(cats.CATEGORIES)}})
+    assert r.status_code == 400
+    assert "MC_DISABLED_CATEGORIES" not in env_file.read_env()
+
+
+def test_clearing_the_disabled_line_turns_everything_back_on(env, client):
+    client.post("/api/settings",
+                json={"values": {"MC_DISABLED_CATEGORIES": "pets"}})
+    assert env_file.read_env()["MC_DISABLED_CATEGORIES"] == "pets"
+    client.post("/api/settings",
+                json={"values": {"MC_DISABLED_CATEGORIES": ""}})
+    # gone from the file entirely, so config's default (all on) applies again
+    assert "MC_DISABLED_CATEGORIES" not in env_file.read_env()
+
+
+def test_enabled_categories_drops_the_disabled_ones(monkeypatch):
+    import config
+    import categories as cats
+    monkeypatch.setattr(config, "DISABLED_CATEGORIES", ["pets", "relationships"])
+    enabled = cats.enabled_categories()
+    assert "pets" not in enabled and "relationships" not in enabled
+    assert "work" in enabled
+    # the definition rides along, so the tagging prompt still describes it
+    assert enabled["work"] == cats.CATEGORIES["work"]
+
+
+def test_tagging_never_offers_or_applies_a_disabled_category(monkeypatch):
+    """Two guarantees at once: the schema handed to the model excludes the
+    disabled name, and a reply that names it anyway (an old mock fixture, a
+    rename) is dropped rather than applied."""
+    import config
+    import categories as cats
+    monkeypatch.setattr(config, "DISABLED_CATEGORIES", ["pets"])
+    seen = {}
+
+    def create(**kw):
+        seen["enum"] = kw["output_config"]["format"]["schema"]["properties"][
+            "categories"]["items"]["properties"]["name"]["enum"]
+        text = json.dumps({"categories": [
+            {"name": "work", "evidence": "job stuff"},
+            {"name": "pets", "evidence": "the dog wandered through"},
+        ]})
+        return SimpleNamespace(
+            stop_reason="end_turn",
+            content=[SimpleNamespace(type="text", text=text)])
+
+    client = SimpleNamespace(messages=SimpleNamespace(create=create))
+    conv = {"text": "a short entry about my job", "date": "2026-08-01", "title": "Work"}
+    tags = cats.tag_conversation(client, conv)
+
+    assert "pets" not in seen["enum"] and "work" in seen["enum"]
+    assert "work" in tags and "pets" not in tags

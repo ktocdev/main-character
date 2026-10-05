@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { $ } from './core.js';
 import { costLine } from './settings.js';
+import * as popover from './popover.js';
 
 // ---- the nav cost icon ----
 // Cost is available, not ambient. A running dollar figure sitting in the nav
@@ -32,6 +34,15 @@ async function show() {
     // promising otherwise is the kind of wrong number that gets believed.
     note.textContent = 'since this journal started, estimated';
     panel.append(line, note);
+    // In mock mode the figure above still climbs (the meter counts canned
+    // calls), so it needs saying outright that none of it is real -- the same
+    // fact Settings -> Models & Cost makes about the monthly ledger.
+    if (c.mock) {
+      const mock = document.createElement('div');
+      mock.className = 'cost-note cost-mock';
+      mock.textContent = 'mock mode, so replies are canned and nothing real is spent';
+      panel.append(mock);
+    }
   } catch {
     // Silent-zero would be a lie in the one direction that matters.
     panel.textContent = 'cost unavailable';
@@ -42,16 +53,14 @@ function toggle(next) {
   open = next;
   $('cost-panel').hidden = !open;
   $('cost-toggle').setAttribute('aria-expanded', String(open));
-  if (open) show();
+  if (open) { popover.opened('cost'); show(); }
 }
 
 export function init() {
   $('cost-toggle').onclick = e => { e.stopPropagation(); toggle(!open); };
-  // Anywhere else dismisses it. A panel that only closes by pressing the same
-  // small icon again is one people leave open by accident, which quietly
-  // turns it back into the ambient figure this is meant not to be.
-  document.addEventListener('click', () => { if (open) toggle(false); });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && open) toggle(false);
-  });
+  // Anywhere else dismisses it (popover.js). A panel that only closes by
+  // pressing the same small icon again is one people leave open by accident,
+  // which quietly turns it back into the ambient figure this is meant not to be.
+  popover.register('cost', () => { if (open) toggle(false); },
+    t => $('cost-panel').contains(t));
 }

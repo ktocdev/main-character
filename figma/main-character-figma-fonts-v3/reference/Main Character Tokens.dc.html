@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+@font-face { font-family: 'CMU Sans Demi Condensed'; src: url('fonts/cmu-sans-demicondensed.ttf') format('truetype'); font-weight: 400 600; font-display: swap; }
+@keyframes lamp-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+html, body { margin: 0; background: #211d19; }
+* { box-sizing: border-box; scrollbar-width: thin; scrollbar-color: #3d362f transparent; }
+a { color: #a99f92; text-decoration: none; }
+a:hover { color: #d99e5b; }
+.mc { --bg:#211d19; --bg-raised:#2a2521; --bg-input:#322c27; --text:#e8e0d5; --text-dim:#a99f92; --accent:#d99e5b; --accent-dim:#8a6a44; --border:#3d362f; --you:#c9b99f; --error:#c96a5a; color-scheme: dark; }
+.mc[data-theme="light"] { --bg:#faf7f2; --bg-raised:#ffffff; --bg-input:#f1ece4; --text:#38322b; --text-dim:#6b6258; --accent:#9c6021; --accent-dim:#827020; --border:#e4dcd0; --you:#6a4a2a; --error:#a8493a; color-scheme: light; }
+.mc[data-theme="light"] a { color: #6b6258; }
+.mc[data-theme="light"] a:hover { color: #9c6021; }
+</style>
+</helmet>
+
+<div class="mc" data-theme="{{ theme }}" style="--font-ui:'CMU Sans Demi Condensed', system-ui, sans-serif; --font-body:'Old Standard TT', Georgia, 'Times New Roman', serif; background: var(--bg); color: var(--text); font: 17px/1.65 var(--font-body); min-height: 100vh;">
+
+  <header style="display: flex; align-items: baseline; flex-wrap: wrap; gap: .8rem 1.5rem; padding: 1rem 1.5rem .8rem; border-bottom: 1px solid var(--border);">
+    <h1 style="font-size: 1.15rem; font-weight: normal; font-style: italic; color: var(--accent); margin: 0;">main character</h1>
+    <span style="font: .8rem var(--font-ui); color: var(--text-dim);">design tokens · 10 colors · 2 families · 8 type steps · 8 space steps · 5 radii · 1 motion</span>
+    <span style="margin-left: auto; font: .8rem var(--font-ui); color: var(--text-dim);">source: static/css/tokens.css</span>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: flex-start;">
+
+    <nav style="position: sticky; top: 0; flex: 1 1 11rem; max-width: 100%; padding: 1.5rem; display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; font: .9rem var(--font-ui); background: var(--bg); z-index: 2;">
+      <a href="#color" style="padding: .35rem .8rem; border-radius: 6px; display: block;" style-hover="background: var(--bg-input);">color</a>
+      <a href="#type" style="padding: .35rem .8rem; border-radius: 6px; display: block;" style-hover="background: var(--bg-input);">type</a>
+      <a href="#space" style="padding: .35rem .8rem; border-radius: 6px; display: block;" style-hover="background: var(--bg-input);">spacing</a>
+      <a href="#radius" style="padding: .35rem .8rem; border-radius: 6px; display: block;" style-hover="background: var(--bg-input);">radius</a>
+      <a href="#motion" style="padding: .35rem .8rem; border-radius: 6px; display: block;" style-hover="background: var(--bg-input);">motion</a>
+    </nav>
+
+    <main style="flex: 999 1 26rem; min-width: 0; max-width: 52rem; padding: 1.5rem; display: flex; flex-direction: column; gap: 3rem;">
+
+      <section style="display: flex; flex-direction: column; gap: .6rem;">
+        <h2 style="font-size: 1.05rem; font-weight: normal; font-style: italic; color: var(--accent); margin: 0;">Tokens</h2>
+        <p style="margin: 0; max-width: 40rem; font-size: .95rem; color: var(--text-dim); text-wrap: pretty;">Every semantic token the app is built from, rendered live. Dark is the default palette; light is a second value set for the same ten names, not a separate design. Two font families, one motion idiom. Nothing here is proposed — it is what <span style="font-family: var(--font-ui); color: var(--text);">tokens.css</span> already says.</p>
+      </section>
+
+      <!-- COLOR -->
+      <section id="color" style="display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 5rem;">
+        <h3 style="margin: 0; padding-bottom: .4rem; border-bottom: 1px solid var(--border); font: 600 .7rem var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--accent-dim);">Color</h3>
+        <p style="margin: 0; max-width: 40rem; font-size: .85rem; color: var(--text-dim); text-wrap: pretty;">Ten semantic names. Dark applies when nothing else is set; light applies when the OS prefers it or <span style="font-family: var(--font-ui); color: var(--text);">data-theme="light"</span> is pinned on <span style="font-family: var(--font-ui); color: var(--text);">&lt;html&gt;</span>. Four light-mode values deviate from tokens.css, all contrast fixes: <span style="font-family: var(--font-ui); color: var(--text);">--accent-dim</span> #827020 (was #d9b183, ~1.9:1), <span style="font-family: var(--font-ui); color: var(--text);">--accent</span> #9c6021 (was #b5732f, ~3.6:1), <span style="font-family: var(--font-ui); color: var(--text);">--text-dim</span> #6b6258 (was #8c8378, ~3.5:1), <span style="font-family: var(--font-ui); color: var(--text);">--you</span> #6a4a2a (was #6b5d49). Dark is unchanged.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0 1rem; padding: 0 .2rem; font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim);">
+          <div>token · role</div><div>dark (default)</div><div>light</div>
+        </div>
+
+        <sc-for list="{{ colors }}" as="c" hint-placeholder-count="10">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .6rem 1rem; align-items: stretch; padding-bottom: .8rem; border-bottom: 1px solid var(--border);">
+            <div style="display: flex; flex-direction: column; gap: .15rem; min-width: 0;">
+              <div style="font: 600 .95rem var(--font-ui); color: var(--text);">{{ c.name }}</div>
+              <div style="font-size: .85rem; color: var(--text-dim); line-height: 1.45; text-wrap: pretty;">{{ c.role }}</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: .8rem; padding: .6rem .8rem; border-radius: 10px; background: #211d19; border: 1px solid #3d362f;">
+              <div style="width: 2.6rem; height: 2.6rem; flex-shrink: 0; border-radius: 8px; border: 1px solid #3d362f; background: {{ c.dark }};"></div>
+              <sc-if value="{{ c.isText }}" hint-placeholder-val="{{ true }}"><span style="font-size: 1.4rem; line-height: 1; color: {{ c.dark }};">Aa</span></sc-if>
+              <span style="margin-left: auto; font: .8rem var(--font-ui); color: #a99f92;">{{ c.dark }}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: .8rem; padding: .6rem .8rem; border-radius: 10px; background: #faf7f2; border: 1px solid #e4dcd0;">
+              <div style="width: 2.6rem; height: 2.6rem; flex-shrink: 0; border-radius: 8px; border: 1px solid #e4dcd0; background: {{ c.light }};"></div>
+              <sc-if value="{{ c.isText }}" hint-placeholder-val="{{ true }}"><span style="font-size: 1.4rem; line-height: 1; color: {{ c.light }};">Aa</span></sc-if>
+              <span style="margin-left: auto; font: .8rem var(--font-ui); color: #6b6258;">{{ c.light }}</span>
+            </div>
+            
+          </div>
+        </sc-for>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; margin-top: .4rem;">
+          <div style="padding: 1rem 1.2rem; border-radius: 10px; background: #211d19; border: 1px solid #3d362f; display: flex; flex-direction: column; gap: .4rem;">
+            <div style="font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: #8a6a44;">you · september 1, 2026</div>
+            <p style="margin: 0; font-size: .95rem; color: #c9b99f;">Wrote until the lamp was the only light left on.</p>
+            <div style="font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: #8a6a44; margin-top: .4rem;">companion</div>
+            <p style="margin: 0; font-size: .95rem; color: #e8e0d5;">That is the second night this week you stayed with it.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; margin-top: .6rem; font: .8rem var(--font-ui);">
+              <span style="color: #a99f92;">31 entries · 49 entities</span>
+              <span style="color: #d99e5b;">saved</span>
+              <span style="color: #c96a5a;">could not reach the model</span>
+            </div>
+          </div>
+          <div style="padding: 1rem 1.2rem; border-radius: 10px; background: #faf7f2; border: 1px solid #e4dcd0; display: flex; flex-direction: column; gap: .4rem;">
+            <div style="font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: #827020;">you · september 1, 2026</div>
+            <p style="margin: 0; font-size: .95rem; color: #6a4a2a;">Wrote until the lamp was the only light left on.</p>
+            <div style="font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: #827020; margin-top: .4rem;">companion</div>
+            <p style="margin: 0; font-size: .95rem; color: #38322b;">That is the second night this week you stayed with it.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; margin-top: .6rem; font: .8rem var(--font-ui);">
+              <span style="color: #6b6258;">31 entries · 49 entities</span>
+              <span style="color: #9c6021;">saved</span>
+              <span style="color: #a8493a;">could not reach the model</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TYPE -->
+      <section id="type" style="display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 5rem;">
+        <h3 style="margin: 0; padding-bottom: .4rem; border-bottom: 1px solid var(--border); font: 600 .7rem var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--accent-dim);">Typography</h3>
+        <p style="margin: 0; max-width: 40rem; font-size: .85rem; color: var(--text-dim); text-wrap: pretty;">Two families, no third. Serif is writing — yours and the companion's. Condensed sans is the machinery around it: buttons, labels, nav, meta.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem;">
+          <div style="padding: 1.2rem; border-radius: 10px; background: var(--bg-raised); border: 1px solid var(--border); display: flex; flex-direction: column; gap: .6rem;">
+            <div style="font: 600 .95rem var(--font-ui); color: var(--text);">--font-body</div>
+            <div style="font: .8rem var(--font-ui); color: var(--text-dim);">'Old Standard TT', Georgia, 'Times New Roman', serif · Google Fonts · 400, 400 italic, 700</div>
+            <p style="margin: .4rem 0 0; font-size: 1.4rem; line-height: 1.3; text-wrap: pretty;">After work, Jordan met Mika for a run at Greenwood Park.</p>
+            <p style="margin: 0; font-size: 1.05rem; font-style: italic; color: var(--accent);">main character — the wordmark is this face, italic, in accent</p>
+            <p style="margin: 0; font-size: .95rem; font-weight: 700;">Bold is reserved for entry titles and category names.</p>
+            <div style="font-size: .85rem; color: var(--text-dim); text-wrap: pretty;">Journal entries, companion replies, help prose, AI-written summaries — anything meant to read as writing, even when a machine wrote it.</div>
+          </div>
+          <div style="padding: 1.2rem; border-radius: 10px; background: var(--bg-raised); border: 1px solid var(--border); display: flex; flex-direction: column; gap: .6rem;">
+            <div style="font: 600 .95rem var(--font-ui); color: var(--text);">--font-ui</div>
+            <div style="font: .8rem var(--font-ui); color: var(--text-dim);">'CMU Sans Demi Condensed', system-ui, sans-serif · self-hosted · 400–600</div>
+            <p style="margin: .4rem 0 0; font: 1.4rem/1.3 var(--font-ui);">write · chat · search · entities · categories</p>
+            <p style="margin: 0; font: 600 .95rem var(--font-ui);">save entry &nbsp; send &nbsp; reflect &nbsp; detect patterns</p>
+            <p style="margin: 0; font: 600 .7rem var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--accent-dim);">july 30, 2026 · updating memory</p>
+            <div style="font-size: .85rem; color: var(--text-dim); text-wrap: pretty;">Every button, label, nav item, status line, chip and meta line. The tell for "this is interface, not journal content."</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0 1rem; padding: 0 .2rem; margin-top: .6rem; font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim);">
+          <div>step · covers</div><div>--font-ui</div><div>--font-body</div>
+        </div>
+
+        <sc-for list="{{ typeScale }}" as="t" hint-placeholder-count="8">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .4rem 1rem; align-items: center; padding-bottom: .6rem; border-bottom: 1px solid var(--border);">
+            <div style="display: flex; flex-direction: column; gap: .1rem; min-width: 0;">
+              <div style="display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap;"><span style="font: 600 .95rem var(--font-ui); color: var(--text);">{{ t.name }}</span><span style="font: .8rem var(--font-ui); color: var(--text-dim);">{{ t.value }}</span></div>
+              <div style="font-size: .85rem; color: var(--text-dim); line-height: 1.45; text-wrap: pretty;">{{ t.covers }}</div>
+            </div>
+            <div style="font-family: var(--font-ui); line-height: 1.3; font-size: {{ t.rem }}; color: var(--text); overflow-wrap: anywhere;">{{ t.uiSample }}</div>
+            <div style="font-family: var(--font-body); line-height: 1.3; font-size: {{ t.rem }}; color: var(--text); overflow-wrap: anywhere;">{{ t.bodySample }}</div>
+          </div>
+        </sc-for>
+
+        <div style="padding: 1rem 1.2rem; border-radius: 10px; border: 1px solid var(--border); border-left: 3px solid var(--accent-dim); background: var(--bg-raised); display: flex; flex-direction: column; gap: .4rem; margin-top: .4rem;">
+          <div style="display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap;"><span style="font: 600 .95rem var(--font-ui); color: var(--text);">body prose</span><span style="font: .8rem var(--font-ui); color: var(--text-dim);">17px / 1.65 · literal, not on the scale</span></div>
+          <p style="margin: 0; font: 17px/1.65 var(--font-body); color: var(--text); max-width: 46rem; text-wrap: pretty;">Here's what I notice you didn't: on 8/3, the recovery cost you a sick day. This time you went to work, sat through the meetings, and still made it to Groundwork after. You're not doing the same loop, you're doing a tighter one.</p>
+          <div style="font-size: .85rem; color: var(--text-dim); text-wrap: pretty;">Set on <span style="font-family: var(--font-ui); color: var(--text);">body</span> directly. Entries and companion replies keep this size; do not swap it for <span style="font-family: var(--font-ui); color: var(--text);">--font-base</span>.</div>
+        </div>
+      </section>
+
+      <!-- SPACING -->
+      <section id="space" style="display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 5rem;">
+        <h3 style="margin: 0; padding-bottom: .4rem; border-bottom: 1px solid var(--border); font: 600 .7rem var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--accent-dim);">Spacing</h3>
+        <p style="margin: 0; max-width: 40rem; font-size: .85rem; color: var(--text-dim); text-wrap: pretty">Eight steps, chosen by frequency — every step is a value the app already used, nothing was rounded. The long tail of one-off nudges stays literal.</p>
+        <sc-for list="{{ spaceScale }}" as="s" hint-placeholder-count="8">
+          <div style="display: grid; grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr); gap: .3rem 1rem; align-items: center; padding-bottom: .5rem; border-bottom: 1px solid var(--border);">
+            <div style="display: flex; flex-direction: column; gap: .05rem;">
+              <span style="font: 600 .95rem var(--font-ui); color: var(--text);">{{ s.name }}</span>
+              <span style="font: .8rem var(--font-ui); color: var(--text-dim);">{{ s.value }}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: .8rem; min-width: 0;">
+              <div style="height: 1.2rem; flex-shrink: 0; border-radius: 2px; background: var(--accent-dim); width: {{ s.rem }};"></div>
+              <span style="font-size: .85rem; color: var(--text-dim); line-height: 1.45; text-wrap: pretty;">{{ s.covers }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+      <!-- RADIUS -->
+      <section id="radius" style="display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 5rem;">
+        <h3 style="margin: 0; padding-bottom: .4rem; border-bottom: 1px solid var(--border); font: 600 .7rem var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--accent-dim);">Radius</h3>
+        <p style="margin: 0; max-width: 40rem; font-size: .85rem; color: var(--text-dim); text-wrap: pretty;">Three tiers: small controls, default components, pill/circle. Rendered at real component height (2.2rem) — at that size 8–10px reads rounder than the number suggests. That is correct, not drift.</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem;">
+          <sc-for list="{{ radii }}" as="r" hint-placeholder-count="5">
+            <div style="padding: 1rem 1.2rem; border-radius: 10px; background: var(--bg-raised); border: 1px solid var(--border); display: flex; flex-direction: column; gap: .6rem;">
+              <div style="display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap;"><span style="font: 600 .95rem var(--font-ui); color: var(--text);">{{ r.name }}</span><span style="font: .8rem var(--font-ui); color: var(--text-dim);">{{ r.value }}</span></div>
+              <div style="display: flex; gap: .8rem; align-items: center;">
+                <div style="height: 2.2rem; width: {{ r.w }}; display: flex; align-items: center; justify-content: center; background: var(--bg-input); border: 1px solid var(--border); font: .8rem var(--font-ui); color: var(--text-dim); border-radius: {{ r.value }};">{{ r.label }}</div>
+                <div style="height: 2.2rem; width: 2.2rem; flex-shrink: 0; background: var(--accent); border-radius: {{ r.value }};"></div>
+              </div>
+              <div style="font-size: .85rem; color: var(--text-dim); line-height: 1.45; text-wrap: pretty;">{{ r.covers }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; font: .8rem var(--font-ui); color: var(--text-dim); padding: .8rem 1rem; border: 1px dashed var(--accent-dim); border-radius: 10px;">
+          <span style="color: var(--accent-dim); letter-spacing: .08em; text-transform: uppercase; font-weight: 600; font-size: .7rem;">left literal on purpose</span>
+          <span style="display: inline-flex; align-items: center; gap: .5rem;"><span style="display: inline-block; width: 1.6rem; height: 1.6rem; border-radius: 4px; background: var(--bg-input); border: 1px solid var(--border);"></span>4px · .set-control select/input, #help code</span>
+          <span style="display: inline-flex; align-items: center; gap: .5rem;"><span style="display: inline-block; width: 1.6rem; height: 1.6rem; border-radius: 12px; background: var(--bg-input); border: 1px solid var(--border);"></span>12px · #triage-card, the one bigger card</span>
+        </div>
+      </section>
+
+      <!-- MOTION -->
+      <section id="motion" style="display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 5rem; padding-bottom: 3rem;">
+        <h3 style="margin: 0; padding-bottom: .4rem; border-bottom: 1px solid var(--border); font: 600 .7rem var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--accent-dim);">Motion</h3>
+        <p style="margin: 0; max-width: 40rem; font-size: .85rem; color: var(--text-dim); text-wrap: pretty;">One idiom: a slow breathing fade in the accent color, standing in for "something is happening, wait." No spinners, no skeletons. New async states reuse this.</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem;">
+          <div style="padding: 1.2rem; border-radius: 10px; background: var(--bg-raised); border: 1px solid var(--border); display: flex; flex-direction: column; gap: .6rem;">
+            <div style="display: flex; gap: .6rem; align-items: baseline; flex-wrap: wrap;"><span style="font: 600 .95rem var(--font-ui); color: var(--text);">lamp-pulse</span><span style="font: .8rem var(--font-ui); color: var(--text-dim);">1.6s ease-in-out infinite · opacity .25 ↔ 1</span></div>
+            <div style="font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-dim);">companion</div>
+            <div style="font-size: 1.05rem; color: var(--accent); letter-spacing: .15em; text-shadow: 0 0 10px var(--accent-dim); animation: lamp-pulse 1.6s ease-in-out infinite; width: max-content;">· · ·</div>
+            <div style="font-size: .85rem; color: var(--text-dim); text-wrap: pretty;"><span style="font-family: var(--font-ui); color: var(--text);">.msg.thinking::after</span> — the pending reply, before the companion answers.</div>
+          </div>
+          <div style="padding: 1.2rem; border-radius: 10px; background: var(--bg-raised); border: 1px solid var(--border); display: flex; flex-direction: column; gap: .6rem;">
+            <div style="font: 600 .7rem var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-dim);">updating memory</div>
+            <div style="display: flex; flex-direction: column; gap: .2rem; font: .85rem var(--font-ui); color: var(--accent-dim);">
+              <div style="display: flex; gap: .5rem;"><span style="width: 1rem; text-align: center;">·</span><span>saved the entry</span></div>
+              <div style="display: flex; gap: .5rem;"><span style="width: 1rem; text-align: center;">·</span><span>tagged entities</span></div>
+              <div style="display: flex; gap: .5rem;"><span style="width: 1rem; text-align: center; color: var(--accent); animation: lamp-pulse 1.6s ease-in-out infinite;">…</span><span>refreshing weekly arc</span></div>
+              <div style="display: flex; gap: .5rem; opacity: .5;"><span style="width: 1rem; text-align: center;">·</span><span>detecting patterns</span></div>
+              <div style="display: flex; gap: .5rem; opacity: .5;"><span style="width: 1rem; text-align: center;">·</span><span>writing summary</span></div>
+            </div>
+            <div style="font-size: .85rem; color: var(--text-dim); text-wrap: pretty;"><span style="font-family: var(--font-ui); color: var(--text);">.cp-running .cp-mark</span> — pending steps sit at .5 opacity; running and done are full, differing only by mark.</div>
+          </div>
+        </div>
+        <div style="font: .8rem var(--font-ui); color: var(--text-dim);">The only other transition is a one-off <span style="color: var(--text);">transform .15s ease</span> on the help disclosure caret — there is no duration scale.</div>
+      </section>
+
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;'dark' | 'light'&quot;,&quot;section&quot;:&quot;Page&quot;},&quot;units&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;both&quot;,&quot;rem&quot;,&quot;px&quot;],&quot;default&quot;:&quot;both&quot;,&quot;tsType&quot;:&quot;'both' | 'rem' | 'px'&quot;,&quot;section&quot;:&quot;Page&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const units = this.props.units ?? 'both';
+    const fmt = (rem) => {
+      const px = Math.round(rem * 16 * 10) / 10;
+      if (units === 'rem') return rem + 'rem';
+      if (units === 'px') return px + 'px';
+      return rem + 'rem · ' + px + 'px';
+    };
+    const colors = [
+      ['--bg', '#211d19', '#faf7f2', 'page background — warm charcoal, never pure black', false],
+      ['--bg-raised', '#2a2521', '#ffffff', 'cards, panels, dropdown menus — one step up from --bg', false],
+      ['--bg-input', '#322c27', '#f1ece4', 'text inputs, textareas, chips, pressed/active nav', false],
+      ['--text', '#e8e0d5', '#38322b', 'primary text', true],
+      ['--text-dim', '#a99f92', '#6b6258', 'secondary/meta text — timestamps, labels, help copy. Light value changed from #8c8378 (~3.5:1 on --bg) to #6b6258 (~5.3:1).', true],
+      ['--accent', '#d99e5b', '#9c6021', '"lamp amber" — the one accent hue. Active states, the send button, italic headings. Small surfaces only; a large fill reads as a banner. Light value changed from #b5732f (~3.6:1 on --bg) to #9c6021 (~4.8:1).', true],
+      ['--accent-dim', '#8a6a44', '#827020', 'quieter accent — section eyebrows, dashed borders, date labels. Light value changed from #d9b183 (~1.9:1 on --bg) to #827020 (~4.6:1) — same darkness as dark mode\'s value, pushed yellow to sit apart from --you.', true],
+      ['--border', '#3d362f', '#e4dcd0', 'all hairline borders and dividers', false],
+      ['--you', '#c9b99f', '#6a4a2a', "the user's own words in a transcript — distinct from --text without a bubble. Light value changed from #6b5d49 to #6a4a2a (~7.5:1), warmed toward the accent so it separates from --text despite Old Standard's thin hairlines.", true],
+      ['--error', '#c96a5a', '#a8493a', 'the only danger/error state — .set-note.error, .set-feedback.error. Unused on buttons today.', true],
+    ].map(([name, dark, light, role, isText]) => ({ name, dark, light, role, isText }));
+    const typeScale = [
+      ['--font-3xs', .7, 'eyebrow / tracked uppercase labels', 'YOU · SEPTEMBER 1, 2026', 'The lamp was still on.'],
+      ['--font-2xs', .75, 'small buttons, tight meta', 'medium confidence · 8 weeks', 'The lamp was still on.'],
+      ['--font-xs', .8, 'default UI text — buttons, status, meta. The workhorse.', 'restart the journal · 31 entries', 'The lamp was still on.'],
+      ['--font-sm', .85, 'secondary body text, help copy, chip labels', 'emotional 30 · family 3', 'The lamp was still on.'],
+      ['--font-base', .95, 'primary UI text, form labels, message text', 'save entry · send · reflect', 'The lamp was still on.'],
+      ['--font-md', 1.05, 'tab sub-headings (Settings, session head)', 'Settings', 'The lamp was still on.'],
+      ['--font-lg', 1.15, 'section headings — header h1, help h2', 'Keyboard shortcuts', 'main character'],
+      ['--font-xl', 1.4, 'the one focal heading (#triage-card h2)', 'Is this the same Mika?', 'Is this the same Mika?'],
+    ].map(([name, rem, covers, uiSample, bodySample]) => ({ name, rem: rem + 'rem', value: fmt(rem), covers, uiSample, bodySample }));
+    const spaceScale = [
+      ['--space-1', .25, 'icon / inline nudges'],
+      ['--space-2', .4, 'tight inline gaps — the most common value in the app'],
+      ['--space-3', .5, 'compact padding, chip padding'],
+      ['--space-4', .6, 'composer gaps, button rows'],
+      ['--space-5', .8, 'standard component padding'],
+      ['--space-6', 1, 'section spacing, pane padding'],
+      ['--space-7', 1.2, 'header gaps'],
+      ['--space-8', 1.5, 'pane outer padding on nearly every tab, major section margins'],
+    ].map(([name, rem, covers]) => ({ name, rem: rem + 'rem', value: fmt(rem), covers }));
+    const radii = [
+      ['--radius-sm', '6px', 'small controls — chips-as-buttons, list-item hover, segmented control, active nav', '6rem', 'quiet'],
+      ['--radius-base', '8px', 'default component radius — button.quiet, .cat-full', '6rem', 'quiet'],
+      ['--radius-lg', '10px', 'the dominant radius — button.send, textareas, cards, raised panels', '6rem', 'send'],
+      ['--radius-pill', '999px', 'pills and chips — .chip, .cat-chip, .dream-tone', '6rem', 'uneasy'],
+      ['--radius-circle', '50%', 'circular icon buttons — .set-info, .step-n', '2.2rem', '?'],
+    ].map(([name, value, covers, w, label]) => ({ name, value, covers, w, label }));
+    return { theme: this.props.theme ?? 'dark', colors, typeScale, spaceScale, radii };
+  }
+}
+</script>
+</body>
+</html>

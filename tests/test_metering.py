@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
 The cost meter: what it counts, how it prices it, and where it files it.
 
@@ -118,6 +119,28 @@ def test_every_model_offered_in_settings_is_priced():
     for model in config.MODEL_EFFORT_LEVELS:
         usage = {"input": 1000, "output": 1000, "cache_write": 0, "cache_read": 0}
         assert metering.price(model, usage) > 0, model
+
+
+def test_opus_5_5_cache_reads_cost_five_percent():
+    """Opus 5.5 bills a cache hit at 0.05x input, not the usual 0.1x."""
+    usage = {"input": 0, "output": 0, "cache_write": 0, "cache_read": 1_000_000}
+    assert metering.price("claude-opus-5-5", usage) == pytest.approx(0.20)
+    assert metering.price("claude-sonnet-5", usage) == pytest.approx(0.20)
+
+
+def test_thinking_is_left_off_a_processing_call_that_cant_disable_it():
+    import config
+    assert config.processing_thinking_kwargs("claude-opus-5-5") == {}
+    assert config.processing_thinking_kwargs("claude-sonnet-5") == {
+        "thinking": {"type": "disabled"}}
+    assert config.processing_thinking_kwargs("claude-haiku-4-5") == {}
+
+
+def test_sonnet_5_5_turns_processing_thinking_off_by_its_own_name():
+    """Sonnet 5.5 400s on {"type": "disabled"}; off is "between_tools"."""
+    import config
+    assert config.processing_thinking_kwargs("claude-sonnet-5-5") == {
+        "thinking": {"type": "between_tools"}}
 
 
 # ---- counting ----
@@ -328,6 +351,15 @@ def test_the_route_says_the_figure_is_an_estimate(api):
     """List prices from a hand-kept table are not a bill, and the UI can only
     say so if the payload does."""
     assert api.get("/api/cost").json()["estimated"] is True
+
+
+def test_the_route_reports_whether_the_figure_is_mock(api):
+    """In mock mode the figure still climbs, so the popover needs the payload
+    to say the spend is not real -- the same claim the monthly card makes.
+    Asserted against config rather than a literal so it holds whichever mode
+    the suite runs in."""
+    import config
+    assert api.get("/api/cost").json()["mock"] is config.MOCK_MODE
 
 
 def test_the_route_names_the_models_the_figures_came_from(api):

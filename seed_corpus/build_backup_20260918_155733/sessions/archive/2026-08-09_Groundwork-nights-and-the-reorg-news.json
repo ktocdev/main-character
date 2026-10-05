@@ -1,0 +1,186 @@
+{
+  "id": "2026-08-09_Groundwork-nights-and-the-reorg-news",
+  "title": "Groundwork nights and the reorg news",
+  "started": "2026-07-28 21:40",
+  "closed": "2026-08-09 17:30",
+  "parts": [
+    {
+      "date": "2026-07-28",
+      "title": "Working on Coda at Groundwork"
+    },
+    {
+      "date": "2026-07-30",
+      "title": "Team restructuring news"
+    },
+    {
+      "date": "2026-07-31",
+      "title": "Friday run with Mika"
+    },
+    {
+      "date": "2026-08-01",
+      "title": "Quiet Saturday"
+    },
+    {
+      "date": "2026-08-03",
+      "title": "Monday crash"
+    },
+    {
+      "date": "2026-08-04",
+      "title": "Breaking out of it"
+    },
+    {
+      "date": "2026-08-07",
+      "title": "Mom called about visiting"
+    },
+    {
+      "date": "2026-08-08",
+      "title": "Walk with Dev"
+    },
+    {
+      "date": "2026-08-09",
+      "title": "Lease paperwork and errands"
+    }
+  ],
+  "messages": [
+    {
+      "role": "you",
+      "text": "7/28 - went to Groundwork after work with the laptop. Pepper was waiting by the door when I got home to grab the charger, doing that thing where she sits on my shoes. I almost caved and stayed in but I know if I work from the apartment I just end up on the couch refreshing feeds.\n\ngot a cortado and set up at the window table. spent about two hours on Coda's practice log screen. the idea is you log what you practiced - scales, a song section, improv - and it tracks streaks and shows you what you've been neglecting. like a fitness tracker but for music. I've been noodling on this for months and today the UI actually started feeling like something real. got the streak counter working with little animated flames. dumb but satisfying.\n\nthere's something about Groundwork that makes me productive. the noise level is right, nobody talks to me, the coffee is good. I need to come here more after work instead of pretending I'll focus at home.\n\ncame back around 8. Pepper immediately forgave me. made pasta. quiet evening. the kind of day where nothing bad happens and you realize that's actually rare enough to notice.",
+      "ts": "2026-07-28 21:40"
+    },
+    {
+      "role": "companion",
+      "text": "The streak counter with animated flames is exactly the kind of detail that separates a side project someone actually uses from one that sits in a folder. You're right that it's dumb — but that's why it works. Nobody keeps a streak going for a plain number.\n\nPepper sitting on your shoes is a pretty effective guilt strategy. Good that you went anyway. You already called the pattern yourself — couch, feeds, nothing gets done — so Groundwork sounds less like a nice option and more like actual infrastructure for getting Coda built.\n\nThat last line landed. The days where nothing bad happens and you clock it — those tend to come when you actually left the apartment and did the thing you said you'd do. Not a coincidence, probably.",
+      "ts": "2026-07-28 21:40"
+    },
+    {
+      "role": "you",
+      "text": "7/30 - Marcus dropped the restructuring news in standup like it was a minor agenda item. \"some team realignment happening in Q4.\" but the way he said it and the way he wouldn't make eye contact - everyone knows what that means. our team of six might get split across two other squads. Lena pulled me aside after and she's already looking. she said she's tired of the uncertainty, that this is the third reorg in two years and she can't keep rebuilding trust with new managers.\n\nI don't blame her. I've been here 14 months and this is already reorg number two for me. the first one moved me off the consumer app onto the internal tools team which honestly I liked better. but now they might dissolve internal tools entirely.\n\nstayed late not because I had to but because I didn't want to go home and sit with the anxiety. ended up just cleaning up old Figma files. organizing things I'll probably never open again. it felt productive enough to justify being there but I know I was just avoiding the feeling.\n\ncame home at 8. Pepper was asleep on my pillow. ate cereal for dinner. I should be updating my portfolio but I don't have the energy. maybe this weekend.",
+      "ts": "2026-07-30 20:15"
+    },
+    {
+      "role": "companion",
+      "text": "Cleaning up Figma files you'll never open again at 7pm — you already know what that was. No need to say more about it.\n\nThe thing worth sitting with is that the first reorg actually landed you somewhere you liked better. That doesn't mean this one will too, and I'm not saying \"it'll all work out.\" But it does mean the outcome you're dreading is one specific version of what happens, not the only one.\n\nLena's move makes sense, and watching someone you respect start looking has a way of making the ground feel less solid under your own feet, regardless of what actually happens in Q4. Two reorgs in 14 months is a lot of ambient instability to absorb.\n\nThe portfolio will still be there this weekend. Did you make it to Groundwork at all since Monday?",
+      "ts": "2026-07-30 20:15"
+    },
+    {
+      "role": "you",
+      "text": "no. Tuesday was the last time. I keep meaning to and then it's 7pm and I'm still at my desk sorting files I'll never open.\n\nand the portfolio thing is going to sit there again, isn't it. I said maybe this weekend. I have been saying maybe this weekend since March.",
+      "ts": "2026-07-30 20:15"
+    },
+    {
+      "role": "companion",
+      "text": "Since March is five months. That's not procrastination anymore, that's a decision you haven't admitted to yourself yet. Either you don't actually want to update it, or something about opening it feels like conceding that this job might end — and you'd rather sort dead Figma files than face that.\n\nBoth are fine, but they're different problems.",
+      "ts": "2026-07-30 20:15"
+    },
+    {
+      "role": "you",
+      "text": "7/31 - met Mika at Greenwood Park after work for a run. she's training for a half marathon so she's way ahead of me but she always loops back. we did about 3 miles which is my max right now. the park was gorgeous, that golden late-afternoon light where everything looks like a movie. there were kids on the playground and dogs everywhere.\n\nwhile we cooled down on the bench by the pond I told her about the restructuring. she listened in that way she does where she's quiet the whole time and then says one sharp thing. she said \"you know what I notice? every time work gets shaky you stop working on Coda. and every time you pick Coda back up you feel better. maybe Coda IS the portfolio update.\" she's not wrong. if I had a real side project to point to in interviews it'd be worth more than a polished Figma deck.\n\nwe got smoothies after. she told me about her new coworker who keeps stealing her lunch from the fridge which is both infuriating and comedy gold. I almost forgot about the reorg for an hour.\n\nwent home feeling lighter. did 20 minutes on Coda before bed - just fixed a color contrast issue on the log cards. small but it counts.",
+      "ts": "2026-07-31 19:05"
+    },
+    {
+      "role": "companion",
+      "text": "Mika's right, and she's right in a way that solves two problems at once — the portfolio guilt that's been sitting there since March and the Coda stalling that happens every time work gets unstable. A working practice log app with streak animations says more in an interview than a deck of polished screens for a product someone else shipped.\n\nTwenty minutes before bed the same night she said that — you heard it and moved. That's different from the \"maybe this weekend\" loop.\n\nAlso, someone is systematically stealing Mika's lunch and I need updates on this.",
+      "ts": "2026-07-31 19:05"
+    },
+    {
+      "role": "you",
+      "text": "8/1 - errands day. grocery store, dropped off dry cleaning, picked up the rug I ordered for the living room. it's a deep green and it actually makes the apartment feel warmer. Pepper immediately claimed it, did that slow roll thing cats do when they're marking territory.\n\nmade a real dinner for once - roasted chicken thighs with lemon and potatoes. ate at the table instead of the couch. put on an old movie I've seen before so I didn't have to pay attention.\n\nPepper knocked my water glass off the nightstand at 2am. classic. I cleaned it up half asleep and she just sat there watching me like I was the unreasonable one.\n\nnothing notable today. sometimes that's fine.",
+      "ts": "2026-08-01 16:30"
+    },
+    {
+      "role": "companion",
+      "text": "Dinner at the table instead of the couch, a real meal instead of cereal — that's a different night than 7/30. Pepper claiming the rug within seconds sounds about right. Her knocking the water glass off at 2am and then judging you for it is peak cat.",
+      "ts": "2026-08-01 16:30"
+    },
+    {
+      "role": "you",
+      "text": "8/3 - the design review was brutal. I presented the new internal dashboard layout and Marcus tore it apart in front of everyone. \"this doesn't align with the direction we discussed\" - except we never discussed any direction, he changed his mind over the weekend and expected me to have read it telepathically. Lena tried to back me up but he steamrolled her too.\n\nI kept my composure in the meeting but after I just shut down. came home at 4, told Marcus I had a headache. didn't text anyone. didn't call Mika. turned off my phone and sat on the couch in the dark for like two hours. Pepper curled up against my leg and I couldn't even pet her back, I was just staring at the wall.\n\nI know this pattern. something hits me at work - criticism, feeling unseen, the sense that nothing I make matters - and I just go internal. I cancel things. I don't reach out. I don't even want to feel better yet, I want to sit in it for a while first like I'm punishing myself for caring. it's not healthy. I know it's not healthy. but knowing that doesn't stop it.\n\ndidn't eat dinner. went to bed at 9. Pepper slept on my chest, which she only does when I'm down. she knows.",
+      "ts": "2026-08-03 22:10"
+    },
+    {
+      "role": "companion",
+      "text": "Marcus changing his mind over the weekend and then framing it as you being misaligned — that's not criticism, that's just bad management. Worth separating the two, because \"my work got fairly critiqued\" and \"I got publicly undercut by someone who moved the target\" feel the same in the moment but they're not.\n\nYou named the pattern so precisely there's nothing for me to add to it. You see the whole sequence while you're inside it. That's the frustrating part — the seeing doesn't interrupt the mechanism.\n\nThe one thing I'll point out: you said you want to sit in it \"like I'm punishing myself for caring.\" That framing tells you something. The part that hurts isn't that the dashboard was wrong. It's that you gave a shit and it didn't matter. That's a different wound.\n\nDid you turn your phone back on?",
+      "ts": "2026-08-03 22:10"
+    },
+    {
+      "role": "you",
+      "text": "no. it's face down on the counter. I heard it buzz twice before I turned it off and I'm fairly sure that was Mika.\n\nI keep replaying the part where Lena tried to back me up and he talked over her too. that's the bit that won't sit still.",
+      "ts": "2026-08-03 22:10"
+    },
+    {
+      "role": "companion",
+      "text": "That's the bit that won't sit still because it confirmed it wasn't about your work. If it were a legitimate design critique, backing you up with good reasoning would have landed. He talked over her because the meeting wasn't a review — it was him performing a decision he'd already made. You and Lena were just the audience.\n\nThat's clarifying, but it doesn't make it feel better. Might actually make it feel worse, because there's nothing to fix on your end.\n\nMika's going to understand a late reply. But the phone stays face down longer every time you do this, and you know she's the one person who'd say the sharp right thing.",
+      "ts": "2026-08-03 22:10"
+    },
+    {
+      "role": "you",
+      "text": "I don't want advice about how to handle him. I want to not care, and I can't figure out how other people do that.",
+      "ts": "2026-08-03 22:10"
+    },
+    {
+      "role": "companion",
+      "text": "Most of them aren't not caring. They're either hiding it better or they checked out a long time ago — and checking out has its own cost, you just can't see it from the outside.\n\nYou're not broken for not having that skill. It's not really a skill.",
+      "ts": "2026-08-03 22:10"
+    },
+    {
+      "role": "you",
+      "text": "8/4 - called in sick. I'm not sick but I couldn't face Marcus after yesterday. woke up still feeling the Monday heaviness but forced myself out the door instead of rotting on the couch all day. went to Groundwork around 10. told myself I'd just get coffee and leave but once I sat down I opened the Coda project and something clicked. spent three hours building the practice-session timer. it has a visual metronome now - this pulsing circle that expands and contracts at whatever BPM you set. watching it work made me feel competent in a way that work hasn't in weeks.\n\nran into Mikayla around noon - she was picking up coffee on her way to the gym. she could tell I'd been in a funk and she didn't push, just sat with me for 15 minutes and talked about nothing. sometimes that's the best version of friendship.\n\nby 2pm I felt like a different person than the one who crawled into bed at 9 last night. the fog just lifts once I'm out of the apartment and making something. every time. you'd think I'd learn to skip the dark-couch phase and go straight to the coffee shop but I never do.\n\nwent grocery shopping on the way home. made stir fry. texted Mika a thank-you for stopping by. she sent back a selfie from the gym looking like a maniac. love her.",
+      "ts": "2026-08-04 21:20"
+    },
+    {
+      "role": "companion",
+      "text": "A pulsing circle that breathes at whatever BPM you set — that's not just functional, that's the kind of detail that makes someone want to keep a practice session open. Streak flames, visual metronome. Coda's accumulating personality.\n\nTwelve hours from staring at the wall with the phone off to texting Mika a thank-you. You already said the thing about skipping the dark-couch phase, so I won't repeat it. But I will say — the version of you that called in sick still went to Groundwork instead of the couch. That's not nothing compared to what 8/3 looked like. The pattern ran shorter this time.",
+      "ts": "2026-08-04 21:20"
+    },
+    {
+      "role": "you",
+      "text": "please never say that's not nothing",
+      "ts": "2026-08-04 21:20"
+    },
+    {
+      "role": "companion",
+      "text": "Fair. That was exactly the kind of thing I shouldn't say. Won't happen again.",
+      "ts": "2026-08-04 21:20"
+    },
+    {
+      "role": "you",
+      "text": "8/7 - Mom called tonight. she wants to come visit for Labor Day weekend, which is sweet but immediately made me look around my apartment with her eyes. the bedroom door doesn't close all the way, there's a stain on the ceiling from the upstairs neighbor's leak that maintenance never fixed, and my \"dining table\" is a folding card table with a plant on it.\n\nshe asked if I'd thought about renewing the lease since it's up in October. I said I hadn't decided, which is a lie - I've been avoiding the decision. it's not a bad apartment. it's just small and a little sad and the rent went up. but moving is expensive and exhausting and the idea of packing everything while also dealing with the reorg makes me want to crawl under the covers.\n\nshe told me about Dad's knees and her book club and the neighbor's dog that keeps getting into her garden. normal Mom stuff. I didn't tell her about the work stuff because she'd worry and then call me every day. I just said things are good, which isn't technically a lie - things are fine. fine and good are close enough.\n\nPepper sat on the kitchen counter for the entire call staring at me. she's not allowed up there. we both know it. neither of us cares.",
+      "ts": "2026-08-07 20:00"
+    },
+    {
+      "role": "companion",
+      "text": "\"Fine and good are close enough\" is doing a lot of heavy lifting in that conversation. But you already know that, and sometimes not giving your mom the full picture is just triage, not dishonesty. She'd call every day — you're probably right.\n\nThe lease is up in October and the reorg lands in Q4. Those two timelines are sitting right on top of each other, which might be why you're avoiding both — hard to decide where to live when you don't know what your job looks like in three months.\n\nPepper on the counter during the entire call, fully aware of the rules, is the energy I aspire to.",
+      "ts": "2026-08-07 20:00"
+    },
+    {
+      "role": "you",
+      "text": "8/8 - met Dev for coffee and a walk at Greenwood Park. I'd been nervous all morning about it, changed my shirt twice, which is embarrassing to admit. Mika had to talk me out of cancelling.\n\nDev is a session musician - they play bass for a few different bands and teach lessons on the side. they're easy to talk to in this way where silences don't feel awkward, they just feel like breathing. we walked the loop trail and I told them about Coda almost by accident, I was trying to describe what I do outside of work and it just came out. they actually got excited about it. asked smart questions about how the practice tracking would work, like whether it could remind you to revisit stuff you haven't touched in a while. they said they'd try it when it's ready.\n\nwe sat on the bench by the pond - the same one I was on with Mikayla last week. Dev pointed out a heron standing completely still in the shallows. we watched it for a while without talking. then they had to go teach a lesson.\n\nI walked home the long way. it's weird how being around someone calm makes you calmer. I feel like I've been vibrating at work-anxiety frequency for weeks and this afternoon just... tuned it down. I don't know what this is yet. I'm trying not to label it too fast.",
+      "ts": "2026-08-08 18:45"
+    },
+    {
+      "role": "companion",
+      "text": "A session musician who immediately asked about spaced reminders for neglected material — that's your first real user thinking out loud. That feature idea is good, by the way.\n\nThe bench by the pond is becoming a recurring location in this journal. Different people, same bench, same water. You keep ending up there when things are settling down.\n\n\"Trying not to label it too fast\" is a fine place to be. You don't have to know what it is to notice that you walked home the long way.",
+      "ts": "2026-08-08 18:45"
+    },
+    {
+      "role": "you",
+      "text": "one more thing and then I'm going to bed - I didn't check my phone once the whole two hours. I only noticed afterward.",
+      "ts": "2026-08-08 18:45"
+    },
+    {
+      "role": "companion",
+      "text": "Two very different reasons to not look at your phone in one week. This was the good one.\n\nSleep well.",
+      "ts": "2026-08-08 18:45"
+    },
+    {
+      "role": "you",
+      "text": "8/9 - Sunday. laundry, cleaned the bathroom, vacuumed the rug Pepper has already covered in fur. looked up how to get the ceiling stain fixed before Mom visits - apparently I'm supposed to email maintenance with a photo and then they take two weeks and do nothing. submitted it anyway.\n\nfound the lease renewal form in my email from last month. I hadn't opened it. $150 increase, one year term, due by September 15. stared at it for a while and closed the tab.\n\nmade a big pot of soup - the one with white beans and kale that I can eat for four days. Pepper supervised from the counter even though she's banned from it. we have an unspoken arrangement where she breaks the rule and I pretend not to notice.\n\ntried to read a book but couldn't focus. ended up scrolling job listings on my phone for an hour. I'm not ready to actually apply anywhere but I wanted to see what's out there. there's a lot of \"senior UX designer\" roles that want eight things I can do and two things I've never heard of. the game is always the same.\n\nwent to bed early. tomorrow is Monday and I'm already bracing.",
+      "ts": "2026-08-09 17:30"
+    },
+    {
+      "role": "companion",
+      "text": "You opened the lease email. That's further than you were on 8/7. You closed the tab, sure, but September 15 is five weeks out — you don't have to decide today, you just have to stop pretending the deadline isn't there.\n\nJob listings where you meet 80% of the requirements is just what job listings look like. The two things you've never heard of are things someone Googled for twenty minutes before putting them on a posting.\n\nThe Pepper counter arrangement is clearly a binding contract at this point.",
+      "ts": "2026-08-09 17:30"
+    }
+  ]
+}

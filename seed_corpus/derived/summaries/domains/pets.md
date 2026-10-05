@@ -1,0 +1,16 @@
+<!-- hash: bf4b39f82fca -->
+# pets (15 entries, through 2026-09-14)
+
+# Pets
+
+Pepper, cat, is the constant background presence in Jordan's apartment and the clearest instrument on the page for reading Jordan's state on any given day.
+
+The pattern is consistent enough by September that Jordan has named it outright: work hits, Jordan shuts down, and Pepper responds specifically to the down days. On 8/3, after Marcus tore apart a design review, Pepper curled against Jordan's leg and then slept on Jordan's chest — which Jordan notes she only does when Jordan is down. On 8/24, when the restructuring news turned into "role under evaluation," Pepper climbed into Jordan's lap around 6pm and purred hard enough to vibrate against Jordan's sternum; Jordan just sat there under her weight for an hour. These aren't one-offs — Jordan tracks it as data, the same way Coda tracks practice streaks.
+
+The rest of the time Pepper is comic and domestic rather than therapeutic. She waits by the door and sits on Jordan's shoes (7/28). She claims the new green rug the day it arrives, doing the slow territorial roll (8/1), and is still sleeping on it contentedly, white feet curled, as of 9/14. She knocks a water glass off the nightstand at 2am and watches Jordan clean it up like Jordan's the unreasonable one (8/1). She sits on the kitchen counter she's banned from during Jordan's call with Mom (8/7) and again while Jordan makes soup (8/9) — an unspoken arrangement where she breaks the rule and Jordan pretends not to notice. She bats at shoelaces (8/19), gets fed and does her purring head-bonk against Jordan's ankle on a recovery day (8/12), and stares from the foot of the bed when Jordan wakes at 4am from the empty-office dream (8/14).
+
+She also has opinions about music. During guitar practice for the open mic, Pepper sat on the amp and howled along during the quiet verse of "Fast Car," which made Jordan laugh hard enough to lose the chord progression (8/17). During Dev's first real Coda testing session, Pepper left the room at the loud slapped bass notes and came back only once Dev had cleaned the passage up, which Jordan read as her having "made her position clear" (9/3).
+
+The one notable exception to Pepper's usual wariness around people: when Jordan's mom visited over Labor Day weekend, Pepper — who usually hides from guests — slept on Mom's lap for a full hour (9/6).
+
+Nothing is unresolved here in the way other threads are. Pepper isn't a decision pending; she's the fixed point the rest of the entries orient around — the one who's there when Jordan gets home, whether Jordan calls anyone else or not. The open thread, if there is one, is just Jordan's own naming of the pattern: Pepper shows up hardest exactly when Jordan is least able to let people in, and Jordan has started to notice that noticing.

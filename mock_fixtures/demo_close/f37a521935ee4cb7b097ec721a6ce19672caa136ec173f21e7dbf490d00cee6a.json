@@ -1,0 +1,19 @@
+{
+  "key": "organic.scan",
+  "text": "{\"clusters\":[{\"index\":0,\"keep\":false,\"name\":\"\",\"reason\":\"Mixes music practice tooling, a coffee shop, portfolio anxiety, and unrelated office dread with no single coherent theme.\"},{\"index\":1,\"keep\":true,\"name\":\"The Reorg\",\"reason\":\"All entries track the same organizational restructuring and Jordan's forced move to the legacy marketing team.\"},{\"index\":2,\"keep\":true,\"name\":\"Dashboard Project\",\"reason\":\"All entries follow the same dashboard's design, criticism, and rebuild saga at work.\"},{\"index\":3,\"keep\":false,\"name\":\"\",\"reason\":\"Jumbles two separate threads (dating Dev and open-mic singing practice) that only coincidentally share locations.\"},{\"index\":4,\"keep\":true,\"name\":\"Northlight Interview\",\"reason\":\"All entries trace Jordan's job application and interview process for the Northlight role.\"}]}",
+  "model": "claude-sonnet-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2406,
+    "output_tokens": 304,
+    "output_tokens_details": null,
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

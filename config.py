@@ -1,5 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """
-Config — centralized settings for RAG Journal.
+Config — centralized settings.
 
 Single source of truth for what used to be scattered across modules: the
 two-model split (companion vs. processing), the companion's effort level,
@@ -13,10 +14,20 @@ Settings UI read from — one place to update when a new model ships.
 """
 
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+# Mock mode is read here, before load_dotenv, and nowhere else: only the real
+# process environment can turn it on. Canned replies exist to serve the demo
+# journal, which sets this in the child environment it boots (server.SEED_ENV),
+# as do run_demo.sh, the test suite and CI. A .env cannot, because .env is the
+# real journal's config file and the pairing it used to allow -- canned replies
+# against your own entries, where storage is not mocked and the writes are
+# real -- is the one this is here to make unreachable.
+_ENV_MOCK = os.environ.get("MC_MOCK")
 
 load_dotenv()
 
@@ -29,22 +40,33 @@ _PROJECT_ROOT = Path(__file__).parent
 # Two workloads, two settings: the companion is the one user-visible voice,
 # so quality matters most there. Processing (entity extraction, summaries,
 # arcs, categories, patterns, dreams, organic naming, seed integration) is
-# structured/mechanical, runs in bulk, and dominates token spend — Sonnet 5
+# structured/mechanical, runs in bulk, and dominates token spend — Sonnet 5.5
 # is the default there because that work doesn't need Opus-tier reasoning.
 
-MC_COMPANION_MODEL = os.getenv("MC_COMPANION_MODEL", "claude-opus-4-6").strip()
-MC_PROCESSING_MODEL = os.getenv("MC_PROCESSING_MODEL", "claude-sonnet-5").strip()
+MC_COMPANION_MODEL = os.getenv("MC_COMPANION_MODEL", "claude-opus-5-5").strip()
+MC_PROCESSING_MODEL = os.getenv("MC_PROCESSING_MODEL", "claude-sonnet-5-5").strip()
 
-MC_COMPANION_EFFORT = os.getenv("MC_COMPANION_EFFORT", "high").strip()
+# Medium, not high: at high, Opus 5.5 answers every thread in an entry and
+# runs long. Measured 2026-09-29 against the replies Opus 4.6 gave at high:
+# medium plus the prompt's Length section matched their length (~105 words
+# on average); high alone ran ~170.
+MC_COMPANION_EFFORT = os.getenv("MC_COMPANION_EFFORT", "medium").strip()
+
+# Smart replies, the chat tab's toggle: Claude gets the journal's search tools
+# and can search, read and search again before answering. This caps the
+# calls per question; the companion model answers.
+SMART_REPLY_ROUNDS = 5
 
 # Model -> valid `effort` levels. Haiku 4.5 doesn't take the parameter at
 # all; Opus 4.6 predates `xhigh`. A Settings picker must derive its options
 # from this map rather than offering a static list, or a request 400s.
 MODEL_EFFORT_LEVELS = {
+    "claude-opus-5-5": ["low", "medium", "high", "max", "xhigh"],
     "claude-opus-4-6": ["low", "medium", "high", "max"],
     "claude-opus-4-7": ["low", "medium", "high", "max", "xhigh"],
     "claude-opus-4-8": ["low", "medium", "high", "max", "xhigh"],
     "claude-opus-5": ["low", "medium", "high", "max", "xhigh"],
+    "claude-sonnet-5-5": ["low", "medium", "high", "max", "xhigh"],
     "claude-sonnet-5": ["low", "medium", "high", "max", "xhigh"],
     "claude-haiku-4-5": [],
 }
@@ -52,10 +74,12 @@ MODEL_EFFORT_LEVELS = {
 # Model -> the name a person recognizes. The API ids are what get written
 # to .env; these are what the pickers show.
 MODEL_LABELS = {
+    "claude-opus-5-5": "Opus 5.5",
     "claude-opus-4-6": "Opus 4.6",
     "claude-opus-4-7": "Opus 4.7",
     "claude-opus-4-8": "Opus 4.8",
     "claude-opus-5": "Opus 5",
+    "claude-sonnet-5-5": "Sonnet 5.5",
     "claude-sonnet-5": "Sonnet 5",
     "claude-haiku-4-5": "Haiku 4.5",
 }
@@ -68,25 +92,37 @@ MODEL_LABELS = {
 # on screen rather than a wrong label -- but still nothing *bills* or refuses a
 # call against them; that is Phase 2 item 10. Anthropic's pricing page is the
 # authority: check these against it when adding a model, and treat a figure
-# here as an estimate that goes stale, never as a quote.
+# here as an estimate that goes stale, never as a quote. `cache_read` is the
+# share of the input price a cache hit costs, where a model differs from the
+# usual 0.1 (metering.CACHE_READ_RATIO). Checked 2026-09-29.
 MODEL_PRICES = {
+    "claude-opus-5-5": {"in": 4.0, "out": 20.0, "cache_read": 0.05},
     "claude-opus-4-6": {"in": 5.0, "out": 25.0},
     "claude-opus-4-7": {"in": 5.0, "out": 25.0},
     "claude-opus-4-8": {"in": 5.0, "out": 25.0},
     "claude-opus-5": {"in": 5.0, "out": 25.0},
-    "claude-sonnet-5": {"in": 3.0, "out": 15.0},
+    "claude-sonnet-5-5": {"in": 2.0, "out": 10.0},
+    "claude-sonnet-5": {"in": 2.0, "out": 10.0},
     "claude-haiku-4-5": {"in": 1.0, "out": 5.0},
 }
 
 # Model -> whether the `thinking` parameter is supported at all. Where
 # it's supported, Opus 4.6/4.7/4.8 default to *off* when the parameter is
 # omitted; Sonnet 5 and Opus 5 default to *adaptive* when omitted. Haiku
-# 4.5 rejects the parameter outright.
+# 4.5 rejects the parameter outright. "always": thinking can't be turned
+# off -- Opus 5.5 answers `{"type": "disabled"}` with a 400 -- so a call
+# that wants it off leaves the parameter out instead. "between_tools":
+# thinking turns off, but under that name -- Sonnet 5.5 400s on
+# `{"type": "disabled"}` and asks for `{"type": "between_tools"}`, which
+# skips thinking before the reply (any short updates between tool calls
+# come back as thinking blocks).
 MODEL_THINKING_SUPPORT = {
+    "claude-opus-5-5": "always",
     "claude-opus-4-6": True,
     "claude-opus-4-7": True,
     "claude-opus-4-8": True,
     "claude-opus-5": True,
+    "claude-sonnet-5-5": "between_tools",
     "claude-sonnet-5": True,
     "claude-haiku-4-5": False,
 }
@@ -104,15 +140,28 @@ def companion_effort_kwargs(model: str = None, effort: str = None) -> dict:
     return {}
 
 
+# The processing picker's lineup. Processing is structured bulk work where
+# trading down is the point, and its calls are sized for thinking switched
+# off, which Opus 5.5 can't do. Opus is left out for now (owner's call,
+# 2026-09-26); the companion picker offers everything above.
+PROCESSING_MODELS = ["claude-sonnet-5-5", "claude-sonnet-5", "claude-haiku-4-5"]
+
+
 def processing_thinking_kwargs(model: str = None) -> dict:
     """The `thinking` kwarg for a processing call on the given model
     (default: the configured processing model). Processing calls want
     thinking explicitly disabled on models that support the parameter —
     several call sites are sized tight enough that adaptive thinking would
     eat the budget and truncate the response — and omitted entirely on
-    models that reject the parameter (Haiku 4.5)."""
+    models that reject the parameter (Haiku 4.5). Sonnet 5.5 spells "off"
+    as `between_tools`."""
     model = model or MC_PROCESSING_MODEL
-    if MODEL_THINKING_SUPPORT.get(model, True):
+    support = MODEL_THINKING_SUPPORT.get(model, True)
+    if support == "always":
+        return {}
+    if support == "between_tools":
+        return {"thinking": {"type": "between_tools"}}
+    if support:
         return {"thinking": {"type": "disabled"}}
     return {}
 
@@ -127,11 +176,36 @@ PORT = int(os.getenv("MC_PORT", "8144"))
 # ---------------------------------------------------------------------------
 # DATA DIRECTORIES
 # ---------------------------------------------------------------------------
-# RAG_JOURNAL_DIR / RAG_CHROMA_DIR keep their existing env var names (predate
-# this module); the rest are new and use the MC_ prefix.
+# Every data directory is MC_-prefixed. Three of these were RAG_-prefixed
+# until the public release (they predated this module, and the inconsistency
+# was carried rather than chosen); renaming them was a now-or-never call,
+# since doing it after strangers have working .env files is a breaking
+# change with an audience.
+#
+# _refuse_legacy_names is the migration aid for the one install that
+# predates the rename. It refuses rather than falling back, because the
+# failure it prevents is silent: an unread MC_AUTHOR_NAME does not error,
+# it just starts extracting an entity for the author, and an unread
+# MC_JOURNAL_DIR opens an empty journal that looks like data loss. Delete
+# this once the pre-release .env files are gone.
 
-JOURNAL_DIR = Path(os.getenv("RAG_JOURNAL_DIR", _PROJECT_ROOT / "journal_entries"))
-CHROMA_DIR = Path(os.getenv("RAG_CHROMA_DIR", _PROJECT_ROOT / "chroma_data"))
+def _refuse_legacy_names():
+    renamed = {"RAG_AUTHOR_NAME": "MC_AUTHOR_NAME",
+               "RAG_JOURNAL_DIR": "MC_JOURNAL_DIR",
+               "RAG_CHROMA_DIR": "MC_CHROMA_DIR"}
+    stale = [(old, new) for old, new in renamed.items() if os.getenv(old)]
+    if stale:
+        raise SystemExit(
+            "\n.env uses env var names that were renamed before release:\n"
+            + "".join(f"  {old}  ->  {new}\n" for old, new in stale)
+            + "\nRename them in .env and start again. Nothing else changed;\n"
+              "the values are still correct.")
+
+
+_refuse_legacy_names()
+
+JOURNAL_DIR = Path(os.getenv("MC_JOURNAL_DIR", _PROJECT_ROOT / "journal_entries"))
+CHROMA_DIR = Path(os.getenv("MC_CHROMA_DIR", _PROJECT_ROOT / "chroma_data"))
 ENTITY_DIR = Path(os.getenv("MC_ENTITY_DIR", _PROJECT_ROOT / "entity_graph"))
 SUMMARY_DIR = Path(os.getenv("MC_SUMMARY_DIR", _PROJECT_ROOT / "summaries"))
 CATEGORY_DIR = Path(os.getenv("MC_CATEGORY_DIR", _PROJECT_ROOT / "categories"))
@@ -143,9 +217,24 @@ SESSION_DIR = Path(os.getenv("MC_SESSION_DIR", _PROJECT_ROOT / "sessions"))
 # RETRIEVAL TUNING
 # ---------------------------------------------------------------------------
 
-N_SEMANTIC = int(os.getenv("MC_N_SEMANTIC", "6"))     # semantically similar chunks per question
+N_SEMANTIC = int(os.getenv("MC_N_SEMANTIC", "12"))    # passages found by meaning per question
 N_RECENT = int(os.getenv("MC_N_RECENT", "3"))         # most recent chunks always included
 EXCERPT_CHARS = int(os.getenv("MC_EXCERPT_CHARS", "2000"))
+# The search-only passage index (passages.py). Target passage size in the
+# embedder's tokens, capped at what the model reads; and how many passages on
+# each side of a hit are shown with it ("search small, read bigger"). Chosen
+# on the real journal's test set (the handoff's steps 1 and 1a).
+PASSAGE_TOKENS = int(os.getenv("MC_PASSAGE_TOKENS", "120"))
+PASSAGE_NEIGHBORS = int(os.getenv("MC_PASSAGE_NEIGHBORS", "1"))
+# The model that embeds the passage index, the summaries and dreams, one of
+# passages.MODELS. Changing it makes the next rebuild_index.py re-embed all
+# three; until then, search falls back to the journal chunks rather than mix
+# two models.
+EMBED_MODEL = os.getenv("MC_EMBED_MODEL", "snowflake/snowflake-arctic-embed-s").strip()
+# Where that model is downloaded to: once per machine, like chroma's own
+# model under ~/.cache/chroma. Kept short -- Hugging Face's cache layout
+# nests deep enough to pass Windows' 260-character path limit.
+MODEL_CACHE = Path(os.getenv("MC_MODEL_CACHE", Path.home() / ".cache" / "main-character"))
 MAX_TOKENS = int(os.getenv("MC_MAX_TOKENS", "8000"))  # companion reply budget
 
 # ---------------------------------------------------------------------------
@@ -201,6 +290,14 @@ MAX_MONTHLY_SPEND = _positive("MC_MAX_MONTHLY_SPEND", DEFAULT_MONTHLY_SPEND)
 # like the others -- it holds one number per month and nothing else.
 SPEND_FILE = Path(os.getenv("MC_SPEND_FILE", _PROJECT_ROOT / "spend_ledger.json"))
 
+# When the open chapter holds this many characters of your own writing (what
+# a close turns into journal entries, dreams aside), the write tab asks
+# whether to close it. Until a close, nothing in the chapter can be searched,
+# and every reply resends all of it. 30,000 is a little over the median
+# chapter the author had closed by hand. Blank uses the default; 0 never asks.
+DEFAULT_CHAPTER_CLOSE_CHARS = 30_000
+CHAPTER_CLOSE_CHARS = int(_positive("MC_CHAPTER_CLOSE_CHARS", DEFAULT_CHAPTER_CLOSE_CHARS))
+
 # The longest text a single entry, chat turn or lookup may carry. A rejection
 # is the point: silently truncating a journal entry loses writing the author
 # believes was saved, which is worse than the paste that prompted it. Sized so
@@ -214,8 +311,36 @@ MAX_INPUT_CHARS = int(_positive("MC_MAX_INPUT_CHARS", 100_000))
 # MISC
 # ---------------------------------------------------------------------------
 
-MOCK_MODE = os.getenv("MC_MOCK", "0").strip() == "1"
-AUTHOR = os.getenv("RAG_AUTHOR_NAME", "").strip() or "the journal author"
+MOCK_MODE = (_ENV_MOCK or "0").strip() == "1"
+
+# load_dotenv has just copied a .env MC_MOCK into os.environ, where the rest of
+# the app would find it. It is not honoured, and staying quiet about that is
+# the worst of the options: someone who wrote MC_MOCK=1 is expecting canned
+# replies, and the bill is the wrong place to learn otherwise.
+if _ENV_MOCK is None and os.environ.get("MC_MOCK", "0").strip() == "1":
+    os.environ.pop("MC_MOCK", None)
+    print("MC_MOCK in .env is ignored: canned replies are the demo "
+          "journal only. To look around without a key, run "
+          "`python seed_corpus/import_seed_corpus.py --demo`, then load "
+          "the demo journal from Settings.", file=sys.stderr)
+
+AUTHOR = os.getenv("MC_AUTHOR_NAME", "").strip() or "the journal author"
+
+
+# ---------------------------------------------------------------------------
+# CATEGORIES
+# ---------------------------------------------------------------------------
+# Which built-in life-domain categories the tagger offers on new entries.
+# Stored as the *disabled* set, not the enabled one, and blank means all on:
+# a category added to the built-in list in a future version is then on by
+# default, where an enabled list written by an older build would silently
+# leave it off. Disabling one only stops it being offered going forward --
+# entries already tagged with it keep those tags (categories.py never re-tags
+# on its own), and its counts and domain summary still render.
+DISABLED_CATEGORIES = [
+    c.strip() for c in os.getenv("MC_DISABLED_CATEGORIES", "").split(",")
+    if c.strip()
+]
 
 
 # ---------------------------------------------------------------------------
@@ -313,6 +438,26 @@ def parse_stamp(text: str) -> datetime | None:
 # ---------------------------------------------------------------------------
 # CLIENT
 # ---------------------------------------------------------------------------
+
+
+def is_configured() -> bool:
+    """Whether this journal has what it needs to talk to Claude.
+
+    Read as "can get_client() succeed?" — the SDK raises at *construction*
+    when no key is present, so a fresh clone with no .env would otherwise
+    take the server down on startup before anything could ask the author
+    for one. `server.startup()` checks this before building the client, and
+    /api/status reports it so the first-run wizard knows to open.
+
+    A function rather than a constant because both callers want the truth
+    now: a key written by the wizard lands in .env, and the restart that
+    follows is what makes it true for the next process.
+
+    Mock mode counts as configured. It never constructs the SDK at all, so
+    it needs no key -- and the demo instance runs mock, which is what keeps
+    the wizard from opening over a journal that is working fine.
+    """
+    return MOCK_MODE or bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
 
 
 def get_client():

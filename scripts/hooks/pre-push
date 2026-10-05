@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+#
+# Pre-push gate: the leak check, all three passes (scripts/check_leaks.sh),
+# on each commit being pushed -- as committed, whatever is checked out.
+# CI runs only the pattern pass; the name and terms passes need the
+# gitignored lists, so this is the only place they run on their own.
+#
+# It checks the tip of each pushed branch, not every commit on the way:
+# a leak added and removed within one push still lands in history. Run
+# the check before committing too.
+#
+# Installed by `bash scripts/install_hooks.sh`. Skip once, knowingly, with
+# `git push --no-verify`.
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+zero="0000000000000000000000000000000000000000"
+status=0
+# git feeds one line per ref: <local ref> <local sha> <remote ref> <remote sha>
+while read -r local_ref local_sha _ _; do
+    [ "$local_sha" = "$zero" ] && continue        # a branch being deleted
+    echo "pre-push: $local_ref"
+    bash scripts/check_leaks.sh --rev "$local_sha" || status=1
+done
+exit $status

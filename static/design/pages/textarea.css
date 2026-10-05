@@ -1,0 +1,5 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* textarea.html's own rules, kept out of the page so it runs under a
+   CSP with no inline styles (the web demo publishes these pages). */
+/* write's entry box at its resting height (autosize grows it in the app) */
+.spec-row textarea { width: 24rem; height: 6.6rem; }

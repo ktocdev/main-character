@@ -1,4 +1,7 @@
-import { $, esc } from './core.js';
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { $, esc, installDemo, demoBuildWait } from './core.js';
+import { busyLabel } from './categories.js';
+import { state } from './state.js';
 
 // ---- settings ----
 // A UI over .env. Nothing here changes the running process: the app reads
@@ -30,6 +33,13 @@ function markPending(controlId, key, describe) {
   $(controlId).appendChild(p);
 }
 
+// The active-state phrase for the category toggles' pending marker. The
+// message frame is "still running as {this} until you restart it", so this
+// describes what the process is tagging with right now, not what was saved.
+const describeCats = a => a
+  ? 'tagging with these off: ' + a.split(',').join(', ')
+  : 'tagging with every category on';
+
 // A picker can only send back what it can show. When .env holds a value this
 // list has no option for -- a hand-set date format, a zone this machine can't
 // resolve -- the select displays some *other* option, and saving from it would
@@ -57,7 +67,7 @@ function lockUnshowable(sel, controlId, stored, describe) {
 //     sends the reader to config.py to find out what they just agreed to.
 function capHelp(live) {
   if (!live || live.limit === undefined) {
-    return 'This journal has not said what it is enforcing — it is '
+    return 'This journal has not said what it is enforcing. It is '
       + 'running a build from before the spend caps. Restart it.';
   }
   if (!live.default) return 'Leave it blank for no ceiling at all.';
@@ -74,6 +84,8 @@ function capField(id, key, values, live, fmt) {
   const input = document.createElement('input');
   input.type = 'text';
   input.id = id;
+  input.className = 'money';
+  input.inputMode = 'decimal';
   input.value = values[key] || '';
   input.autocomplete = 'off';
   // The *default*, not the limit in force: this is what the box would mean if
@@ -83,6 +95,32 @@ function capField(id, key, values, live, fmt) {
   input.placeholder = !live || live.limit === undefined ? ''
     : live.default ? 'default: ' + fmt(live.default) : 'no limit';
   box.appendChild(input);
+
+  // "this session: $0.03 of $10.00" and a hairline, live against whatever is
+  // typed (blank = the default, 0 = no ceiling). What the journal has spent
+  // comes from the caps status; the ceiling it is measured against is the
+  // one in the box, so typing a figure shows what it would mean.
+  if (live && live.used !== undefined) {
+    const line = document.createElement('div');
+    line.className = 'cap-line';
+    line.innerHTML = '<span></span><div class="hairline"><i></i></div>';
+    box.appendChild(line);
+    const label = key === 'MC_MAX_SESSION_SPEND' ? 'this session'
+      : 'this month' + (live.month ? ' (' + live.month + ')' : '');
+    const draw = () => {
+      const typed = input.value.trim();
+      const ceiling = typed === '' ? Number(live.default || 0) : Number(typed);
+      const ok = Number.isFinite(ceiling);
+      const used = Number(live.used || 0);
+      line.firstChild.textContent = ok && ceiling > 0
+        ? `${label}: ${fmt(used)} of ${fmt(ceiling)}`
+        : `${label}: ${fmt(used)} · no ceiling`;
+      line.querySelector('i').style.width = ok && ceiling > 0
+        ? Math.min(100, used / ceiling * 100).toFixed(1) + '%' : '0%';
+    };
+    draw();
+    input.addEventListener('input', draw);
+  }
 
   // The process read its ceilings at import, same as every other setting.
   // Comparing the file against what is actually in force is the only way to
@@ -105,16 +143,38 @@ function capField(id, key, values, live, fmt) {
   }
 }
 
-// "used of limit" for one ceiling, or "used, no limit set".
-const money = n => '$' + Number(n).toFixed(2);
-
-function usedLine(label, cap, fmt) {
-  const p = document.createElement('p');
-  p.className = 'set-help';
-  p.textContent = label + ': ' + fmt(cap.used)
-    + (cap.limit ? ' of ' + fmt(cap.limit) : ' \u2014 no limit set');
-  return p;
+// The chapter length at which the write tab asks to close. Blank means the
+// default, as with the caps, so the placeholder names it; and a saved figure
+// isn't the one in force until a restart, so say which one is. An older
+// server sends no `chapter_close`: the row then has nothing to offer.
+function chapterField(values, live) {
+  const box = $('set-chapter-control');
+  if (!box) return;
+  if (!live) {
+    box.parentElement.remove();
+    return;
+  }
+  const chars = n => Number(n).toLocaleString() + ' characters';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = 'set-chapter';
+  input.inputMode = 'numeric';
+  input.autocomplete = 'off';
+  input.value = values.MC_CHAPTER_CLOSE_CHARS || '';
+  input.placeholder = 'default: ' + chars(live.default);
+  box.appendChild(input);
+  const stored = (values.MC_CHAPTER_CLOSE_CHARS || '').replace(/[,_\s]/g, '');
+  const effective = stored ? Number(stored) : Number(live.default);
+  if (effective !== Number(live.limit)) {
+    const p = document.createElement('p');
+    p.className = 'set-warn';
+    p.textContent = 'Saved. This journal is still asking at '
+      + (live.limit ? chars(live.limit) : 'no length (never)') + ' until you restart it.';
+    box.appendChild(p);
+  }
 }
+
+const money = n => '$' + Number(n).toFixed(2);
 
 export async function loadSettings() {
   const body = $('settings-body');
@@ -131,17 +191,17 @@ export async function loadSettings() {
       throw new Error((s && s.error) || 'the server did not return settings');
     }
   } catch (e) {
-    body.textContent = 'could not read settings — ' + (e.message || e);
+    body.textContent = 'could not read settings. ' + (e.message || e);
     return;
   }
   loaded = s;
   const v = s.values, o = s.options;
 
   body.innerHTML = `
-    <section class="set-group">
-      <h3>Journal</h3>
+    <section class="set-group" data-set="journal">
+      <div class="rule eyebrow">journal</div>
       ${fieldRow('set-date', 'Date display',
-        'How dates are shown. What gets stored never changes — entries are '
+        'How dates are shown. What gets stored never changes, because entries are '
         + 'always kept in ISO form, so switching back and forth is safe.')}
       ${fieldRow('set-tz', 'Time zone',
         'The zone your entries are stamped in, and the companion\'s sense of '
@@ -150,44 +210,103 @@ export async function loadSettings() {
       ${fieldRow('set-lang', 'Language',
         'English is the only option today. The setting exists so adding '
         + 'another later is a configuration change, not a rebuild.')}
+      ${fieldRow('set-chapter', 'Ask to close a chapter at',
+        'Characters of your own writing in the open chapter. Past this, the '
+        + 'write tab asks whether to close it, since nothing in it can be '
+        + 'searched until then and every reply resends all of it. Say not yet, '
+        + 'and it asks again after 10,000 more. Blank uses the default; 0 never asks.')}
     </section>
-    <section class="set-group">
-      <h3>Models &amp; cost</h3>
+    <section class="set-group" data-set="categories">
+      <div class="rule eyebrow">categories</div>
+      <p class="set-help">The life-domain tags the companion suggests on new
+        entries. Turn off any that don’t fit your life, and the
+        journal will still grow its own categories from what you write. Entries
+        you’ve already tagged keep their tags either way.</p>
+      <div class="set-row"><div class="set-control check-group" id="set-categories-control"></div></div>
+    </section>
+    <section class="set-group" data-set="models">
+      <div class="rule eyebrow">models &amp; cost</div>
       ${fieldRow('set-companion-model', 'Companion model',
         'The voice you write to. This is the one place model quality is '
         + 'felt directly, so it is worth spending more here than anywhere '
         + 'else.')}
       ${fieldRow('set-companion-effort', 'Companion effort',
         'How hard the companion thinks before answering. Higher is slower '
-        + 'and costs more. The choices come from the model above &mdash; '
-        + 'not every model offers the same ones.')}
+        + 'and costs more. The choices come from the model above, '
+        + 'since not every model offers the same ones.')}
       ${fieldRow('set-processing-model', 'Processing model',
         'Everything that happens in the background: tagging, entities, '
         + 'summaries, arcs, patterns, dreams. It runs in bulk and is where '
         + 'most of the spend goes, so it is the useful place to trade down.')}
       ${fieldRow('set-max-session', 'Stop after (dollars per session)',
         'A ceiling on one session, counted from when the journal last '
-        + 'started and cleared when you close a chat. '
+        + 'started and cleared when you close a chapter. '
         + capHelp((s.caps || {}).session))}
       ${fieldRow('set-max-spend', 'Stop after (dollars per month)',
         'A ceiling on the calendar month, kept in a small file so it '
         + 'survives restarts. ' + capHelp((s.caps || {}).monthly))}
       <div class="set-row" id="set-caps-control"></div>
       <div class="set-row">
-        <label>Session cost</label>
+        <span class="set-label">Session cost</span>
         <div class="set-control" id="set-cost-control"></div>
       </div>
     </section>
-    <section class="set-group">
-      <h3>API key</h3>
+    <section class="set-group" data-set="api key">
+      <div class="rule eyebrow">api key</div>
       <div class="set-row">
         <label for="set-key">Anthropic API key</label>
         <div class="set-control">
           <input type="password" id="set-key" autocomplete="off"
-                 placeholder="${s.api_key_set ? 'a key is set — type a new one to replace it' : 'no key set'}">
+                 placeholder="${s.api_key_set ? 'a key is set, so type a new one to replace it' : 'no key set'}">
         </div>
         <p class="set-help">Write-only: the key is never sent back to this
           page, not even partially. Leave it blank to keep the one you have.</p>
+      </div>
+    </section>
+    <section class="set-group" data-set="data">
+      <div class="rule eyebrow">data</div>
+      <p class="set-help">Your writing is plain markdown on this computer, and
+        these do not need saving first. They act straight away on the
+        journal as it is right now.</p>
+      <div class="set-row">
+        <span class="set-label">Export</span>
+        <div class="set-control">
+          <button class="quiet" id="set-export">export to a folder</button>
+        </div>
+        <p class="set-help">Every entry as markdown, plus one JSON file with
+          all of them, plus everything the app worked out from them. Nothing
+          in it needs this app to read.</p>
+      </div>
+      <div class="set-row">
+        <span class="set-label">Backup</span>
+        <div class="set-control">
+          <button class="quiet" id="set-backup">save a dated zip</button>
+        </div>
+        <p class="set-help">The same export as one file you can move. It lands
+          next to the journal, on the same disk. Copy it somewhere that
+          survives this machine.</p>
+      </div>
+      <div class="set-row">
+        <span class="set-label">Search index</span>
+        <div class="set-control">
+          <button class="quiet" id="set-rebuild">rebuild from my entries</button>
+        </div>
+        <p class="set-help">Rebuilds search from the markdown. Free and
+          offline, because the embeddings are computed on this machine, so
+          there is no key and nothing to spend. Slow on a long journal.</p>
+      </div>
+      <div id="set-data-note"></div>
+    </section>
+    <section class="set-group" data-set="design">
+      <div class="rule eyebrow">design</div>
+      <div class="set-row">
+        <span class="set-label">Design system</span>
+        <div class="set-control">
+          <a class="quiet" id="set-design" href="/design">open the design system ›</a>
+        </div>
+        <p class="set-help">The tokens and components the journal is built
+          from, rendered live from its own stylesheets. For whoever works on
+          the app; nothing there touches your journal.</p>
       </div>
     </section>`;
 
@@ -245,6 +364,33 @@ export async function loadSettings() {
   markPending('set-lang-control', 'MC_LANGUAGE',
     a => (o.languages.find(l => l.value === a) || {}).label || a);
 
+  // categories — one checkbox per built-in, checked = offered on new entries.
+  // Stored as the *disabled* set (config.DISABLED_CATEGORIES), so an unchecked
+  // box is what gets sent. The list comes from the server so a category added
+  // later needs no change here. An older server sends no `categories`, in which
+  // case the section simply stays empty rather than throwing.
+  const catBox = $('set-categories-control');
+  if (catBox && Array.isArray(o.categories)) {
+    const off = new Set((v.MC_DISABLED_CATEGORIES || '')
+      .split(',').map(s => s.trim()).filter(Boolean));
+    for (const c of o.categories) {
+      const row = document.createElement('label');
+      row.className = 'check-row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = c.name;
+      cb.checked = !off.has(c.name);
+      const text = document.createElement('span');
+      text.innerHTML = '<strong>' + esc(c.name) + '</strong> · '
+        + esc(c.description || '');
+      row.append(cb, text);
+      catBox.appendChild(row);
+    }
+    markPending('set-categories-control', 'MC_DISABLED_CATEGORIES', describeCats);
+  }
+
+  chapterField(v, s.chapter_close);
+
   // ---- models ----
   // Both pickers offer the same lineup: nothing is restricted by bucket. The
   // difference between the two is the guidance beside them, not the options
@@ -269,10 +415,10 @@ export async function loadSettings() {
       const pr = (o.models.find(x => x.value === m) || {}).price;
       return pr ? '$' + pr.in + ' / $' + pr.out + ' per Mtok' : 'price unlisted';
     };
-    function modelSelect(id, current) {
+    function modelSelect(id, current, models) {
       const sel = document.createElement('select');
       sel.id = id;
-      for (const m of o.models) {
+      for (const m of models) {
         const opt = new Option(m.label + ' \u2014 ' + priceOf(m.value), m.value);
         opt.selected = m.value === current;
         sel.add(opt);
@@ -283,7 +429,7 @@ export async function loadSettings() {
       return sel;
     }
 
-    const cModel = modelSelect('set-companion-model', v.MC_COMPANION_MODEL);
+    const cModel = modelSelect('set-companion-model', v.MC_COMPANION_MODEL, o.models);
     markPending('set-companion-model-control', 'MC_COMPANION_MODEL', modelName);
 
     // The companion is the one surface where dropping a tier is felt in the
@@ -342,21 +488,20 @@ export async function loadSettings() {
     cModel.onchange = () => { fillEfforts(effort.value); showVoiceWarning(); };
     markPending('set-companion-effort-control', 'MC_COMPANION_EFFORT', a => a);
 
-    modelSelect('set-processing-model', v.MC_PROCESSING_MODEL);
+    // Processing offers a shorter list (config.PROCESSING_MODELS). An older
+    // server sends no `processing` flag, so it gets the whole lineup as before.
+    const forProcessing = o.models.filter(m => m.processing !== false);
+    modelSelect('set-processing-model', v.MC_PROCESSING_MODEL, forProcessing);
     markPending('set-processing-model-control', 'MC_PROCESSING_MODEL', modelName);
   }
 
   // ---- spend caps ----
-  // There is no cap control here, because there is no cap: nothing reads
-  // these values before a call yet. An input would let someone set a ceiling
-  // and believe it protected them, and even a read-only "no limit" row is
-  // just a setting that does nothing taking up space.
-  //
-  // The exception is a value that is already in .env -- hand-added, or saved
-  // through the API, which whitelists both keys. That author has every reason
-  // to think their cap is working, and this is the only place that can tell
-  // them otherwise. So: say what is true always, and name the stale values
-  // only when they exist.
+  // Two real inputs, because `caps.py` now checks both before every call.
+  // This comment used to say the opposite -- that a cap control would be a
+  // setting nobody enforced -- and that reasoning is worth keeping in view:
+  // an input that lets someone set a ceiling and believe it protects them is
+  // worse than no input. `spend_caps_enforced` is what keeps the two honest,
+  // and the branch below is what a build from before the caps still shows.
   // Rendered with the rest of the section rather than on a disclosure's
   // first open. The figure is a snapshot of the moment the pane was loaded --
   // there is nothing to subscribe to, since it only moves when a call the
@@ -381,9 +526,6 @@ export async function loadSettings() {
       + 'Restart it to pick up the new one.';
     caps.appendChild(note);
   } else {
-    caps.appendChild(usedLine('This session', s.caps.session, money));
-    caps.appendChild(usedLine('This month (' + s.caps.monthly.month + ')',
-                              s.caps.monthly, money));
     if (v.MC_MAX_SESSION_TOKENS) {
       // It was a token count, briefly, and nothing reads it now. Silence here
       // would leave a line in .env that looks exactly like a cap.
@@ -412,9 +554,14 @@ export async function loadSettings() {
     + 'being right is a spend limit on your Anthropic Console account.';
   caps.appendChild(backstop);
 
-  $('settings-save').disabled = false;
   $('settings-note').textContent = '';
+  setDirty(false);
+  body.oninput = body.onchange = () => setDirty(Object.keys(collectChanges()).length > 0);
   syncSeedButton();
+  // Not in init(): these buttons live inside #settings-body, which this
+  // function replaces wholesale every time Settings is opened, so handlers
+  // bound once at startup would be attached to elements that no longer exist.
+  wireData();
 }
 
 // A save is only half a change: the process read .env at import. Rather than
@@ -428,14 +575,18 @@ async function instanceId() {
   try {
     const res = await fetch('/api/status', {cache: 'no-store'});
     return res.ok ? ((await res.json()).instance || null) : null;
-  } catch (e) {
+  } catch {
     return null;      // still down
   }
 }
 
-async function restartServer(note, saved = true, into = 'journal') {
+// Exported for the first-run wizard, which ends on the same restart this
+// does. The instance-id poll below is the subtle part -- uvicorn keeps
+// serving while it drains, so "the server answered" is not evidence the
+// restart happened -- and a second copy of it would drift from this one.
+export async function restartServer(note, saved = true, into = 'journal') {
   note.className = 'set-note';
-  note.textContent = 'restarting to apply…';
+  note.innerHTML = 'restarting <span class="dots">···</span>';
   const before = await instanceId();
   let r;
   try {
@@ -443,7 +594,7 @@ async function restartServer(note, saved = true, into = 'journal') {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({into}),
     })).json();
-  } catch (e) {
+  } catch {
     r = {error: 'could not reach the server.'};
   }
   if (r.error) {
@@ -467,7 +618,7 @@ async function restartServer(note, saved = true, into = 'journal') {
   }
   note.className = 'set-note error';
   note.textContent = (saved ? 'saved, but ' : '')
-    + 'the journal did not come back — start it again the way you normally do.';
+    + 'the journal did not come back. Start it again the way you normally do.';
 }
 
 // The restart the save flow already performs, reachable on its own. Item 7
@@ -546,16 +697,13 @@ async function renderCost() {
   box.appendChild(note);
 }
 
-async function save() {
-  if (!loaded) return;
-  const btn = $('settings-save');
-  const note = $('settings-note');
-
-  // only what actually changed, so a save never rewrites a line the user
-  // didn't touch — and an untouched key field sends nothing at all. A control
-  // that is disabled or locked is skipped outright: its value is not an
-  // answer the author gave, so sending it would be this page inventing one.
+// Only what actually changed, so a save never rewrites a line the user
+// didn't touch, and an untouched key field sends nothing at all. A control
+// that is disabled or locked is skipped outright: its value is not an answer
+// the author gave, so sending it would be this page inventing one.
+function collectChanges() {
   const values = {};
+  if (!loaded) return values;
   const pairs = [
     ['MC_DATE_FORMAT', 'set-date'],
     ['MC_TIMEZONE', 'set-tz'],
@@ -565,6 +713,7 @@ async function save() {
     ['MC_PROCESSING_MODEL', 'set-processing-model'],
     ['MC_MAX_SESSION_SPEND', 'set-max-session'],
     ['MC_MAX_MONTHLY_SPEND', 'set-max-spend'],
+    ['MC_CHAPTER_CLOSE_CHARS', 'set-chapter'],
   ];
   for (const [key, id] of pairs) {
     const el = $(id);
@@ -574,8 +723,37 @@ async function save() {
     if (!el || el.disabled || el.dataset.locked) continue;
     if (el.value !== (loaded.values[key] || '')) values[key] = el.value;
   }
-  const key = $('set-key').value.trim();
+  // categories: unchecked boxes are the disabled set, in the built-in order
+  // they were rendered in (which matches the server's normalisation), so the
+  // comparison against the stored line is apples to apples. Only sent when it
+  // changed.
+  const catInputs = [...document.querySelectorAll(
+    '#set-categories-control input[type=checkbox]')];
+  if (catInputs.length) {
+    const disabled = catInputs.filter(b => !b.checked).map(b => b.value).join(',');
+    if (disabled !== (loaded.values.MC_DISABLED_CATEGORIES || '')) {
+      values.MC_DISABLED_CATEGORIES = disabled;
+    }
+  }
+  const key = ($('set-key') || {value: ''}).value.trim();
   if (key) values.ANTHROPIC_API_KEY = key;
+  return values;
+}
+
+// save is dim and outlined until something is dirty, then the filled
+// secondary primary reading `save & restart`
+function setDirty(dirty) {
+  const btn = $('settings-save');
+  btn.disabled = !dirty;
+  btn.className = dirty ? 'filled' : 'quiet';
+  btn.textContent = dirty ? 'save & restart' : 'save';
+}
+
+async function save() {
+  if (!loaded) return;
+  const btn = $('settings-save');
+  const note = $('settings-note');
+  const values = collectChanges();
 
   if (!Object.keys(values).length) {
     note.className = 'set-note';
@@ -585,7 +763,7 @@ async function save() {
 
   btn.disabled = true;
   note.className = 'set-note';
-  note.textContent = 'saving…';
+  note.innerHTML = 'saving · restarting <span class="dots">···</span>';
   let r;
   try {
     const res = await fetch('/api/settings', {
@@ -593,7 +771,7 @@ async function save() {
       body: JSON.stringify({values}),
     });
     r = await res.json();
-  } catch (e) {
+  } catch {
     r = {error: 'could not reach the server'};
   }
   btn.disabled = false;
@@ -664,18 +842,148 @@ async function loadSeed() {
     btn.disabled = false;
     return;
   }
+  // Only the first trip builds anything, so this is said once. In the
+  // dialog rather than only during the wait: a pause someone agreed to
+  // reads as the program working, and the same pause unannounced reads
+  // as the program stuck.
+  const build = state.demoBuilt ? '' :
+    '\n\nThe first trip there builds its search index: '
+    + demoBuildWait() + '. Each visit rebuilds the demo to clear previous writing.';
   if (!confirm('Restart on the demo journal?\n\nIt has its own entries, '
       + 'entities and summaries \u2014 nothing you do there touches yours. '
-      + 'Any restart brings you back.')) return;
+      + 'Any restart brings you back. All demo data is reset on each visit; rebuilding may take around twenty seconds.' + build)) return;
   btn.disabled = true;
+  // Built on demand when it is missing. Until this, the button's whole
+  // failure mode was a 409 naming a command to go and run -- a fine thing
+  // for a log to say and a poor thing for a button to do.
+  const ready = await installDemo((text, kind) => {
+    note.className = kind === 'error' ? 'set-note error' : 'set-note';
+    note.textContent = text;
+  });
+  if (!ready) { btn.disabled = false; return; }
   await restartServer(note, false, 'seed');
   btn.disabled = false;
 }
 
+// ---- data ----
+// Export, backup and rebuild call the same functions `export.py`, `backup.py`
+// and `rebuild_index.py` call from a terminal. They act on the journal as it
+// is on disk, not on anything unsaved in this pane, which is why they do not
+// wait for Save and do not restart anything.
+
+// Each of the three can take a while on a long journal -- the rebuild
+// embeds every chunk -- and the only honest thing to show meanwhile is that
+// it is running. A disabled button with a line under it beats a spinner that
+// cannot say how far along it is.
+async function runData(btn, label, url, describe) {
+  const note = $('set-data-note');
+  const all = ['set-export', 'set-backup', 'set-rebuild'].map($);
+  all.forEach(b => { if (b) b.disabled = true; });
+  const was = btn.textContent;
+  busyLabel(btn, label);
+  // Put the answer directly under the button that was pressed. The note used to
+  // sit at the foot of the whole section, so an Export confirmation surfaced
+  // below Backup and Rebuild and read as unrelated help text; moving it here,
+  // and drawing it as a callout (below), ties it to the action that ran.
+  btn.closest('.set-row').append(note);
+  note.className = 'notice-card set-feedback working';
+  note.innerHTML = 'working <span class="dots">···</span>';
+  try {
+    const res = await fetch(url, {method: 'POST'});
+    const body = await res.json();
+    if (!res.ok || body.error) throw new Error(body.error || 'it did not finish');
+    note.className = 'notice-card set-feedback ok';
+    note.textContent = describe(body);
+  } catch (e) {
+    note.className = 'notice-card set-feedback error';
+    note.textContent = 'That did not work. ' + (e.message || e);
+  } finally {
+    btn.textContent = was;
+    all.forEach(b => { if (b) b.disabled = false; });
+  }
+}
+
+const mb = n => (n / 1e6).toFixed(1) + ' MB';
+
+function wireData() {
+  const exp = $('set-export'), bak = $('set-backup'), reb = $('set-rebuild');
+  if (exp) exp.onclick = () => runData(exp, 'exporting',
+    '/api/data/export',
+    b => b.entries + ' entries written to ' + b.path);
+  if (bak) bak.onclick = () => runData(bak, 'zipping',
+    '/api/data/backup',
+    b => mb(b.bytes) + ' written to ' + b.path
+       + '. Move it somewhere that survives this machine.');
+  if (reb) reb.onclick = () => runData(reb, 'rebuilding',
+    '/api/data/rebuild',
+    b => 'search index rebuilt: '
+       + Object.entries(b).filter(([, val]) => val && val.documents !== undefined)
+           .map(([k, val]) => val.documents + ' ' + k.replace('journal_', ''))
+           .join(', ') + '.');
+}
+
+// ---- appearance (client-only theme) ----
+// A per-browser display preference, not a .env value: it takes effect with no
+// save and no restart, and does not travel to another device. The inline head
+// script applies a pinned choice before first paint to avoid a flash; this
+// keeps the control in sync and writes the choice. "auto" clears the pin and
+// lets prefers-color-scheme decide. Reads/writes are wrapped because storage
+// can throw (private mode) -- a theme switch must never take the panel down.
+const THEME_KEY = 'rag_theme';
+function applyTheme(choice) {
+  const root = document.documentElement;
+  if (choice === 'light' || choice === 'dark') root.dataset.theme = choice;
+  else delete root.dataset.theme;
+}
+function markTheme(choice) {
+  document.querySelectorAll('#theme-toggle button').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.themeChoice === choice)));
+}
+function themeInit() {
+  const group = $('theme-toggle');
+  if (!group) return;
+  let stored;
+  try { stored = localStorage.getItem(THEME_KEY); } catch {}
+  const current = (stored === 'light' || stored === 'dark') ? stored : 'auto';
+  applyTheme(current);
+  markTheme(current);
+  group.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-theme-choice]');
+    if (!btn) return;
+    const choice = btn.dataset.themeChoice;
+    try {
+      if (choice === 'auto') localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, choice);
+    } catch {}
+    applyTheme(choice);
+    markTheme(choice);
+  });
+}
+
+const JUMPS = ['appearance', 'journal', 'categories', 'models', 'api key', 'data', 'design'];
+function jumpTo(id) {
+  const pane = $('settings');
+  const el = pane.querySelector(`[data-set="${id}"]`);
+  if (!el) return;
+  const top = el.getBoundingClientRect().top - pane.getBoundingClientRect().top + pane.scrollTop;
+  pane.scrollTo({top: Math.max(0, top - 64), behavior: 'smooth'});
+  document.querySelectorAll('#settings-jumps .chip').forEach(b =>
+    b.classList.toggle('on', b.dataset.jump === id));
+}
+
 export function init() {
+  for (const id of JUMPS) {
+    const b = document.createElement('button');
+    b.className = 'chip sm';
+    b.dataset.jump = id;
+    b.textContent = id;
+    b.onclick = () => jumpTo(id);
+    $('settings-jumps').appendChild(b);
+  }
   $('settings-save').onclick = save;
   $('settings-restart').onclick = restartNow;
   $('settings-seed').onclick = loadSeed;
+  themeInit();
   syncSeedButton();
   // `toggle` fires after the popover is in the layer, so it has a width to
   // measure by then; `beforetoggle` would measure zero.

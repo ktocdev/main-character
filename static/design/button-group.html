@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Character — button group</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="design.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="pages/button-group.css">
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1><a href="index.html">main character</a></h1>
+    <span class="status">button group · chip · filter row · jump pills · segmented</span>
+  </div>
+  <div class="right">
+    <span>source: static/css/components.css</span>
+    <div class="segmented" id="theme" role="group" aria-label="theme">
+      <button data-t="auto" aria-pressed="false">Auto</button>
+      <button data-t="light" aria-pressed="false">Light</button>
+      <button data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="side" aria-label="design system">
+    <div class="eyebrow">on this page</div>
+    <a href="#chip">chip</a>
+    <a href="#filter">filter row</a>
+    <a href="#jump">jump pills</a>
+    <a href="#segmented">segmented</a>
+    <a href="#anatomy">anatomy</a>
+    <a href="#tokens">tokens</a>
+  </nav>
+
+  <main class="doc wide">
+    <section>
+      <h2>Button group</h2>
+      <p class="lede">A row of buttons where one is the current choice. Three shapes: a <b>filter row</b> of count chips (dreams' tones, the entity filters), a sticky <b>jump row</b> of pills that scrolls a long column (help, settings), and the boxed <b>segmented</b> control for two to four fixed options (the theme). Each marks its one choice the same way: <span class="mono">--bg-muted</span> under a <span class="mono">--text-accent</span> label.</p>
+    </section>
+
+    <section id="chip">
+      <div class="rule eyebrow strong">Chip</div>
+      <p class="note">The button the first two groups are made of: a pill in a <span class="mono">--border-default</span> rule, <span class="mono">.on</span> when it is the current choice. <b>plain</b> is the 2.2rem chip (suggestion pills); <b>filter</b> and <b>jump</b> are the 1.8rem <span class="mono">.chip.sm</span> inside a <span class="mono">.chip-row</span> or a <span class="mono">.jump-pills</span>, which only differ on hover: a filter chip's rule brightens, a jump pill's label goes to <span class="mono">--text-accent</span>.</p>
+      <div class="stack">
+        <div class="spec-row">
+          <button class="chip" data-figma-set="Chip" data-figma-variant="kind=plain, selected=false, state=default" data-figma-text="label">what did I write about Mika?</button>
+          <button class="chip is-hover" data-figma-set="Chip" data-figma-variant="kind=plain, selected=false, state=hover" data-figma-text="label">what did I write about Mika?</button>
+          <button class="chip on" data-figma-set="Chip" data-figma-variant="kind=plain, selected=true, state=default" data-figma-text="label">what did I write about Mika?</button>
+          <button class="chip on is-hover" data-figma-set="Chip" data-figma-variant="kind=plain, selected=true, state=hover" data-figma-text="label">what did I write about Mika?</button>
+        </div>
+        <div class="spec-row">
+          <div class="host chip-row"><button class="chip sm" data-figma-set="Chip" data-figma-variant="kind=filter, selected=false, state=default"><span data-figma-text="label">surreal</span><span class="n" data-figma-text="count" data-figma-bool="show count">4</span></button></div>
+          <div class="host chip-row"><button class="chip sm is-hover" data-figma-set="Chip" data-figma-variant="kind=filter, selected=false, state=hover"><span data-figma-text="label">surreal</span><span class="n" data-figma-text="count" data-figma-bool="show count">4</span></button></div>
+          <div class="host chip-row"><button class="chip sm on" data-figma-set="Chip" data-figma-variant="kind=filter, selected=true, state=default"><span data-figma-text="label">surreal</span><span class="n" data-figma-text="count" data-figma-bool="show count">4</span></button></div>
+          <div class="host chip-row"><button class="chip sm on is-hover" data-figma-set="Chip" data-figma-variant="kind=filter, selected=true, state=hover"><span data-figma-text="label">surreal</span><span class="n" data-figma-text="count" data-figma-bool="show count">4</span></button></div>
+        </div>
+        <div class="spec-row">
+          <div class="host jump-pills"><button class="chip sm" data-figma-set="Chip" data-figma-variant="kind=jump, selected=false, state=default" data-figma-text="label">search</button></div>
+          <div class="host jump-pills"><button class="chip sm is-hover" data-figma-set="Chip" data-figma-variant="kind=jump, selected=false, state=hover" data-figma-text="label">search</button></div>
+          <div class="host jump-pills"><button class="chip sm on" data-figma-set="Chip" data-figma-variant="kind=jump, selected=true, state=default" data-figma-text="label">search</button></div>
+          <div class="host jump-pills"><button class="chip sm on is-hover" data-figma-set="Chip" data-figma-variant="kind=jump, selected=true, state=hover" data-figma-text="label">search</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="filter">
+      <div class="rule eyebrow strong">Filter row</div>
+      <p class="note"><span class="mono">.chip-row</span>: count chips .3rem apart that wrap onto a second line. The first is always "all". Dreams' tone row, under the weather line.</p>
+      <div class="spec-row top">
+        <div class="chip-row" data-figma-set="Filter row" data-figma-variant="selected=all">
+          <button class="chip sm on" data-figma-instance="Chip" data-figma-variant="kind=filter, selected=true, state=default"><span data-figma-text="label">all</span><span class="n" data-figma-text="count">9</span></button>
+          <button class="chip sm" data-figma-instance="Chip" data-figma-variant="kind=filter, selected=false, state=default"><span data-figma-text="label">surreal</span><span class="n" data-figma-text="count">4</span></button>
+          <button class="chip sm" data-figma-instance="Chip" data-figma-variant="kind=filter, selected=false, state=default"><span data-figma-text="label">anxiety</span><span class="n" data-figma-text="count">3</span></button>
+          <button class="chip sm" data-figma-instance="Chip" data-figma-variant="kind=filter, selected=false, state=default"><span data-figma-text="label">tender</span><span class="n" data-figma-text="count">2</span></button>
+        </div>
+        <div class="chip-row" data-figma-set="Filter row" data-figma-variant="selected=other">
+          <button class="chip sm" data-figma-instance="Chip" data-figma-variant="kind=filter, selected=false, state=default"><span data-figma-text="label">all</span><span class="n" data-figma-text="count">9</span></button>
+          <button class="chip sm on" data-figma-instance="Chip" data-figma-variant="kind=filter, selected=true, state=default"><span data-figma-text="label">surreal</span><span class="n" data-figma-text="count">4</span></button>
+          <button class="chip sm" data-figma-instance="Chip" data-figma-variant="kind=filter, selected=false, state=default"><span data-figma-text="label">anxiety</span><span class="n" data-figma-text="count">3</span></button>
+          <button class="chip sm" data-figma-instance="Chip" data-figma-variant="kind=filter, selected=false, state=default"><span data-figma-text="label">tender</span><span class="n" data-figma-text="count">2</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section id="jump">
+      <div class="rule eyebrow strong">Jump pills</div>
+      <p class="note"><span class="mono">.jump-pills</span>: sticky at the top of a scrolling column, on <span class="mono">--bg-page</span> with a hairline under it. The pills scroll sideways rather than wrap; an optional text button sits at the end (help's expand all). The pill for the section in view is <span class="mono">.on</span>.</p>
+      <div class="spec-row top">
+        <div class="jump-pills" data-figma-set="Jump pills" data-figma-variant="action=true">
+          <div class="pills">
+            <button class="chip sm" data-figma-instance="Chip" data-figma-variant="kind=jump, selected=false, state=default" data-figma-text="label">write</button>
+            <button class="chip sm" data-figma-instance="Chip" data-figma-variant="kind=jump, selected=false, state=default" data-figma-text="label">ask</button>
+            <button class="chip sm on" data-figma-instance="Chip" data-figma-variant="kind=jump, selected=true, state=default" data-figma-text="label">search</button>
+            <button class="chip sm" data-figma-instance="Chip" data-figma-variant="kind=jump, selected=false, state=default" data-figma-text="label">history</button>
+            <button class="chip sm" data-figma-instance="Chip" data-figma-variant="kind=jump, selected=false, state=default" data-figma-text="label">entities</button>
+          </div>
+          <button class="text" data-figma-instance="Button" data-figma-variant="kind=text, size=md, state=default" data-figma-text="label">expand all</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="segmented">
+      <div class="rule eyebrow strong">Segmented</div>
+      <p class="note"><span class="mono">.segmented</span>: two to four options in one <span class="mono">--radius-sm</span> box, hairlines between them, the chosen one marked with <span class="mono">aria-pressed</span>. Settings' appearance (and the theme switch at the top of these pages).</p>
+      <div class="spec-row">
+        <div class="segmented" role="group" data-figma-set="Segmented" data-figma-variant="selected=1">
+          <button aria-pressed="true" data-figma-text="option 1">Auto</button><button aria-pressed="false" data-figma-text="option 2">Light</button><button aria-pressed="false" data-figma-text="option 3">Dark</button>
+        </div>
+        <div class="segmented" role="group" data-figma-set="Segmented" data-figma-variant="selected=2">
+          <button aria-pressed="false" data-figma-text="option 1">Auto</button><button aria-pressed="true" data-figma-text="option 2">Light</button><button aria-pressed="false" data-figma-text="option 3">Dark</button>
+        </div>
+        <div class="segmented" role="group" data-figma-set="Segmented" data-figma-variant="selected=3">
+          <button aria-pressed="false" data-figma-text="option 1">Auto</button><button aria-pressed="false" data-figma-text="option 2">Light</button><button aria-pressed="true" data-figma-text="option 3">Dark</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="anatomy">
+      <div class="rule eyebrow strong">Anatomy</div>
+<pre class="tree">div.chip-row                 filter row, wraps
+  button.chip.sm[.on]
+    span   label
+    span.n count, 70%
+div.jump-pills               sticky row
+  div.pills                  scrolls sideways
+    button.chip.sm[.on]
+  button.text                optional action
+div.segmented[role=group]
+  button[aria-pressed]</pre>
+      <div class="parts">
+        <div class="part">chip</div><div class="rule-text">--border-default pill, --text-muted label. Hover: --text-default on --bg-raised. On: --bg-muted fill, --border-accent rule, --text-accent label.</div>
+        <div class="part">count</div><div class="rule-text">Tabular figures at 70% opacity, after the label.</div>
+        <div class="part">segment</div><div class="rule-text">2.4rem tall, at least 4.2rem wide, hairline on the left of all but the first. Pressed: --bg-muted under a --text-accent label.</div>
+      </div>
+    </section>
+
+    <section id="tokens">
+      <div class="rule eyebrow strong">Tokens</div>
+      <p class="note">Fills <span class="mono">--bg-muted</span>, <span class="mono">--bg-raised</span>, <span class="mono">--bg-page</span>; labels <span class="mono">--text-muted</span>, <span class="mono">--text-default</span>, <span class="mono">--text-accent</span>; rules <span class="mono">--border-default</span>, <span class="mono">--border-strong</span>, <span class="mono">--border-accent</span>; radius <span class="mono">--radius-pill</span>, <span class="mono">--radius-sm</span>. In Figma: <b>Chip</b> (<span class="mono">kind × selected × state</span>; <span class="mono">label</span>, <span class="mono">count</span>, <span class="mono">show count</span>), and <b>Filter row</b>, <b>Jump pills</b> and <b>Segmented</b>, the first two made of Chip instances.</p>
+    </section>
+  </main>
+</div>
+<script type="module" src="design.js"></script>
+</body>
+</html>
