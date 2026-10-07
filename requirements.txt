@@ -9,5 +9,5 @@ tzdata>=2024.1         # IANA zone database — zoneinfo ships none on
 
 # Web UI
 
-fastapi>=0.141.1       # local web server (server.py)
+fastapi>=0.142.2       # local web server (server.py)
 uvicorn>=0.52.4        # ASGI runner
