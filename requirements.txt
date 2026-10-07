@@ -7,7 +7,7 @@ chromadb>=1.5.9        # local vector store; bundles all-MiniLM-L6-v2 for
 fastembed>=0.8         # the passage index's embedder, run locally (passages.py);
                        # EMBED_MODEL in config.py picks snowflake-arctic-embed-s
 anthropic>=1.2.0       # Claude API — companion + metadata extraction
-python-dotenv>=1.2.3   # .env config
+python-dotenv>=1.2.4   # .env config
 tzdata>=2024.1         # IANA zone database — zoneinfo ships none on
                        # Windows, so MC_TIMEZONE is a silent no-op without it
 
