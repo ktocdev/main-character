@@ -77,6 +77,9 @@
   /* ---- detail ---- */
   #entity-detail-col[hidden], #entity-none[hidden] { display: none; }
   #entity-edit-toggle { margin-left: auto; }
+  /* opened from triage with e: the way back, above the title on every width */
+  #entity-to-triage { display: inline-flex; margin: 0 0 .6rem; padding-left: 0; font-size: .85rem; min-height: 2.2rem; }
+  #entity-to-triage[hidden] { display: none; }
   #entity-chips { margin-top: .6rem; gap: .3rem; }
   #entity-chips .tag { color: var(--text-muted); height: 1.7rem; padding: 0 .7rem; font-size: .8rem; }
   #entity-chips .tag .k { font-size: .7rem; opacity: .7; }

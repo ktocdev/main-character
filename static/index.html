@@ -314,6 +314,7 @@
         <button class="quiet" data-tkey="t" title="move to a different kind: then 1 person · 2 project · 3 place"><span class="key">t</span>retype</button>
         <button class="quiet danger" data-tkey="d" title="remove this entity. There's no confirm, and undo brings it back"><span class="key">d</span>delete</button>
         <button class="quiet" data-tkey="s" title="decide later. It stays in the queue for next time"><span class="key">s</span>skip</button>
+        <button class="quiet" data-tkey="e" title="open this entity in Entities to edit observations; a link there brings you back"><span class="key">e</span>edit in entities</button>
         <button class="quiet" data-tkey="u" id="triage-undo" title="undo the last change, 50 deep and across sessions"><span class="key">u</span>undo</button>
       </div>
       <p class="footnote" id="triage-foot">Most entities are a one-second <span class="key">k</span> or <span class="key">d</span>. Don't deliberate; that is what <span class="key">s</span> is for. Undo is 50 deep and survives closing the tab.</p>
@@ -484,6 +485,7 @@
           <span class="k">a</span><span class="d"><span class="n">alias</span> <span class="t">— add another name this entity goes by (matchable by both)</span></span>
           <span class="k">t then 1/2/3</span><span class="d"><span class="n">retype</span> <span class="t">— to person / project / place</span></span>
           <span class="k">s</span><span class="d"><span class="n">skip</span> <span class="t">— decide later, stays in queue for next time</span></span>
+          <span class="k">e</span><span class="d"><span class="n">edit in entities</span> <span class="t">— open it on the entities screen for a deeper fix; "back to triage" there returns you to the same spot</span></span>
           <span class="k">u</span><span class="d"><span class="n">undo</span> <span class="t">— last change (50 deep, works across sessions)</span></span>
         </div>
         <p>Most entities are a 1-second <b>k</b> or <b>d</b>. If you're unsure, don't deliberate. That's what
@@ -645,6 +647,7 @@
         </div>
         <div class="detail-col" id="entity-detail-col" hidden>
           <button class="text back-link" id="entity-back">‹ all entities</button>
+          <button class="text" id="entity-to-triage" hidden title="back to the triage queue, where you left it">‹ back to triage</button>
           <div class="title-row">
             <h2 class="title" id="entity-name"></h2>
             <button class="quiet sm" id="entity-edit-toggle" aria-expanded="false" hidden>edit ▾</button>

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, esc, fmtDate, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
+import { showTab } from './main.js';
 import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection, showGroup as showGroupByName } from './groups.js';
 
 // ---- entities ----
@@ -200,6 +201,7 @@ function showDetail(kind) {
   $('entity-detail-col').hidden = kind === 'none';
   $('entity-none').hidden = kind !== 'none';
   $('entity-edit-toggle').hidden = kind !== 'entity';
+  $('entity-to-triage').hidden = kind !== 'entity' || !state.triageReturn;
   if (kind !== 'entity') { $('entity-edit').hidden = true; $('entity-chips').innerHTML = ''; }
   setEditOpen(kind === 'entity' && editOpen);
   $('entities-pane').classList.toggle('drilled', kind !== 'none' || !$('suggest-wrap').hidden);
@@ -422,6 +424,7 @@ export function init() {
   };
   $('entity-edit-toggle').onclick = () => setEditOpen(!editOpen);
   $('entity-back').onclick = () => $('entities-pane').classList.remove('drilled');
+  $('entity-to-triage').onclick = () => showTab('triage');
   $('suggest-back').onclick = () => $('entities-pane').classList.remove('drilled');
   $('batch-add').onclick = batchAdd;
   $('batch-group').onkeydown = e => { if (e.key === 'Enter') batchAdd(); };

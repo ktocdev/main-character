@@ -697,7 +697,9 @@ def list_observations(kind: str, canonical_name: str) -> list[dict]:
     for path in sorted(RAW_DIR.glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
         date, title = lookup.get(path.stem, (path.stem[:10], path.stem))
-        for group, raw_kind in (("people", "person"), ("projects", "project"), ("places", "place")):
+        for group, raw_kind, attr_field in (("people", "person", "relationship"),
+                                            ("projects", "project", "status"),
+                                            ("places", "place", "kind")):
             for ent_index, ent in enumerate(data.get(group, [])):
                 name = (ent.get("name") or "").strip()
                 if not name:
@@ -705,12 +707,15 @@ def list_observations(kind: str, canonical_name: str) -> list[dict]:
                 resolved = apply_curation(curation, raw_kind, name)
                 if not resolved or resolved[0] != kind or resolved[1].lower() != target:
                     continue
+                # this record's own attribute, not the entity's "latest wins"
+                # one: two people under one name tend to show up right here
+                attr = (ent.get(attr_field) or "").strip()
                 for obs_index, text in enumerate(ent.get("observations", [])):
                     out.append({
                         "file": path.name, "group": group,
                         "ent_index": ent_index, "obs_index": obs_index,
                         "text": text, "date": date, "title": title,
-                        "extracted_name": name,
+                        "extracted_name": name, "attr": attr,
                     })
     out.sort(key=lambda o: o["date"])
     return out

@@ -48,7 +48,7 @@ export function showTab(name, lit = name) {
   if (name === 'patterns') patterns.loadPatterns();
   if (name === 'dreams') dreams.loadDreams();
   if (name === 'history') history.loadHistory();
-  if (name === 'triage') { triage.startTriage(); $('triage').focus(); }
+  if (name === 'triage') { state.triageReturn = false; triage.startTriage(); $('triage').focus(); }
   if (name === 'settings') settings.loadSettings();
 }
 nav.init(showTab);
