@@ -11,7 +11,8 @@ static/design/*.html ──extract.mjs + walk.js──▶ specs/*.figma.json ─
        (the app's own CSS)        (Chrome)          (committed)                component sets
 ```
 
-Card is the exception. Its plugin and hand-kept spec stay in `figma/card/`.
+Card and Icon are the exceptions. Each has its own plugin: `figma/card/` (a
+hand-kept spec) and `figma/icons/` (generated from `static/icons/`).
 
 ## Run it in Figma
 1. Open the Figma desktop app and the Main Character file.

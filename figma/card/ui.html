@@ -19,23 +19,46 @@
   .error { color: var(--figma-color-text-danger); }
   .ok { color: var(--figma-color-text-success); }
 </style>
-<p>Choose <b>card.figma.json</b> from <code>figma/card/</code> in rag-journal. This builds a
-  <b>Card</b> component set on the current page, bound to this file's token variables by name.</p>
-<input type="file" id="file" accept=".json,application/json">
+<p>Choose <b>card.figma.json</b> from <code>figma/card/</code> in rag-journal, and
+  optionally a picture for the image variants (e.g. from <code>static/images/</code>).
+  This builds a <b>Card</b> set on the current page, bound to this file's token variables
+  by name. It uses this file's <b>Icon</b> set: run Main Character: Icons first.</p>
+<input type="file" id="file" multiple accept=".json,application/json,image/png,image/jpeg,image/gif,image/webp">
+<p id="picked">Nothing chosen yet.</p>
 <button id="go" disabled>Build Card</button>
 <pre id="log"></pre>
 <script>
   const file = document.getElementById('file');
+  const picked = document.getElementById('picked');
   const go = document.getElementById('go');
   const out = document.getElementById('log');
-  let spec = null;
+  let spec = null, image = null;
+  // Sorted by what they hold, so the order they're picked in doesn't matter:
+  // the card spec has variants, an image file is the picture for the image
+  // variants.
   file.onchange = async () => {
-    spec = file.files[0] ? await file.files[0].text() : null;
+    spec = image = null;
+    const names = [];
+    for (const f of file.files) {
+      if (f.type.startsWith('image/')) {
+        image = new Uint8Array(await f.arrayBuffer());
+        names.push('image: ' + f.name);
+        continue;
+      }
+      const text = await f.text();
+      let json = null;
+      try { json = JSON.parse(text); } catch (e) { names.push(f.name + ' is not JSON'); continue; }
+      if (json.svgs) names.push(f.name + ' is the icon bundle: build it with Main Character: Icons');
+      else if (json.variants) { spec = text; names.push('card: ' + f.name); }
+      else names.push(f.name + ' is not card.figma.json');
+    }
+    if (!spec) names.push('still needed: card.figma.json');
+    picked.textContent = names.join(' · ');
     go.disabled = !spec;
   };
   go.onclick = () => {
     out.textContent = '';
-    parent.postMessage({ pluginMessage: { type: 'build', spec } }, '*');
+    parent.postMessage({ pluginMessage: { type: 'build', spec, image } }, '*');
   };
   onmessage = e => {
     const m = e.data.pluginMessage;

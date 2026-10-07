@@ -32,6 +32,8 @@ const SUBTYPE_ICONS = {
   },
   thing: {music: 'music', game: 'gamepad', show: 'tv', book: 'book-open', event: 'ticket'},
 };
+// read by figma/icons/icons.mjs, which bundles the icons for Figma
+export { TYPE_ICONS, SUBTYPE_ICONS };
 // these have one version, used for both styles
 export const ONE_VERSION = new Set(['peace-bold']);
 const ICON_DIR = new URL('../icons/', import.meta.url);
@@ -76,9 +78,11 @@ function badgeRow(badges, size) {
 // | vertical | horizontal. Small cards never show a description.
 // subtype: the category key, dream tone or thing category, for its own
 // icon. iconStyle: filled (the default) | outline. icon: text that
-// replaces the icon or initials.
+// replaces the icon or initials. image: a URL whose picture fills the
+// visual in place of either (experimental: no plan yet for where images
+// come from).
 export function itemCard({
-  type, title, href = '#', description = '', badges = [], icon,
+  type, title, href = '#', description = '', badges = [], icon, image,
   subtype, iconStyle = 'filled', size = 'md', orientation = 'auto',
 }) {
   const card = document.createElement('article');
@@ -93,8 +97,18 @@ export function itemCard({
   visual.setAttribute('aria-hidden', 'true');
   // The icon is a mask filled with currentColor, so it takes the visual's
   // accent and hover colours. Set through the CSSOM, which the CSP allows.
-  const file = icon ? null : iconFile(type, subtype, iconStyle);
-  if (file) {
+  const file = icon || image ? null : iconFile(type, subtype, iconStyle);
+  if (image) {
+    // A photo fills the visual instead (experimental). Its alt is empty
+    // because the visual is hidden from screen readers already.
+    const img = document.createElement('img');
+    img.className = 'card-image';
+    img.src = image;
+    img.alt = '';
+    img.loading = 'lazy';
+    visual.classList.add('image');
+    visual.appendChild(img);
+  } else if (file) {
     const glyph = document.createElement('span');
     glyph.className = 'card-icon';
     glyph.style.setProperty('--icon', `url("${file}")`);

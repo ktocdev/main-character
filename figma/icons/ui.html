@@ -1,0 +1,63 @@
+<style>
+  body {
+    margin: 0; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+    font: 12px/1.45 Inter, system-ui, sans-serif;
+    color: var(--figma-color-text); background: var(--figma-color-bg);
+  }
+  p { margin: 0; color: var(--figma-color-text-secondary); }
+  button {
+    font: inherit; font-weight: 600; padding: 7px 12px; border: 0; border-radius: 6px;
+    color: var(--figma-color-text-onbrand); background: var(--figma-color-bg-brand); cursor: pointer;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  #log {
+    flex: 1; min-height: 0; margin: 0; padding: 8px; overflow: auto; white-space: pre-wrap;
+    font: 11px/1.5 ui-monospace, Menlo, Consolas, monospace;
+    background: var(--figma-color-bg-secondary); border-radius: 6px;
+  }
+  .warn { color: var(--figma-color-text-warning); }
+  .error { color: var(--figma-color-text-danger); }
+  .ok { color: var(--figma-color-text-success); }
+</style>
+<p>Choose <b>icons.figma.json</b> from <code>figma/icons/</code> in rag-journal. This builds
+  the <b>Icon</b> set on the current page, painted with this file's <code>text-accent</code>
+  variable. Run it before the Card plugin, which puts these icons in its slot.</p>
+<input type="file" id="file" accept=".json,application/json">
+<button id="go" disabled>Build Icons</button>
+<p>Icons on cards look off after switching their style? <b>Fit icons</b> scales every
+  Icon instance's vector on this page to its instance (no file needed).</p>
+<button id="fit">Fit icons</button>
+<pre id="log"></pre>
+<script>
+  const file = document.getElementById('file');
+  const go = document.getElementById('go');
+  const out = document.getElementById('log');
+  let icons = null;
+  file.onchange = async () => {
+    icons = null;
+    out.textContent = '';
+    const f = file.files[0];
+    if (!f) { go.disabled = true; return; }
+    const text = await f.text();
+    try { if (JSON.parse(text).svgs) icons = text; } catch (e) {}
+    if (!icons) out.textContent = f.name + ' is not icons.figma.json';
+    go.disabled = !icons;
+  };
+  document.getElementById('fit').onclick = () => {
+    out.textContent = '';
+    parent.postMessage({ pluginMessage: { type: 'fit' } }, '*');
+  };
+  go.onclick = () => {
+    out.textContent = '';
+    parent.postMessage({ pluginMessage: { type: 'build', icons } }, '*');
+  };
+  onmessage = e => {
+    const m = e.data.pluginMessage;
+    if (!m || m.type !== 'log') return;
+    const line = document.createElement('div');
+    line.className = m.kind;
+    line.textContent = m.text;
+    out.appendChild(line);
+    out.scrollTop = out.scrollHeight;
+  };
+</script>

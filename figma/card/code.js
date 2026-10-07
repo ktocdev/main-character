@@ -1,12 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Builds the Card component set in Figma from card.figma.json.
+// Builds the Card component set in Figma from card.figma.json. It uses the
+// file's Icon set, which the Icons plugin (figma/icons/) builds; run that
+// first.
 //
-// Six variants, size (sm | md | lg) x orientation (vertical | horizontal).
-// Which kind of item a card points at is not a variant: type, glyph, title,
-// description and badges are component properties, since a type only
-// changes the eyebrow and the glyph. Layers are named after the CSS parts
-// in static/css/card.css (card-visual, card-body, card-type, card-title,
-// card-desc, card-badges, card-badge, card-more) so the two stay mappable.
+// Card: size (sm | md | lg) x orientation (vertical | horizontal) x visual
+// (icon | initials | image), what the visual starts with. card-visual is a
+// native slot, so an instance can swap in anything; it suggests the Icon
+// set. The icon variants start with an Icon instance (exposed when
+// Figma allows it, so its "for" and "style" pickers show on the card), the
+// initials variants with a text layer (edited in the slot: slot content
+// can't be bound to a property), the image variants with a rectangle whose
+// image fill can be replaced. Which kind of item a card points at is
+// otherwise not a variant: type, title,
+// description and badges are component properties. Layers are named after
+// the CSS parts in static/css/card.css (card-visual, card-icon, card-image,
+// card-body, card-type, card-title, card-desc, card-badges, card-badge,
+// card-more) so the two stay mappable.
 //
 // Colors, radii, and every length the spec marks with a token are bound to
 // the file's existing variables, found by name (local variables first, then
@@ -14,7 +23,7 @@
 // file doesn't have falls back to the spec's literal and is listed in the
 // report, so a naming mismatch is visible rather than silent.
 
-figma.showUI(__html__, { width: 380, height: 480, themeColors: true });
+figma.showUI(__html__, { width: 380, height: 540, themeColors: true });
 
 function log(text, kind) {
   figma.ui.postMessage({ type: 'log', text: text, kind: kind || 'info' });
@@ -23,7 +32,7 @@ function log(text, kind) {
 figma.ui.onmessage = async function (msg) {
   if (msg.type !== 'build') return;
   try {
-    await build(JSON.parse(msg.spec));
+    await build(JSON.parse(msg.spec), msg.image || null);
   } catch (e) {
     log(String((e && e.stack) || e), 'error');
     figma.notify('Card import failed: ' + (e && e.message), { error: true });
@@ -109,7 +118,7 @@ function hexToRgb(hex) {
   return { r: (n >> 16 & 255) / 255, g: (n >> 8 & 255) / 255, b: (n & 255) / 255 };
 }
 
-async function build(spec) {
+async function build(spec, imageBytes) {
   const px = function (rem) { return Math.round(rem * spec.remPx * 100) / 100; };
   const find = await tokenFinder();
   const bound = {}, missing = {};
@@ -192,7 +201,6 @@ async function build(spec) {
   const F = {
     serif: pickFont(spec.fonts.serif, ['Regular']),
     serifBold: pickFont(spec.fonts.serif, ['Bold']),
-    serifItalic: pickFont(spec.fonts.serif, ['Italic']),
     // the face is demi-weight in its regular style; CSS asks for 600 and
     // gets this same file
     ui: pickFont(spec.fonts.ui, ['Regular', 'Demi Condensed', 'DemiCondensed', 'Medium', 'SemiBold']),
@@ -222,11 +230,59 @@ async function build(spec) {
 
   const s = spec.sample, C = spec.colors, T = spec.text;
 
+  // A set's name, or "<name> (import)" when the page already has one: a
+  // new set never replaces an old one, since that would break its
+  // instances.
+  function setName(name, set) {
+    const taken = figma.currentPage.findOne(function (n) {
+      return n.type === 'COMPONENT_SET' && n.name === name && n !== set;
+    });
+    if (taken) log('A component set named "' + name + '" already exists on this page, so this one is "' + name + ' (import)". Swap or delete as you like.');
+    return taken ? name + ' (import)' : name;
+  }
+
+  // ---- the Icon set, built by the Icons plugin (figma/icons/) ----
+  // Found by name, this page first and then the rest of the file. The icon
+  // variants' slot starts with one of its instances, and the slot suggests
+  // the set.
+  async function findIcons() {
+    const isSet = function (n) { return n.type === 'COMPONENT_SET' && n.name === spec.iconSet; };
+    let set = figma.currentPage.findOne(isSet);
+    if (!set && figma.loadAllPagesAsync) {
+      await figma.loadAllPagesAsync();
+      set = figma.root.findOne(isSet);
+    }
+    if (!set) throw new Error('No "' + spec.iconSet + '" component set in this file. Run Main Character: Icons (figma/icons/) first.');
+    const comps = {};
+    for (const c of set.children) {
+      let p = c.variantProperties;
+      if (!p) {
+        p = {};
+        for (const kv of c.name.split(', ')) { const i = kv.indexOf('='); p[kv.slice(0, i)] = kv.slice(i + 1); }
+      }
+      (comps[p.for] = comps[p.for] || {})[p.style] = c;
+    }
+    if (!comps[s.icon] || !comps[s.icon].filled) throw new Error('"' + set.name + '" has no for=' + s.icon + ', style=filled variant; rebuild it with the Icons plugin.');
+    log('Using "' + set.name + '" (' + set.children.length + ' variants) for the icon variants.');
+    return { set: set, comps: comps };
+  }
+  const icons = await findIcons();
+
+  // The picture the image variants show: the one chosen with the specs, or
+  // a flat --bg-muted placeholder to replace in Figma.
+  let imageFill = null;
+  if (imageBytes) {
+    imageFill = { type: 'IMAGE', imageHash: figma.createImage(new Uint8Array(imageBytes)).hash, scaleMode: 'FILL' };
+    log('Image: ' + Math.round(imageBytes.length / 1024) + ' KB.');
+  } else {
+    log('No image chosen; the image variants show a placeholder fill.');
+  }
+
   // ---- one variant ----
-  async function variant(v) {
+  async function variant(v, kind) {
     const horiz = v.orientation === 'horizontal';
     const c = figma.createComponent();
-    c.name = 'size=' + v.size + ', orientation=' + v.orientation;
+    c.name = 'size=' + v.size + ', orientation=' + v.orientation + ', visual=' + kind;
     c.layoutMode = horiz ? 'HORIZONTAL' : 'VERTICAL';
     c.primaryAxisSizingMode = 'FIXED';
     c.counterAxisSizingMode = 'FIXED';
@@ -240,8 +296,14 @@ async function build(spec) {
     c.strokeWeight = 1;
     await radius(c, spec.radius.card);
 
-    // card-visual: glyph centred, a hairline on the side facing the body
-    const visual = autoFrame('card-visual', 'HORIZONTAL');
+    // card-visual: a native slot (an instance can swap in any content), its
+    // content centred, a hairline on the side facing the body. Naming the
+    // slot names its SLOT property. A Figma without slots gets a plain frame.
+    const slotted = typeof c.createSlot === 'function';
+    const visual = slotted ? c.createSlot() : figma.createFrame();
+    visual.name = 'card-visual';
+    visual.layoutMode = 'HORIZONTAL';
+    visual.clipsContent = true;  // whatever is dropped in stays inside
     visual.primaryAxisAlignItems = 'CENTER';
     visual.counterAxisAlignItems = 'CENTER';
     visual.primaryAxisSizingMode = 'FIXED';
@@ -252,7 +314,7 @@ async function build(spec) {
     visual.strokeTopWeight = 0; visual.strokeLeftWeight = 0;
     visual.strokeRightWeight = horiz ? 1 : 0;
     visual.strokeBottomWeight = horiz ? 0 : 1;
-    c.appendChild(visual);
+    if (!slotted) c.appendChild(visual);
     if (horiz) {
       visual.resize(px(v.visual.size), visual.height);
       visual.layoutSizingVertical = 'FILL';
@@ -260,8 +322,28 @@ async function build(spec) {
       visual.resize(visual.width, px(v.visual.size));
       visual.layoutSizingHorizontal = 'FILL';
     }
-    const glyph = await text('glyph', s.glyph, F.serifItalic, v.visual.glyph, C.glyph, 100);
-    visual.appendChild(glyph);
+    // what the slot starts with: an icon at .9em of the glyph size; initials
+    // dropped .25em so their baseline meets the icons' bottom (card.css
+    // .card-visual.text); or a picture covering the whole visual
+    let icon = null, initials = null;
+    if (kind === 'icon') {
+      icon = icons.comps[s.icon].filled.createInstance();
+      icon.name = 'card-icon';
+      visual.appendChild(icon);
+      const side = px(v.visual.glyph * spec.visual.iconScale);
+      icon.resize(side, side);
+    } else if (kind === 'initials') {
+      visual.paddingTop = px(v.visual.glyph * spec.visual.initialsDrop);
+      initials = await text('initials', s.initials, F.serifBold, v.visual.glyph, C.glyph, 100);
+      visual.appendChild(initials);
+    } else {
+      const img = figma.createRectangle();
+      img.name = 'card-image';
+      img.fills = [imageFill || await paint(C.visual)];
+      visual.appendChild(img);
+      img.layoutSizingHorizontal = 'FILL';
+      img.layoutSizingVertical = 'FILL';
+    }
 
     // card-body
     const body = autoFrame('card-body', 'VERTICAL');
@@ -306,7 +388,7 @@ async function build(spec) {
     badges.layoutSizingVertical = 'FILL';
     await length(badges, ['itemSpacing'], B.gap);
 
-    const slots = [];
+    const pills = [];
     for (let i = 0; i < B.max; i++) {
       const pill = autoFrame('card-badge', 'HORIZONTAL');
       pill.fills = [await paint(C.badgeFill)];
@@ -321,7 +403,7 @@ async function build(spec) {
       badges.appendChild(pill);
       pill.layoutSizingHorizontal = 'HUG';
       pill.layoutSizingVertical = 'HUG';
-      slots.push({ pill: pill, label: label });
+      pills.push({ pill: pill, label: label });
     }
     const more = autoFrame('card-more', 'HORIZONTAL');
     await length(more, ['paddingLeft', 'paddingRight'], B.morePadX);
@@ -332,34 +414,34 @@ async function build(spec) {
     more.layoutSizingHorizontal = 'HUG';
     more.layoutSizingVertical = 'HUG';
 
-    return { component: c, glyph: glyph, type: type, title: title, desc: desc, slots: slots, more: more, moreLabel: moreLabel };
+    return { component: c, slotted: slotted, icon: icon, initials: initials, type: type, title: title, desc: desc, pills: pills, more: more, moreLabel: moreLabel };
   }
 
   // ---- build, lay out, combine ----
+  // a block per visual, side by side; in each, the vertical sizes in a row
+  // and the horizontal forms stacked beneath
   const built = [];
-  for (const v of spec.variants) {
-    built.push(await variant(v));
-    log('Built ' + v.size + ' ' + v.orientation + '.');
-  }
-  // vertical sizes side by side, the horizontal forms stacked beneath
   const gap = 40;
-  let x = 0, y = 0, rowH = 0;
-  built.forEach(function (b, i) {
-    const v = spec.variants[i];
-    if (v.orientation === 'horizontal' && x > 0 && spec.variants[i - 1].orientation === 'vertical') {
-      x = 0; y += rowH + gap; rowH = 0;
+  let blockX = 0;
+  for (const kind of spec.visuals) {
+    let x = 0, y = 0, rowH = 0, blockW = 0;
+    for (let i = 0; i < spec.variants.length; i++) {
+      const v = spec.variants[i];
+      const b = await variant(v, kind);
+      built.push(b);
+      if (v.orientation === 'horizontal' && x > 0 && spec.variants[i - 1].orientation === 'vertical') {
+        x = 0; y += rowH + gap; rowH = 0;
+      }
+      b.component.x = blockX + x; b.component.y = y;
+      if (v.orientation === 'horizontal') { y += b.component.height + gap; blockW = Math.max(blockW, b.component.width); }
+      else { x += b.component.width + gap; rowH = Math.max(rowH, b.component.height); blockW = Math.max(blockW, x - gap); }
     }
-    b.component.x = x; b.component.y = y;
-    if (v.orientation === 'horizontal') { y += b.component.height + gap; }
-    else { x += b.component.width + gap; rowH = Math.max(rowH, b.component.height); }
-  });
+    blockX += blockW + gap * 2;
+    log('Built the ' + kind + ' variants.');
+  }
 
   const set = figma.combineAsVariants(built.map(function (b) { return b.component; }), figma.currentPage);
-  const taken = figma.currentPage.findOne(function (n) {
-    return n.type === 'COMPONENT_SET' && n.name === spec.name && n !== set;
-  });
-  set.name = taken ? spec.name + ' (import)' : spec.name;
-  if (taken) log('A component set named "' + spec.name + '" already exists on this page, so this one is "' + set.name + '". Swap or delete as you like.');
+  set.name = setName(spec.name, set);
   set.layoutMode = 'NONE';
   const pad = 40;
   for (const child of set.children) { child.x += pad; child.y += pad; }
@@ -370,9 +452,12 @@ async function build(spec) {
   set.y = Math.round(figma.viewport.center.y - set.height / 2);
 
   // ---- component properties ----
+  // Layers in a slot can't be bound to properties, so with slots the
+  // initials are edited in the instance's slot, like any slot content.
+  const slotted = built.every(function (b) { return b.slotted; });
   const P = {
     type: set.addComponentProperty('type', 'TEXT', s.type),
-    glyph: set.addComponentProperty('glyph', 'TEXT', s.glyph),
+    initials: slotted ? null : set.addComponentProperty('initials', 'TEXT', s.initials),
     title: set.addComponentProperty('title', 'TEXT', s.title),
     description: set.addComponentProperty('description', 'TEXT', s.description),
     showDescription: set.addComponentProperty('show description', 'BOOLEAN', true),
@@ -387,17 +472,40 @@ async function build(spec) {
     P.showBadge.push(i === 0 ? null
       : set.addComponentProperty('show badge ' + (i + 1), 'BOOLEAN', i < s.shownBadges));
   }
+  let exposeFailed = null;
   for (const b of built) {
-    b.glyph.componentPropertyReferences = { characters: P.glyph };
+    if (b.initials && P.initials) b.initials.componentPropertyReferences = { characters: P.initials };
+    // the icon's own "for" and "style" pickers show on the card; inside a
+    // slot Figma may refuse, and the icon is then picked by selecting it
+    if (b.icon) {
+      try { b.icon.isExposedInstance = true; } catch (e) { exposeFailed = e; }
+    }
     b.type.componentPropertyReferences = { characters: P.type };
     b.title.componentPropertyReferences = { characters: P.title };
     if (b.desc) b.desc.componentPropertyReferences = { characters: P.description, visible: P.showDescription };
-    b.slots.forEach(function (slot, i) {
-      slot.label.componentPropertyReferences = { characters: P.badge[i] };
-      if (P.showBadge[i]) slot.pill.componentPropertyReferences = { visible: P.showBadge[i] };
+    b.pills.forEach(function (pill, i) {
+      pill.label.componentPropertyReferences = { characters: P.badge[i] };
+      if (P.showBadge[i]) pill.pill.componentPropertyReferences = { visible: P.showBadge[i] };
     });
     b.moreLabel.componentPropertyReferences = { characters: P.more };
     b.more.componentPropertyReferences = { visible: P.showMore };
+  }
+  if (exposeFailed) log('The Icon in the slot couldn\'t be exposed (' + exposeFailed.message + '); select the icon inside a card to change it.', 'warn');
+
+  // the slot: one SLOT property for all the variants, suggesting the Icon
+  // set first (anything else can still be dropped in)
+  if (slotted) {
+    const slotKeys = Object.keys(set.componentPropertyDefinitions).filter(function (k) {
+      return set.componentPropertyDefinitions[k].type === 'SLOT';
+    });
+    if (slotKeys.length !== 1) log('Expected one slot property, found ' + slotKeys.length + ': ' + slotKeys.join(', '), 'warn');
+    for (const k of slotKeys) {
+      try { set.editComponentProperty(k, { preferredValues: [{ type: 'COMPONENT_SET', key: icons.set.key }] }); }
+      catch (e) { log('Couldn\'t suggest the Icon set for the slot: ' + e.message, 'warn'); }
+    }
+    log('card-visual is a slot' + (slotKeys.length ? ' (' + slotKeys.join(', ') + ')' : '') + '; drop anything into it in an instance.');
+  } else {
+    log('This Figma has no slots, so card-visual is a plain frame.', 'warn');
   }
 
   figma.currentPage.selection = [set];
@@ -411,7 +519,7 @@ async function build(spec) {
     log('No variable found for ' + missingList.length + ' tokens; they are literal values:\n  '
       + missingList.join(', ') + '\nRename the variable or add the name to STEMS in code.js, then run again.', 'warn');
   }
-  log('Done: "' + set.name + '" with ' + built.length + ' variants.', 'ok');
+  log('Done: "' + set.name + '" with ' + built.length + ' variants, using "' + icons.set.name + '".', 'ok');
   figma.notify('Card built: ' + built.length + ' variants, ' + boundList.length + ' tokens bound'
     + (missingList.length ? ', ' + missingList.length + ' missing' : ''));
 }
