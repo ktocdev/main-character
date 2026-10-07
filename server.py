@@ -100,7 +100,7 @@ def startup():
     # dirs are empty on a first run, which is a state the app already handles.
     STATE["client"] = get_client() if config.is_configured() else None
     STATE["collection"] = get_collection()
-    STATE["entity_index"] = companion.load_entity_index()
+    STATE["entity_index"] = entities.mark_generic(companion.load_entity_index())
     # the open session survives restarts — rebuild the conversation from it
     STATE["messages"] = sessions.conversation_messages()
     # A full recount, not the cached one: startup is when anything done
@@ -136,6 +136,26 @@ class MergeIn(BaseModel):
 
 class NameIn(BaseModel):
     name: str
+
+
+class DeleteIn(BaseModel):
+    name: str
+    # "mentions": drop the mentions there are now, leave the name free (the
+    # default). "name": never track it again -- for generic terms and junk.
+    mode: str = "mentions"
+
+
+class NamesIn(BaseModel):
+    names: list[str]
+
+
+class DeletedIn(BaseModel):
+    key: str
+    mode: str  # which kind of delete to undo: "name" or "mentions"
+
+
+class KeysIn(BaseModel):
+    keys: list[str]
 
 
 class RetypeIn(BaseModel):
@@ -2582,19 +2602,114 @@ def entry_text(date: str, title: str):
 
 
 @app.post("/api/entities/delete")
-def delete_entity(body: NameIn):
+def delete_entity(body: DeleteIn):
+    """Two kinds of delete; neither touches journal entries, so search and
+    the companion still find the text either way."""
     index = STATE["entity_index"]
     name = companion.resolve_entity(index, body.name)
     if not name:
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    if body.mode not in ("mentions", "name"):
+        return JSONResponse({"error": "mode must be mentions or name"}, status_code=400)
 
     before = _snapshot()
     curation = entities.load_curation()
-    curation["delete"].append(entities.index_key(index, name))
+    key = entities.index_key(index, name)
+    if body.mode == "name":
+        _never_track(curation, key)
+    else:
+        entities.drop_mentions(curation, key)
     entities.save_curation(curation)
-    _record_curation(f"delete {name}", before)
+    verb = "stop tracking" if body.mode == "name" else "delete"
+    _record_curation(f"{verb} {name}", before)
     _rebuild()
-    return {"ok": True, "deleted": name}
+    return {"ok": True, "deleted": name, "mode": body.mode}
+
+
+def _never_track(curation: dict, key: str):
+    """A never-track rule, plus removing merge rules that pointed the
+    generic name somewhere ("work plan -> Nebula" goes, not redirected)."""
+    if key not in {d.lower() for d in curation["delete"]}:
+        curation["delete"].append(key)
+    for field in ("merge", "correct"):
+        curation[field].pop(key, None)
+
+
+@app.post("/api/entities/delete-names")
+def delete_names(body: NamesIn):
+    """The generic cleanup: never track every checked name. One curation
+    change, so one undo brings them all back."""
+    index = STATE["entity_index"]
+    found = [n for n in (companion.resolve_entity(index, x) for x in body.names) if n]
+    if not found:
+        return JSONResponse({"error": "none of those were found"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    for name in found:
+        _never_track(curation, entities.index_key(index, name))
+    entities.save_curation(curation)
+    _record_curation(f"stop tracking {len(found)} generic names", before)
+    _rebuild()
+    return {"ok": True, "deleted": found}
+
+
+@app.get("/api/entities/generic")
+def generic_candidates():
+    """Entities the local detector calls generic, with what they say, for
+    the cleanup checklist."""
+    out = []
+    for name, info in STATE["entity_index"].items():
+        if not info.get("generic"):
+            continue
+        obs = entities.list_observations(info["type"], entities.base_name(STATE["entity_index"], name))
+        out.append({"name": name, "kind": info["type"], "mentions": info["mentions"],
+                    "first": obs[0]["text"] if obs else ""})
+    out.sort(key=lambda c: (c["kind"], -c["mentions"], c["name"].lower()))
+    return {"candidates": out}
+
+
+@app.get("/api/entities/deleted")
+def deleted_entities():
+    return entities.deleted_list(entities.load_curation())
+
+
+@app.post("/api/entities/deleted/restore")
+def restore_deleted(body: DeletedIn):
+    """Undo one delete from the list: a never-track rule or a set of
+    deleted mentions. What it hid comes back on the rebuild."""
+    key = body.key.strip().lower()
+    before = _snapshot()
+    curation = entities.load_curation()
+    if body.mode == "name":
+        curation["delete"] = [d for d in curation["delete"] if d.lower() != key]
+    elif body.mode == "mentions":
+        curation["drop_mentions"].pop(key, None)
+    else:
+        return JSONResponse({"error": "mode must be name or mentions"}, status_code=400)
+    if curation == before:
+        return JSONResponse({"error": "nothing to restore"}, status_code=404)
+    entities.save_curation(curation)
+    _record_curation(f"restore {key.partition(':')[2]}", before)
+    _rebuild()
+    return {"ok": True}
+
+
+@app.post("/api/entities/deleted/free")
+def free_names(body: KeysIn):
+    """Let names back in: each never-track rule becomes delete-these-
+    mentions, so what it hid stays hidden but a new entry starts fresh."""
+    blocked = {d.lower() for d in entities.load_curation()["delete"]}
+    keys = [k.strip().lower() for k in body.keys if k.strip().lower() in blocked]
+    if not keys:
+        return JSONResponse({"error": "none of those are blocked"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    for key in keys:
+        entities.free_name(curation, key)
+    entities.save_curation(curation)
+    _record_curation(f"allow {len(keys)} name{'s' if len(keys) != 1 else ''} again", before)
+    _rebuild()
+    return {"ok": True, "freed": keys}
 
 
 if __name__ == "__main__":

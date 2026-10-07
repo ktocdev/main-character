@@ -266,7 +266,8 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
             n = sum(len(entities.get(k, [])) for k in ("people", "projects", "places"))
             print(f"  {label} -> {n} entities")
 
-        records.append({"date": conv["date"], "title": conv["title"], "entities": entities})
+        records.append({"date": conv["date"], "title": conv["title"],
+                        "key": cache_file.stem, "entities": entities})
     return records
 
 
@@ -279,7 +280,10 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
 #   "retype":       {key: {"type": kind, "name": optional new name}}
 #   "alias_add":    {key: [names]}   extra aliases for matching
 #   "alias_remove": {key: [names]}   suppress unwanted aliases
-#   "delete":       [keys]
+#   "delete":       [keys]   never track: every mention, now and future
+#   "drop_mentions": {key: [entry cache keys]}  delete just these mentions;
+#                   the name stays free for new entries. Keyed by entry, not
+#                   raw-file index, so it survives raw edits and --force.
 #
 # merge/correct targets may be kind-qualified ("person:Dr. Reyes") to
 # move an entity across kinds while combining.
@@ -287,7 +291,7 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
 KINDS = ("person", "project", "place")
 _CURATION_DEFAULTS = {
     "merge": {}, "correct": {}, "retype": {}, "rename": {},
-    "alias_add": {}, "alias_remove": {}, "delete": [],
+    "alias_add": {}, "alias_remove": {}, "delete": [], "drop_mentions": {},
     "reviewed": [],        # entity keys the user has marked as checked
     "not_duplicates": [],  # dismissed duplicate-pair keys ("kind:a|b")
 }
@@ -324,6 +328,151 @@ def base_name(index: dict, name: str) -> str:
 def index_key(index: dict, name: str) -> str:
     """Curation key for an entity already in the index."""
     return curation_key(index[name]["type"], base_name(index, name))
+
+
+# ---------------------------------------------------------------------------
+# GENERIC NAMES ("restaurant", "dive bar", "work plan" aren't entities)
+# ---------------------------------------------------------------------------
+# A generic term turns into a profile that unrelated mentions pile into.
+# Dropping it loses nothing: the entry text and its embeddings are
+# untouched, so search and the companion still find "a dive bar after".
+# Local and free. Never lowercase-based: plenty of real names are stored
+# lowercase ("belmont tavern"), and it's the word before the noun that
+# decides -- "late night bar" is generic, "belmont tavern" isn't.
+
+_ARTICLES = {"the", "a", "an", "my", "our", "his", "her", "their", "this", "that", "some"}
+
+GENERIC_NOUNS = {
+    "place": {
+        "place", "spot", "restaurant", "bar", "dive bar", "pub", "tavern", "lounge",
+        "diner", "cafe", "café", "coffee shop", "bakery", "brewery", "club", "venue",
+        "gym", "park", "office", "dr office", "doctor's office", "doctors office",
+        "dentist", "doctor", "urgent care", "hospital", "clinic", "pharmacy", "er",
+        "store", "shop", "grocery store", "supermarket", "mall", "pet store",
+        "gift store", "garden center", "casino", "hotel", "motel", "airport",
+        "basement", "library", "theater", "theatre", "movie theater", "cinema",
+        "gas station", "parking lot", "laundromat", "salon", "barber", "vet",
+        "bank", "post office", "food truck", "liquor store", "bookstore",
+        "parking garage", "garage sale", "car wash",
+    },
+    "project": {
+        "project", "projects", "work project", "work projects", "work plan",
+        "plan", "side project", "side projects", "personal project",
+        "personal projects", "code project", "code projects", "app", "website",
+        "site", "design system", "design components", "components", "refactor",
+        "ticket", "tickets", "tasks", "sprint", "presentation", "homework", "chores",
+    },
+}
+
+# words that only describe ("late night bar", "mid pizza place", "personal
+# code projects"). A word not in here -- a proper name -- makes it specific.
+_DESCRIPTORS = {
+    "new", "old", "local", "little", "small", "big", "cheap", "fancy", "nice",
+    "random", "other", "mid", "good", "bad", "late", "night", "late-night",
+    "cocktail", "wine", "sports", "trivia", "open", "mic", "karaoke", "dive",
+    "corner", "neighborhood", "nearby", "fast", "food", "sushi", "pizza",
+    "pasta", "taco", "thai", "chinese", "mexican", "italian", "indian",
+    "japanese", "korean", "vietnamese", "ramen", "burger", "bbq", "breakfast",
+    "brunch", "coffee", "dessert", "ice", "cream", "vegan", "pet", "gift",
+    "sandwich", "deli", "bagel", "donut", "noodle", "salad", "steak", "seafood",
+    "chicken", "wing", "hot", "dog", "pho", "dumpling", "greek", "french",
+    "grocery", "hardware", "thrift", "vintage", "work", "personal", "code",
+    "coding", "side", "design", "main", "weekly", "daily",
+}
+
+
+def is_generic(kind: str, name: str) -> bool:
+    """A category word, optionally after an article and describing words."""
+    nouns = GENERIC_NOUNS.get(kind)
+    if not nouns:
+        return False  # people aren't judged by name
+    words = re.sub(r"[^\w\s'’-]", " ", name.lower()).split()
+    while words and words[0] in _ARTICLES:
+        words = words[1:]
+    for i in range(len(words)):
+        if " ".join(words[i:]) in nouns and all(w in _DESCRIPTORS for w in words[:i]):
+            return True
+    return False
+
+
+def generic_flag(curation: dict, kind: str, name: str, groups: list[str]) -> bool:
+    """is_generic, except for what you clearly treat as one particular
+    thing: a group member, or a name you renamed by hand ("the gym" that's
+    *your* gym can be put in a group to keep it)."""
+    if groups or not is_generic(kind, name):
+        return False
+    renamed_to = {v.lower() for v in curation["rename"].values()}
+    return name.lower() not in renamed_to
+
+
+def mark_generic(index: dict) -> dict:
+    """(Re)set the `generic` flag across a loaded index -- for one built
+    before the detector existed, or before a detector change."""
+    curation = load_curation()
+    for name, info in index.items():
+        if generic_flag(curation, info["type"], info.get("base", name), info.get("groups", [])):
+            info["generic"] = True
+        else:
+            info.pop("generic", None)
+    return index
+
+
+def _raw_mentions():
+    """Every extracted (entry, kind, name) in the raw cache."""
+    for path in sorted(RAW_DIR.glob("*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for group, kind in (("people", "person"), ("projects", "project"), ("places", "place")):
+            for ent in data.get(group, []):
+                name = (ent.get("name") or "").strip()
+                if name:
+                    yield path.stem, kind, name, ent
+
+
+def entries_for(curation: dict, key: str) -> list[str]:
+    """Entries with a mention that is, or resolves to, `key`."""
+    out = set()
+    for entry, kind, name, _ in _raw_mentions():
+        resolved = apply_curation(curation, kind, name, entry)
+        if curation_key(kind, name) == key or (
+                resolved and curation_key(resolved[0], resolved[1]) == key):
+            out.add(entry)
+    return sorted(out)
+
+
+def drop_mentions(curation: dict, key: str):
+    """Delete the mentions `key` has now; leave the name free."""
+    entries = set(curation["drop_mentions"].get(key, [])) | set(entries_for(curation, key))
+    if entries:
+        curation["drop_mentions"][key] = sorted(entries)
+
+
+def free_name(curation: dict, key: str):
+    """Turn a never-track rule into delete-these-mentions: what it hid stays
+    hidden, but a new entry with the name starts fresh."""
+    curation["delete"] = [d for d in curation["delete"] if d.lower() != key]
+    drop_mentions(curation, key)
+
+
+def deleted_list(curation: dict) -> dict:
+    """Both kinds of delete, for the Entities "deleted" view."""
+    counts = defaultdict(int)
+    spelled = {}  # keys are lowercase; show the name as the entries spell it
+    for _, kind, name, _ in _raw_mentions():
+        counts[curation_key(kind, name)] += 1
+        spelled.setdefault(curation_key(kind, name), name)
+
+    def split(key):
+        kind, _, name = key.partition(":")
+        return kind, spelled.get(key, name)
+
+    names = []
+    for key in dict.fromkeys(d.lower() for d in curation["delete"]):
+        kind, name = split(key)
+        names.append({"key": key, "kind": kind, "name": name, "mentions": counts[key],
+                      "generic": is_generic(kind, name)})
+    mentions = [{"key": k, "kind": split(k)[0], "name": split(k)[1], "entries": len(v)}
+                for k, v in curation["drop_mentions"].items() if v]
+    return {"names": names, "mentions": mentions}
 
 
 # ---------------------------------------------------------------------------
@@ -401,12 +550,19 @@ def _parse_target(value: str, default_kind: str) -> tuple[str, str]:
     return default_kind, value.strip()
 
 
-def apply_curation(curation: dict, kind: str, name: str):
+def _dropped(curation: dict, key: str, entry: str) -> bool:
+    return bool(entry) and entry in curation["drop_mentions"].get(key, ())
+
+
+def apply_curation(curation: dict, kind: str, name: str, entry: str = ""):
     """
     Resolve one extracted (kind, name) through the curation rules.
     Returns (kind, canonical_name, alias_of_canonical: bool) or None if deleted.
+    `entry` is the record's cache key, for mentions deleted entry by entry.
     """
     if curation_key(kind, name) in {d.lower() for d in curation["delete"]}:
+        return None
+    if _dropped(curation, curation_key(kind, name), entry):
         return None
 
     rt = curation["retype"].get(curation_key(kind, name))
@@ -433,6 +589,8 @@ def apply_curation(curation: dict, kind: str, name: str):
         name = rn
 
     if curation_key(kind, name) in {d.lower() for d in curation["delete"]}:
+        return None
+    if _dropped(curation, curation_key(kind, name), entry):
         return None
     return kind, name, is_alias
 
@@ -473,7 +631,7 @@ def build_entity_docs(records: list[dict]) -> dict:
                 name = ent.get("name", "").strip()
                 if not name:
                     continue
-                resolved = apply_curation(curation, kind, name)
+                resolved = apply_curation(curation, kind, name, record.get("key", ""))
                 if resolved is None:
                     continue
                 final_kind, display, is_alias = resolved
@@ -592,6 +750,8 @@ def build_entity_docs(records: list[dict]) -> dict:
         }
         if ent["display"] != ent["name"]:
             index[ent["display"]]["base"] = ent["name"]
+        if generic_flag(curation, kind, ent["name"], gnames):
+            index[ent["display"]]["generic"] = True
 
     (ENTITY_DIR / "index.json").write_text(
         json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -733,7 +893,7 @@ def list_observations(kind: str, canonical_name: str) -> list[dict]:
                 name = (ent.get("name") or "").strip()
                 if not name:
                     continue
-                resolved = apply_curation(curation, raw_kind, name)
+                resolved = apply_curation(curation, raw_kind, name, path.stem)
                 if not resolved or resolved[0] != kind or resolved[1].lower() != target:
                     continue
                 # this record's own attribute, not the entity's "latest wins"
@@ -831,7 +991,7 @@ def _entity_texts() -> dict:
                 name = (ent.get("name") or "").strip()
                 if not name:
                     continue
-                resolved = apply_curation(curation, raw_kind, name)
+                resolved = apply_curation(curation, raw_kind, name, path.stem)
                 if resolved:
                     texts[(resolved[0], resolved[1].lower())].extend(
                         ent.get("observations", [])
@@ -858,6 +1018,8 @@ def find_duplicate_candidates(max_pairs: int = 60, use_embeddings: bool = True) 
 
     by_kind = defaultdict(list)
     for name, info in index.items():
+        if info.get("generic"):
+            continue  # delete it, don't merge it (and nothing merges into it)
         by_kind[info["type"]].append((name, info))
 
     candidates = {}
@@ -889,7 +1051,7 @@ def find_duplicate_candidates(max_pairs: int = 60, use_embeddings: bool = True) 
             texts = _entity_texts()
             for kind, items in by_kind.items():
                 keyed = [
-                    (name, info, texts.get((kind, name.lower()), ""))
+                    (name, info, texts.get((kind, info.get("base", name).lower()), ""))
                     for name, info in items
                 ]
                 keyed = [(n, i, t) for n, i, t in keyed if len(t) > 60]
@@ -976,7 +1138,7 @@ def suggest_merges(kind: str) -> list[dict]:
     listing = [
         {"name": n, "attribute": "", "mentions": i["mentions"]}
         for n, i in sorted(index.items(), key=lambda kv: -kv[1]["mentions"])
-        if i["type"] == kind
+        if i["type"] == kind and not i.get("generic")
     ]
     if len(listing) < 2:
         return []

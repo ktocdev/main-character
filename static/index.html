@@ -285,6 +285,7 @@
           <span id="triage-meta"></span>
         </div>
         <div id="triage-aliases"></div>
+        <div id="triage-generic"></div>
         <div id="triage-obs"></div>
         <div id="triage-input-row" hidden>
           <span id="triage-mode-label"></span>
@@ -304,6 +305,13 @@
           </span>
           <button class="text" id="triage-kind-cancel">cancel <span class="hint">esc</span></button>
         </div>
+        <div id="triage-never-row" hidden>
+          <span id="triage-never-q"></span>
+          <span class="btns">
+            <button class="quiet danger" id="triage-never-yes"><span class="key">D</span>never track</button>
+            <button class="text" id="triage-never-cancel">cancel <span class="hint">esc</span></button>
+          </span>
+        </div>
       </article>
       <div id="triage-btns">
         <button class="quiet primary" data-tkey="k" title="mark reviewed ✓ and move on. Your default."><span class="key">k</span>keep</button>
@@ -312,7 +320,8 @@
         <button class="quiet" data-tkey="r" title="fix the spelling or case of this entity's own name"><span class="key">r</span>rename</button>
         <button class="quiet" data-tkey="a" title="add another name this entity goes by, matchable by both"><span class="key">a</span>alias</button>
         <button class="quiet" data-tkey="t" title="move to a different kind: then 1 person · 2 project · 3 place"><span class="key">t</span>retype</button>
-        <button class="quiet danger" data-tkey="d" title="remove this entity. There's no confirm, and undo brings it back"><span class="key">d</span>delete</button>
+        <button class="quiet danger" data-tkey="d" title="delete the mentions it has now; the name stays free for new entries (a generic name stops being tracked). No confirm; undo brings it back"><span class="key">d</span>delete</button>
+        <button class="quiet danger" data-tkey="D" title="for generic terms and junk: ignore this name in every entry, now and future. Asks once"><span class="key">D</span>never track</button>
         <button class="quiet" data-tkey="s" title="decide later. It stays in the queue for next time"><span class="key">s</span>skip</button>
         <button class="quiet" data-tkey="e" title="open this entity in Entities to edit observations; a link there brings you back"><span class="key">e</span>edit in entities</button>
         <button class="quiet" data-tkey="u" id="triage-undo" title="undo the last change, 50 deep and across sessions"><span class="key">u</span>undo</button>
@@ -478,7 +487,8 @@
         <p>Entities come one at a time, junk first (1-mention entities lead). Keep your hands on the keyboard:</p>
         <div class="help-keys">
           <span class="k">k</span><span class="d"><span class="n">keep</span> <span class="t">— marks reviewed ✓, next. Your default key.</span></span>
-          <span class="k">d</span><span class="d"><span class="n">delete</span> <span class="t">— junk, noise, things that shouldn't exist. No confirm; u undoes.</span></span>
+          <span class="k">d</span><span class="d"><span class="n">delete</span> <span class="t">— removes the mentions it has now. The name stays free, so a new entry that mentions it starts fresh. A name marked "looks generic" stops being tracked instead. No confirm; u undoes.</span></span>
+          <span class="k">D</span><span class="d"><span class="n">never track</span> <span class="t">— for generic terms and junk ("dive bar", "work plan"): every future mention is ignored too. Asks once; u undoes.</span></span>
           <span class="k">m</span><span class="d"><span class="n">merge</span> <span class="t">— into another entity (autocomplete; old name kept as alias)</span></span>
           <span class="k">c</span><span class="d"><span class="n">correct</span> <span class="t">— typo fix; old name is not kept as alias (Dana → Dane)</span></span>
           <span class="k">r</span><span class="d"><span class="n">rename</span> <span class="t">— fix spelling or case of this entity's own name</span></span>
@@ -620,6 +630,8 @@
           </div>
           <div id="suggest-btns">
             <button class="quiet sm" id="find-dups">find duplicates (free)</button>
+            <button class="quiet sm" id="find-generic" title="names that are a category, not one particular place or project (local, free)">generic names</button>
+            <button class="quiet sm" id="show-deleted" title="everything deleted, both kinds, to restore or let a name back in">deleted</button>
             <select class="quiet-select sm" id="suggest-kind" title="ask claude to suggest merges for a type (uses the API)">
               <option value="">ask claude…</option>
               <option value="person">people</option>
@@ -667,7 +679,8 @@
                 <option value="project">project</option>
                 <option value="place">place</option>
               </select>
-              <button class="quiet danger" id="delete-btn" title="remove this entity. Undo brings it back">delete</button>
+              <button class="quiet danger" id="delete-btn" title="delete the mentions it has now. The name stays free, so a new entry can bring it back. Undo restores them">delete</button>
+              <button class="quiet danger" id="never-btn" title="for generic terms and junk: ignore this name in every entry, now and future">never track</button>
             </div>
             <div class="ent-actions" id="alias-row">
               <span class="lbl">aliases:</span>

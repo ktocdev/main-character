@@ -79,7 +79,6 @@
   #entity-edit-toggle { margin-left: auto; }
   /* opened from triage with e: the way back, above the title on every width */
   #entity-to-triage { display: inline-flex; margin: 0 0 .6rem; padding-left: 0; font-size: .85rem; min-height: 2.2rem; }
-  #entity-to-triage[hidden] { display: none; }
   #entity-chips { margin-top: .6rem; gap: .3rem; }
   #entity-chips .tag { color: var(--text-muted); height: 1.7rem; padding: 0 .7rem; font-size: .8rem; }
   #entity-chips .tag .k { font-size: .7rem; opacity: .7; }
@@ -111,6 +110,18 @@
   .dup-row, .sg { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; font-size: .95rem; }
   .dup-row .why, .sg .r { font: .78rem var(--font-ui); color: var(--text-muted); flex-basis: 100%; }
   .dup-row .quiet, .sg .quiet { min-height: 1.8rem; padding: .2rem .7rem; }
+  .dup-row .note { font: .8rem var(--font-ui); color: var(--text-muted); }
+  #suggest-panel .sub { margin-top: .6rem; }
+  #suggest-panel > .filled { align-self: flex-start; margin-top: .3rem; }
+  /* review checklists (generic names, never-tracked names) */
+  .check-row { display: flex; align-items: baseline; gap: .6rem; font-size: .95rem; cursor: pointer; }
+  .check-row input { flex-shrink: 0; translate: 0 .1rem; }
+  .check-row .body { flex: 1; min-width: 0; }
+  .check-row .nm { color: var(--text-default); }
+  .check-row .note { font: .8rem var(--font-ui); color: var(--text-muted); }
+  .check-row .ln { display: block; font-size: .85rem; color: var(--text-muted); text-wrap: pretty; }
+  .check-row .ln:empty { display: none; }
+  .check-row .quiet { flex-shrink: 0; }
 
   /* observations: a section rule, date eyebrows, one serif line each */
   #entity-doc { margin-top: 2rem; }

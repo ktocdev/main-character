@@ -120,7 +120,7 @@ def entity_records() -> dict:
                 name = (ent.get("name") or "").strip()
                 if not name:
                     continue
-                resolved = apply_curation(curation, raw_kind, name)
+                resolved = apply_curation(curation, raw_kind, name, key)
                 if not resolved:
                     continue
                 kind, canonical = resolved[0], resolved[1]

@@ -195,6 +195,105 @@ async function findDups() {
   }
 }
 
+// A checkbox row for the review panels: name, muted note, optional line.
+function checkRow(panel, {checked, label, note, line}) {
+  const row = document.createElement('label');
+  row.className = 'check-row';
+  row.innerHTML = '<input type="checkbox"><span class="body"><span class="nm"></span> <span class="note"></span><span class="ln"></span></span>';
+  row.querySelector('input').checked = checked;
+  row.querySelector('.nm').textContent = label;
+  row.querySelector('.note').textContent = note;
+  row.querySelector('.ln').textContent = line || '';
+  panel.appendChild(row);
+  return row;
+}
+function panelHead(panel, text) {
+  const h = document.createElement('div');
+  h.className = 'sub eyebrow';
+  h.textContent = text;
+  panel.appendChild(h);
+}
+// the apply button under a checklist, its label kept to the checked count
+function panelApply(panel, rows, label, fn) {
+  const b = document.createElement('button');
+  b.className = 'filled sm';
+  const checked = () => rows.filter(([, row]) => row.isConnected && row.querySelector('input').checked).map(([x]) => x);
+  b.onclick = () => { const xs = checked(); if (xs.length) fn(xs); };
+  const relabel = () => { const n = checked().length; b.textContent = label(n); b.disabled = !n; };
+  panel.addEventListener('change', relabel);
+  panel.appendChild(b);
+  relabel();
+}
+
+// ---- generic names ----
+// The local detector's hits as a checklist, pre-checked. Uncheck a "the
+// gym" that is your gym. Applying is one never-track change, one undo.
+async function genericCleanup() {
+  const panel = suggestPanel('generic names');
+  const w = panelSay(panel, 'looking for category names (local, free)…');
+  const r = await (await fetch('/api/entities/generic')).json();
+  w.remove();
+  if (!r.candidates || !r.candidates.length) { panelSay(panel, 'no generic names found.'); return; }
+  panelSay(panel, "A category isn't an entity. Checked names stop being tracked; your entries keep every word, so search and the companion still find them. Uncheck one you mean as one particular place.");
+  const rows = r.candidates.map(c => [c, checkRow(panel, {
+    checked: true, label: c.name, line: c.first,
+    note: `${c.kind} · ${c.mentions} mention${c.mentions === 1 ? '' : 's'}`,
+  })]);
+  panelApply(panel, rows, n => `stop tracking ${n}`, async picked => {
+    const res = await api('/api/entities/delete-names', {names: picked.map(c => c.name)});
+    if (res) { closeSuggest(); clearDetail(`stopped tracking ${res.deleted.length} generic names. Undo brings them back.`); }
+  });
+}
+
+// ---- deleted, both kinds ----
+// Never-tracked names (rules that block every future mention too) and
+// mentions deleted entry by entry. A blocked name can be let back in: what
+// it hid stays hidden, but new entries start it fresh. People are
+// pre-checked for that -- a deleted Allen shouldn't block every Allen.
+async function showDeleted() {
+  const panel = suggestPanel('deleted');
+  const r = await (await fetch('/api/entities/deleted')).json();
+  if (!r.names || (!r.names.length && !r.mentions.length)) { panelSay(panel, 'nothing deleted.'); return; }
+  const restoreBtn = (row, key, mode) => {
+    const b = document.createElement('button');
+    b.className = 'quiet xs';
+    b.textContent = 'restore';
+    b.title = 'bring back everything this delete hid';
+    b.onclick = async e => {
+      e.preventDefault();
+      if (await api('/api/entities/deleted/restore', {key, mode})) { row.remove(); panel.dispatchEvent(new Event('change')); loadEntities(); }
+    };
+    row.appendChild(b);
+  };
+  if (r.names.length) {
+    panelHead(panel, `never tracked (${r.names.length})`);
+    panelSay(panel, 'Checked names are let back in: their old mentions stay deleted, and a new entry that mentions one starts it fresh.');
+    const rows = r.names.map(n => {
+      const row = checkRow(panel, {
+        checked: n.kind === 'person' && !n.generic, label: n.name,
+        note: `${n.kind} · ${n.mentions} mention${n.mentions === 1 ? '' : 's'}${n.generic ? ' · looks generic' : ''}`,
+      });
+      restoreBtn(row, n.key, 'name');
+      return [n, row];
+    });
+    panelApply(panel, rows, n => `let ${n} name${n === 1 ? '' : 's'} back in`, async picked => {
+      if (await api('/api/entities/deleted/free', {keys: picked.map(n => n.key)})) { showDeleted(); loadEntities(); }
+    });
+  }
+  if (r.mentions.length) {
+    panelHead(panel, `deleted mentions (${r.mentions.length})`);
+    for (const m of r.mentions) {
+      const row = document.createElement('div');
+      row.className = 'dup-row';
+      row.innerHTML = '<span><strong></strong> <span class="note"></span></span>';
+      row.querySelector('strong').textContent = m.name;
+      row.querySelector('.note').textContent = `${m.kind} · from ${m.entries} entr${m.entries === 1 ? 'y' : 'ies'}`;
+      restoreBtn(row, m.key, 'mentions');
+      panel.appendChild(row);
+    }
+  }
+}
+
 // The detail pane shows one of: an entity, a group page, or the prompt to
 // pick one. The edit box and its toggle only exist for an entity.
 function showDetail(kind) {
@@ -431,6 +530,8 @@ export function init() {
   $('batch-clear').onclick = () => { picked.clear(); updateBatchCount(); renderEntityList(); };
   $('search').oninput = renderEntityList;
   $('find-dups').onclick = findDups;
+  $('find-generic').onclick = genericCleanup;
+  $('show-deleted').onclick = showDeleted;
 
   $('merge-btn').onclick = async () => {
     const target = $('merge-target').value.trim();
@@ -476,9 +577,16 @@ export function init() {
 
   $('delete-btn').onclick = async () => {
     if (!state.selected) return;
-    if (!confirm(`Delete "${state.selected}" from the entity graph?`)) return;
-    const r = await api('/api/entities/delete', {name: state.selected});
+    if (!confirm(`Delete the mentions of "${state.selected}"?\n(your entries are untouched, and a new entry that mentions "${state.selected}" starts it fresh)`)) return;
+    const r = await api('/api/entities/delete', {name: state.selected, mode: 'mentions'});
     if (r) clearDetail('deleted');
+  };
+
+  $('never-btn').onclick = async () => {
+    if (!state.selected) return;
+    if (!confirm(`Never track "${state.selected}"?\nEvery future "${state.selected}" will be ignored too. Meant for generic terms and junk.`)) return;
+    const r = await api('/api/entities/delete', {name: state.selected, mode: 'name'});
+    if (r) clearDetail(`no longer tracking ${r.deleted}`);
   };
 
   $('undo-btn').onclick = () => histStep('/api/undo');
