@@ -9,17 +9,46 @@
 const LABELS = {
   summary: 'summary', category: 'category', dream: 'dream category',
   favorite: 'favorite', person: 'person', place: 'place', project: 'project',
+  thing: 'thing',
 };
-// ☾ ◎ ◇ ★ are not in Old Standard TT and fall back to a system face.
-// Swap them for real icons if the app ever gets an icon set.
-const GLYPHS = {
-  summary: '¶', category: '§', dream: '☾', favorite: '★', place: '◎', project: '◇',
+// ---- icons (static/icons/, chosen on static/design/icons.html) ----
+// One per type, and one per subtype where it has its own: a built-in
+// category, a dream tone, a thing category. Anything else (an organic
+// category, an unknown tone) falls back to its type's icon. People have no
+// icon: they show their initials.
+const TYPE_ICONS = {
+  summary: 'root-list', category: 'category', dream: 'moon', favorite: 'star',
+  place: 'location-1', project: 'rocket', thing: 'bookmark-heart',
 };
+const SUBTYPE_ICONS = {
+  category: {
+    work: 'work', relationships: 'heart', health: 'hospital-1', creative: 'palette',
+    social: 'chat-bubble-smile', family: 'usergroup', pets: 'cat',
+    emotional: 'emo-emotional', ai_reflection: 'ai-book-open', home: 'houses-2',
+  },
+  dream: {
+    nightmare: 'thunderstorm-night', anxiety: 'no-expression', processing: 'component-steps',
+    peaceful: 'peace-bold', surreal: 'alien', lucid: 'hand', nostalgic: 'ice-cream', joyful: 'cake',
+  },
+  thing: {music: 'music', game: 'gamepad', show: 'tv', book: 'book-open', event: 'ticket'},
+};
+// read by figma/icons/icons.mjs, which bundles the icons for Figma
+export { TYPE_ICONS, SUBTYPE_ICONS };
+// these have one version, used for both styles
+export const ONE_VERSION = new Set(['peace-bold']);
+const ICON_DIR = new URL('../icons/', import.meta.url);
 const MAX_BADGES = {sm: 2, md: 3, lg: 4};
 
+// The icon's file for a type and subtype, or null for a person.
+export function iconFile(type, subtype, style = 'filled') {
+  const name = SUBTYPE_ICONS[type]?.[subtype] ?? TYPE_ICONS[type];
+  if (!name) return null;
+  return new URL(`${style === 'filled' && !ONE_VERSION.has(name) ? `${name}-filled` : name}.svg`, ICON_DIR).href;
+}
+
 // A person shows their initials: the first letter of the first two words.
-function glyphFor(type, title) {
-  return GLYPHS[type] ?? title.split(/\s+/).filter(Boolean).slice(0, 2)
+function initials(title) {
+  return title.split(/\s+/).filter(Boolean).slice(0, 2)
     .map(w => w[0].toUpperCase()).join('');
 }
 
@@ -47,9 +76,14 @@ function badgeRow(badges, size) {
 
 // size: sm | md | lg. orientation: auto (horizontal below 670px, from CSS)
 // | vertical | horizontal. Small cards never show a description.
+// subtype: the category key, dream tone or thing category, for its own
+// icon. iconStyle: filled (the default) | outline. icon: text that
+// replaces the icon or initials. image: a URL whose picture fills the
+// visual in place of either (experimental: no plan yet for where images
+// come from).
 export function itemCard({
-  type, title, href = '#', description = '', badges = [], icon,
-  size = 'md', orientation = 'auto',
+  type, title, href = '#', description = '', badges = [], icon, image,
+  subtype, iconStyle = 'filled', size = 'md', orientation = 'auto',
 }) {
   const card = document.createElement('article');
   card.className = 'item-card';
@@ -61,7 +95,28 @@ export function itemCard({
   visual.href = href;
   visual.tabIndex = -1;
   visual.setAttribute('aria-hidden', 'true');
-  visual.textContent = icon || glyphFor(type, title);
+  // The icon is a mask filled with currentColor, so it takes the visual's
+  // accent and hover colours. Set through the CSSOM, which the CSP allows.
+  const file = icon || image ? null : iconFile(type, subtype, iconStyle);
+  if (image) {
+    // A photo fills the visual instead (experimental). Its alt is empty
+    // because the visual is hidden from screen readers already.
+    const img = document.createElement('img');
+    img.className = 'card-image';
+    img.src = image;
+    img.alt = '';
+    img.loading = 'lazy';
+    visual.classList.add('image');
+    visual.appendChild(img);
+  } else if (file) {
+    const glyph = document.createElement('span');
+    glyph.className = 'card-icon';
+    glyph.style.setProperty('--icon', `url("${file}")`);
+    visual.appendChild(glyph);
+  } else {
+    visual.classList.add('text');
+    visual.textContent = icon || initials(title);
+  }
 
   const body = document.createElement('div');
   body.className = 'card-body';

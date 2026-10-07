@@ -6,6 +6,7 @@
 // One list, so a new page is one line here and one card on the home page.
 export const PAGES = [
   ['tokens', 'tokens.html', 'foundation'],
+  ['icons', 'icons.html', 'foundation'],
   ['card', 'card.html'],
   ['button', 'button.html'],
   ['input', 'input.html'],

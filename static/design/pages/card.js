@@ -13,7 +13,7 @@ const cards = [
   ['place', 'Greenwood Park', 'Where the Tuesday runs happen. Mentioned most on weeks you describe as tight.', ['12 mentions']],
   ['project', 'Groundwork', 'The side project you keep going to after meetings. Morale tracks how often it comes up.', ['18 mentions', 'since June']],
   ['summary', 'The long week before the move, when every evening ended at the kitchen table', 'Boxes, a lease that would not sign itself, three calls home and one you did not return. You wrote every night anyway, most of it about the table — who sat there, what got said, and what you decided to leave behind in the old apartment.', ['Aug 11–17', '9 entries', 'family', 'work', 'move']],
-].map(([type, title, description, badges]) => ({type, title, description, badges, href: '#'}));
+].map(([type, title, description, badges]) => ({type, title, description, badges, href: '#', subtype: {Family: 'family', Surreal: 'surreal'}[title]}));
 
 function spec(size, text) {
   const d = document.createElement('div');
@@ -37,13 +37,26 @@ for (const c of [cards[4], cards[1], cards[7]]) horiz.appendChild(itemCard({...c
 horiz.append(spec('sm', 'horizontal · 5.75rem · 5rem visual · no description'));
 for (const c of [cards[4], cards[5]]) horiz.appendChild(itemCard({...c, size: 'sm', orientation: 'horizontal'}));
 
+// the same place card with a photo, in every size and both orientations
+const photo = {
+  type: 'place', title: 'The ridge road', href: '#',
+  description: 'Where the evening drives end up. You wrote about the light out there three times in August.',
+  badges: ['6 mentions', 'since July'],
+  image: '../images/sergey-pesterev-tMvuB9se2uQ-unsplash.jpg',
+};
+const imageOut = document.getElementById('image-out');
+imageOut.append(spec('sm · md · lg', 'vertical'));
+for (const size of ['sm', 'md', 'lg']) imageOut.appendChild(cardRow([photo, cards[5]], size));
+imageOut.append(spec('md · sm', 'horizontal'));
+for (const size of ['md', 'sm']) imageOut.appendChild(itemCard({...photo, size, orientation: 'horizontal'}));
+
 const wrapping = document.getElementById('wrapping-out');
 for (const [size, text] of [['sm', '6 per 72rem row'], ['md', '5 per 72rem row'], ['lg', '3 per 72rem row']])
   wrapping.append(spec(size, text), cardRow(cards, size));
 
 const parts = document.getElementById('parts');
 for (const [part, text] of [
-  ['visual', 'Links to the item. One glyph per type (¶ § ☾ ★ ◎ ◇); people get their initials. Override it with icon. Hidden from screen readers and skipped by Tab, because the title is the real link.'],
+  ['visual', 'Links to the item. A filled icon per type, or per subtype where it has one (a category, dream tone or thing category; see the icons page); people get their initials. iconStyle: outline switches set, icon replaces it with text, image with a photo that covers the visual. Hidden from screen readers and skipped by Tab, because the title is the real link.'],
   ['type', 'Tracked uppercase eyebrow in --text-accent-muted, the same label idiom every section in the app uses.'],
   ['title', 'Links to the item. Body serif 700, since bold is for entry titles and category names. Clamped to two lines; --text-accent on hover, an outline in the same colour on focus.'],
   ['description', 'Plain text, not a link, so it can be selected and copied. --text-muted serif, clamped to 3 lines on md and 4 on lg. Small has none.'],

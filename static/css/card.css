@@ -6,7 +6,8 @@
      parts keep the handoff's names so the Figma layers can mirror them:
 
        article.item-card[.sm|.lg][.horizontal|.vertical]
-         a.card-visual      glyph, aria-hidden, tabindex=-1
+         a.card-visual[.text|.image]  icon (span.card-icon), initials or
+                            img.card-image; aria-hidden, tabindex=-1
          div.card-body
            div.card-type    eyebrow
            a.card-title     the one tab stop
@@ -29,10 +30,28 @@
     flex: none; height: 7rem;
     display: flex; align-items: center; justify-content: center;
     background: var(--bg-muted); border-bottom: 1px solid var(--border-default);
-    color: var(--text-accent); font: italic 2.4rem/1 var(--font-body);
+    color: var(--text-accent); font: 700 2.4rem/1 var(--font-body);
     transition: background-color var(--dur-hover) ease;
   }
   .card-visual:hover { background: var(--card-thumb-hover); color: var(--text-accent); }
+  /* the type's icon (static/icons/), a mask in the visual's colour. Sized
+     in em, so it follows the glyph size each size and orientation sets. */
+  .card-icon {
+    width: .9em; height: .9em; background: currentColor;
+    mask: var(--icon) center / contain no-repeat;
+  }
+  /* initials (or text in place of the icon): dropped so the baseline meets
+     the bottom of the icons' ink (.36em below the centre for most) */
+  .card-visual.text { padding-top: .25em; }
+  /* a photo in place of the icon (experimental): it covers the whole visual,
+     cropped from the centre, and dims a little on hover where the others
+     take --card-thumb-hover */
+  .card-visual.image { position: relative; overflow: hidden; }
+  .card-image {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    transition: opacity var(--dur-hover) ease;
+  }
+  .card-visual.image:hover .card-image { opacity: .85; }
   .card-body {
     flex: 1; min-height: 0; display: flex; flex-direction: column;
     gap: .35rem; padding: .8rem .9rem .85rem;

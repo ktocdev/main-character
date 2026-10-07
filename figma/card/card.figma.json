@@ -1,10 +1,17 @@
 {
-  "$comment": "The Card component for Figma, read by figma/card/code.js. Every value mirrors static/css/card.css (spec: docs/design_handoff_card/README.md); change both together. Lengths are rem (x remPx). A {rem, token} value is bound to the Figma variable of that token name; a bare number stays a literal because no token has that value. Colors are role names only (the Semantic collection that figma/components syncs); `fallback` is their dark values from static/css/tokens.css, used only when the file has no variable by that name.",
+  "$comment": "The Card component for Figma, read by figma/card/code.js. Every value mirrors static/css/card.css (spec: docs/design_handoff_card/README.md); change both together. The icons are the file's `iconSet` component set, built by the Icons plugin (figma/icons/). Lengths are rem (x remPx). A {rem, token} value is bound to the Figma variable of that token name; a bare number stays a literal because no token has that value. Colors are role names only (the Semantic collection that figma/components syncs); `fallback` is their dark values from static/css/tokens.css, used only when the file has no variable by that name.",
   "name": "Card",
+  "iconSet": "Icon",
   "remPx": 16,
   "fonts": {
     "serif": "Old Standard TT",
     "ui": "CMU Sans Serif Demi Condensed"
+  },
+  "visuals": ["icon", "initials", "image"],
+  "visual": {
+    "$comment": "card.css: .card-icon is .9em of the visual's glyph size; .card-visual.text drops initials .25em so their baseline meets the icons' bottom",
+    "iconScale": 0.9,
+    "initialsDrop": 0.25
   },
   "colors": {
     "card": "bg-raised",
@@ -32,7 +39,8 @@
   },
   "sample": {
     "type": "summary",
-    "glyph": "¶",
+    "icon": "summary",
+    "initials": "WW",
     "title": "Week of September 22",
     "description": "Two late nights writing, a run with Mika at Greenwood Park, and the first week the recovery didn’t cost a sick day.",
     "badges": ["Sep 22–28", "7 entries", "family", "work"],
