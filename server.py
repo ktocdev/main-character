@@ -1828,15 +1828,17 @@ def _combine(body: MergeIn, field: str, verb: str):
     before = _snapshot()
     curation = entities.load_curation()
     src_kind = index[src]["type"]
+    src_base = entities.base_name(index, src)
     # kind-qualify the target when it exists under a different kind
     # (e.g. merge place:Reyes into person:Dr. Reyes)
     dst_kind = index[dst]["type"] if dst in index else src_kind
-    value = f"{dst_kind}:{dst}" if dst_kind != src_kind else dst
-    curation[field][entities.curation_key(src_kind, src)] = value
+    dst_base = entities.base_name(index, dst) if dst in index else dst
+    value = f"{dst_kind}:{dst_base}" if dst_kind != src_kind else dst_base
+    curation[field][entities.index_key(index, src)] = value
     for other in ("merge", "correct"):
         for k, v in list(curation[other].items()):
             _, tname = entities._parse_target(v, src_kind)
-            if tname.lower() == src.lower():
+            if tname.lower() == src_base.lower():
                 curation[other][k] = value
     entities.save_curation(curation)
     _record_curation(f"{verb} {src} into {dst}", before)
@@ -1865,9 +1867,9 @@ def retype_entity(body: RetypeIn):
 
     before = _snapshot()
     curation = entities.load_curation()
-    curation["retype"][entities.curation_key(index[name]["type"], name)] = {
+    curation["retype"][entities.index_key(index, name)] = {
         "type": body.new_type,
-        "name": body.new_name.strip() or name,
+        "name": body.new_name.strip() or entities.base_name(index, name),
     }
     entities.save_curation(curation)
     _record_curation(f"retype {name} to {body.new_type}", before)
@@ -1888,7 +1890,7 @@ def rename_entity(body: MergeIn):
 
     before = _snapshot()
     curation = entities.load_curation()
-    curation["rename"][entities.curation_key(index[name]["type"], name)] = new_name
+    curation["rename"][entities.index_key(index, name)] = new_name
     entities.save_curation(curation)
     _record_curation(f"rename {name} to {new_name}", before)
     _rebuild()
@@ -1904,7 +1906,7 @@ def alias_entity(body: AliasIn):
 
     before = _snapshot()
     curation = entities.load_curation()
-    key = entities.curation_key(index[name]["type"], name)
+    key = entities.index_key(index, name)
     if body.add.strip():
         curation["alias_add"].setdefault(key, [])
         if body.add.strip() not in curation["alias_add"][key]:
@@ -1932,7 +1934,7 @@ def entity_observations(name: str):
     kind = index[canonical]["type"]
     return {
         "name": canonical, "type": kind,
-        "observations": entities.list_observations(kind, canonical),
+        "observations": entities.list_observations(kind, entities.base_name(index, canonical)),
     }
 
 
@@ -2004,7 +2006,7 @@ def mark_reviewed(body: ReviewedIn):
     if not name:
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
 
-    key = entities.curation_key(index[name]["type"], name)
+    key = entities.index_key(index, name)
     curation = entities.load_curation()
     reviewed = {r.lower() for r in curation["reviewed"]}
     if body.reviewed and key not in reviewed:
@@ -2588,7 +2590,7 @@ def delete_entity(body: NameIn):
 
     before = _snapshot()
     curation = entities.load_curation()
-    curation["delete"].append(entities.curation_key(index[name]["type"], name))
+    curation["delete"].append(entities.index_key(index, name))
     entities.save_curation(curation)
     _record_curation(f"delete {name}", before)
     _rebuild()

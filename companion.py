@@ -873,11 +873,13 @@ def manage_mode(entity_index: dict) -> dict:
                 print("  those are already the same entity\n")
                 continue
             curation = entities.load_curation()
-            kind = entity_index[src]["type"]
-            curation["merge"][entities.curation_key(kind, src)] = dst
+            if dst in entity_index:
+                dst = entities.base_name(entity_index, dst)
+            curation["merge"][entities.index_key(entity_index, src)] = dst
             # re-point anything already merged into src
+            src_base = entities.base_name(entity_index, src)
             for k, v in list(curation["merge"].items()):
-                if v.lower() == src.lower():
+                if v.lower() == src_base.lower():
                     curation["merge"][k] = dst
             entities.save_curation(curation)
             print(f"  merged {src} -> {dst}")
@@ -893,8 +895,7 @@ def manage_mode(entity_index: dict) -> dict:
                 print("  kept\n")
                 continue
             curation = entities.load_curation()
-            kind = entity_index[name]["type"]
-            curation["delete"].append(entities.curation_key(kind, name))
+            curation["delete"].append(entities.index_key(entity_index, name))
             entities.save_curation(curation)
             print(f"  deleted {name}")
             dirty = True

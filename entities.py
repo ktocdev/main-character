@@ -315,6 +315,17 @@ def curation_key(kind: str, name: str) -> str:
     return f"{kind}:{name.lower()}"
 
 
+def base_name(index: dict, name: str) -> str:
+    """The name curation rules know an indexed entity by. Differs from its
+    index key only when two kinds share a name ("karaoke · project")."""
+    return index[name].get("base", name)
+
+
+def index_key(index: dict, name: str) -> str:
+    """Curation key for an entity already in the index."""
+    return curation_key(index[name]["type"], base_name(index, name))
+
+
 # ---------------------------------------------------------------------------
 # GROUPS (user-made collections of entities, for viewing and associating)
 # ---------------------------------------------------------------------------
@@ -499,13 +510,29 @@ def build_entity_docs(records: list[dict]) -> dict:
     for ent in merged.values():
         ent["aliases"] = {a for a in ent["aliases"] if a.lower() != ent["name"].lower()}
 
+    # The index is keyed by display name, so two kinds sharing a name
+    # ("karaoke" the place and the project) would overwrite each other and
+    # one would vanish. The one with the most mentions keeps the plain name;
+    # the others show their kind ("karaoke · project") and stay reachable,
+    # e.g. to merge one way. Rules still key on the plain name (`base`).
+    by_name: dict[str, list[dict]] = {}
+    for ent in merged.values():
+        ent["display"] = ent["name"]
+        by_name.setdefault(ent["name"].lower(), []).append(ent)
+    for same in by_name.values():
+        same.sort(key=lambda e: (-len(e["timeline"]), KINDS.index(e["kind"])))
+        for ent in same[1:]:
+            ent["display"] = f"{ent['name']} · {ent['kind']}"
+
     # group memberships, resolved through names + aliases
     groups = load_groups()
     name_lookup = {}  # lowercase name/alias -> canonical display name
     for ent in merged.values():
-        name_lookup[ent["name"].lower()] = ent["name"]
+        name_lookup[ent["display"].lower()] = ent["display"]
+    for ent in merged.values():
+        name_lookup.setdefault(ent["name"].lower(), ent["display"])
         for a in ent["aliases"]:
-            name_lookup.setdefault(a.lower(), ent["name"])
+            name_lookup.setdefault(a.lower(), ent["display"])
     entity_groups: dict[str, list[str]] = {}  # canonical name -> [group names]
     for g in groups:
         for member in g["members"]:
@@ -531,7 +558,7 @@ def build_entity_docs(records: list[dict]) -> dict:
 
         lines = [
             "---",
-            f"name: {ent['name']}",
+            f"name: {ent['display']}",
             f"type: {kind}",
             f"{attr_labels[kind]}: {ent['attr'] or 'unknown'}",
             f"first_seen: {dates[0]}",
@@ -540,7 +567,7 @@ def build_entity_docs(records: list[dict]) -> dict:
         ]
         if ent["aliases"]:
             lines.append(f"aliases: {', '.join(sorted(ent['aliases']))}")
-        gnames = sorted(entity_groups.get(ent["name"], []), key=str.lower)
+        gnames = sorted(entity_groups.get(ent["display"], []), key=str.lower)
         if gnames:
             lines.append(
                 f"groups: {', '.join(group_path(groups, g) for g in gnames)}"
@@ -553,7 +580,7 @@ def build_entity_docs(records: list[dict]) -> dict:
             lines.append("")
         path.write_text("\n".join(lines), encoding="utf-8")
 
-        index[ent["name"]] = {
+        index[ent["display"]] = {
             "type": kind,
             "path": path.relative_to(ENTITY_DIR).as_posix(),
             "mentions": len(ent["timeline"]),
@@ -563,6 +590,8 @@ def build_entity_docs(records: list[dict]) -> dict:
                 r.lower() for r in curation["reviewed"]
             },
         }
+        if ent["display"] != ent["name"]:
+            index[ent["display"]]["base"] = ent["name"]
 
     (ENTITY_DIR / "index.json").write_text(
         json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
