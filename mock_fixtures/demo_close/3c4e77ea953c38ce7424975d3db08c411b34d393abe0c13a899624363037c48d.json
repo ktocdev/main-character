@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Priya\",\"relationship\":\"manager at Meridian\",\"qualifier\":\"\",\"observations\":[\"Will assign someone to take over the analytics dashboard after the 21st\",\"Jordan has a meeting with Priya in six days\"]},{\"name\":\"Dev\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Dev's session on the 3rd broke something open for Jordan about the free-play review screen\"]},{\"name\":\"Pepper\",\"relationship\":\"pet\",\"qualifier\":\"\",\"observations\":[\"Sat on the back of the couch watching the window like she was expecting someone\",\"Was watching the Tuesday bird\"]}],\"projects\":[{\"name\":\"analytics dashboard\",\"domain\":\"work\",\"status\":\"active\",\"observations\":[\"Spent most of the afternoon writing documentation for it: screenshots and flow diagrams\",\"Documentation is meant for whoever Priya assigns after the 21st\",\"Jordan wants it to outlive their tenure at Meridian\"]},{\"name\":\"free-play review screen\",\"domain\":\"personal\",\"status\":\"active\",\"observations\":[\"Rebuilt the free-play review screen at Groundwork after carrying the fix around for twelve days\",\"Replaced highlights with neutral marks; the review step asks what a mark means instead of telling you\",\"Removed the 'your best moments' header and highlight reel\",\"Took two hours and more code was thrown out than written; trophy-case framing affected export naming, share text, and the summary card\",\"Ran a test session, marked four spots, and the review asked about each one; it works now\"]}],\"places\":[{\"name\":\"Groundwork\",\"kind\":\"cafe\",\"observations\":[\"Went there after documenting the dashboard; had a cortado at a window table with laptop\",\"Rebuilt the free-play review screen there\"]},{\"name\":\"Meridian\",\"kind\":\"workplace\",\"observations\":[\"Jordan is in their last good week at Meridian\",\"The company plans to replace the site the dashboard is for\"]}],\"things\":[]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2556,
+    "output_tokens": 630,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

@@ -5,7 +5,12 @@
     "mentions": 3,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "contact of lena's (at northlight)": 1,
+      "contact at northlight": 1,
+      "recruiter/interviewer at northlight": 1
+    }
   },
   "Dad": {
     "type": "person",
@@ -13,7 +18,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "father": 1
+    }
   },
   "Dev": {
     "type": "person",
@@ -23,7 +31,12 @@
       "Devon"
     ],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "friend": 9,
+      "date": 2,
+      "coworker": 1
+    }
   },
   "Lena": {
     "type": "person",
@@ -31,7 +44,21 @@
     "mentions": 12,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "coworker": 8,
+      "friend": 4
+    },
+    "mixup": [
+      [
+        "coworker",
+        8
+      ],
+      [
+        "friend",
+        4
+      ]
+    ]
   },
   "Marcus": {
     "type": "person",
@@ -39,7 +66,11 @@
     "mentions": 12,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "coworker": 10,
+      "manager": 2
+    }
   },
   "Mika": {
     "type": "person",
@@ -47,7 +78,10 @@
     "mentions": 14,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "friend": 14
+    }
   },
   "Mikayla": {
     "type": "person",
@@ -55,7 +89,10 @@
     "mentions": 2,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "friend": 2
+    }
   },
   "Mom": {
     "type": "person",
@@ -65,7 +102,10 @@
     "groups": [
       "Family"
     ],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "mother": 4
+    }
   },
   "Pepper": {
     "type": "person",
@@ -73,7 +113,10 @@
     "mentions": 15,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "pet": 15
+    }
   },
   "Priya": {
     "type": "person",
@@ -81,7 +124,11 @@
     "mentions": 3,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "manager": 2,
+      "new manager": 1
+    }
   },
   "apartment": {
     "type": "place",
@@ -89,7 +136,10 @@
     "mentions": 6,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "home": 6
+    }
   },
   "coffee shop": {
     "type": "place",
@@ -98,7 +148,10 @@
     "aliases": [],
     "groups": [],
     "reviewed": false,
-    "generic": true
+    "generic": true,
+    "attrs": {
+      "venue": 1
+    }
   },
   "Greenwood Park": {
     "type": "place",
@@ -106,7 +159,11 @@
     "mentions": 7,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "park": 4,
+      "venue": 3
+    }
   },
   "Groundwork": {
     "type": "place",
@@ -114,7 +171,12 @@
     "mentions": 9,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "cafe": 5,
+      "coffee shop": 2,
+      "venue": 2
+    }
   },
   "home": {
     "type": "place",
@@ -122,7 +184,10 @@
     "mentions": 3,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "home": 3
+    }
   },
   "internal tools": {
     "type": "place",
@@ -130,7 +195,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "workplace team": 1
+    }
   },
   "Jordan's apartment": {
     "type": "place",
@@ -138,7 +206,10 @@
     "mentions": 2,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "home": 2
+    }
   },
   "Jordan's living room": {
     "type": "place",
@@ -146,7 +217,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "home": 1
+    }
   },
   "legacy marketing pages": {
     "type": "place",
@@ -154,7 +228,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "workplace team": 1
+    }
   },
   "living room": {
     "type": "place",
@@ -162,7 +239,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "home": 1
+    }
   },
   "Meridian": {
     "type": "place",
@@ -170,7 +250,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "workplace": 1
+    }
   },
   "Northlight": {
     "type": "place",
@@ -178,7 +261,10 @@
     "mentions": 2,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "workplace": 2
+    }
   },
   "office": {
     "type": "place",
@@ -187,7 +273,10 @@
     "aliases": [],
     "groups": [],
     "reviewed": false,
-    "generic": true
+    "generic": true,
+    "attrs": {
+      "workplace": 3
+    }
   },
   "park": {
     "type": "place",
@@ -196,7 +285,10 @@
     "aliases": [],
     "groups": [],
     "reviewed": false,
-    "generic": true
+    "generic": true,
+    "attrs": {
+      "park": 1
+    }
   },
   "sandwich place": {
     "type": "place",
@@ -205,7 +297,10 @@
     "aliases": [],
     "groups": [],
     "reviewed": false,
-    "generic": true
+    "generic": true,
+    "attrs": {
+      "restaurant": 1
+    }
   },
   "Thai place": {
     "type": "place",
@@ -214,7 +309,10 @@
     "aliases": [],
     "groups": [],
     "reviewed": false,
-    "generic": true
+    "generic": true,
+    "attrs": {
+      "restaurant": 1
+    }
   },
   "Thai place on Elm": {
     "type": "place",
@@ -222,7 +320,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "venue": 1
+    }
   },
   "The Lantern": {
     "type": "place",
@@ -230,7 +331,10 @@
     "mentions": 2,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "venue": 2
+    }
   },
   "the office building (dream)": {
     "type": "place",
@@ -238,7 +342,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "dream location": 1
+    }
   },
   "the parking garage": {
     "type": "place",
@@ -247,7 +354,10 @@
     "aliases": [],
     "groups": [],
     "reviewed": false,
-    "generic": true
+    "generic": true,
+    "attrs": {
+      "venue": 1
+    }
   },
   "the pond": {
     "type": "place",
@@ -255,7 +365,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "outdoor location": 1
+    }
   },
   "Coda": {
     "type": "project",
@@ -263,7 +376,10 @@
     "mentions": 12,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 11
+    }
   },
   "Coda project": {
     "type": "project",
@@ -273,7 +389,10 @@
       "Coda"
     ],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 1
+    }
   },
   "Coda's snippet library": {
     "type": "project",
@@ -281,7 +400,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 1
+    }
   },
   "Dashboard": {
     "type": "project",
@@ -289,7 +411,10 @@
     "mentions": 2,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 2
+    }
   },
   "Dashboard project": {
     "type": "project",
@@ -297,7 +422,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "completed": 1
+    }
   },
   "Dashboard rebuild": {
     "type": "project",
@@ -305,7 +433,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "completed": 1
+    }
   },
   "exit plan": {
     "type": "project",
@@ -313,7 +444,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 1
+    }
   },
   "internal dashboard layout": {
     "type": "project",
@@ -321,7 +455,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 1
+    }
   },
   "internal tools team": {
     "type": "project",
@@ -329,7 +466,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 1
+    }
   },
   "Meridian work": {
     "type": "project",
@@ -337,7 +477,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "completed": 1
+    }
   },
   "nav component": {
     "type": "project",
@@ -345,7 +488,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 1
+    }
   },
   "Northlight · project": {
     "type": "project",
@@ -354,7 +500,10 @@
     "aliases": [],
     "groups": [],
     "reviewed": false,
-    "base": "Northlight"
+    "base": "Northlight",
+    "attrs": {
+      "active": 1
+    }
   },
   "Northlight application": {
     "type": "project",
@@ -362,7 +511,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "completed": 1
+    }
   },
   "Northlight interview process": {
     "type": "project",
@@ -370,7 +522,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 1
+    }
   },
   "portfolio": {
     "type": "project",
@@ -378,7 +533,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "paused": 1
+    }
   },
   "portfolio update": {
     "type": "project",
@@ -386,7 +544,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "completed": 1
+    }
   },
   "reorg": {
     "type": "project",
@@ -394,7 +555,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 1
+    }
   },
   "restructuring": {
     "type": "project",
@@ -402,7 +566,10 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 1
+    }
   },
   "Singing practice": {
     "type": "project",
@@ -410,6 +577,9 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "attrs": {
+      "active": 1
+    }
   }
 }
