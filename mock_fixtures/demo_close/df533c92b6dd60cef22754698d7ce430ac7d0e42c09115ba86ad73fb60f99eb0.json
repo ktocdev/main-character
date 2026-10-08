@@ -1,0 +1,21 @@
+{
+  "key": "organic.scan",
+  "text": "{\"clusters\":[{\"index\":0,\"keep\":true,\"name\":\"Reorg Fallout\",\"reason\":\"All members are the team moves, restructuring, and reassignment to legacy marketing that Jordan is working through at their job.\"},{\"index\":1,\"keep\":true,\"name\":\"Job Hunt\",\"reason\":\"The exit plan, Northlight application and interviews, and Meridian portfolio deck are all parts of Jordan's search for a new job.\"}]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 1137,
+    "output_tokens": 148,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

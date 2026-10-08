@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Priya\",\"relationship\":\"manager\",\"observations\":[\"Jordan is writing the dashboard documentation for whoever Priya assigns after the 21st\",\"Jordan has six days until a meeting with Priya\"]},{\"name\":\"Dev\",\"relationship\":\"friend\",\"observations\":[\"Dev's session on the 3rd broke something open that led to the free-play review screen fix Jordan carried around for twelve days\"]},{\"name\":\"Pepper\",\"relationship\":\"pet\",\"observations\":[\"Pepper sat on the back of the couch watching the window like she was expecting someone\"]}],\"projects\":[{\"name\":\"analytics dashboard\",\"domain\":\"work\",\"status\":\"active\",\"observations\":[\"Jordan spent most of the afternoon writing documentation for it, with screenshots and flow diagrams\",\"Jordan wants the dashboard to outlive their tenure at Meridian because it actually helps people\"]},{\"name\":\"free-play review screen\",\"domain\":\"personal\",\"status\":\"active\",\"observations\":[\"Jordan finally rebuilt it at Groundwork after carrying the fix around for twelve days\",\"Replaced highlights with neutral marks, and the review step asks what a mark means instead of telling you\",\"Removed the 'your best moments' header and highlight reel\",\"Took two hours and Jordan threw out more code than they wrote\",\"The trophy-case framing affected export naming, share text, and the summary card\",\"Ran a test session, marked four spots, and the review asked about each one\"]}],\"places\":[{\"name\":\"Groundwork\",\"kind\":\"cafe\",\"observations\":[\"Jordan went there after work, had a cortado at a window table with laptop\",\"Rebuilt the free-play review screen there\"]},{\"name\":\"Meridian\",\"kind\":\"workplace\",\"observations\":[\"Jordan is spending their last good week there\",\"The company plans to replace the site the dashboard is for\"]}],\"things\":[]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2496,
+    "output_tokens": 600,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

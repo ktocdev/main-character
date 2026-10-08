@@ -48,6 +48,9 @@ GENERIC = {
     "Mom", "Mum", "Mother", "Dad", "Father", "Papa", "Pop",
     "Grandma", "Grandpa", "Granny", "Nana", "Grandmother", "Grandfather",
     "Aunt", "Auntie", "Uncle", "Sister", "Brother", "Cousin",
+    # ordinary words that got filed as a person once; they identify nobody
+    # and the demo uses them as entity names ("Guitar")
+    "Guitar",
 }
 
 HEADER = """\

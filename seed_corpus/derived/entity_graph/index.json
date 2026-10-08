@@ -97,7 +97,8 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "generic": true
   },
   "Greenwood Park": {
     "type": "place",
@@ -172,9 +173,9 @@
     "reviewed": false
   },
   "Northlight": {
-    "type": "project",
-    "path": "projects/northlight.md",
-    "mentions": 1,
+    "type": "place",
+    "path": "places/northlight.md",
+    "mentions": 2,
     "aliases": [],
     "groups": [],
     "reviewed": false
@@ -185,7 +186,8 @@
     "mentions": 3,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "generic": true
   },
   "park": {
     "type": "place",
@@ -193,7 +195,8 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "generic": true
   },
   "sandwich place": {
     "type": "place",
@@ -201,7 +204,8 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "generic": true
   },
   "Thai place": {
     "type": "place",
@@ -209,7 +213,8 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "generic": true
   },
   "Thai place on Elm": {
     "type": "place",
@@ -241,7 +246,8 @@
     "mentions": 1,
     "aliases": [],
     "groups": [],
-    "reviewed": false
+    "reviewed": false,
+    "generic": true
   },
   "the pond": {
     "type": "place",
@@ -340,6 +346,15 @@
     "aliases": [],
     "groups": [],
     "reviewed": false
+  },
+  "Northlight · project": {
+    "type": "project",
+    "path": "projects/northlight.md",
+    "mentions": 1,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false,
+    "base": "Northlight"
   },
   "Northlight application": {
     "type": "project",

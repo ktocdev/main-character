@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Marcus\",\"relationship\":\"coworker\",\"observations\":[\"The Meridian stakeholder management section of the deck is really about designing around Marcus, without saying so\"]},{\"name\":\"Ana\",\"relationship\":\"coworker\",\"observations\":[\"Already knows the honest version of the Meridian story from the screen\"]},{\"name\":\"Dev\",\"relationship\":\"friend\",\"observations\":[\"Was at the Thai place where Jordan sketched on a napkin, one of the moments Jordan found while re-reading old entries\"]},{\"name\":\"Lena\",\"relationship\":\"friend\",\"observations\":[\"Texted asking if Jordan needs anything for the 24th\",\"Jordan replied 'I'm good'; Lena sent a single thumbs up with no follow-up questions\"]},{\"name\":\"Priya\",\"relationship\":\"coworker\",\"observations\":[\"Sent a calendar invite this afternoon for an intro chat on Monday 9/21, 30 minutes\",\"Jordan worries about getting an offer before having a real conversation with Priya\"]},{\"name\":\"Pepper\",\"relationship\":\"pet\",\"observations\":[\"Asleep on the green rug again, same spot, same curl\"]}],\"projects\":[{\"name\":\"Portfolio presentation\",\"domain\":\"work\",\"status\":\"active\",\"observations\":[\"Started building it on 9/17 for the 24th: four interviews plus a presentation to the full design team\",\"Meridian section wrote itself: dashboard metrics, before-and-after user flow, stakeholder management section\",\"Coda section is harder; spent two hours re-reading old entries to find the thread\",\"Re-reading entries changed the story from features to the blind spot\",\"The deck version of the Coda case study is less defensive than the 9/9 version: 'I missed this and here's what I learned'\"]},{\"name\":\"Meridian\",\"domain\":\"work\",\"status\":\"unknown\",\"observations\":[\"Deck section covers dashboard metrics, user flow before and after, and stakeholder management\"]},{\"name\":\"Coda\",\"domain\":\"personal\",\"status\":\"active\",\"observations\":[\"Jordan has used it every day and had someone else spot a blind spot in forty minutes\",\"Jordan wrote a Coda case study on the 9th and revised it for the deck\",\"Features include a practice log, a metronome and free play\",\"Jordan built the timer on August 4th after a crash\",\"Jordan missed their own blind spot for nine days\"]},{\"name\":\"Journal\",\"domain\":\"personal\",\"status\":\"active\",\"observations\":[\"Jordan realized the journal has been working as an unintentional design log, holding the thread of the work\",\"Re-reading it led to a new understanding of what the Coda work was about\"]}],\"places\":[{\"name\":\"Groundwork\",\"kind\":\"venue\",\"observations\":[\"Site of Jordan's first night on July 28th, revisited while re-reading entries\"]},{\"name\":\"Thai place\",\"kind\":\"restaurant\",\"observations\":[\"Jordan sketched on a napkin there with Dev, a moment found while re-reading entries\"]},{\"name\":\"Northlight\",\"kind\":\"workplace\",\"observations\":[\"Onsite interview is three days after the Monday 9/21 intro chat with Priya\"]}],\"things\":[]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2685,
+    "output_tokens": 1008,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}
