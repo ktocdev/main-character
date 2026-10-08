@@ -190,6 +190,11 @@ class ReviewedIn(BaseModel):
     reviewed: bool
 
 
+class RetireIn(BaseModel):
+    name: str
+    retired: bool
+
+
 class DismissDupIn(BaseModel):
     kind: str
     a: str
@@ -219,6 +224,7 @@ class GroupEditIn(BaseModel):
     parent: str | None = None  # None = unchanged, "" = make root
     delete: bool = False
     rollup: bool | None = None  # None = unchanged; collapse members out of the flat list
+    retired: bool | None = None  # None = unchanged; retire every member (deep)
 
 
 class CategoryTagIn(BaseModel):
@@ -2069,6 +2075,7 @@ def list_groups():
             "name": g["name"],
             "parent": g["parent"],
             "rollup": bool(g.get("rollup")),
+            "retired": bool(g.get("retired")),
             "members": sorted(resolved, key=str.lower),
             "unresolved": sorted(unresolved, key=str.lower),
         })
@@ -2231,6 +2238,13 @@ def edit_group(body: GroupEditIn):
                 child["parent"] = rename
         group["name"] = rename
         actions.append(f"rename group {old} to {rename}")
+
+    if body.retired is not None and bool(group.get("retired")) != body.retired:
+        if body.retired:
+            group["retired"] = True
+        else:
+            group.pop("retired", None)
+        actions.append(f"{'retire' if body.retired else 'un-retire'} group {group['name']}")
 
     if body.parent is not None:
         parent = body.parent.strip()
@@ -2599,6 +2613,29 @@ def entry_text(date: str, title: str):
             "summary": summarizer.load_entry_summary(key),
             "messages": sessions.load_braid(date, title),
             "text": "\n\n".join(doc for _, doc in chunks)}
+
+
+@app.post("/api/entities/retire")
+def retire_entity(body: RetireIn):
+    """A past chapter: out of the list and triage, and the companion only
+    brings them up when you do. Nothing is deleted."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    key = entities.index_key(index, name)
+    curation["retired"] = [r for r in curation["retired"] if r.lower() != key]
+    if body.retired:
+        curation["retired"].append(key)
+    if curation == before:
+        return {"ok": True, "name": name, "retired": body.retired}
+    entities.save_curation(curation)
+    _record_curation(f"{'retire' if body.retired else 'un-retire'} {name}", before)
+    _rebuild()
+    still = STATE["entity_index"].get(name, {}).get("retired", "")
+    return {"ok": True, "name": name, "retired": bool(still), "by": still}
 
 
 @app.post("/api/entities/delete")

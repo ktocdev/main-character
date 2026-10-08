@@ -61,6 +61,17 @@ function deepMembers(name) {
   };
 }
 
+// retired itself, or nested under a retired group
+function groupRetired(g) {
+  const seen = new Set();
+  for (let cur = g; cur && !seen.has(cur.name.toLowerCase());) {
+    if (cur.retired) return true;
+    seen.add(cur.name.toLowerCase());
+    cur = cur.parent ? groupsData.find(x => x.name.toLowerCase() === cur.parent.toLowerCase()) : null;
+  }
+  return false;
+}
+
 export function groupSetDeep(name) {
   // lowercase names of the group + all nested child groups
   const active = new Set([name.toLowerCase()]);
@@ -101,6 +112,9 @@ function renderGroupBrowser() {
     groupsData.filter(g => g.parent.toLowerCase() === name.toLowerCase());
 
   const renderOne = (g, depth) => {
+    // retired groups (and what's nested in them) show under the retired chip
+    const retired = groupRetired(g);
+    if (retired && !filters.retired) return;
     const rolled = !!g.rollup;
     const isOpen = openRollup === g.name;
     const row = document.createElement('div');
@@ -132,7 +146,8 @@ function renderGroupBrowser() {
 
     const btn = document.createElement('button');
     btn.className = 'grp-btn';
-    btn.innerHTML = `${esc(g.name)} <span class="n">${memberSet.size}</span>`;
+    btn.innerHTML = `${esc(g.name)} <span class="n">${memberSet.size}</span>`
+      + (retired ? ' <span class="n">retired</span>' : '');
     btn.title = 'open this group to list its entities on the right';
     btn.onclick = () => showGroup(g.name);
     row.appendChild(btn);
@@ -375,6 +390,22 @@ function groupEditor(g) {
     }
   };
   ops.appendChild(roll);
+
+  // retiring a group retires its members, nested groups included -- but a
+  // member who is also in an active group stays in view unless retired
+  // one by one
+  const ret = document.createElement('button');
+  ret.className = 'quiet sm';
+  ret.textContent = g.retired ? 'un-retire' : 'retire';
+  ret.title = g.retired ? 'bring this group and its members back into everyday view'
+    : 'a past chapter: its members leave the list and triage, and the companion only brings them up when you do';
+  ret.onclick = async () => {
+    const n = deepMembers(g.name).resolved.length;
+    if (!g.retired && !confirm(`Retire "${g.name}"? This covers ${n} member${n === 1 ? '' : 's'}.\n`
+      + 'Members who are also in an active group stay in view unless you retire them one by one. Nothing is deleted.')) return;
+    if (await api('/api/groups/edit', {name: g.name, retired: !g.retired})) await loadEntities();
+  };
+  ops.appendChild(ret);
 
   const ren = document.createElement('button');
   ren.className = 'quiet sm';

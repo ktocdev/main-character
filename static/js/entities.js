@@ -36,7 +36,12 @@ export function renderEntityList() {
   const hideSet = (!filter && !activeGroupSet && !selectMode) ? rolledUpMemberSet() : null;
   if (selectMode) for (const n of [...picked]) if (!state.entities[n]) picked.delete(n);
   const groups = {person: [], project: [], place: []};
+  // retired entities (a past chapter) live behind their own chip
+  const retiredCount = Object.values(state.entities).filter(i => i.retired).length;
+  $('flt-retired').hidden = !retiredCount && !filters.retired;
+  $('flt-retired').textContent = `retired (${retiredCount})`;
   for (const [name, info] of Object.entries(state.entities)) {
+    if (!!info.retired !== filters.retired) continue;
     const hay = (name + ' ' + (info.aliases || []).join(' ')).toLowerCase();
     if (filter && !hay.includes(filter)) continue;
     if (filters.unreviewed && info.reviewed) continue;
@@ -367,6 +372,19 @@ export async function showEntity(name) {
       if (await api('/api/entities/alias', {name: r.name, remove: a})) await reloadEntity(r.name);
     }, `remove alias ${a}`));
   }
+  if (info.retired) {
+    const c = document.createElement('span');
+    c.className = 'tag muted';
+    c.innerHTML = '<span class="v">retired</span>';
+    if (info.retired !== 'self') c.title = `retired with the group ${info.retired}`;
+    chips.appendChild(c);
+  }
+  // retired through a group can only be undone there
+  const rb = $('retire-btn');
+  rb.textContent = info.retired ? 'un-retire' : 'retire';
+  rb.disabled = !!info.retired && info.retired !== 'self';
+  rb.title = rb.disabled ? `retired with the group ${info.retired}; un-retire the group, or add them to an active one`
+    : info.retired ? 'back into everyday view' : 'a past chapter: out of the list and triage, and the companion only brings them up when you do. Nothing is deleted';
   $('group-add-input').value = '';
   const gchips = $('group-chips');
   gchips.innerHTML = '';
@@ -502,6 +520,19 @@ export function init() {
     filters.unreviewed = !filters.unreviewed;
     pressed('flt-unreviewed', filters.unreviewed);
     renderEntityList();
+  };
+  $('flt-retired').onclick = () => {
+    filters.retired = !filters.retired;
+    pressed('flt-retired', filters.retired);
+    loadGroups();  // the group browser shows retired groups only under this chip
+    renderEntityList();
+  };
+  $('retire-btn').onclick = async () => {
+    if (!state.selected) return;
+    const retire = !state.entities[state.selected]?.retired;
+    const r = await api('/api/entities/retire', {name: state.selected, retired: retire});
+    if (r) await reloadEntity(r.name);
+    if (r && retire) flash(`${r.name} retired. The retired chip shows them.`);
   };
   $('flt-single').onclick = () => {
     filters.single = !filters.single;

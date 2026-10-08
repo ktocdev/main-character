@@ -82,6 +82,7 @@
   #entity-chips { margin-top: .6rem; gap: .3rem; }
   #entity-chips .tag { color: var(--text-muted); height: 1.7rem; padding: 0 .7rem; font-size: .8rem; }
   #entity-chips .tag .k { font-size: .7rem; opacity: .7; }
+  #entity-chips .tag.muted { color: var(--text-muted); border-style: dashed; }
   #entity-chips .tag .v { color: var(--text-default); }
   #entity-chips button.tag { background: transparent; border-color: var(--border-default); }
   #entity-chips button.tag:hover { color: var(--text-default); }

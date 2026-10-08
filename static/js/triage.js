@@ -6,7 +6,7 @@ import { showTab } from './main.js';
 
 // ---- triage mode ----
 // Entities come one at a time, junk first (1-mention entities lead). The
-// keyboard does the work: k m c r a t d D s u e, then 1/2/3 in retype mode,
+// keyboard does the work: k m c r a t d D x s u e, then 1/2/3 in retype mode,
 // Enter and Esc in a field. The buttons mirror the keys.
 let queue = [], qpos = 0, triageMode = null;
 let skipped = [];        // names skipped in this pass, for the queue-empty offer
@@ -22,7 +22,7 @@ export async function startTriage(only) {
   const returning = editing && !only;
   editing = false;
   queue = Object.entries(state.entities)
-    .filter(([n, i]) => !i.reviewed && (!only || only.includes(n)) && !(returning && skipped.includes(n)))
+    .filter(([n, i]) => !i.reviewed && !i.retired && (!only || only.includes(n)) && !(returning && skipped.includes(n)))
     .sort((a, b) => a[1].mentions - b[1].mentions)  // junk (1-mention) first
     .map(([n]) => n);
   qpos = 0;
@@ -292,6 +292,10 @@ async function triageKey(key) {
       break;
     case 'd': await deleteMentions(name); break;
     case 'D': askNeverTrack(name); break;
+    case 'x':
+      await triageAct(n => api('/api/entities/retire', {name: n, retired: true}),
+        r => `${r.name} retired: out of everyday view. u brings them back.`);
+      break;
     case 'e': editInEntities(name); break;
     case 'm': triagePrompt('merge'); break;
     case 'c': triagePrompt('correct'); break;
@@ -340,7 +344,7 @@ export function init() {
     if (state.activeTab !== 'triage') return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    const keys = ['m', 'c', 'r', 'a', 'k', 'd', 'D', 's', 't', 'u', 'e', '1', '2', '3'];
+    const keys = ['m', 'c', 'r', 'a', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', '1', '2', '3'];
     if (triageMode === 'never') keys.push('Enter', 'Escape');
     else if (['Enter', 'Escape'].includes(e.key) && triageMode !== 'kind') return;
     if (keys.includes(e.key)) e.preventDefault();

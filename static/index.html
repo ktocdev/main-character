@@ -322,6 +322,7 @@
         <button class="quiet" data-tkey="t" title="move to a different kind: then 1 person · 2 project · 3 place"><span class="key">t</span>retype</button>
         <button class="quiet danger" data-tkey="d" title="delete the mentions it has now; the name stays free for new entries (a generic name stops being tracked). No confirm; undo brings it back"><span class="key">d</span>delete</button>
         <button class="quiet danger" data-tkey="D" title="for generic terms and junk: ignore this name in every entry, now and future. Asks once"><span class="key">D</span>never track</button>
+        <button class="quiet" data-tkey="x" title="a past chapter: out of the list and triage, and the companion only brings them up when you do"><span class="key">x</span>retire</button>
         <button class="quiet" data-tkey="s" title="decide later. It stays in the queue for next time"><span class="key">s</span>skip</button>
         <button class="quiet" data-tkey="e" title="open this entity in Entities to edit observations; a link there brings you back"><span class="key">e</span>edit in entities</button>
         <button class="quiet" data-tkey="u" id="triage-undo" title="undo the last change, 50 deep and across sessions"><span class="key">u</span>undo</button>
@@ -494,6 +495,7 @@
           <span class="k">r</span><span class="d"><span class="n">rename</span> <span class="t">— fix spelling or case of this entity's own name</span></span>
           <span class="k">a</span><span class="d"><span class="n">alias</span> <span class="t">— add another name this entity goes by (matchable by both)</span></span>
           <span class="k">t then 1/2/3</span><span class="d"><span class="n">retype</span> <span class="t">— to person / project / place</span></span>
+          <span class="k">x</span><span class="d"><span class="n">retire</span> <span class="t">— someone from a chapter that's over. Out of the list and triage; the companion still knows them when you name them, but won't bring them up. Nothing is deleted; u undoes.</span></span>
           <span class="k">s</span><span class="d"><span class="n">skip</span> <span class="t">— decide later, stays in queue for next time</span></span>
           <span class="k">e</span><span class="d"><span class="n">edit in entities</span> <span class="t">— open it on the entities screen for a deeper fix; "back to triage" there returns you to the same spot</span></span>
           <span class="k">u</span><span class="d"><span class="n">undo</span> <span class="t">— last change (50 deep, works across sessions)</span></span>
@@ -619,6 +621,7 @@
           <div id="filter-chips" class="chip-row">
             <button class="chip-toggle" id="flt-unreviewed" aria-pressed="false" title="only entities you haven't confirmed yet">unreviewed</button>
             <button class="chip-toggle" id="flt-single" aria-pressed="false" title="entities that appear in only one entry, which is usually noise">1 mention</button>
+            <button class="chip-toggle" id="flt-retired" aria-pressed="false" hidden title="people and groups from a past chapter, kept out of everyday view">retired</button>
             <button class="chip-toggle" id="sort-az" aria-pressed="false" title="sort each group A–Z instead of by most mentions">A–Z</button>
             <button class="chip-toggle" id="flt-select" aria-pressed="false" title="check entities to add several to a group at once">select</button>
           </div>
@@ -680,6 +683,7 @@
                 <option value="place">place</option>
               </select>
               <button class="quiet danger" id="delete-btn" title="delete the mentions it has now. The name stays free, so a new entry can bring it back. Undo restores them">delete</button>
+              <button class="quiet" id="retire-btn" title="a past chapter: out of the list and triage, and the companion only brings them up when you do. Nothing is deleted">retire</button>
               <button class="quiet danger" id="never-btn" title="for generic terms and junk: ignore this name in every entry, now and future">never track</button>
             </div>
             <div class="ent-actions" id="alias-row">

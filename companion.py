@@ -476,7 +476,11 @@ def build_context_block(question: str, collection, entity_index: dict,
 
     mentioned = match_entities(question, entity_index)
 
-    summary_hits = get_summary_hits(question, skip_entities=set(mentioned))
+    # Retired profiles (a past chapter) come up only when named: they're
+    # left out of the zoomed-out hits. Entry summaries stay -- what
+    # happened is still part of what happened.
+    retired = {n for n, i in entity_index.items() if i.get("retired")}
+    summary_hits = get_summary_hits(question, skip_entities=set(mentioned) | retired)
     if summary_hits:
         lines.append("")
         lines.append("<related_summaries>")

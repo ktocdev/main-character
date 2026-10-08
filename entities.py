@@ -198,7 +198,8 @@ def known_people_hint() -> list[str]:
         return []
     index = json.loads(index_file.read_text(encoding="utf-8"))
     people = sorted(
-        ((i["mentions"], n) for n, i in index.items() if i["type"] == "person"),
+        ((i["mentions"], n) for n, i in index.items()
+         if i["type"] == "person" and not i.get("retired")),
         reverse=True,
     )
     return [n for _, n in people[:80]]
@@ -281,6 +282,8 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
 #   "alias_add":    {key: [names]}   extra aliases for matching
 #   "alias_remove": {key: [names]}   suppress unwanted aliases
 #   "delete":       [keys]   never track: every mention, now and future
+#   "retired":      [keys]   a past chapter: out of everyday view, and the
+#                   companion doesn't bring them up unless the author does
 #   "drop_mentions": {key: [entry cache keys]}  delete just these mentions;
 #                   the name stays free for new entries. Keyed by entry, not
 #                   raw-file index, so it survives raw edits and --force.
@@ -293,6 +296,7 @@ _CURATION_DEFAULTS = {
     "merge": {}, "correct": {}, "retype": {}, "rename": {},
     "alias_add": {}, "alias_remove": {}, "delete": [], "drop_mentions": {},
     "reviewed": [],        # entity keys the user has marked as checked
+    "retired": [],         # entity keys retired one by one (groups: groups.json)
     "not_duplicates": [],  # dismissed duplicate-pair keys ("kind:a|b")
 }
 
@@ -528,6 +532,21 @@ def group_would_cycle(groups: list[dict], name: str, parent: str) -> bool:
     return False
 
 
+def retired_groups(groups: list[dict]) -> set[str]:
+    """Lowercase names of retired groups, counting every group nested
+    under a retired one."""
+    out = set()
+    for g in groups:
+        current, seen = g, set()
+        while current and current["name"].lower() not in seen:
+            if current.get("retired"):
+                out.add(g["name"].lower())
+                break
+            seen.add(current["name"].lower())
+            current = find_group(groups, current["parent"]) if current["parent"] else None
+    return out
+
+
 def group_descendants(groups: list[dict], name: str) -> set[str]:
     """Lowercase names of the group plus all transitive children."""
     result = {name.strip().lower()}
@@ -700,6 +719,8 @@ def build_entity_docs(records: list[dict]) -> dict:
 
     attr_labels = {"person": "relationship", "project": "status", "place": "type"}
     index = {}
+    retired_keys = {r.lower() for r in curation["retired"]}
+    retired_gs = retired_groups(groups)
 
     # Clear generated docs so merged/deleted entities don't leave stale files
     for kind_dir in ("people", "projects", "places"):
@@ -730,6 +751,19 @@ def build_entity_docs(records: list[dict]) -> dict:
             lines.append(
                 f"groups: {', '.join(group_path(groups, g) for g in gnames)}"
             )
+        # Retired: one by one, or through groups -- but only when every
+        # group they're in is retired; membership in an active group keeps
+        # them in view unless they were retired themselves.
+        retired_by = ""
+        if curation_key(kind, ent["name"]) in retired_keys:
+            retired_by = "self"
+        elif gnames and all(g.lower() in retired_gs for g in gnames):
+            retired_by = gnames[0]
+        if retired_by:
+            # said in the profile itself, so it reaches the companion
+            # whenever the profile does, without a system prompt change
+            lines.append("status: retired (a past chapter). Don't bring them "
+                         "up unless the author does.")
         lines += ["---", ""]
         for date, title, observations in ent["timeline"]:
             lines.append(f"### {date} — {title}")
@@ -752,6 +786,8 @@ def build_entity_docs(records: list[dict]) -> dict:
             index[ent["display"]]["base"] = ent["name"]
         if generic_flag(curation, kind, ent["name"], gnames):
             index[ent["display"]]["generic"] = True
+        if retired_by:
+            index[ent["display"]]["retired"] = retired_by
 
     (ENTITY_DIR / "index.json").write_text(
         json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
