@@ -358,7 +358,7 @@ async function reextractPanel() {
     if (!r) return;
     if (!r.entries.length) { panelSay(out, 'no entries mention that.'); return; }
     const edited = r.entries.filter(e => e.edited);
-    panelSay(out, `${r.entries.length} entr${r.entries.length === 1 ? 'y mentions' : 'ies mention'} it. Re-extracting costs about $${r.estimate.toFixed(2)} on ${r.model}.`);
+    panelSay(out, `${r.entries.length} entr${r.entries.length === 1 ? 'y mentions' : 'ies mention'} ${r.terms.length > 1 ? 'one of them' : 'it'}. Re-extracting costs about $${r.estimate.toFixed(2)} on ${r.model}.`);
     if (edited.length) {
       panelHead(out, `hand edits that would be lost (${edited.length})`);
       panelSay(out, 'You edited, moved or deleted observations in the entries marked (edited) below. Re-extracting replaces them with fresh ones.');

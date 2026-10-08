@@ -340,7 +340,7 @@ async function retype(kind, category = '') {
   $('triage-cat-row').hidden = true;
   await triageAct(
     n => api('/api/entities/retype', {name: n, new_type: kind, new_name: '', category}),
-    r => `${r.retyped} is now a ${category ? `${category} ` : ''}${kind}.`,
+    r => `${r.retyped} is now a ${kind}${category ? ` (${category})` : ''}.`,
   );
 }
 
