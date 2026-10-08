@@ -225,6 +225,21 @@ class NotMixedIn(BaseModel):
     not_mixed: bool = True
 
 
+class PickIn(BaseModel):
+    file: str
+    group: str
+    ent_index: int
+    obs_index: int
+
+
+class SplitIn(BaseModel):
+    name: str
+    picks: list[PickIn]
+    qualifier: str           # where the picked observations go
+    rest: str = ""           # the first split of a name: what the others are
+    groups: dict[str, str] = {}  # group -> the qualifier that keeps it
+
+
 class PartOfIn(BaseModel):
     name: str
     parent: str = ""       # empty: no longer a part
@@ -1898,6 +1913,14 @@ def _record_groups(description: str, before: list):
     entities.record_change(description, "groups", before, _groups_snapshot())
 
 
+def _which_of(index: dict, name: str) -> list[str]:
+    """The halves of a split name, when a bare name was typed for one."""
+    if name in index:
+        return []
+    return sorted(n for n, i in index.items()
+                  if i.get("variant_of", "").lower() == name.strip().lower() and not i.get("unsorted"))
+
+
 def _combine(body: MergeIn, field: str, verb: str):
     """Shared logic for merge (keeps alias) and correct (no alias)."""
     index = STATE["entity_index"]
@@ -1905,6 +1928,9 @@ def _combine(body: MergeIn, field: str, verb: str):
     if not src:
         return JSONResponse({"error": f"'{body.source}' not found"}, status_code=404)
     dst = companion.resolve_entity(index, body.target) or body.target.strip()
+    which = _which_of(index, dst)
+    if which:
+        return JSONResponse({"error": f"which {dst}? {', '.join(which)}"}, status_code=400)
     if src == dst:
         return JSONResponse({"error": "already the same entity — use rename to change spelling"}, status_code=400)
 
@@ -2034,6 +2060,20 @@ def rename_entity(body: MergeIn):
     kind = index[name]["type"]
     if not new_name or new_name == entities.base_name(index, name):
         return JSONResponse({"error": "nothing to rename"}, status_code=400)
+    if index[name].get("variant_of"):
+        # one half of a split name: renaming it renames its qualifier
+        head = index[name]["variant_of"]
+        split = entities.split_name(new_name)
+        if split and split[0].lower() != head.lower():
+            return JSONResponse({"error": f"keep the name {head}; change what comes after ·"},
+                                status_code=400)
+        try:
+            entities.rename_qualifier(index, name, split[1] if split else new_name)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        _rebuild()
+        q = split[1] if split else new_name
+        return {"ok": True, "renamed": name, "to": _display_for("person", f"{head} · {q}", name)}
 
     before = _snapshot()
     curation = entities.load_curation()
@@ -2212,6 +2252,30 @@ def not_mixed(body: NotMixedIn):
         if flag:
             info["mixup"] = flag
     return {"ok": True, "name": name, "mixup": info.get("mixup", [])}
+
+
+@app.post("/api/entities/split")
+def split(body: SplitIn):
+    """Two people under one name: the picked observations go to one
+    qualifier ("Dev · work"), and on the first split everything else to
+    another, so nothing is left as a bare name. Sorting an unsorted
+    mention is the same call. One undo puts it all back."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    try:
+        description = entities.split_entity(index, name, [p.model_dump() for p in body.picks],
+                                            body.qualifier, body.rest, body.groups)
+    except (ValueError, FileNotFoundError, IndexError) as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    _rebuild()
+    head = index[name].get("variant_of") or entities.base_name(index, name)
+    out = {"ok": True, "did": description,
+           "to": _display_for("person", f"{head} · {body.qualifier.strip()}", "")}
+    if body.rest.strip():
+        out["rest"] = _display_for("person", f"{head} · {body.rest.strip()}", "")
+    return out
 
 
 @app.post("/api/entities/part-of")

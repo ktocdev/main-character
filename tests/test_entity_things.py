@@ -171,7 +171,7 @@ def test_reextract_replaces_only_matching_caches(tmp_path, monkeypatch):
     monkeypatch.setattr(entities, "get_client", lambda: None)
     fresh = {"people": [], "projects": [], "places": [],
              "things": [{"name": "90 Day Fiance", "category": "show", "observations": ["watched"]}]}
-    monkeypatch.setattr(entities, "extract_conversation", lambda client, conv, known_people=None: fresh)
+    monkeypatch.setattr(entities, "extract_conversation", lambda client, conv, **kw: fresh)
     seen = []
     result = entities.reextract(["90 day"], progress=lambda i, n, c: seen.append((i, n)))
     assert result == {"done": ["2026-03-20_Memories"], "failed": []}

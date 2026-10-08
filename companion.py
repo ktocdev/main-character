@@ -292,16 +292,25 @@ def match_entities(text: str, entity_index: dict) -> list[str]:
     """
     text_lower = text.lower()
     hits = []
+
+    def said(word: str) -> bool:
+        return bool(re.search(r"\b" + re.escape(word.lower()) + r"\b", text_lower))
+
     for name, info in entity_index.items():
-        # a part ("Coda / Tabs") is mentioned by its own name
-        for candidate in [name, info.get("base", "")] + info.get("aliases", []):
+        if info.get("unsorted"):
+            continue  # its mentions belong to one of the others, not yet known which
+        # a part ("Coda / Tabs") is mentioned by its own name, and plain
+        # "Dev" is every Dev when the name is split
+        for candidate in [name, info.get("base", ""), info.get("variant_of", "")] + info.get("aliases", []):
             if len(candidate) < 3:
                 continue
-            if re.search(r"\b" + re.escape(candidate.lower()) + r"\b", text_lower):
-                hits.append((info.get("mentions", 0), name))
+            if said(candidate):
+                # "Dev from work" puts Dev · work first
+                q = info.get("qualifier", "")
+                hits.append((bool(q) and said(q), info.get("mentions", 0), name))
                 break
     hits.sort(reverse=True)
-    return [name for _, name in hits[:N_ENTITY_DOCS]]
+    return [name for _, _, name in hits[:N_ENTITY_DOCS]]
 
 
 # Framing for the seed summary system block. The seed replaced the auto
@@ -797,11 +806,20 @@ def write_entry(client, collection, entity_index: dict, messages: list):
 def resolve_entity(entity_index: dict, name: str) -> str | None:
     """Find the canonical entity name for a user-typed name (or alias)."""
     target = name.strip().lower()
+    if name.strip() in entity_index:
+        return name.strip()
+    by_alias = []
     for canonical, info in entity_index.items():
         if canonical.lower() == target:
             return canonical
         if any(a.lower() == target for a in info.get("aliases", [])):
-            return canonical
+            by_alias.append(canonical)
+    # an alias two entities share (plain "Dev" once the name is split)
+    # means neither: the caller has to say which
+    if len(by_alias) == 1:
+        return by_alias[0]
+    if by_alias:
+        return None
     # then a part or kind-suffixed name by its own name ("Tabs" for
     # "Coda / Tabs"), when only one entity goes by it
     by_base = [c for c, info in entity_index.items() if info.get("base", "").lower() == target]
