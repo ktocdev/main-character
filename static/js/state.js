@@ -25,4 +25,4 @@ export const state = {
                          // already on this machine. null = couldn't tell, and
                          // the wait wording hedges rather than guessing.
 };
-export const filters = {unreviewed: false, single: false, retired: false, group: null, types: new Set()};
+export const filters = {unreviewed: false, single: false, retired: false, mixup: false, group: null, types: new Set()};

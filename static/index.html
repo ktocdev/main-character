@@ -286,6 +286,7 @@
         </div>
         <div id="triage-aliases"></div>
         <div id="triage-generic"></div>
+        <div id="triage-mixup"></div>
         <div id="triage-obs"></div>
         <div id="triage-input-row" hidden>
           <span id="triage-mode-label"></span>
@@ -317,6 +318,14 @@
             <button class="quiet" data-cat="other" title="(6)"><span class="key">6</span>other</button>
           </span>
           <button class="text" id="triage-cat-cancel">cancel <span class="hint">esc</span></button>
+        </div>
+        <div id="triage-mixed-row" hidden>
+          <span id="triage-mixed-q"></span>
+          <span class="btns">
+            <button class="quiet primary" id="triage-mixed-yes" title="one person: keep, and stop flagging"><span class="key">k</span>one person</button>
+            <button class="quiet" id="triage-mixed-edit" title="move the other person's observations to a new entity in Entities"><span class="key">e</span>split in Entities</button>
+            <button class="text" id="triage-mixed-cancel">cancel <span class="hint">esc</span></button>
+          </span>
         </div>
         <div id="triage-never-row" hidden>
           <span id="triage-never-q"></span>
@@ -500,7 +509,7 @@
         <div class="step-body">
         <p>Entities come one at a time, junk first (1-mention entities lead). Keep your hands on the keyboard:</p>
         <div class="help-keys">
-          <span class="k">k</span><span class="d"><span class="n">keep</span> <span class="t">— marks reviewed ✓, next. Your default key.</span></span>
+          <span class="k">k</span><span class="d"><span class="n">keep</span> <span class="t">— marks reviewed ✓, next. Your default key. On a card that says "possibly two people" it asks once: k again keeps it as one person and stops the flag, e splits it in entities.</span></span>
           <span class="k">d</span><span class="d"><span class="n">delete</span> <span class="t">— removes the mentions it has now. The name stays free, so a new entry that mentions it starts fresh. A name marked "looks generic" stops being tracked instead. No confirm; u undoes.</span></span>
           <span class="k">D</span><span class="d"><span class="n">never track</span> <span class="t">— for generic terms and junk ("dive bar", "work plan"): every future mention is ignored too. Asks once; u undoes.</span></span>
           <span class="k">m</span><span class="d"><span class="n">merge</span> <span class="t">— into another entity (autocomplete; old name kept as alias)</span></span>
@@ -525,7 +534,8 @@
         <span class="step-n">4</span>
         <div class="step-h"><h3>deep fixes on the tricky ones</h3><span class="where">entities → pick an entity → hover an observation</span></div>
         <div class="step-body"><p>For entities that are <em>conflations</em>, like two Sams in one node or a "karaoke bar" that's really
-        two different bars, use the observation tools. <em>move</em> reassigns a single memory to the right
+        two different bars, use the observation tools. The <em>maybe two</em> chip lists people whose entries
+        disagree about who they are (coworker in some, friend in others); each date there says what that entry called them. <em>move</em> reassigns a single memory to the right
         entity (type <code>person:Sam (work)</code> to create a new one), <em>edit</em> fixes wrong facts, and
         <em>×</em> removes them. These are the slow, careful fixes. Save them for after the fast passes
         so you're not context-switching.</p></div>
@@ -637,6 +647,7 @@
           <div id="filter-chips" class="chip-row">
             <button class="chip-toggle" id="flt-unreviewed" aria-pressed="false" title="only entities you haven't confirmed yet">unreviewed</button>
             <button class="chip-toggle" id="flt-single" aria-pressed="false" title="entities that appear in only one entry, which is usually noise">1 mention</button>
+            <button class="chip-toggle" id="flt-mixup" aria-pressed="false" hidden title="people whose entries disagree about who they are, so the name may cover two">maybe two</button>
             <button class="chip-toggle" id="flt-retired" aria-pressed="false" hidden title="people and groups from a past chapter, kept out of everyday view">retired</button>
             <button class="chip-toggle" id="sort-az" aria-pressed="false" title="sort each group A–Z instead of by most mentions">A–Z</button>
             <button class="chip-toggle" id="flt-select" aria-pressed="false" title="check entities to add several to a group at once">select</button>
@@ -688,6 +699,7 @@
           </div>
           <div class="title-meta" id="entity-meta"></div>
           <div id="entity-chips" class="chip-row"></div>
+          <div id="entity-mixup" class="notice-line"></div>
           <div id="entity-notice" class="notice-line"></div>
           <div id="entity-edit" class="edit-box" hidden>
             <div class="ent-actions" id="entity-actions">

@@ -22,6 +22,12 @@ export async function loadEntities() {
 const KINDS = ['person', 'project', 'place', 'thing'];
 const PLURAL = {person: 'people', project: 'projects', place: 'places', thing: 'things'};
 const CATEGORIES = ['music', 'game', 'show', 'book', 'event', 'other'];
+
+// a mix-up flag as words: "seen as coworker (9) and friend (4)"
+export function mixupText(flag) {
+  const parts = flag.map(([label, n]) => `${label} (${n})`);
+  return 'seen as ' + (parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]);
+}
 let sortAlpha = false;
 let selectMode = false;         // checkboxes for batch add-to-group
 const picked = new Set();       // entity names checked for the next batch
@@ -42,15 +48,20 @@ export function renderEntityList() {
   const retiredCount = Object.values(state.entities).filter(i => i.retired).length;
   $('flt-retired').hidden = !retiredCount && !filters.retired;
   $('flt-retired').textContent = `retired (${retiredCount})`;
+  // names whose entries disagree about who they are
+  const mixupCount = Object.values(state.entities).filter(i => i.mixup && !i.retired).length;
+  $('flt-mixup').hidden = !mixupCount && !filters.mixup;
+  $('flt-mixup').textContent = `maybe two (${mixupCount})`;
   for (const [name, info] of Object.entries(state.entities)) {
     if (!!info.retired !== filters.retired) continue;
     const hay = (name + ' ' + (info.aliases || []).join(' ')).toLowerCase();
     if (filter && !hay.includes(filter)) continue;
     if (filters.unreviewed && info.reviewed) continue;
     if (filters.single && info.mentions !== 1) continue;
+    if (filters.mixup && !info.mixup) continue;
     if (activeGroupSet && !(info.groups || []).some(g => activeGroupSet.has(g.toLowerCase()))) continue;
     if (hideSet && hideSet.has(name.toLowerCase())) continue;
-    groups[info.type].push([name, info.mentions, info.reviewed]);
+    groups[info.type].push([name, info.mentions, info.reviewed, !!info.mixup]);
   }
   const wrap = $('entity-groups');
   wrap.innerHTML = '';
@@ -68,7 +79,7 @@ export function renderEntityList() {
     h.innerHTML = '<span class="eyebrow"></span>';
     h.firstChild.textContent = `${PLURAL[kind]} (${items.length})`;
     wrap.appendChild(h);
-    for (const [name, mentions, reviewed] of items) {
+    for (const [name, mentions, reviewed, mixup] of items) {
       const row = document.createElement('div');
       row.className = 'ent-row';
 
@@ -91,12 +102,17 @@ export function renderEntityList() {
       b.innerHTML = '<span class="li-title"></span><span class="li-meta"></span>';
       b.querySelector('.li-title').textContent = name;
       b.querySelector('.li-meta').textContent = mentions;
-      if (!reviewed) {
+      // a ring for maybe-two-people, then the unreviewed dot
+      const dots = [];
+      if (mixup) dots.push(['flag', 'maybe two people']);
+      if (!reviewed) dots.push(['', 'unreviewed']);
+      dots.forEach(([cls, label], i) => {
         const dot = document.createElement('span');
-        dot.className = 'dot right';
-        dot.setAttribute('aria-label', 'unreviewed');
+        dot.className = ['dot', cls, i ? '' : 'right'].filter(Boolean).join(' ');
+        dot.setAttribute('aria-label', label);
+        dot.title = label;
         b.appendChild(dot);
-      }
+      });
       b.onclick = () => selectMode
         ? row.querySelector('.ent-check')?.click()
         : showEntity(name);
@@ -483,6 +499,26 @@ export async function showEntity(name) {
     if (info.retired !== 'self') c.title = `retired with the group ${info.retired}`;
     chips.appendChild(c);
   }
+  // maybe two people: confirm one, or move one person's mentions out
+  // with "move" below (each date says what that entry called them)
+  const mx = $('entity-mixup');
+  mx.innerHTML = '';
+  if (info.mixup) {
+    mx.append(`possibly two people: ${mixupText(info.mixup)}. Move one person's observations to a new name below, or `);
+    const one = document.createElement('button');
+    one.className = 'link';
+    one.textContent = "it's one person";
+    one.title = 'stop flagging this name';
+    one.onclick = async () => {
+      if (await api('/api/entities/not-mixed', {name: r.name, not_mixed: true})) {
+        delete info.mixup;
+        renderEntityList();
+        mx.innerHTML = '';
+        notice(`${r.name} won't be flagged again. Undo brings the flag back.`);
+      }
+    };
+    mx.append(one);
+  }
   // retired through a group can only be undone there
   const rb = $('retire-btn');
   rb.textContent = info.retired ? 'un-retire' : 'retire';
@@ -508,13 +544,17 @@ export async function showEntity(name) {
   // observations grouped by date, each editable
   const docEl = $('entity-doc');
   docEl.innerHTML = '<div class="rule eyebrow">observations</div>';
-  let lastDate = null;
+  // each date says what that entry called it, as in triage ("as coworker"),
+  // which is how two people under one name tell apart
+  let lastKey = null;
   for (const o of r.observations) {
-    if (o.date !== lastDate) {
-      lastDate = o.date;
+    const key = `${o.date}|${o.attr || ''}|${o.extracted_name}`;
+    if (key !== lastKey) {
+      lastKey = key;
       const d = document.createElement('div');
       d.className = 'obs-date eyebrow';
-      d.textContent = fmtDate(o.date) + (o.extracted_name !== r.name ? ` · as "${o.extracted_name}"` : '');
+      d.textContent = fmtDate(o.date) + (o.extracted_name !== r.name ? ` · as "${o.extracted_name}"` : '')
+        + (r.type === 'person' && o.attr ? ` · as ${o.attr}` : '');
       docEl.appendChild(d);
     }
     const row = document.createElement('div');
@@ -637,6 +677,11 @@ export function init() {
     const r = await api('/api/entities/retire', {name: state.selected, retired: retire});
     if (r) await reloadEntity(r.name);
     if (r && retire) flash(`${r.name} retired. The retired chip shows them.`);
+  };
+  $('flt-mixup').onclick = () => {
+    filters.mixup = !filters.mixup;
+    pressed('flt-mixup', filters.mixup);
+    renderEntityList();
   };
   $('flt-single').onclick = () => {
     filters.single = !filters.single;

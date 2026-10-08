@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, fmtDate } from './core.js';
 import { state } from './state.js';
-import { loadEntities, showEntity } from './entities.js';
+import { loadEntities, showEntity, mixupText } from './entities.js';
 import { showTab } from './main.js';
 
 // ---- triage mode ----
 // Entities come one at a time, junk first (1-mention entities lead). The
 // keyboard does the work: k m c r a t d D x s u e, then 1-4 in retype mode
 // (and 1-6 for a thing's category), Enter and Esc in a field. The buttons
-// mirror the keys.
+// mirror the keys. On a card flagged as maybe two people, k asks once.
 let queue = [], qpos = 0, triageMode = null;
 let skipped = [];        // names skipped in this pass, for the queue-empty offer
 let toastTimer = null;
@@ -61,6 +61,7 @@ async function renderTriage() {
   $('triage-input-row').hidden = true;
   $('triage-kind-row').hidden = true;
   $('triage-cat-row').hidden = true;
+  $('triage-mixed-row').hidden = true;
   $('triage-never-row').hidden = true;
   $('triage-suggest').innerHTML = '';
   const total = Object.keys(state.entities).length;
@@ -100,6 +101,9 @@ async function renderTriage() {
     ? `looks generic: d stops tracking the name, so a future "${name}" is ignored too`
     : '';
   $('triage-btns').querySelector('[data-tkey="d"]').classList.toggle('suggested', !!info.generic);
+  // entries that disagree about who this is: the dated eyebrows below
+  // ("Mar 4 · as coworker") show which mentions are which
+  $('triage-mixup').textContent = info.mixup ? `possibly two people: ${mixupText(info.mixup)}` : '';
   const obsEl = $('triage-obs');
   obsEl.innerHTML = '<span class="more">reading <span class="dots">···</span></span>';
   const r = await (await fetch('/api/entities/observations?name=' + encodeURIComponent(name))).json();
@@ -201,9 +205,30 @@ function triageCancel() {
   $('triage-input-row').hidden = true;
   $('triage-kind-row').hidden = true;
   $('triage-cat-row').hidden = true;
+  $('triage-mixed-row').hidden = true;
   $('triage-never-row').hidden = true;
   $('triage-suggest').innerHTML = '';
   $('triage').focus();
+}
+
+// k on a flagged card: one more press says it's one person, and the flag
+// stays off for good; e goes to Entities to move one person's mentions out
+function askMixed(name) {
+  triageMode = 'mixed';
+  $('triage-mixed-q').textContent = `Keep "${name}" as one person?`;
+  $('triage-mixed-row').hidden = false;
+}
+async function keep(name, oneConfirmed = false) {
+  triageMode = null;
+  $('triage-mixed-row').hidden = true;
+  if (oneConfirmed && !await api('/api/entities/not-mixed', {name, not_mixed: true})) return;
+  if (await api('/api/entities/reviewed', {name, reviewed: true})) {
+    state.entities[name].reviewed = true;
+    if (oneConfirmed) delete state.entities[name].mixup;
+    toast(oneConfirmed ? `${name} kept as one person ✓` : `${name} kept ✓`);
+    refreshUndo();
+    triageAdvance();
+  }
 }
 
 // Two kinds of delete, neither touching the entries themselves. d drops the
@@ -278,6 +303,12 @@ async function triageKey(key) {
     if (c) retype('thing', c);
     return;
   }
+  if (triageMode === 'mixed') {
+    if (key === 'k' || key === 'Enter') keep(queue[qpos], true);
+    else if (key === 'e') { triageCancel(); editInEntities(queue[qpos]); }
+    else if (key === 'Escape') triageCancel();
+    return;
+  }
   if (triageMode === 'never') {
     if (key === 'D' || key === 'Enter') neverTrack();
     else if (key === 'Escape') triageCancel();
@@ -288,12 +319,8 @@ async function triageKey(key) {
   const name = queue[qpos];
   switch (key) {
     case 'k':
-      if (await api('/api/entities/reviewed', {name, reviewed: true})) {
-        state.entities[name].reviewed = true;
-        toast(`${name} kept ✓`);
-        refreshUndo();
-        triageAdvance();
-      }
+      if (state.entities[name]?.mixup) askMixed(name);
+      else await keep(name);
       break;
     case 's':
       skipped.push(name);
@@ -350,6 +377,9 @@ export function init() {
   $('triage-kind-cancel').onclick = triageCancel;
   $('triage-cat-cancel').onclick = triageCancel;
   $('triage-never-yes').onclick = neverTrack;
+  $('triage-mixed-yes').onclick = () => keep(queue[qpos], true);
+  $('triage-mixed-edit').onclick = () => { triageCancel(); editInEntities(queue[qpos]); };
+  $('triage-mixed-cancel').onclick = triageCancel;
   $('triage-never-cancel').onclick = triageCancel;
   $('triage-input').addEventListener('input', suggest);
   $('triage-input').addEventListener('keydown', e => {
@@ -367,7 +397,7 @@ export function init() {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const keys = ['m', 'c', 'r', 'a', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', '1', '2', '3', '4', '5', '6'];
-    if (triageMode === 'never') keys.push('Enter', 'Escape');
+    if (triageMode === 'never' || triageMode === 'mixed') keys.push('Enter', 'Escape');
     else if (['Enter', 'Escape'].includes(e.key) && triageMode !== 'kind' && triageMode !== 'category') return;
     if (keys.includes(e.key)) e.preventDefault();
     triageKey(e.key);
