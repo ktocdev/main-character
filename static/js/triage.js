@@ -6,7 +6,7 @@ import { showTab } from './main.js';
 
 // ---- triage mode ----
 // Entities come one at a time, junk first (1-mention entities lead). The
-// keyboard does the work: k m c r a t d D x s u e, then 1-4 in retype mode
+// keyboard does the work: k m c r a p t d D x s u e, then 1-4 in retype mode
 // (and 1-6 for a thing's category), Enter and Esc in a field. The buttons
 // mirror the keys. On a card flagged as maybe two people, k asks once.
 let queue = [], qpos = 0, triageMode = null;
@@ -160,9 +160,11 @@ async function triageAct(fn, successMsg) {
 
 const TRIAGE_LABELS = {
   merge: 'merge into', correct: 'correct to', rename: 'rename to', alias: 'also known as',
+  part: 'part of',
 };
 const TRIAGE_PLACEHOLDERS = {
   merge: 'existing entity…', correct: 'the right name…', rename: 'new name…', alias: 'another name…',
+  part: 'what it belongs to…',
 };
 
 function triagePrompt(mode) {
@@ -170,9 +172,11 @@ function triagePrompt(mode) {
   $('triage-mode-label').textContent = TRIAGE_LABELS[mode];
   $('triage-input-row').hidden = false;
   $('triage-kind-row').hidden = true;
+  // a merge of a non-person may really be a part: offered beside apply
+  $('triage-as-part').hidden = mode !== 'merge' || state.entities[queue[qpos]]?.type === 'person';
   const inp = $('triage-input');
   inp.placeholder = TRIAGE_PLACEHOLDERS[mode];
-  inp.value = mode === 'rename' ? queue[qpos] : '';
+  inp.value = mode === 'rename' ? (state.entities[queue[qpos]]?.base || queue[qpos]) : '';
   inp.focus();
   if (mode === 'rename') inp.select();
   suggest();
@@ -183,7 +187,7 @@ function triagePrompt(mode) {
 function suggest() {
   const box = $('triage-suggest');
   box.innerHTML = '';
-  if (triageMode !== 'merge' && triageMode !== 'correct') return;
+  if (!['merge', 'correct', 'part'].includes(triageMode)) return;
   const q = $('triage-input').value.trim().toLowerCase();
   if (!q) return;
   const cur = queue[qpos];
@@ -256,10 +260,10 @@ function neverTrack() {
   );
 }
 
-async function triageApply() {
+async function triageApply(asPart = false) {
   const target = $('triage-input').value.trim();
   if (!target) { $('triage-input').focus(); return; }
-  const name = queue[qpos], mode = triageMode;
+  const name = queue[qpos], mode = asPart === true ? 'part' : triageMode;
   triageMode = null;
   $('triage-input-row').hidden = true;
   $('triage-suggest').innerHTML = '';
@@ -268,6 +272,16 @@ async function triageApply() {
       n => api(`/api/entities/${mode}`, {source: n, target}),
       r => mode === 'merge' ? `${name} merged into ${r.into}, kept as an alias.` : `${name} corrected to ${r.into}. Old name not kept.`,
     );
+  } else if (mode === 'part') {
+    // its own entity under the parent: the card stays, renamed to its path
+    const r = await api('/api/entities/part-of', {name, parent: target});
+    if (r) {
+      toast(`${state.entities[name]?.base || name} is now part of ${target}, kept separate from it.`);
+      await loadEntities();
+      queue[qpos] = r.name;
+      refreshUndo();
+      renderTriage();
+    }
   } else if (mode === 'rename') {
     const r = await api('/api/entities/rename', {source: name, target});
     if (r) {
@@ -338,6 +352,10 @@ async function triageKey(key) {
     case 'c': triagePrompt('correct'); break;
     case 'r': triagePrompt('rename'); break;
     case 'a': triagePrompt('alias'); break;
+    case 'p':
+      if (state.entities[name]?.type === 'person') { toast('people aren\'t parts of anything; a group holds them.'); break; }
+      triagePrompt('part');
+      break;
     case 't':
       triageMode = 'kind';
       $('triage-kind-row').hidden = false;
@@ -372,7 +390,8 @@ async function retype(kind, category = '') {
 }
 
 export function init() {
-  $('triage-apply').onclick = triageApply;
+  $('triage-apply').onclick = () => triageApply();
+  $('triage-as-part').onclick = () => triageApply(true);
   $('triage-cancel').onclick = triageCancel;
   $('triage-kind-cancel').onclick = triageCancel;
   $('triage-cat-cancel').onclick = triageCancel;
@@ -396,7 +415,7 @@ export function init() {
     if (state.activeTab !== 'triage') return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    const keys = ['m', 'c', 'r', 'a', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', '1', '2', '3', '4', '5', '6'];
+    const keys = ['m', 'c', 'r', 'a', 'p', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', '1', '2', '3', '4', '5', '6'];
     if (triageMode === 'never' || triageMode === 'mixed') keys.push('Enter', 'Escape');
     else if (['Enter', 'Escape'].includes(e.key) && triageMode !== 'kind' && triageMode !== 'category') return;
     if (keys.includes(e.key)) e.preventDefault();

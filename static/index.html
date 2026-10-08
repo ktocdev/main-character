@@ -293,6 +293,7 @@
           <input type="text" id="triage-input" class="input-xs" placeholder="type here…" autocomplete="off">
           <span class="btns">
             <button class="filled" id="triage-apply" title="apply this action (or press Enter)">apply <span class="hint">↵</span></button>
+            <button class="quiet" id="triage-as-part" hidden title="keep it as its own entity, shown as Target / Name, instead of merging it in">part of it instead</button>
             <button class="quiet" id="triage-cancel" title="cancel (or press Esc)">cancel <span class="hint">esc</span></button>
           </span>
           <div id="triage-suggest"></div>
@@ -339,6 +340,7 @@
         <button class="quiet primary" data-tkey="k" title="mark reviewed ✓ and move on. Your default."><span class="key">k</span>keep</button>
         <button class="quiet" data-tkey="m" title="fold this into another entity; this name is kept as an alias"><span class="key">m</span>merge</button>
         <button class="quiet" data-tkey="c" title="typo fix; this name is not kept as an alias (Dana → Dane)"><span class="key">c</span>correct</button>
+        <button class="quiet" data-tkey="p" title="a piece of something bigger (Tabs of a project, a beach in a town): its own entity, shown as Parent / Name"><span class="key">p</span>part of</button>
         <button class="quiet" data-tkey="r" title="fix the spelling or case of this entity's own name"><span class="key">r</span>rename</button>
         <button class="quiet" data-tkey="a" title="add another name this entity goes by, matchable by both"><span class="key">a</span>alias</button>
         <button class="quiet" data-tkey="t" title="move to a different kind: then 1 person · 2 project · 3 place · 4 thing"><span class="key">t</span>retype</button>
@@ -516,6 +518,7 @@
           <span class="k">c</span><span class="d"><span class="n">correct</span> <span class="t">— typo fix; old name is not kept as alias (Dana → Dane)</span></span>
           <span class="k">r</span><span class="d"><span class="n">rename</span> <span class="t">— fix spelling or case of this entity's own name</span></span>
           <span class="k">a</span><span class="d"><span class="n">alias</span> <span class="t">— add another name this entity goes by (matchable by both)</span></span>
+          <span class="k">p</span><span class="d"><span class="n">part of</span> <span class="t">— a piece of something bigger (Tabs of a project, a beach in a town). It stays its own entity, shown as Parent / Name, so an unrelated Tabs isn't folded in the way a merge would. The merge field offers it too.</span></span>
           <span class="k">t then 1–4</span><span class="d"><span class="n">retype</span> <span class="t">— to person / project / place / thing. A thing then asks which kind: 1 music, 2 game, 3 show, 4 book, 5 event, 6 other</span></span>
           <span class="k">x</span><span class="d"><span class="n">retire</span> <span class="t">— someone from a chapter that's over. Out of the list and triage; the companion still knows them when you name them, but won't bring them up. Nothing is deleted; u undoes.</span></span>
           <span class="k">s</span><span class="d"><span class="n">skip</span> <span class="t">— decide later, stays in queue for next time</span></span>
@@ -535,7 +538,9 @@
         <div class="step-h"><h3>deep fixes on the tricky ones</h3><span class="where">entities → pick an entity → hover an observation</span></div>
         <div class="step-body"><p>For entities that are <em>conflations</em>, like two Sams in one node or a "karaoke bar" that's really
         two different bars, use the observation tools. The <em>maybe two</em> chip lists people whose entries
-        disagree about who they are (coworker in some, friend in others); each date there says what that entry called them. <em>move</em> reassigns a single memory to the right
+        disagree about who they are (coworker in some, friend in others); each date there says what that entry called them.
+        Something that's a piece of something bigger (a component of a project, a beach in a town) is a <em>part</em>, not a merge:
+        <em>part of</em> beside <em>merge into</em>, or <b>p</b> in triage. <em>parts review</em> goes through old merges once. <em>move</em> reassigns a single memory to the right
         entity (type <code>person:Sam (work)</code> to create a new one), <em>edit</em> fixes wrong facts, and
         <em>×</em> removes them. These are the slow, careful fixes. Save them for after the fast passes
         so you're not context-switching.</p></div>
@@ -670,6 +675,7 @@
               <option value="thing">things</option>
             </select>
             <button class="quiet sm" id="things-review" title="ask claude which projects and places are really things (a game, a show, a band), then accept or skip each (uses the API)">things review</button>
+            <button class="quiet sm" id="parts-review" title="one-time: which merged names are really parts of something (Tabs of a project, a beach in a town). Claude suggests, you choose (uses the API)">parts review</button>
             <button class="quiet sm" id="reextract-open" title="re-run extraction for just the entries that mention a word or name (uses the API, estimate first)">re-extract…</button>
           </div>
           <div id="group-browser">
@@ -706,6 +712,7 @@
               <input type="text" id="merge-target" class="input-xs" list="entity-names" placeholder="target name…">
               <button class="quiet" id="merge-btn" title="combine, keeping this name as an alias">merge into</button>
               <button class="quiet" id="correct-btn" title="fix a typo without keeping this name as an alias">correct to</button>
+              <button class="quiet" id="part-btn" title="its own entity, shown as Target / Name. Unlike a merge, an unrelated one with the same name stays separate">part of</button>
               <button class="quiet" id="rename-btn" title="change spelling/case of this entity's name">rename</button>
               <select id="retype-kind" class="quiet-select" title="change the kind of this entity">
                 <option value="">retype…</option>
@@ -731,6 +738,11 @@
               <span id="alias-chips" class="tag-editor"></span>
               <input type="text" id="alias-new" class="input-xs" placeholder="add alias…">
               <button class="quiet" id="alias-add-btn">add</button>
+            </div>
+            <div class="ent-actions" id="part-row" hidden>
+              <span class="lbl">part of:</span>
+              <span id="part-chip" class="tag-editor"></span>
+              <label class="check-inline" title="off: keep its own name when it's already specific (Coda theme switcher)"><input type="checkbox" id="part-path"> show as parent / name</label>
             </div>
             <div class="ent-actions" id="group-row">
               <span class="lbl">groups:</span>

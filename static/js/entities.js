@@ -31,6 +31,7 @@ export function mixupText(flag) {
 let sortAlpha = false;
 let selectMode = false;         // checkboxes for batch add-to-group
 const picked = new Set();       // entity names checked for the next batch
+const openParts = new Set();    // parents whose parts are shown in the list
 
 function updateBatchCount() {
   $('batch-count').textContent = `${picked.size} selected`;
@@ -63,25 +64,50 @@ export function renderEntityList() {
     if (hideSet && hideSet.has(name.toLowerCase())) continue;
     groups[info.type].push([name, info.mentions, info.reviewed, !!info.mixup]);
   }
+  // parts sit under their parent, collapsed, in the plain view; a search
+  // or filter shows them flat with their path
+  const nest = !filter && !selectMode;
+  const shownNames = new Set(Object.values(groups).flat().map(([n]) => n));
+  const nested = n => nest && state.entities[n].part_of && shownNames.has(state.entities[n].part_of)
+    && state.entities[state.entities[n].part_of].type === state.entities[n].type;
   const wrap = $('entity-groups');
   wrap.innerHTML = '';
   const typeFilter = filters.types.size ? filters.types : null;
   let shown = 0;
   for (const kind of KINDS) {
     if (typeFilter && !typeFilter.has(kind)) continue;
-    const items = groups[kind].sort(sortAlpha
+    const all = groups[kind].sort(sortAlpha
       ? (a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase())
       : (a, b) => b[1] - a[1]);
-    if (!items.length) continue;
-    shown += items.length;
+    if (!all.length) continue;
+    shown += all.length;
+    // each parent followed by its parts (when open), the parts marked
+    const items = [];
+    for (const it of all) {
+      if (nested(it[0])) continue;
+      items.push(it);
+      const kids = all.filter(k => nested(k[0]) && state.entities[k[0]].part_of === it[0]);
+      if (kids.length) items.push(['', 0, true, false, {toggle: it[0], count: kids.length}]);
+      if (kids.length && openParts.has(it[0])) for (const k of kids) items.push([...k, {part: true}]);
+    }
     const h = document.createElement('div');
     h.className = 'list-head';
     h.innerHTML = '<span class="eyebrow"></span>';
-    h.firstChild.textContent = `${PLURAL[kind]} (${items.length})`;
+    h.firstChild.textContent = `${PLURAL[kind]} (${all.length})`;
     wrap.appendChild(h);
-    for (const [name, mentions, reviewed, mixup] of items) {
+    for (const [name, mentions, reviewed, mixup, nestInfo] of items) {
+      if (nestInfo?.toggle) {
+        const t = document.createElement('button');
+        t.className = 'parts-toggle';
+        const open = openParts.has(nestInfo.toggle);
+        t.textContent = `${open ? '▾' : '▸'} ${nestInfo.count} part${nestInfo.count === 1 ? '' : 's'}`;
+        t.setAttribute('aria-expanded', open);
+        t.onclick = () => { if (open) openParts.delete(nestInfo.toggle); else openParts.add(nestInfo.toggle); renderEntityList(); };
+        wrap.appendChild(t);
+        continue;
+      }
       const row = document.createElement('div');
-      row.className = 'ent-row';
+      row.className = 'ent-row' + (nestInfo?.part ? ' part' : '');
 
       if (selectMode) {
         const cb = document.createElement('input');
@@ -100,7 +126,8 @@ export function renderEntityList() {
       const b = document.createElement('button');
       b.className = 'list-item' + (name === state.selected ? ' sel' : '');
       b.innerHTML = '<span class="li-title"></span><span class="li-meta"></span>';
-      b.querySelector('.li-title').textContent = name;
+      // nested under its parent, a part reads by its own name
+      b.querySelector('.li-title').textContent = nestInfo?.part ? (state.entities[name].base || name) : name;
       b.querySelector('.li-meta').textContent = mentions;
       // a ring for maybe-two-people, then the unreviewed dot
       const dots = [];
@@ -352,6 +379,92 @@ async function thingsReview() {
   });
 }
 
+// ---- parts review ----
+// One-time. Before part-of links, a piece of something was merged into it
+// ("tabs" into a project) or given a slash name ("Harbor Town / Beach").
+// A merge is a name rule, so every future "the beach" went to that town.
+// Slash names whose parent exists are offered as parts, checked; each
+// merged name gets keep as alias / part / never track, with generic ones
+// pre-set to never track and Claude's guesses at parts pre-set to part.
+// Applying is one curation change, one undo.
+async function partsReview() {
+  const panel = suggestPanel('parts review');
+  const w = panelSay(panel, 'reading your merges (local, free)…');
+  const r = await (await fetch('/api/entities/parts-review')).json();
+  w.remove();
+  if (!r.slash.length && !r.targets.length) { panelSay(panel, 'no merges or slash names to review.'); return; }
+  panelSay(panel, 'A part is its own entity shown under its parent ("Coda / Tabs"), so it keeps its own timeline and an unrelated one with the same name stays separate. An alias is another name for the same thing. Nothing changes until you apply.');
+  const slashRows = [];
+  if (r.slash.length) {
+    panelHead(panel, `slash names (${r.slash.length})`);
+    for (const s of r.slash) {
+      slashRows.push([s, checkRow(panel, {
+        checked: true, label: s.name,
+        note: `→ ${s.part}, part of ${s.parent}${s.joins ? ` · joins the existing ${s.joins}` : ''}`,
+      })]);
+    }
+  }
+  const sourceRows = [];
+  if (r.targets.length) {
+    panelHead(panel, `merged names, by what they merge into (${r.targets.length})`);
+    for (const t of r.targets) {
+      const d = document.createElement('details');
+      d.innerHTML = '<summary><span class="nm"></span> <span class="note"></span></summary>';
+      d.querySelector('.nm').textContent = t.target;
+      d.querySelector('.note').textContent = `${t.kind} · ${t.sources.length} merged`;
+      for (const s of t.sources) {
+        const row = document.createElement('div');
+        row.className = 'part-row';
+        row.innerHTML = '<span class="nm"></span><span class="note"></span><select class="quiet-select sm"><option value="alias">keep as alias</option><option value="part">part</option><option value="never">never track</option></select><span class="ln"></span>';
+        row.querySelector('.nm').textContent = s.name;
+        row.querySelector('.note').textContent = `${s.mentions} mention${s.mentions === 1 ? '' : 's'}${s.generic ? ' · looks generic' : ''}`;
+        row.querySelector('.ln').textContent = s.said;
+        const sel = row.querySelector('select');
+        sel.setAttribute('aria-label', `what ${s.name} is to ${t.target}`);
+        if (s.generic) { sel.value = 'never'; d.open = true; }
+        d.appendChild(row);
+        sourceRows.push({s, t, sel, row, d});
+      }
+      panel.appendChild(d);
+    }
+  }
+  const b = document.createElement('button');
+  b.className = 'filled sm';
+  const picked = () => ({
+    convert: slashRows.filter(([, row]) => row.querySelector('input').checked).map(([s]) => ({name: s.name, parent: s.parent})),
+    sources: sourceRows.filter(x => x.sel.value !== 'alias').map(x => ({key: x.s.key, target: x.t.target, action: x.sel.value})),
+  });
+  const relabel = () => {
+    const p = picked(), n = p.convert.length + p.sources.length;
+    b.textContent = `apply ${n} change${n === 1 ? '' : 's'}`;
+    b.disabled = !n;
+  };
+  b.onclick = async () => {
+    const res = await api('/api/entities/parts-review', picked());
+    if (res) { closeSuggest(); clearDetail(`parts review: ${res.changed} changes. Undo puts them all back.`); }
+  };
+  panel.addEventListener('change', relabel);
+  panel.appendChild(b);
+  relabel();
+  // Claude's guesses at parts, filled in when they arrive
+  if (!sourceRows.some(x => !x.s.generic)) return;
+  const ask = panelSay(panel, 'asking claude which merged names are really parts…');
+  b.before(ask);
+  const res = await api('/api/entities/suggest-parts', {});
+  if (!res) { ask.textContent = "claude's suggestions didn't come back; choose by hand."; return; }
+  for (const p of res.parts) {
+    const x = sourceRows.find(x => x.s.key === p.key);
+    if (!x || x.sel.value === 'never') continue;
+    x.sel.value = 'part';
+    x.row.querySelector('.ln').textContent = `claude: ${p.reason}`;
+    x.d.open = true;
+  }
+  ask.textContent = res.parts.length
+    ? `claude suggests ${res.parts.length} part${res.parts.length === 1 ? '' : 's'}, set below. Check each before applying.`
+    : 'claude found no parts among them.';
+  relabel();
+}
+
 // ---- targeted re-extract ----
 // A prompt change only reaches entries extracted after it. This re-runs
 // extraction for the entries that mention a word, after showing how many,
@@ -519,6 +632,35 @@ export async function showEntity(name) {
     };
     mx.append(one);
   }
+  // part of a parent, or the parent of parts: each opens the other
+  if (info.part_of) {
+    const c = document.createElement('button');
+    c.className = 'tag';
+    c.innerHTML = '<span class="k">part of</span><span class="v"></span>';
+    c.querySelector('.v').textContent = info.part_of;
+    c.title = 'open it';
+    c.onclick = () => showEntity(info.part_of);
+    chips.appendChild(c);
+  }
+  for (const p of (info.parts || [])) {
+    const c = document.createElement('button');
+    c.className = 'tag';
+    c.innerHTML = '<span class="k">part</span><span class="v"></span>';
+    c.querySelector('.v').textContent = state.entities[p]?.base || p;
+    c.title = 'open it';
+    c.onclick = () => showEntity(p);
+    chips.appendChild(c);
+  }
+  $('part-btn').hidden = r.type === 'person';
+  $('part-row').hidden = !info.part_of;
+  $('part-chip').innerHTML = '';
+  if (info.part_of) {
+    $('part-chip').appendChild(tag(info.part_of, async () => {
+      const res = await api('/api/entities/part-of', {name: r.name, parent: ''});
+      if (res) await reloadEntity(res.name);
+    }, `no longer part of ${info.part_of}`));
+    $('part-path').checked = r.name.includes(' / ');
+  }
   // retired through a group can only be undone there
   const rb = $('retire-btn');
   rb.textContent = info.retired ? 'un-retire' : 'retire';
@@ -553,7 +695,7 @@ export async function showEntity(name) {
       lastKey = key;
       const d = document.createElement('div');
       d.className = 'obs-date eyebrow';
-      d.textContent = fmtDate(o.date) + (o.extracted_name !== r.name ? ` · as "${o.extracted_name}"` : '')
+      d.textContent = fmtDate(o.date) + (o.extracted_name !== (info.base || r.name) ? ` · as "${o.extracted_name}"` : '')
         + (r.type === 'person' && o.attr ? ` · as ${o.attr}` : '');
       docEl.appendChild(d);
     }
@@ -713,6 +855,17 @@ export function init() {
   $('find-generic').onclick = genericCleanup;
   $('show-deleted').onclick = showDeleted;
   $('things-review').onclick = thingsReview;
+  $('parts-review').onclick = partsReview;
+  $('part-btn').onclick = async () => {
+    const parent = $('merge-target').value.trim();
+    if (!state.selected || !parent) { $('merge-target').focus(); return; }
+    const r = await api('/api/entities/part-of', {name: state.selected, parent});
+    if (r) await reloadEntity(r.name);
+  };
+  $('part-path').onchange = async () => {
+    const r = await api('/api/entities/hide-path', {name: state.selected, hide: !$('part-path').checked});
+    if (r) await reloadEntity(r.name);
+  };
   $('reextract-open').onclick = reextractPanel;
 
   $('merge-btn').onclick = async () => {
@@ -759,8 +912,9 @@ export function init() {
 
   $('rename-btn').onclick = async () => {
     if (!state.selected) return;
-    const newName = prompt(`Rename "${state.selected}" to:`, state.selected);
-    if (newName === null || !newName.trim() || newName.trim() === state.selected) return;
+    const own = state.entities[state.selected]?.base || state.selected;
+    const newName = prompt(`Rename "${state.selected}" to:`, own);
+    if (newName === null || !newName.trim() || newName.trim() === own) return;
     const r = await api('/api/entities/rename', {source: state.selected, target: newName.trim()});
     if (r) { state.selected = r.to; await reloadEntity(r.to); }
   };
