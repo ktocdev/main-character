@@ -14,7 +14,7 @@ export const TABS = [
   ['write', "today's entry and the companion's reply"],
   ['chat', 'look something up in your journal'],
   ['search', 'find an entry by word or phrase'],
-  ['entities', 'people, places and projects'],
+  ['entities', 'people, places, projects and things'],
   ['categories', 'life domains, tagged over time'],
   ['patterns', 'recurring arcs the companion noticed'],
   ['dreams', 'dreams, kept apart from the day'],

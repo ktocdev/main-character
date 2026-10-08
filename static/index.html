@@ -181,7 +181,7 @@
             </div>
             <div class="row">
               <button class="quiet sm" id="cat-build" title="tag any untagged entries with Claude. Already-tagged entries are skipped, so they cost nothing">tag new entries</button>
-              <button class="quiet sm" id="cat-scan" title="cluster places and projects by what happened around them and propose new categories. Nothing is created without your confirm">scan for new categories</button>
+              <button class="quiet sm" id="cat-scan" title="cluster places, projects and things by what happened around them and propose new categories. Nothing is created without your confirm">scan for new categories</button>
             </div>
           </div>
           <div class="side-list">
@@ -302,8 +302,21 @@
             <button class="quiet" data-kind="person" title="retype to person (1)"><span class="key">1</span>person</button>
             <button class="quiet" data-kind="project" title="retype to project (2)"><span class="key">2</span>project</button>
             <button class="quiet" data-kind="place" title="retype to place (3)"><span class="key">3</span>place</button>
+            <button class="quiet" data-kind="thing" title="retype to thing: a band, game, show, book or event (4)"><span class="key">4</span>thing</button>
           </span>
           <button class="text" id="triage-kind-cancel">cancel <span class="hint">esc</span></button>
+        </div>
+        <div id="triage-cat-row" hidden>
+          <span class="lbl">which kind of thing</span>
+          <span class="btns">
+            <button class="quiet" data-cat="music" title="bands, artists, albums (1)"><span class="key">1</span>music</button>
+            <button class="quiet" data-cat="game" title="(2)"><span class="key">2</span>game</button>
+            <button class="quiet" data-cat="show" title="TV and film (3)"><span class="key">3</span>show</button>
+            <button class="quiet" data-cat="book" title="(4)"><span class="key">4</span>book</button>
+            <button class="quiet" data-cat="event" title="a recurring event, like a yearly festival (5)"><span class="key">5</span>event</button>
+            <button class="quiet" data-cat="other" title="(6)"><span class="key">6</span>other</button>
+          </span>
+          <button class="text" id="triage-cat-cancel">cancel <span class="hint">esc</span></button>
         </div>
         <div id="triage-never-row" hidden>
           <span id="triage-never-q"></span>
@@ -319,7 +332,7 @@
         <button class="quiet" data-tkey="c" title="typo fix; this name is not kept as an alias (Dana → Dane)"><span class="key">c</span>correct</button>
         <button class="quiet" data-tkey="r" title="fix the spelling or case of this entity's own name"><span class="key">r</span>rename</button>
         <button class="quiet" data-tkey="a" title="add another name this entity goes by, matchable by both"><span class="key">a</span>alias</button>
-        <button class="quiet" data-tkey="t" title="move to a different kind: then 1 person · 2 project · 3 place"><span class="key">t</span>retype</button>
+        <button class="quiet" data-tkey="t" title="move to a different kind: then 1 person · 2 project · 3 place · 4 thing"><span class="key">t</span>retype</button>
         <button class="quiet danger" data-tkey="d" title="delete the mentions it has now; the name stays free for new entries (a generic name stops being tracked). No confirm; undo brings it back"><span class="key">d</span>delete</button>
         <button class="quiet danger" data-tkey="D" title="for generic terms and junk: ignore this name in every entry, now and future. Asks once"><span class="key">D</span>never track</button>
         <button class="quiet" data-tkey="x" title="a past chapter: out of the list and triage, and the companion only brings them up when you do"><span class="key">x</span>retire</button>
@@ -475,7 +488,7 @@
 
       <div class="help-step">
         <span class="step-n">2</span>
-        <div class="step-h"><h3>ask claude (optional)</h3><span class="where">entities → ask claude: people / projects / places</span></div>
+        <div class="step-h"><h3>ask claude (optional)</h3><span class="where">entities → ask claude: people / projects / places / things</span></div>
         <div class="step-body"><p>Catches conceptual duplicates the local scan can't, like long descriptive names that mean the
         same project. Costs one API call per kind. Worth one pass on projects
         especially. Apply or dismiss each group. Nothing merges without your click.</p></div>
@@ -494,7 +507,7 @@
           <span class="k">c</span><span class="d"><span class="n">correct</span> <span class="t">— typo fix; old name is not kept as alias (Dana → Dane)</span></span>
           <span class="k">r</span><span class="d"><span class="n">rename</span> <span class="t">— fix spelling or case of this entity's own name</span></span>
           <span class="k">a</span><span class="d"><span class="n">alias</span> <span class="t">— add another name this entity goes by (matchable by both)</span></span>
-          <span class="k">t then 1/2/3</span><span class="d"><span class="n">retype</span> <span class="t">— to person / project / place</span></span>
+          <span class="k">t then 1–4</span><span class="d"><span class="n">retype</span> <span class="t">— to person / project / place / thing. A thing then asks which kind: 1 music, 2 game, 3 show, 4 book, 5 event, 6 other</span></span>
           <span class="k">x</span><span class="d"><span class="n">retire</span> <span class="t">— someone from a chapter that's over. Out of the list and triage; the companion still knows them when you name them, but won't bring them up. Nothing is deleted; u undoes.</span></span>
           <span class="k">s</span><span class="d"><span class="n">skip</span> <span class="t">— decide later, stays in queue for next time</span></span>
           <span class="k">e</span><span class="d"><span class="n">edit in entities</span> <span class="t">— open it on the entities screen for a deeper fix; "back to triage" there returns you to the same spot</span></span>
@@ -544,6 +557,8 @@
         <div class="row"><span class="when">Misspelling or typo that shouldn't be remembered</span><span class="fix"><b>correct</b> <span class="t">no alias</span></span></div>
         <div class="row"><span class="when">Right entity, wrong spelling or capitalization</span><span class="fix"><b>rename</b></span></div>
         <div class="row"><span class="when">Right entity, wrong kind (person vs place)</span><span class="fix"><b>retype</b></span></div>
+        <div class="row"><span class="when">A game, show or band filed as a project or place</span><span class="fix"><b>retype to thing</b> <span class="t">or the <em>things review</em> on the entities screen, for all of them at once</span></span></div>
+        <div class="row"><span class="when">Entries from before a prompt change missed something</span><span class="fix"><b>re-extract</b> <span class="t">entities → re-extract: only the entries that mention it, with a cost estimate first</span></span></div>
         <div class="row"><span class="when">One wrong memory inside a right entity</span><span class="fix"><b>observation edit / move / ×</b></span></div>
         <div class="row"><span class="when">Shouldn't exist at all</span><span class="fix"><b>delete</b></span></div>
       </div>
@@ -558,7 +573,7 @@
       entries are cached and free). Pick a category to browse its entries and read its
       <em>domain document</em>, a living ~500-word summary of that area of life. × a wrong tag or
       + a missing one, and your fixes become permanent overrides. <em>scan for new categories</em> clusters
-      your places/projects and proposes organic categories, but nothing is created without your
+      your places, projects and things and proposes organic categories, but nothing is created without your
       confirm. You can also hand-seed a category with keywords. Entry categories are deliberately
       flat to stay broad and scannable, so there's no sub-category nesting here.</p>
       </div>
@@ -617,6 +632,7 @@
             <button class="chip-toggle" data-type="person" aria-pressed="false" title="show only people">people</button>
             <button class="chip-toggle" data-type="project" aria-pressed="false" title="show only projects">projects</button>
             <button class="chip-toggle" data-type="place" aria-pressed="false" title="show only places">places</button>
+            <button class="chip-toggle" data-type="thing" aria-pressed="false" title="show only things: bands, games, shows, books, events">things</button>
           </div>
           <div id="filter-chips" class="chip-row">
             <button class="chip-toggle" id="flt-unreviewed" aria-pressed="false" title="only entities you haven't confirmed yet">unreviewed</button>
@@ -640,7 +656,10 @@
               <option value="person">people</option>
               <option value="project">projects</option>
               <option value="place">places</option>
+              <option value="thing">things</option>
             </select>
+            <button class="quiet sm" id="things-review" title="ask claude which projects and places are really things (a game, a show, a band), then accept or skip each (uses the API)">things review</button>
+            <button class="quiet sm" id="reextract-open" title="re-run extraction for just the entries that mention a word or name (uses the API, estimate first)">re-extract…</button>
           </div>
           <div id="group-browser">
             <div id="group-header"><span class="eyebrow">groups</span>
@@ -681,6 +700,15 @@
                 <option value="person">person</option>
                 <option value="project">project</option>
                 <option value="place">place</option>
+                <option value="thing">thing</option>
+              </select>
+              <select id="thing-category" class="quiet-select" title="which kind of thing" hidden>
+                <option value="music">music</option>
+                <option value="game">game</option>
+                <option value="show">show</option>
+                <option value="book">book</option>
+                <option value="event">event</option>
+                <option value="other">other</option>
               </select>
               <button class="quiet danger" id="delete-btn" title="delete the mentions it has now. The name stays free, so a new entry can bring it back. Undo restores them">delete</button>
               <button class="quiet" id="retire-btn" title="a past chapter: out of the list and triage, and the companion only brings them up when you do. Nothing is deleted">retire</button>

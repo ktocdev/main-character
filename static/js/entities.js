@@ -19,7 +19,9 @@ export async function loadEntities() {
   refreshStatus();
 }
 
-const PLURAL = {person: 'people', project: 'projects', place: 'places'};
+const KINDS = ['person', 'project', 'place', 'thing'];
+const PLURAL = {person: 'people', project: 'projects', place: 'places', thing: 'things'};
+const CATEGORIES = ['music', 'game', 'show', 'book', 'event', 'other'];
 let sortAlpha = false;
 let selectMode = false;         // checkboxes for batch add-to-group
 const picked = new Set();       // entity names checked for the next batch
@@ -35,7 +37,7 @@ export function renderEntityList() {
   // the plain view; an active search, group filter, or select mode reveals them
   const hideSet = (!filter && !activeGroupSet && !selectMode) ? rolledUpMemberSet() : null;
   if (selectMode) for (const n of [...picked]) if (!state.entities[n]) picked.delete(n);
-  const groups = {person: [], project: [], place: []};
+  const groups = Object.fromEntries(KINDS.map(k => [k, []]));
   // retired entities (a past chapter) live behind their own chip
   const retiredCount = Object.values(state.entities).filter(i => i.retired).length;
   $('flt-retired').hidden = !retiredCount && !filters.retired;
@@ -54,7 +56,7 @@ export function renderEntityList() {
   wrap.innerHTML = '';
   const typeFilter = filters.types.size ? filters.types : null;
   let shown = 0;
-  for (const kind of ['person', 'project', 'place']) {
+  for (const kind of KINDS) {
     if (typeFilter && !typeFilter.has(kind)) continue;
     const items = groups[kind].sort(sortAlpha
       ? (a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase())
@@ -299,6 +301,105 @@ async function showDeleted() {
   }
 }
 
+// ---- things review ----
+// Before the thing kind, games and shows were filed as projects and a
+// festival as a place. Claude proposes which are really things; each is
+// pre-checked with its category, editable. One retype change, one undo.
+async function thingsReview() {
+  const panel = suggestPanel('things review');
+  const w = panelSay(panel, 'asking claude which projects and places are really things…');
+  const r = await api('/api/entities/suggest-things', {});
+  w.remove();
+  if (!r) { closeSuggest(); return; }
+  if (!r.things.length) { panelSay(panel, 'nothing looks like a thing. Looks clean.'); return; }
+  panelSay(panel, 'A project is something you make or work on; a thing is something you enjoy or follow. Checked names become things, with the category shown. Observations come along.');
+  const rows = r.things.map(t => {
+    const row = checkRow(panel, {
+      checked: true, label: t.name, line: t.reason,
+      note: `${t.kind} · ${t.mentions} mention${t.mentions === 1 ? '' : 's'} →`,
+    });
+    const sel = document.createElement('select');
+    sel.className = 'quiet-select sm';
+    sel.setAttribute('aria-label', `category for ${t.name}`);
+    for (const c of CATEGORIES) {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      sel.appendChild(o);
+    }
+    sel.value = t.category;
+    row.querySelector('.note').after(' ', sel);
+    return [{name: t.name, sel}, row];
+  });
+  panelApply(panel, rows, n => `make ${n} thing${n === 1 ? '' : 's'}`, async picked => {
+    const res = await api('/api/entities/retype-things', {items: picked.map(p => ({name: p.name, category: p.sel.value}))});
+    if (res) { closeSuggest(); clearDetail(`${res.retyped.length} now things. Undo puts them back.`); }
+  });
+}
+
+// ---- targeted re-extract ----
+// A prompt change only reaches entries extracted after it. This re-runs
+// extraction for the entries that mention a word, after showing how many,
+// roughly what it costs, and which of them have hand edits it would lose.
+async function reextractPanel() {
+  const panel = suggestPanel('re-extract');
+  panelSay(panel, 'Re-run extraction for just the entries that mention a word or name, e.g. a show that was missed. Separate several with commas. Case and spaces don\'t matter: "live journal" finds LiveJournal.');
+  const form = document.createElement('div');
+  form.className = 'ent-actions';
+  form.innerHTML = '<input type="text" class="input-xs" placeholder="90 day, live journal…"><button class="quiet sm">find entries</button>';
+  panel.appendChild(form);
+  const out = document.createElement('div');
+  panel.appendChild(out);
+  const input = form.querySelector('input');
+  const terms = () => input.value.split(',').map(t => t.trim()).filter(Boolean);
+  const find = async () => {
+    if (!terms().length) { input.focus(); return; }
+    out.innerHTML = '';
+    const r = await api('/api/entities/reextract/preview', {terms: terms()});
+    if (!r) return;
+    if (!r.entries.length) { panelSay(out, 'no entries mention that.'); return; }
+    const edited = r.entries.filter(e => e.edited);
+    panelSay(out, `${r.entries.length} entr${r.entries.length === 1 ? 'y mentions' : 'ies mention'} it. Re-extracting costs about $${r.estimate.toFixed(2)} on ${r.model}.`);
+    if (edited.length) {
+      panelHead(out, `hand edits that would be lost (${edited.length})`);
+      panelSay(out, 'You edited, moved or deleted observations in the entries marked (edited) below. Re-extracting replaces them with fresh ones.');
+    }
+    panelHead(out, 'entries');
+    for (const e of r.entries) panelSay(out, `${fmtDate(e.date)} · ${e.title}${e.edited ? ' (edited)' : ''}`);
+    const go = document.createElement('button');
+    go.className = 'filled sm';
+    go.textContent = `re-extract ${r.entries.length} entr${r.entries.length === 1 ? 'y' : 'ies'} (~$${r.estimate.toFixed(2)})`;
+    go.onclick = async () => {
+      go.disabled = true;
+      if (await api('/api/entities/reextract', {terms: r.terms})) watchReextract(out);
+      else go.disabled = false;
+    };
+    out.appendChild(go);
+  };
+  form.querySelector('button').onclick = find;
+  input.onkeydown = e => { if (e.key === 'Enter') find(); };
+  input.focus();
+}
+async function watchReextract(out) {
+  out.innerHTML = '';
+  const line = panelSay(out, 'starting…');
+  for (;;) {
+    const s = await (await fetch('/api/entities/reextract/status')).json();
+    if (!s.running) {
+      if (s.error) line.textContent = `stopped: ${s.error}`;
+      else {
+        const res = s.result || {done: [], failed: []};
+        line.textContent = `re-extracted ${res.done.length} entr${res.done.length === 1 ? 'y' : 'ies'}`
+          + (res.failed.length ? `; ${res.failed.length} failed and kept their old extraction` : '')
+          + '. New names are waiting in triage.';
+      }
+      loadEntities();
+      return;
+    }
+    line.textContent = s.total ? `${s.done + 1} of ${s.total} · ${s.current}` : 'starting…';
+    await new Promise(r => setTimeout(r, 1500));
+  }
+}
+
 // The detail pane shows one of: an entity, a group page, or the prompt to
 // pick one. The edit box and its toggle only exist for an entity.
 function showDetail(kind) {
@@ -352,10 +453,13 @@ export async function showEntity(name) {
   showDetail('entity');
   notice('');
   $('entity-name').textContent = r.name;
-  $('entity-meta').textContent = `${r.type} · ${r.observations.length} observation${r.observations.length === 1 ? '' : 's'}`
+  $('entity-meta').textContent = `${r.type}${info.category ? ` · ${info.category}` : ''} · ${r.observations.length} observation${r.observations.length === 1 ? '' : 's'}`
     + (info.mentions ? ` · ${info.mentions} mention${info.mentions === 1 ? '' : 's'}` : '');
   $('merge-target').value = '';
   $('retype-kind').value = '';
+  // a thing's category, changeable in place
+  $('thing-category').hidden = r.type !== 'thing';
+  $('thing-category').value = info.category || 'other';
 
   // aka / in chips under the meta, and the editable rows in the edit box
   const chips = $('entity-chips');
@@ -432,10 +536,10 @@ export async function showEntity(name) {
       if (await api('/api/observation', {...o, action: 'edit', text: text.trim()})) await reloadEntity(r.name);
     });
     mk('move', 'move this observation to another entity', async () => {
-      const target = prompt('Move this observation to which entity?\n(prefix with person:/project:/place: if it\'s new)', '');
+      const target = prompt('Move this observation to which entity?\n(prefix with person:/project:/place:/thing: if it\'s new)', '');
       if (!target) return;
       let kind = r.type, tname = target.trim();
-      const m = tname.match(/^(person|project|place):(.+)$/);
+      const m = tname.match(/^(person|project|place|thing):(.+)$/);
       if (m) { kind = m[1]; tname = m[2].trim(); }
       else if (state.entities[tname]) kind = state.entities[tname].type;
       if (await api('/api/observation', {...o, action: 'reassign', target_kind: kind, target_name: tname})) await reloadEntity(r.name);
@@ -563,6 +667,8 @@ export function init() {
   $('find-dups').onclick = findDups;
   $('find-generic').onclick = genericCleanup;
   $('show-deleted').onclick = showDeleted;
+  $('things-review').onclick = thingsReview;
+  $('reextract-open').onclick = reextractPanel;
 
   $('merge-btn').onclick = async () => {
     const target = $('merge-target').value.trim();
@@ -583,10 +689,18 @@ export function init() {
   $('retype-kind').onchange = async () => {
     const kind = $('retype-kind').value;
     if (!state.selected || !kind) return;
-    const newName = prompt(`Move "${state.selected}" to ${kind}s. Rename it? (leave as-is to keep the name)`, state.selected);
+    const newName = prompt(`Move "${state.selected}" to ${PLURAL[kind]}. Rename it? (leave as-is to keep the name)`, state.selected);
     if (newName === null) { $('retype-kind').value = ''; return; }
+    // a new thing starts as "other"; its category picker shows once it's open
     const r = await api('/api/entities/retype', {name: state.selected, new_type: kind, new_name: newName.trim()});
-    if (r) clearDetail(`moved to ${kind}s`);
+    if (r && kind === 'thing') await reloadEntity(newName.trim() || state.selected);
+    else if (r) clearDetail(`moved to ${PLURAL[kind]}`);
+  };
+
+  $('thing-category').onchange = async () => {
+    if (!state.selected) return;
+    const r = await api('/api/entities/category', {name: state.selected, category: $('thing-category').value});
+    if (r) await reloadEntity(r.name);
   };
 
   $('alias-add-btn').onclick = async () => {

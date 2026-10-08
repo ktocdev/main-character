@@ -6,8 +6,9 @@ import { showTab } from './main.js';
 
 // ---- triage mode ----
 // Entities come one at a time, junk first (1-mention entities lead). The
-// keyboard does the work: k m c r a t d D x s u e, then 1/2/3 in retype mode,
-// Enter and Esc in a field. The buttons mirror the keys.
+// keyboard does the work: k m c r a t d D x s u e, then 1-4 in retype mode
+// (and 1-6 for a thing's category), Enter and Esc in a field. The buttons
+// mirror the keys.
 let queue = [], qpos = 0, triageMode = null;
 let skipped = [];        // names skipped in this pass, for the queue-empty offer
 let toastTimer = null;
@@ -59,6 +60,7 @@ async function renderTriage() {
   triageMode = null;
   $('triage-input-row').hidden = true;
   $('triage-kind-row').hidden = true;
+  $('triage-cat-row').hidden = true;
   $('triage-never-row').hidden = true;
   $('triage-suggest').innerHTML = '';
   const total = Object.keys(state.entities).length;
@@ -89,7 +91,7 @@ async function renderTriage() {
   if (!info) { qpos++; return renderTriage(); }
   progress(reviewed, total, queue.length - qpos);
   $('triage-name').textContent = name;
-  const meta = `${info.type} · ${info.mentions} mention${info.mentions === 1 ? '' : 's'}`;
+  const meta = `${info.type}${info.category ? ` · ${info.category}` : ''} · ${info.mentions} mention${info.mentions === 1 ? '' : 's'}`;
   $('triage-meta').textContent = meta;
   $('triage-aliases').textContent = (info.aliases || []).length ? 'also ' + info.aliases.join(' · ') : '';
   // a category name ("dive bar") gets d as never-track, said up front so
@@ -198,6 +200,7 @@ function triageCancel() {
   triageMode = null;
   $('triage-input-row').hidden = true;
   $('triage-kind-row').hidden = true;
+  $('triage-cat-row').hidden = true;
   $('triage-never-row').hidden = true;
   $('triage-suggest').innerHTML = '';
   $('triage').focus();
@@ -264,8 +267,15 @@ async function triageApply() {
 async function triageKey(key) {
   if (triageMode === 'kind') {
     if (key === 'Escape') { triageCancel(); return; }
-    const k = {1: 'person', 2: 'project', 3: 'place'}[key];
-    if (k) retype(k);
+    const k = {1: 'person', 2: 'project', 3: 'place', 4: 'thing'}[key];
+    if (k === 'thing') askCategory();
+    else if (k) retype(k);
+    return;
+  }
+  if (triageMode === 'category') {
+    if (key === 'Escape') { triageCancel(); return; }
+    const c = CATEGORIES[Number(key) - 1];
+    if (c) retype('thing', c);
     return;
   }
   if (triageMode === 'never') {
@@ -316,12 +326,21 @@ async function triageKey(key) {
   }
 }
 
-async function retype(kind) {
+// a thing asks which kind of thing it is, one more key
+const CATEGORIES = ['music', 'game', 'show', 'book', 'event', 'other'];
+function askCategory() {
+  triageMode = 'category';
+  $('triage-kind-row').hidden = true;
+  $('triage-cat-row').hidden = false;
+}
+
+async function retype(kind, category = '') {
   triageMode = null;
   $('triage-kind-row').hidden = true;
+  $('triage-cat-row').hidden = true;
   await triageAct(
-    n => api('/api/entities/retype', {name: n, new_type: kind, new_name: ''}),
-    r => `${r.to || queue[qpos]} is now a ${kind}.`,
+    n => api('/api/entities/retype', {name: n, new_type: kind, new_name: '', category}),
+    r => `${r.retyped} is now a ${category ? `${category} ` : ''}${kind}.`,
   );
 }
 
@@ -329,6 +348,7 @@ export function init() {
   $('triage-apply').onclick = triageApply;
   $('triage-cancel').onclick = triageCancel;
   $('triage-kind-cancel').onclick = triageCancel;
+  $('triage-cat-cancel').onclick = triageCancel;
   $('triage-never-yes').onclick = neverTrack;
   $('triage-never-cancel').onclick = triageCancel;
   $('triage-input').addEventListener('input', suggest);
@@ -338,15 +358,17 @@ export function init() {
     e.stopPropagation();
   });
 
-  document.querySelectorAll('#triage-kind-row button[data-kind]').forEach(b => b.onclick = () => retype(b.dataset.kind));
+  document.querySelectorAll('#triage-kind-row button[data-kind]').forEach(b => b.onclick = () =>
+    b.dataset.kind === 'thing' ? askCategory() : retype(b.dataset.kind));
+  document.querySelectorAll('#triage-cat-row button[data-cat]').forEach(b => b.onclick = () => retype('thing', b.dataset.cat));
 
   document.addEventListener('keydown', e => {
     if (state.activeTab !== 'triage') return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    const keys = ['m', 'c', 'r', 'a', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', '1', '2', '3'];
+    const keys = ['m', 'c', 'r', 'a', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', '1', '2', '3', '4', '5', '6'];
     if (triageMode === 'never') keys.push('Enter', 'Escape');
-    else if (['Enter', 'Escape'].includes(e.key) && triageMode !== 'kind') return;
+    else if (['Enter', 'Escape'].includes(e.key) && triageMode !== 'kind' && triageMode !== 'category') return;
     if (keys.includes(e.key)) e.preventDefault();
     triageKey(e.key);
   });

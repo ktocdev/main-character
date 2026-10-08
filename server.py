@@ -162,6 +162,25 @@ class RetypeIn(BaseModel):
     name: str
     new_type: str
     new_name: str = ""
+    category: str = ""  # into a thing: music, game, show, book, event, other
+
+
+class CategoryIn(BaseModel):
+    name: str
+    category: str
+
+
+class ThingIn(BaseModel):
+    name: str
+    category: str
+
+
+class ThingsIn(BaseModel):
+    items: list[ThingIn]
+
+
+class TermsIn(BaseModel):
+    terms: list[str]
 
 
 class AliasIn(BaseModel):
@@ -478,7 +497,7 @@ def reset_lookup():
 CLOSE_STEPS = [
     ("seed", "writing your life summary candidate"),
     ("categories", "tagging the entry"),
-    ("entities", "extracting people, places and projects"),
+    ("entities", "extracting people, places, projects and things"),
     ("summaries", "refreshing weekly arcs and summaries"),
     ("dreams", "scanning for dreams"),
 ]
@@ -1890,17 +1909,80 @@ def retype_entity(body: RetypeIn):
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
     if body.new_type not in entities.KINDS:
         return JSONResponse({"error": f"kind must be one of {entities.KINDS}"}, status_code=400)
+    if body.category and body.category not in entities.THING_CATEGORIES:
+        return JSONResponse({"error": f"category must be one of {entities.THING_CATEGORIES}"},
+                            status_code=400)
 
     before = _snapshot()
     curation = entities.load_curation()
-    curation["retype"][entities.index_key(index, name)] = {
-        "type": body.new_type,
-        "name": body.new_name.strip() or entities.base_name(index, name),
-    }
+    entities.retype_rule(curation, entities.index_key(index, name), body.new_type,
+                         body.new_name.strip() or entities.base_name(index, name),
+                         body.category)
+    if curation == before:
+        return {"ok": True, "retyped": name, "to": body.new_type}
     entities.save_curation(curation)
     _record_curation(f"retype {name} to {body.new_type}", before)
     _rebuild()
     return {"ok": True, "retyped": name, "to": body.new_type}
+
+
+@app.post("/api/entities/category")
+def set_category(body: CategoryIn):
+    """A thing's category (music, game, show, book, event, other)."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    if index[name]["type"] != "thing":
+        return JSONResponse({"error": "only things have a category"}, status_code=400)
+    if body.category not in entities.THING_CATEGORIES:
+        return JSONResponse({"error": f"category must be one of {entities.THING_CATEGORIES}"},
+                            status_code=400)
+    before = _snapshot()
+    curation = entities.load_curation()
+    curation["category"][entities.index_key(index, name)] = body.category
+    if curation == before:
+        return {"ok": True, "name": name, "category": body.category}
+    entities.save_curation(curation)
+    _record_curation(f"{name} is a {body.category}", before)
+    _rebuild()
+    return {"ok": True, "name": name, "category": body.category}
+
+
+@app.post("/api/entities/suggest-things")
+def suggest_things():
+    """Claude's guesses at which projects and places are really things."""
+    try:
+        return {"things": entities.suggest_things()}
+    except caps.CapExceeded as exc:
+        return _refused(exc)
+
+
+@app.post("/api/entities/retype-things")
+def retype_things(body: ThingsIn):
+    """The things review: retype every accepted name, each with its
+    category. One curation change, so one undo puts them all back."""
+    index = STATE["entity_index"]
+    for item in body.items:
+        if item.category not in entities.THING_CATEGORIES:
+            return JSONResponse({"error": f"category must be one of {entities.THING_CATEGORIES}"},
+                                status_code=400)
+    found = []
+    for item in body.items:
+        name = companion.resolve_entity(index, item.name)
+        if name:
+            found.append((name, item.category))
+    if not found:
+        return JSONResponse({"error": "none of those were found"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    for name, category in found:
+        entities.retype_rule(curation, entities.index_key(index, name), "thing",
+                             entities.base_name(index, name), category)
+    entities.save_curation(curation)
+    _record_curation(f"{len(found)} retyped to things", before)
+    _rebuild()
+    return {"ok": True, "retyped": [n for n, _ in found]}
 
 
 @app.post("/api/entities/rename")
@@ -2703,6 +2785,71 @@ def generic_candidates():
                     "first": obs[0]["text"] if obs else ""})
     out.sort(key=lambda c: (c["kind"], -c["mentions"], c["name"].lower()))
     return {"candidates": out}
+
+
+# ---- targeted re-extract ----
+# A prompt change only reaches entries extracted after it; this re-runs
+# extraction for just the entries that mention a term. Paid, so the page
+# shows the preview (entries, estimate, hand-edited files) first.
+_REEXTRACT = {"running": False, "done": 0, "total": 0, "current": "",
+              "result": None, "error": ""}
+_REEXTRACT_LOCK = threading.Lock()
+
+
+def _clean_terms(terms: list[str]) -> list[str]:
+    return [t.strip() for t in terms if t.strip()][:10]
+
+
+@app.post("/api/entities/reextract/preview")
+def reextract_preview(body: TermsIn):
+    terms = _clean_terms(body.terms)
+    if not terms:
+        return JSONResponse({"error": "type a word or name to look for"}, status_code=400)
+    return {"terms": terms, **entities.reextract_preview(terms)}
+
+
+def _run_reextract(terms: list[str]):
+    def progress(i, total, conv):
+        _REEXTRACT.update(done=i, total=total, current=f"{conv['date']} {conv['title']}")
+    try:
+        result = entities.reextract(terms, progress=progress)
+        _rebuild()
+        _REEXTRACT.update(result=result, done=_REEXTRACT["total"], current="")
+    except caps.CapExceeded as exc:
+        _rebuild()  # keep what was re-extracted before the cap
+        _REEXTRACT.update(error=exc.detail, current="")
+    except Exception as exc:
+        _REEXTRACT.update(error=str(exc), current="")
+    finally:
+        _REEXTRACT["running"] = False
+
+
+@app.post("/api/entities/reextract")
+def reextract(body: TermsIn, background_tasks: BackgroundTasks):
+    if config.MOCK_MODE:
+        return JSONResponse({"error": "re-extracting needs your own journal and key, not the demo"},
+                            status_code=400)
+    terms = _clean_terms(body.terms)
+    if not terms:
+        return JSONResponse({"error": "type a word or name to look for"}, status_code=400)
+    if _CLOSE["active"]:
+        return JSONResponse({"error": "a chapter is closing; try again when it's done"},
+                            status_code=409)
+    try:
+        caps.check()
+    except caps.CapExceeded as exc:
+        return _refused(exc)
+    with _REEXTRACT_LOCK:
+        if _REEXTRACT["running"]:
+            return JSONResponse({"error": "a re-extract is already running"}, status_code=409)
+        _REEXTRACT.update(running=True, done=0, total=0, current="", result=None, error="")
+    _tracked(background_tasks, _run_reextract, terms)
+    return {"ok": True, "terms": terms}
+
+
+@app.get("/api/entities/reextract/status")
+def reextract_status():
+    return _REEXTRACT
 
 
 @app.get("/api/entities/deleted")

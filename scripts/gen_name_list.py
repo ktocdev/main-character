@@ -81,7 +81,7 @@ def main():
         return {n.strip() for n in out if n and n.strip()}
 
     people = {n for n in names_of({"person"}) if n[:1].isupper()}
-    not_people = names_of({"place", "project"})
+    not_people = names_of({"place", "project", "thing"})
 
     carried = set()
     if OUT.exists():
