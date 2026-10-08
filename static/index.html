@@ -328,6 +328,10 @@
             <button class="text" id="triage-mixed-cancel">cancel <span class="hint">esc</span></button>
           </span>
         </div>
+        <div id="triage-sort-row" hidden>
+          <span id="triage-sort-q"></span>
+          <span class="btns" id="triage-sort-btns"></span>
+        </div>
         <div id="triage-never-row" hidden>
           <span id="triage-never-q"></span>
           <span class="btns">
@@ -518,6 +522,7 @@
           <span class="k">c</span><span class="d"><span class="n">correct</span> <span class="t">— typo fix; old name is not kept as alias (Dana → Dane)</span></span>
           <span class="k">r</span><span class="d"><span class="n">rename</span> <span class="t">— fix spelling or case of this entity's own name</span></span>
           <span class="k">a</span><span class="d"><span class="n">alias</span> <span class="t">— add another name this entity goes by (matchable by both)</span></span>
+          <span class="k">1–9, n</span><span class="d"><span class="n">sort</span> <span class="t">— once a name is split (Dev · work, Dev · friend), a new mention that doesn't say which waits in "Dev · ?". Its card shows one entry at a time: a number says which Dev, n names someone new.</span></span>
           <span class="k">p</span><span class="d"><span class="n">part of</span> <span class="t">— a piece of something bigger (Tabs of a project, a beach in a town). It stays its own entity, shown as Parent / Name, so an unrelated Tabs isn't folded in the way a merge would. The merge field offers it too.</span></span>
           <span class="k">t then 1–4</span><span class="d"><span class="n">retype</span> <span class="t">— to person / project / place / thing. A thing then asks which kind: 1 music, 2 game, 3 show, 4 book, 5 event, 6 other</span></span>
           <span class="k">x</span><span class="d"><span class="n">retire</span> <span class="t">— someone from a chapter that's over. Out of the list and triage; the companion still knows them when you name them, but won't bring them up. Nothing is deleted; u undoes.</span></span>
@@ -540,7 +545,9 @@
         two different bars, use the observation tools. The <em>maybe two</em> chip lists people whose entries
         disagree about who they are (coworker in some, friend in others); each date there says what that entry called them.
         Something that's a piece of something bigger (a component of a project, a beach in a town) is a <em>part</em>, not a merge:
-        <em>part of</em> beside <em>merge into</em>, or <b>p</b> in triage. <em>parts review</em> goes through old merges once. <em>move</em> reassigns a single memory to the right
+        <em>part of</em> beside <em>merge into</em>, or <b>p</b> in triage. <em>parts review</em> goes through old merges once.
+        Two people with one name: <em>split…</em> on the person, pick one person's observations, and name each
+        (Dev · work, Dev · friend). New entries then pick the right one, and ones that don't say wait in triage to be sorted. <em>move</em> reassigns a single memory to the right
         entity (type <code>person:Sam (work)</code> to create a new one), <em>edit</em> fixes wrong facts, and
         <em>×</em> removes them. These are the slow, careful fixes. Save them for after the fast passes
         so you're not context-switching.</p></div>
@@ -712,6 +719,7 @@
               <input type="text" id="merge-target" class="input-xs" list="entity-names" placeholder="target name…">
               <button class="quiet" id="merge-btn" title="combine, keeping this name as an alias">merge into</button>
               <button class="quiet" id="correct-btn" title="fix a typo without keeping this name as an alias">correct to</button>
+              <button class="quiet" id="split-btn" title="two people under one name: pick one person's observations and name each">split…</button>
               <button class="quiet" id="part-btn" title="its own entity, shown as Target / Name. Unlike a merge, an unrelated one with the same name stays separate">part of</button>
               <button class="quiet" id="rename-btn" title="change spelling/case of this entity's name">rename</button>
               <select id="retype-kind" class="quiet-select" title="change the kind of this entity">

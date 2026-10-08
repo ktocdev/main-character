@@ -23,6 +23,25 @@ const KINDS = ['person', 'project', 'place', 'thing'];
 const PLURAL = {person: 'people', project: 'projects', place: 'places', thing: 'things'};
 const CATEGORIES = ['music', 'game', 'show', 'book', 'event', 'other'];
 
+// "Dev · work": the name reads first, the qualifier muted. Plain names
+// stay plain text.
+export function setName(el, name, info) {
+  el.textContent = '';
+  const q = info?.variant_of ? name.slice(info.variant_of.length) : '';
+  if (!q) { el.textContent = name; return; }
+  const muted = document.createElement('span');
+  muted.className = 'q';
+  muted.textContent = q;
+  el.append(info.variant_of, muted);
+}
+// the other halves of a split name, for "move to"
+export function variantsOf(head) {
+  return Object.entries(state.entities)
+    .filter(([, i]) => i.variant_of === head && !i.unsorted)
+    .sort((a, b) => b[1].mentions - a[1].mentions)
+    .map(([, i]) => i.qualifier);
+}
+
 // a mix-up flag as words: "seen as coworker (9) and friend (4)"
 export function mixupText(flag) {
   const parts = flag.map(([label, n]) => `${label} (${n})`);
@@ -32,6 +51,8 @@ let sortAlpha = false;
 let selectMode = false;         // checkboxes for batch add-to-group
 const picked = new Set();       // entity names checked for the next batch
 const openParts = new Set();    // parents whose parts are shown in the list
+let splitFor = null;            // the person whose observations are being split
+const splitPicked = new Set();  // "file|group|ent|obs" of the picked ones
 
 function updateBatchCount() {
   $('batch-count').textContent = `${picked.size} selected`;
@@ -127,7 +148,8 @@ export function renderEntityList() {
       b.className = 'list-item' + (name === state.selected ? ' sel' : '');
       b.innerHTML = '<span class="li-title"></span><span class="li-meta"></span>';
       // nested under its parent, a part reads by its own name
-      b.querySelector('.li-title').textContent = nestInfo?.part ? (state.entities[name].base || name) : name;
+      if (nestInfo?.part) b.querySelector('.li-title').textContent = state.entities[name].base || name;
+      else setName(b.querySelector('.li-title'), name, state.entities[name]);
       b.querySelector('.li-meta').textContent = mentions;
       // a ring for maybe-two-people, then the unreviewed dot
       const dots = [];
@@ -581,7 +603,8 @@ export async function showEntity(name) {
   const info = state.entities[r.name] || {};
   showDetail('entity');
   notice('');
-  $('entity-name').textContent = r.name;
+  if (splitFor !== r.name) { splitFor = info.unsorted ? r.name : null; splitPicked.clear(); }
+  setName($('entity-name'), r.name, info);
   $('entity-meta').textContent = `${r.type}${info.category ? ` · ${info.category}` : ''} · ${r.observations.length} observation${r.observations.length === 1 ? '' : 's'}`
     + (info.mentions ? ` · ${info.mentions} mention${info.mentions === 1 ? '' : 's'}` : '');
   $('merge-target').value = '';
@@ -595,7 +618,7 @@ export async function showEntity(name) {
   chips.innerHTML = '';
   const aliasEd = $('alias-chips');
   aliasEd.innerHTML = '';
-  for (const a of (info.aliases || [])) {
+  for (const a of (info.aliases || []).filter(a => a !== info.variant_of)) {
     const c = document.createElement('span');
     c.className = 'tag';
     c.innerHTML = '<span class="k">aka</span><span class="v"></span>';
@@ -617,7 +640,13 @@ export async function showEntity(name) {
   const mx = $('entity-mixup');
   mx.innerHTML = '';
   if (info.mixup) {
-    mx.append(`possibly two people: ${mixupText(info.mixup)}. Move one person's observations to a new name below, or `);
+    mx.append(`possibly two people: ${mixupText(info.mixup)}. `);
+    const sp = document.createElement('button');
+    sp.className = 'link';
+    sp.textContent = 'split them';
+    sp.title = 'pick one person\'s observations and give each person a name';
+    sp.onclick = () => { splitFor = r.name; splitPicked.clear(); showEntity(r.name); };
+    mx.append(sp, ', or ');
     const one = document.createElement('button');
     one.className = 'link';
     one.textContent = "it's one person";
@@ -652,6 +681,8 @@ export async function showEntity(name) {
     chips.appendChild(c);
   }
   $('part-btn').hidden = r.type === 'person';
+  $('split-btn').hidden = r.type !== 'person';
+  $('split-btn').textContent = info.unsorted ? 'sort…' : 'split…';
   $('part-row').hidden = !info.part_of;
   $('part-chip').innerHTML = '';
   if (info.part_of) {
@@ -686,21 +717,46 @@ export async function showEntity(name) {
   // observations grouped by date, each editable
   const docEl = $('entity-doc');
   docEl.innerHTML = '<div class="rule eyebrow">observations</div>';
-  // each date says what that entry called it, as in triage ("as coworker"),
-  // which is how two people under one name tell apart
+  // splitting: a bar on top, a checkbox per observation, "all" per entry
+  const splitting = splitFor === r.name && r.type === 'person';
+  const pickKey = o => `${o.file}|${o.group}|${o.ent_index}|${o.obs_index}`;
+  if (splitting) docEl.appendChild(splitBar(r, info));
+  // each entry's mention gets a date line saying what that entry called
+  // it ("as coworker"), which is how two people under one name tell apart
   let lastKey = null;
   for (const o of r.observations) {
-    const key = `${o.date}|${o.attr || ''}|${o.extracted_name}`;
+    const key = `${o.file}|${o.group}|${o.ent_index}`;
     if (key !== lastKey) {
       lastKey = key;
       const d = document.createElement('div');
       d.className = 'obs-date eyebrow';
-      d.textContent = fmtDate(o.date) + (o.extracted_name !== (info.base || r.name) ? ` · as "${o.extracted_name}"` : '')
+      d.textContent = fmtDate(o.date) + (o.extracted_name !== (info.base || info.variant_of || r.name) ? ` · as "${o.extracted_name}"` : '')
         + (r.type === 'person' && o.attr ? ` · as ${o.attr}` : '');
+      if (splitting) {
+        const all = document.createElement('button');
+        all.className = 'link pick-all';
+        all.textContent = 'all from this entry';
+        const mine = r.observations.filter(x => `${x.file}|${x.group}|${x.ent_index}` === key);
+        all.onclick = () => {
+          const on = !mine.every(x => splitPicked.has(pickKey(x)));
+          for (const x of mine) on ? splitPicked.add(pickKey(x)) : splitPicked.delete(pickKey(x));
+          showEntity(r.name);
+        };
+        d.append(' ', all);
+      }
       docEl.appendChild(d);
     }
     const row = document.createElement('div');
     row.className = 'obs';
+    if (splitting) {
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'pick';
+      cb.checked = splitPicked.has(pickKey(o));
+      cb.setAttribute('aria-label', 'pick this observation');
+      cb.onchange = () => { cb.checked ? splitPicked.add(pickKey(o)) : splitPicked.delete(pickKey(o)); refreshSplitBar(); };
+      row.appendChild(cb);
+    }
     const t = document.createElement('span');
     t.className = 't';
     t.textContent = o.text;
@@ -740,6 +796,102 @@ export async function showEntity(name) {
     e.textContent = 'nothing noted yet.';
     docEl.appendChild(e);
   }
+}
+
+// The split bar: where the picked observations go, and -- the first time
+// a name is split -- what the rest are called, and which one keeps each
+// group. Unsorted mentions are the same: pick, then say who.
+let refreshSplitBar = () => {};
+function splitBar(r, info) {
+  const bar = document.createElement('div');
+  bar.className = 'split-bar';
+  const head = info.variant_of || info.base || r.name;
+  const first = !info.variant_of;
+  const others = variantsOf(head).filter(q => q !== info.qualifier);
+  bar.innerHTML = '<p class="lead"></p><div class="ent-actions to"><span class="lbl"></span></div>';
+  bar.querySelector('.lead').textContent = info.unsorted
+    ? `These mentions of ${head} didn't say which ${head}. Pick the ones about the same person and say who.`
+    : first
+      ? `Pick one person's observations ("all from this entry" takes a whole entry), then name both people. Each name is ${head} plus a word that tells them apart, like ${head} · work.`
+      : `Pick observations that belong to another ${head}.`;
+  const to = bar.querySelector('.to');
+  const sel = document.createElement('select');
+  sel.className = 'quiet-select sm';
+  sel.setAttribute('aria-label', 'move them to');
+  for (const q of others) sel.add(new Option(`${head} · ${q}`, q));
+  sel.add(new Option(`${head} · new…`, ''));
+  const qIn = document.createElement('input');
+  qIn.className = 'input-xs';
+  qIn.placeholder = first ? 'e.g. work' : 'a new word…';
+  qIn.setAttribute('aria-label', 'qualifier for the picked ones');
+  const showNew = () => { qIn.hidden = !!sel.value; };
+  sel.onchange = showNew;
+  if (others.length) to.append(sel);
+  to.append(qIn);
+  showNew();
+  let restIn = null;
+  const groupSels = {};
+  if (first) {
+    const rest = document.createElement('div');
+    rest.className = 'ent-actions';
+    rest.innerHTML = '<span class="lbl"></span>';
+    rest.querySelector('.lbl').textContent = `and the rest are ${head} ·`;
+    restIn = document.createElement('input');
+    restIn.className = 'input-xs';
+    restIn.placeholder = 'e.g. friend';
+    restIn.setAttribute('aria-label', 'qualifier for the rest');
+    rest.append(restIn);
+    bar.append(rest);
+    for (const g of (info.groups || [])) {
+      const row = document.createElement('div');
+      row.className = 'ent-actions';
+      row.innerHTML = '<span class="lbl"></span>';
+      row.querySelector('.lbl').textContent = `${g} stays with`;
+      const gs = document.createElement('select');
+      gs.className = 'quiet-select sm';
+      gs.add(new Option('the rest', 'rest'));
+      gs.add(new Option('the picked ones', 'picked'));
+      row.append(gs);
+      bar.append(row);
+      groupSels[g] = gs;
+    }
+  }
+  const btns = document.createElement('div');
+  btns.className = 'ent-actions';
+  const go = document.createElement('button');
+  go.className = 'filled sm';
+  const cancel = document.createElement('button');
+  cancel.className = 'text';
+  cancel.textContent = info.unsorted ? 'close' : 'cancel';
+  cancel.onclick = () => { splitFor = null; splitPicked.clear(); showEntity(r.name); };
+  btns.append(go, cancel);
+  bar.append(btns);
+  refreshSplitBar = () => {
+    const n = splitPicked.size;
+    to.querySelector('.lbl').textContent = `move ${n} picked to`;
+    go.textContent = info.unsorted ? `sort ${n}` : first ? 'split' : `move ${n}`;
+    go.disabled = !n;
+  };
+  refreshSplitBar();
+  go.onclick = async () => {
+    const qualifier = (sel.value && others.length ? sel.value : qIn.value).trim();
+    if (!qualifier) { qIn.focus(); return; }
+    if (restIn && !restIn.value.trim()) { restIn.focus(); return; }
+    const picks = r.observations.filter(o => splitPicked.has(`${o.file}|${o.group}|${o.ent_index}|${o.obs_index}`))
+      .map(o => ({file: o.file, group: o.group, ent_index: o.ent_index, obs_index: o.obs_index}));
+    const groups = Object.fromEntries(Object.entries(groupSels).map(([g, s]) =>
+      [g, s.value === 'picked' ? qualifier : restIn.value.trim()]));
+    const res = await api('/api/entities/split', {name: r.name, picks, qualifier, rest: restIn ? restIn.value.trim() : '', groups});
+    if (!res) return;
+    splitFor = null;
+    splitPicked.clear();
+    await loadEntities();
+    // stay with what's left, or go to where they went
+    const next = state.entities[r.name] ? r.name : (res.rest || res.to);
+    if (state.entities[next]) await showEntity(next); else showNone();
+    notice(`${res.did}. Undo puts it back.`);
+  };
+  return bar;
 }
 
 export async function reloadEntity(name) {
@@ -856,6 +1008,11 @@ export function init() {
   $('show-deleted').onclick = showDeleted;
   $('things-review').onclick = thingsReview;
   $('parts-review').onclick = partsReview;
+  $('split-btn').onclick = () => {
+    splitFor = splitFor === state.selected ? null : state.selected;
+    splitPicked.clear();
+    showEntity(state.selected);
+  };
   $('part-btn').onclick = async () => {
     const parent = $('merge-target').value.trim();
     if (!state.selected || !parent) { $('merge-target').focus(); return; }

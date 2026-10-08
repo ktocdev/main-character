@@ -140,6 +140,22 @@
   }
   .parts-toggle:hover { color: var(--text-default); }
   .ent-row.part .list-item { padding-left: 2.2rem; }
+  /* "Dev · work": the qualifier reads after the name, muted */
+  .q { color: var(--text-muted); font-weight: inherit; }
+  /* splitting a name: the bar, a checkbox per observation */
+  .split-bar {
+    border: 1px solid var(--border-accent); border-radius: var(--radius-lg); padding: .9rem 1.1rem;
+    margin: 1rem 0 .4rem; display: flex; flex-direction: column; gap: .5rem; font: .85rem var(--font-ui);
+  }
+  .split-bar .lead { color: var(--text-default); text-wrap: pretty; }
+  .split-bar .ent-actions { align-items: center; }
+  .split-bar .lbl { color: var(--text-muted); width: auto; }
+  .obs input.pick { flex-shrink: 0; margin-top: .3rem; }
+  .obs-date .pick-all {
+    border: 0; background: transparent; padding: 0 0 0 .4rem; cursor: pointer;
+    font: .72rem var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--text-muted);
+    text-decoration: underline; text-underline-offset: .2em;
+  }
 
   /* observations: a section rule, date eyebrows, one serif line each */
   #entity-doc { margin-top: 2rem; }
