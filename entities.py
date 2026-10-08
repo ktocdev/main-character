@@ -326,6 +326,11 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
 #                   overriding extraction's; set when retyping into a thing
 #   "not_mixed":    [keys]   checked and found to be one person: the mix-up
 #                   flag stays off for good
+#   "part_of":      {key: "kind:Parent"}  its own entity, shown as
+#                   "Parent / Name" -- Tabs is part of Coda, not merged
+#                   into it, so an unrelated "Tabs" isn't folded in by a rule
+#   "hide_path":    [keys]   a part already specific on its own ("Coda
+#                   theme switcher") keeps its plain name
 #   "drop_mentions": {key: [entry cache keys]}  delete just these mentions;
 #                   the name stays free for new entries. Keyed by entry, not
 #                   raw-file index, so it survives raw edits and --force.
@@ -341,6 +346,8 @@ _CURATION_DEFAULTS = {
     "category": {},        # thing key -> category, overriding extraction's
     "not_duplicates": [],  # dismissed duplicate-pair keys ("kind:a|b")
     "not_mixed": [],       # entity keys confirmed as one, so never flagged
+    "part_of": {},         # part key -> "kind:Parent" (Tabs -> Coda)
+    "hide_path": [],       # part keys shown by their own name, not Parent / Name
 }
 
 
@@ -450,11 +457,13 @@ def is_generic(kind: str, name: str) -> bool:
     return False
 
 
-def generic_flag(curation: dict, kind: str, name: str, groups: list[str]) -> bool:
+def generic_flag(curation: dict, kind: str, name: str, groups: list[str],
+                 part_of: str = "") -> bool:
     """is_generic, except for what you clearly treat as one particular
-    thing: a group member, or a name you renamed by hand ("the gym" that's
-    *your* gym can be put in a group to keep it)."""
-    if groups or not is_generic(kind, name):
+    thing: a group member, a part of something ("office" in your
+    apartment), or a name you renamed by hand ("the gym" that's *your* gym
+    can be put in a group to keep it)."""
+    if groups or part_of or not is_generic(kind, name):
         return False
     renamed_to = {v.lower() for v in curation["rename"].values()}
     return name.lower() not in renamed_to
@@ -465,7 +474,8 @@ def mark_generic(index: dict) -> dict:
     before the detector existed, or before a detector change."""
     curation = load_curation()
     for name, info in index.items():
-        if generic_flag(curation, info["type"], info.get("base", name), info.get("groups", [])):
+        if generic_flag(curation, info["type"], info.get("base", name), info.get("groups", []),
+                        info.get("part_of", "")):
             info["generic"] = True
         else:
             info.pop("generic", None)
@@ -756,6 +766,39 @@ def _parse_target(value: str, default_kind: str) -> tuple[str, str]:
     return default_kind, value.strip()
 
 
+def resolve_ref(curation: dict, ref: str, default_kind: str):
+    """A stored "kind:Name" reference, followed through renames and merges
+    to the entity it now means: (kind, name), or None when it's gone."""
+    kind, name = _parse_target(ref, default_kind)
+    resolved = apply_curation(curation, kind, name)
+    return (resolved[0], resolved[1]) if resolved else None
+
+
+def part_would_cycle(curation: dict, child_key: str, parent_kind: str, parent_name: str) -> bool:
+    """Would making child_key a part of the parent loop back to itself?"""
+    current, seen = (parent_kind, parent_name), set()
+    while current:
+        key = curation_key(*current)
+        if key == child_key or key in seen:
+            return True
+        seen.add(key)
+        ref = curation["part_of"].get(key)
+        current = resolve_ref(curation, ref, current[0]) if ref else None
+    return False
+
+
+def move_entity_rules(curation: dict, key: str, new_key: str):
+    """An entity's own rules follow it to a new key (retyped, or its path
+    name split off)."""
+    for field in ("reviewed", "retired", "not_mixed", "hide_path"):
+        if any(k.lower() == key for k in curation[field]):
+            curation[field] = [k for k in curation[field] if k.lower() != key] + [new_key]
+    for field in ("alias_add", "alias_remove", "rename", "part_of"):
+        if key in curation[field] and new_key not in curation[field]:
+            curation[field][new_key] = curation[field].pop(key)
+    curation["category"].pop(key, None)
+
+
 def _dropped(curation: dict, key: str, entry: str) -> bool:
     return bool(entry) and entry in curation["drop_mentions"].get(key, ())
 
@@ -878,6 +921,22 @@ def build_entity_docs(records: list[dict]) -> dict:
     for ent in merged.values():
         ent["aliases"] = {a for a in ent["aliases"] if a.lower() != ent["name"].lower()}
 
+    # Parts: its own entity, shown under its parent's name ("Coda /
+    # Tabs"). One level, the immediate parent. People are never parts or
+    # parents; grouping people is what groups are for.
+    hidden_paths = {k.lower() for k in curation["hide_path"]}
+    for (kind, lname), ent in merged.items():
+        ent["parent"] = None
+        ref = curation["part_of"].get(f"{kind}:{lname}")
+        parent = resolve_ref(curation, ref, kind) if ref and kind != "person" else None
+        if parent and parent[0] != "person":
+            pkey = (parent[0], parent[1].lower())
+            if pkey in merged and pkey != (kind, lname):
+                ent["parent"] = merged[pkey]
+        ent["display"] = (f"{ent['parent']['name']} / {ent['name']}"
+                          if ent["parent"] and f"{kind}:{lname}" not in hidden_paths
+                          else ent["name"])
+
     # The index is keyed by display name, so two kinds sharing a name
     # ("karaoke" the place and the project) would overwrite each other and
     # one would vanish. The one with the most mentions keeps the plain name;
@@ -885,12 +944,15 @@ def build_entity_docs(records: list[dict]) -> dict:
     # e.g. to merge one way. Rules still key on the plain name (`base`).
     by_name: dict[str, list[dict]] = {}
     for ent in merged.values():
-        ent["display"] = ent["name"]
-        by_name.setdefault(ent["name"].lower(), []).append(ent)
+        by_name.setdefault(ent["display"].lower(), []).append(ent)
     for same in by_name.values():
         same.sort(key=lambda e: (-len(e["timeline"]), KINDS.index(e["kind"])))
         for ent in same[1:]:
-            ent["display"] = f"{ent['name']} · {ent['kind']}"
+            ent["display"] = f"{ent['display']} · {ent['kind']}"
+    parts: dict[int, list[str]] = defaultdict(list)
+    for ent in merged.values():
+        if ent["parent"]:
+            parts[id(ent["parent"])].append(ent["display"])
 
     # group memberships, resolved through names + aliases
     groups = load_groups()
@@ -945,6 +1007,11 @@ def build_entity_docs(records: list[dict]) -> dict:
         ]
         if ent["aliases"]:
             lines.append(f"aliases: {', '.join(sorted(ent['aliases']))}")
+        if ent["parent"]:
+            lines.append(f"part of: {ent['parent']['display']}")
+        kids = sorted(parts.get(id(ent), []), key=str.lower)
+        if kids:
+            lines.append(f"parts: {', '.join(kids)}")
         gnames = sorted(entity_groups.get(ent["display"], []), key=str.lower)
         if gnames:
             lines.append(
@@ -983,12 +1050,17 @@ def build_entity_docs(records: list[dict]) -> dict:
         }
         if ent["display"] != ent["name"]:
             index[ent["display"]]["base"] = ent["name"]
-        if generic_flag(curation, kind, ent["name"], gnames):
+        if generic_flag(curation, kind, ent["name"], gnames,
+                        ent["parent"]["display"] if ent["parent"] else ""):
             index[ent["display"]]["generic"] = True
         if retired_by:
             index[ent["display"]]["retired"] = retired_by
         if kind == "thing":
             index[ent["display"]]["category"] = ent["attr"]
+        if ent["parent"]:
+            index[ent["display"]]["part_of"] = ent["parent"]["display"]
+        if kids:
+            index[ent["display"]]["parts"] = kids
         if ent["attrs"]:
             index[ent["display"]]["attrs"] = dict(ent["attrs"].most_common())
         if curation_key(kind, ent["name"]) not in not_mixed:
@@ -1517,15 +1589,182 @@ def retype_rule(curation: dict, key: str, new_kind: str, new_name: str, category
         curation["retype"].pop(back)
     else:
         curation["retype"][key] = {"type": new_kind, "name": new_name}
-    for field in ("reviewed", "retired"):
-        if any(k.lower() == key for k in curation[field]):
-            curation[field] = [k for k in curation[field] if k.lower() != key] + [new_key]
-    for field in ("alias_add", "alias_remove", "rename"):
-        if key in curation[field] and new_key not in curation[field]:
-            curation[field][new_key] = curation[field].pop(key)
-    curation["category"].pop(key, None)
+    move_entity_rules(curation, key, new_key)
+    if new_kind == "person":
+        curation["part_of"].pop(new_key, None)  # people are never parts
     if new_kind == "thing" and category:
         curation["category"][new_key] = category
+
+
+# ---------------------------------------------------------------------------
+# PARTS REVIEW (one-time: which merges were really parts)
+# ---------------------------------------------------------------------------
+# Before part-of links, a piece of something was merged into it ("tabs" ->
+# Coda) or given a slash name ("Harbor Town / Beach"). A merge is a
+# global name rule, so every future "the beach" lands in Harbor Town. The
+# review lists every merge rule by target, and every "Parent / Name" whose
+# parent exists, so each can become a real part. Nothing converts
+# automatically.
+
+def _slash_split(name: str):
+    """("Harbor Town", "Beach") for a spaced slash name; "7/11" isn't one."""
+    head, sep, tail = name.partition(" / ")
+    return (head.strip(), tail.strip()) if sep and head.strip() and tail.strip() else None
+
+
+def parts_review(index: dict) -> dict:
+    """{slash: [...], targets: [...]} for the review screen."""
+    curation = load_curation()
+    lookup = {n.lower(): n for n in index}
+    slash = []
+    for name, info in index.items():
+        split = _slash_split(info.get("base", name))
+        if not split or info["type"] == "person" or info.get("part_of"):
+            continue
+        parent = lookup.get(split[0].lower())
+        if not parent or index[parent]["type"] == "person":
+            continue
+        joins = lookup.get(split[1].lower())
+        slash.append({"name": name, "parent": parent, "part": split[1],
+                      "mentions": info["mentions"],
+                      "joins": joins if joins and index[joins]["type"] == info["type"] else ""})
+
+    # spelling and a first observation for each merged name, from the raw cache
+    said: dict[str, tuple[str, str, int]] = {}
+    for _, kind, name, ent in _raw_mentions():
+        key = curation_key(kind, name)
+        if key in curation["merge"]:
+            spelled, obs, n = said.get(key, (name, "", 0))
+            first = (ent.get("observations") or [""])[0]
+            said[key] = (spelled, obs or first, n + 1)
+    by_target: dict[str, dict] = {}
+    for key, value in curation["merge"].items():
+        kind = key.partition(":")[0]
+        if kind == "person":
+            continue
+        resolved = resolve_ref(curation, value, kind)
+        if not resolved:
+            continue
+        tkind, tname = resolved
+        target = next((n for n, i in index.items() if i["type"] == tkind
+                       and i.get("base", n).lower() == tname.lower()), None)
+        if not target:
+            continue
+        spelled, obs, n = said.get(key, (key.partition(":")[2], "", 0))
+        t = by_target.setdefault(target, {"target": target, "kind": tkind,
+                                          "mentions": index[target]["mentions"], "sources": []})
+        t["sources"].append({"key": key, "name": spelled, "mentions": n, "said": obs[:160],
+                             "generic": is_generic(kind, spelled)})
+    targets = sorted(by_target.values(), key=lambda t: (-len(t["sources"]), t["target"].lower()))
+    for t in targets:
+        t["sources"].sort(key=lambda src: (-src["mentions"], src["name"].lower()))
+    return {"slash": sorted(slash, key=lambda x: x["name"].lower()), "targets": targets}
+
+
+PARTS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "parts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string"},
+                    "reason": {"type": "string"},
+                },
+                "required": ["key", "reason"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["parts"],
+    "additionalProperties": False,
+}
+
+PARTS_PROMPT = """\
+Below are entities from one person's journal, each with the names that were \
+merged into it, as JSON. Each merged name has a key, how often it was \
+mentioned, and one thing the journal said about it.
+
+A merged name is an ALIAS when it is another name for the same thing (a \
+spelling, a nickname, a longer description of the whole). It is a PART when \
+it is a distinct piece of the target that deserves its own entry: a \
+component or feature of a project, a room of a home, a beach in a town, a \
+venue's stage.
+
+List only the parts, by key, with one short reason. Precision matters more \
+than coverage; the author reviews every suggestion.
+
+<entities>
+{listing}
+</entities>"""
+
+
+def suggest_parts(index: dict) -> list[dict]:
+    """Ask Claude which merged names are really parts of their target."""
+    review = parts_review(index)
+    targets = [t for t in review["targets"] if any(not s["generic"] for s in t["sources"])]
+    if not targets:
+        return []
+    listing = [{"target": t["target"], "kind": t["kind"],
+                "merged": [{"key": s["key"], "name": s["name"], "mentions": s["mentions"],
+                            "said": s["said"]} for s in t["sources"] if not s["generic"]]}
+               for t in targets]
+    client = get_client()
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=8000,
+        **processing_thinking_kwargs(),
+        output_config={"format": {"type": "json_schema", "schema": PARTS_SCHEMA}},
+        messages=[{"role": "user", "content": PARTS_PROMPT.format(
+            listing=json.dumps(listing, ensure_ascii=False))}],
+    )
+    if response.stop_reason == "refusal":
+        return []
+    raw = next(b.text for b in response.content if b.type == "text")
+    known = {s["key"] for t in targets for s in t["sources"] if not s["generic"]}
+    out, seen = [], set()
+    for p in json.loads(raw).get("parts", []):
+        key = p["key"].strip().lower()
+        if key in known and key not in seen:
+            seen.add(key)
+            out.append({"key": key, "reason": p["reason"]})
+    return out
+
+
+def make_part(curation: dict, key: str, parent_kind: str, parent_name: str):
+    """`key` becomes its own entity, a part of the parent: its merge rule
+    goes, a part-of link comes."""
+    curation["merge"].pop(key, None)
+    curation["correct"].pop(key, None)
+    curation["part_of"][key] = f"{parent_kind}:{parent_name}"
+
+
+def split_slash_name(curation: dict, index: dict, name: str, parent: str):
+    """"Harbor Town / Beach" becomes Beach, a part of Harbor Town. Rules that
+    pointed at the slash name point at the new one, and its own rules
+    (reviewed, aliases, ...) follow it."""
+    info = index[name]
+    kind, base = info["type"], info.get("base", name)
+    _, tail = _slash_split(base)
+    old_key, new_key = curation_key(kind, base), curation_key(kind, tail)
+    for field in ("merge", "correct"):
+        for k, v in list(curation[field].items()):
+            vkind, vname = _parse_target(v, k.partition(":")[0])
+            if vkind == kind and vname.lower() == base.lower():
+                qualified = v.partition(":")[0] in KINDS and ":" in v
+                curation[field][k] = f"{kind}:{tail}" if qualified else tail
+    # a record extracted under the slash name itself
+    curation["merge"].setdefault(old_key, tail)
+    # "living room" -> "living room" after the rewrite: not a rule any more
+    for field in ("merge", "correct"):
+        v = curation[field].get(new_key)
+        if v and _parse_target(v, kind) == (kind, tail):
+            curation[field].pop(new_key)
+    move_entity_rules(curation, old_key, new_key)
+    pinfo = index[parent]
+    curation["part_of"][new_key] = f"{pinfo['type']}:{pinfo.get('base', parent)}"
+    return tail
 
 
 # ---------------------------------------------------------------------------

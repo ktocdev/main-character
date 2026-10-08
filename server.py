@@ -225,6 +225,32 @@ class NotMixedIn(BaseModel):
     not_mixed: bool = True
 
 
+class PartOfIn(BaseModel):
+    name: str
+    parent: str = ""       # empty: no longer a part
+
+
+class HidePathIn(BaseModel):
+    name: str
+    hide: bool
+
+
+class SlashIn(BaseModel):
+    name: str
+    parent: str
+
+
+class SourceIn(BaseModel):
+    key: str               # the merge rule's key ("project:tabs")
+    target: str            # the entity it merges into, by display name
+    action: str            # "part" or "never"; anything kept as an alias isn't sent
+
+
+class PartsReviewIn(BaseModel):
+    convert: list[SlashIn] = []
+    sources: list[SourceIn] = []
+
+
 class GroupIn(BaseModel):
     name: str
     parent: str = ""
@@ -1849,6 +1875,13 @@ def _rebuild():
     STATE["entity_index"] = entities.build(quiet=True)
 
 
+def _display_for(kind: str, base: str, fallback: str) -> str:
+    """The index name an entity has after a rebuild: a part's path, or a
+    shared name's kind, comes and goes with the change just made."""
+    return next((n for n, i in STATE["entity_index"].items()
+                 if i["type"] == kind and i.get("base", n).lower() == base.lower()), fallback)
+
+
 def _snapshot():
     return json.loads(json.dumps(entities.load_curation()))
 
@@ -1998,7 +2031,8 @@ def rename_entity(body: MergeIn):
     if not name:
         return JSONResponse({"error": f"'{body.source}' not found"}, status_code=404)
     new_name = body.target.strip()
-    if not new_name or new_name == name:
+    kind = index[name]["type"]
+    if not new_name or new_name == entities.base_name(index, name):
         return JSONResponse({"error": "nothing to rename"}, status_code=400)
 
     before = _snapshot()
@@ -2007,7 +2041,7 @@ def rename_entity(body: MergeIn):
     entities.save_curation(curation)
     _record_curation(f"rename {name} to {new_name}", before)
     _rebuild()
-    return {"ok": True, "renamed": name, "to": new_name}
+    return {"ok": True, "renamed": name, "to": _display_for(kind, new_name, new_name)}
 
 
 @app.post("/api/entities/alias")
@@ -2178,6 +2212,117 @@ def not_mixed(body: NotMixedIn):
         if flag:
             info["mixup"] = flag
     return {"ok": True, "name": name, "mixup": info.get("mixup", [])}
+
+
+@app.post("/api/entities/part-of")
+def part_of(body: PartOfIn):
+    """Its own entity, shown as "Parent / Name". Not a merge: an unrelated
+    "Tabs" stays separate instead of being folded in by a name rule."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    if index[name]["type"] == "person":
+        return JSONResponse({"error": "people aren't parts of anything; put them in a group"},
+                            status_code=400)
+    key = entities.index_key(index, name)
+    before = _snapshot()
+    curation = entities.load_curation()
+    if body.parent.strip():
+        parent = companion.resolve_entity(index, body.parent)
+        if not parent:
+            return JSONResponse({"error": f"'{body.parent}' not found"}, status_code=404)
+        if parent == name:
+            return JSONResponse({"error": "can't be a part of itself"}, status_code=400)
+        pkind, pbase = index[parent]["type"], entities.base_name(index, parent)
+        if pkind == "person":
+            return JSONResponse({"error": "a person can't have parts; use a group"}, status_code=400)
+        if entities.part_would_cycle(curation, key, pkind, pbase):
+            return JSONResponse({"error": f"{parent} is already part of {name}"}, status_code=400)
+        entities.make_part(curation, key, pkind, pbase)
+        description = f"{name} part of {parent}"
+    else:
+        curation["part_of"].pop(key, None)
+        description = f"{name} no longer a part"
+    if curation == before:
+        return {"ok": True, "name": name}
+    entities.save_curation(curation)
+    _record_curation(description, before)
+    _rebuild()
+    # the display name changes with the path
+    return {"ok": True, "name": _display_for(index[name]["type"], entities.base_name(index, name), name)}
+
+
+@app.post("/api/entities/hide-path")
+def hide_path(body: HidePathIn):
+    """A part whose own name is already specific keeps it plain."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    key = entities.index_key(index, name)
+    before = _snapshot()
+    curation = entities.load_curation()
+    curation["hide_path"] = [k for k in curation["hide_path"] if k.lower() != key]
+    if body.hide:
+        curation["hide_path"].append(key)
+    if curation == before:
+        return {"ok": True, "name": name}
+    entities.save_curation(curation)
+    _record_curation(f"{'plain name' if body.hide else 'path name'} for {name}", before)
+    _rebuild()
+    return {"ok": True, "name": _display_for(index[name]["type"], entities.base_name(index, name), name)}
+
+
+@app.get("/api/entities/parts-review")
+def parts_review():
+    return entities.parts_review(STATE["entity_index"])
+
+
+@app.post("/api/entities/suggest-parts")
+def suggest_parts():
+    """Claude's guesses at which merged names are really parts."""
+    try:
+        return {"parts": entities.suggest_parts(STATE["entity_index"])}
+    except caps.CapExceeded as exc:
+        return _refused(exc)
+
+
+@app.post("/api/entities/parts-review")
+def apply_parts_review(body: PartsReviewIn):
+    """The one-time review: slash names become parts, and merged names
+    become parts or stop being tracked. One curation change, one undo."""
+    index = STATE["entity_index"]
+    before = _snapshot()
+    curation = entities.load_curation()
+    done = 0
+    converted = {}  # slash name -> its new plain name, for parts made below
+    for item in body.convert:
+        name = companion.resolve_entity(index, item.name)
+        parent = companion.resolve_entity(index, item.parent)
+        if name and parent and name != parent:
+            converted[name] = entities.split_slash_name(curation, index, name, parent)
+            done += 1
+    for src in body.sources:
+        key = src.key.strip().lower()
+        if key not in curation["merge"]:
+            continue
+        if src.action == "never":
+            _never_track(curation, key)
+            done += 1
+        elif src.action == "part":
+            target = companion.resolve_entity(index, src.target)
+            if not target or index[target]["type"] == "person":
+                continue
+            entities.make_part(curation, key, index[target]["type"],
+                               converted.get(target) or entities.base_name(index, target))
+            done += 1
+    if not done:
+        return JSONResponse({"error": "nothing to change"}, status_code=400)
+    entities.save_curation(curation)
+    _record_curation(f"parts review: {done} changes", before)
+    _rebuild()
+    return {"ok": True, "changed": done}
 
 
 @app.get("/api/groups")
@@ -2786,7 +2931,7 @@ def delete_entity(body: DeleteIn):
 
 def _never_track(curation: dict, key: str):
     """A never-track rule, plus removing merge rules that pointed the
-    generic name somewhere ("work plan -> Nebula" goes, not redirected)."""
+    generic name somewhere ("work plan -> Coda" goes, not redirected)."""
     if key not in {d.lower() for d in curation["delete"]}:
         curation["delete"].append(key)
     for field in ("merge", "correct"):

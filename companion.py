@@ -293,7 +293,8 @@ def match_entities(text: str, entity_index: dict) -> list[str]:
     text_lower = text.lower()
     hits = []
     for name, info in entity_index.items():
-        for candidate in [name] + info.get("aliases", []):
+        # a part ("Coda / Tabs") is mentioned by its own name
+        for candidate in [name, info.get("base", "")] + info.get("aliases", []):
             if len(candidate) < 3:
                 continue
             if re.search(r"\b" + re.escape(candidate.lower()) + r"\b", text_lower):
@@ -801,7 +802,10 @@ def resolve_entity(entity_index: dict, name: str) -> str | None:
             return canonical
         if any(a.lower() == target for a in info.get("aliases", [])):
             return canonical
-    return None
+    # then a part or kind-suffixed name by its own name ("Tabs" for
+    # "Coda / Tabs"), when only one entity goes by it
+    by_base = [c for c, info in entity_index.items() if info.get("base", "").lower() == target]
+    return by_base[0] if len(by_base) == 1 else None
 
 
 MANAGE_HELP = """\
