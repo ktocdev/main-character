@@ -48,9 +48,6 @@ GENERIC = {
     "Mom", "Mum", "Mother", "Dad", "Father", "Papa", "Pop",
     "Grandma", "Grandpa", "Granny", "Nana", "Grandmother", "Grandfather",
     "Aunt", "Auntie", "Uncle", "Sister", "Brother", "Cousin",
-    # ordinary words that got filed as a person once; they identify nobody
-    # and the demo uses them as entity names ("Guitar")
-    "Guitar",
 }
 
 HEADER = """\
@@ -84,7 +81,9 @@ def main():
         return {n.strip() for n in out if n and n.strip()}
 
     people = {n for n in names_of({"person"}) if n[:1].isupper()}
-    not_people = names_of({"place", "project", "thing"})
+    # lowercase: a name filed as a person once and later retyped is often
+    # stored in different case ("Guitar" carried, `guitar` the project)
+    not_people = {n.lower() for n in names_of({"place", "project", "thing"})}
 
     carried = set()
     if OUT.exists():
@@ -92,7 +91,7 @@ def main():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            if line[:1].isupper() and line not in not_people:
+            if line[:1].isupper() and line.lower() not in not_people:
                 carried.add(line)
 
     names = sorted((people | carried) - GENERIC)
