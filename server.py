@@ -100,7 +100,7 @@ def startup():
     # dirs are empty on a first run, which is a state the app already handles.
     STATE["client"] = get_client() if config.is_configured() else None
     STATE["collection"] = get_collection()
-    STATE["entity_index"] = entities.mark_generic(companion.load_entity_index())
+    STATE["entity_index"] = entities.mark_mixups(entities.mark_generic(companion.load_entity_index()))
     # the open session survives restarts — rebuild the conversation from it
     STATE["messages"] = sessions.conversation_messages()
     # A full recount, not the cached one: startup is when anything done
@@ -218,6 +218,11 @@ class DismissDupIn(BaseModel):
     kind: str
     a: str
     b: str
+
+
+class NotMixedIn(BaseModel):
+    name: str
+    not_mixed: bool = True
 
 
 class GroupIn(BaseModel):
@@ -2139,6 +2144,40 @@ def dismiss_duplicate(body: DismissDupIn):
         curation["not_duplicates"].append(pk)
     entities.save_curation(curation)
     return {"ok": True}
+
+
+@app.get("/api/entities/mixups")
+def mixups():
+    """People whose entries disagree about who they are, so the name
+    probably covers two."""
+    return {"mixups": entities.find_mixups(STATE["entity_index"])}
+
+
+@app.post("/api/entities/not-mixed")
+def not_mixed(body: NotMixedIn):
+    """Checked and found to be one: the flag stays off for good. Patches the
+    index in place, so confirming a keep in triage stays instant; undo
+    rebuilds as usual."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    key = entities.index_key(index, name)
+    curation["not_mixed"] = [k for k in curation["not_mixed"] if k.lower() != key]
+    if body.not_mixed:
+        curation["not_mixed"].append(key)
+    if curation != before:
+        entities.save_curation(curation)
+        _record_curation(f"{'confirm' if body.not_mixed else 'unconfirm'} {name} is one person", before)
+    info = index[name]
+    info.pop("mixup", None)
+    if not body.not_mixed:
+        flag = entities.mixup_flag(info["type"], info.get("attrs") or {})
+        if flag:
+            info["mixup"] = flag
+    return {"ok": True, "name": name, "mixup": info.get("mixup", [])}
 
 
 @app.get("/api/groups")

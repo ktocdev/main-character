@@ -24,7 +24,7 @@ Layout (all gitignored — this is personal data):
 import json
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -324,6 +324,8 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
 #                   companion doesn't bring them up unless the author does
 #   "category":     {key: category}  a thing's category (music, game, ...),
 #                   overriding extraction's; set when retyping into a thing
+#   "not_mixed":    [keys]   checked and found to be one person: the mix-up
+#                   flag stays off for good
 #   "drop_mentions": {key: [entry cache keys]}  delete just these mentions;
 #                   the name stays free for new entries. Keyed by entry, not
 #                   raw-file index, so it survives raw edits and --force.
@@ -338,6 +340,7 @@ _CURATION_DEFAULTS = {
     "retired": [],         # entity keys retired one by one (groups: groups.json)
     "category": {},        # thing key -> category, overriding extraction's
     "not_duplicates": [],  # dismissed duplicate-pair keys ("kind:a|b")
+    "not_mixed": [],       # entity keys confirmed as one, so never flagged
 }
 
 
@@ -467,6 +470,142 @@ def mark_generic(index: dict) -> dict:
         else:
             info.pop("generic", None)
     return index
+
+
+# ---------------------------------------------------------------------------
+# MIX-UPS (one name, probably two people: the coworker and the friend who share a first name)
+# ---------------------------------------------------------------------------
+# Every entry's extraction says what the person is to the author. When those
+# disagree in a way one person can't, the name probably covers two. Local
+# and free. People only: a project's status changes legitimately, and a
+# place's type is too loose (bar / venue) to tell two places apart.
+#
+# Embedding each observation and splitting it in two was tried and
+# dropped: on short observations any two topics look like two clusters,
+# and the cleanest "splits" were all small entities.
+
+RELATIONSHIP_GROUPS = {
+    "family": {
+        "mother", "mom", "mum", "father", "dad", "parent", "sister", "brother",
+        "sibling", "niece", "nephew", "aunt", "uncle", "cousin", "grandmother",
+        "grandfather", "grandparent", "son", "daughter", "family", "in-law",
+        "stepmother", "stepfather", "stepsister", "stepbrother",
+    },
+    "pet": {"pet", "pet cat", "pet dog", "pet guinea pig", "dog", "cat"},
+    "work": {
+        "coworker", "co-worker", "former coworker", "old coworker", "colleague",
+        "manager", "boss", "boss's boss", "supervisor", "employee", "report",
+        "direct report", "client", "recruiter", "interviewer", "work friend",
+        "work partner", "former work partner", "teammate", "mentor",
+    },
+    "romantic": {
+        "ex", "date", "partner", "boyfriend", "girlfriend", "spouse", "husband",
+        "wife", "romantic interest", "love interest", "romantic partner",
+        "date prospect", "crush", "ex-boyfriend", "ex-girlfriend", "fiance",
+        "fiancé", "fiancee", "fiancée", "dating app match",
+    },
+    "friend": {
+        "friend", "old friend", "best friend", "close friend", "childhood friend",
+        "acquaintance", "new acquaintance", "classmate", "neighbor", "neighbour",
+        "roommate", "former friend", "estranged friend",
+    },
+    "service": {
+        "bartender", "doctor", "dentist", "therapist", "teacher", "singing teacher",
+        "esthetician", "landlord", "airbnb host", "tattoo artist", "dermatologist",
+        "trainer", "hairdresser", "stylist", "barber", "nurse",
+    },
+}
+_RELATIONSHIP_GROUP = {label: g for g, labels in RELATIONSHIP_GROUPS.items() for label in labels}
+# One person can't be both of these, so two mentions are enough to flag.
+# The rest overlap or change over time (a coworker who's a friend, a friend
+# who became an ex) and need the smaller side to be a real share.
+_EXCLUSIVE_GROUPS = {"family", "pet"}
+MIXUP_MIN = 2               # an exclusive clash
+MIXUP_MIN_OVERLAP = 3       # an overlapping clash: this many mentions...
+MIXUP_MIN_SHARE = 0.25      # ...and this share of the classified ones
+
+
+def relationship_group(label: str) -> str:
+    """The group a relationship label belongs to, or "" when it's unknown
+    or hedged ("ex/partner", "classmate or teacher", "Mika's mother")."""
+    label = label.strip().lower()
+    if label in _RELATIONSHIP_GROUP:
+        return _RELATIONSHIP_GROUP[label]
+    if "/" in label or " or " in label or "'s " in label or "’s " in label:
+        return ""
+    words = label.split()
+    # "high school best friend", "on-and-off boyfriend"
+    return _RELATIONSHIP_GROUP.get(words[-1], "") if words else ""
+
+
+def mixup_flag(kind: str, attrs: dict) -> list:
+    """[[label, count], ...] for the relationship groups that clash, each
+    under its most-used label with the group's count, biggest first.
+    Empty when nothing clashes."""
+    if kind != "person":
+        return []
+    groups: dict[str, Counter] = defaultdict(Counter)
+    for label, count in attrs.items():
+        g = relationship_group(label)
+        if g:
+            groups[g][label] += count
+    totals = {g: sum(c.values()) for g, c in groups.items()}
+    classified = sum(totals.values())
+    ranked = sorted(totals, key=lambda g: -totals[g])
+    clashing = set()
+    for i, a in enumerate(ranked):
+        for b in ranked[i + 1:]:
+            small = totals[b]  # ranked, so b is the smaller side
+            if a in _EXCLUSIVE_GROUPS or b in _EXCLUSIVE_GROUPS:
+                clash = small >= MIXUP_MIN
+            else:
+                clash = small >= MIXUP_MIN_OVERLAP and small / classified >= MIXUP_MIN_SHARE
+            if clash:
+                clashing.update((a, b))
+    return [[groups[g].most_common(1)[0][0], totals[g]] for g in ranked if g in clashing]
+
+
+def mixup_text(flag: list) -> str:
+    """"seen as coworker (9) and friend (4)" """
+    parts = [f"{label} ({count})" for label, count in flag]
+    return "seen as " + (", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0])
+
+
+def mark_mixups(index: dict) -> dict:
+    """(Re)set `attrs` and the `mixup` flag across a loaded index, from the
+    raw cache, without rebuilding -- for an index built before mix-ups
+    existed. Read-only on disk, like mark_generic."""
+    curation = load_curation()
+    attrs: dict[tuple, Counter] = defaultdict(Counter)
+    fields = {kind: field for _, kind, field in KIND_FIELDS}
+    for entry, kind, name, ent in _raw_mentions():
+        resolved = apply_curation(curation, kind, name, entry)
+        if not resolved or resolved[0] != kind:
+            continue
+        attr = (ent.get(fields[kind]) or "").strip()
+        if attr and attr != "unknown":
+            attrs[(kind, resolved[1].lower())][attr.lower()] += 1
+    not_mixed = {k.lower() for k in curation["not_mixed"]}
+    for name, info in index.items():
+        base = info.get("base", name)
+        found = attrs.get((info["type"], base.lower()))
+        info.pop("attrs", None)
+        info.pop("mixup", None)
+        if found:
+            info["attrs"] = dict(found.most_common())
+        if curation_key(info["type"], base) not in not_mixed:
+            flag = mixup_flag(info["type"], found or {})
+            if flag:
+                info["mixup"] = flag
+    return index
+
+
+def find_mixups(index: dict) -> list[dict]:
+    """Flagged entities, most mentions first."""
+    out = [{"name": name, "type": info["type"], "mentions": info["mentions"],
+            "mixup": info["mixup"], "text": mixup_text(info["mixup"])}
+           for name, info in index.items() if info.get("mixup")]
+    return sorted(out, key=lambda m: -m["mentions"])
 
 
 def _raw_mentions():
@@ -707,7 +846,7 @@ def build_entity_docs(records: list[dict]) -> dict:
                 if key not in merged:
                     merged[key] = {
                         "name": display, "kind": final_kind, "attr": "",
-                        "aliases": set(), "timeline": [],
+                        "attrs": Counter(), "aliases": set(), "timeline": [],
                     }
                 if is_alias:
                     merged[key]["aliases"].add(name)
@@ -716,7 +855,10 @@ def build_entity_docs(records: list[dict]) -> dict:
                 if final_kind == kind:
                     attr = (ent.get(attr_field) or "").strip()
                     if attr and attr != "unknown":
-                        merged[key]["attr"] = attr  # latest wins
+                        # shown: the latest; kept: all of them, since a
+                        # coworker and a friend under one name is a mix-up
+                        merged[key]["attr"] = attr
+                        merged[key]["attrs"][attr.lower()] += 1
                 merged[key]["timeline"].append(
                     (record["date"], record["title"], ent.get("observations", []))
                 )
@@ -776,6 +918,7 @@ def build_entity_docs(records: list[dict]) -> dict:
             ent["attr"] = categories.get(f"thing:{lname}") or ent["attr"] or "other"
     index = {}
     retired_keys = {r.lower() for r in curation["retired"]}
+    not_mixed = {k.lower() for k in curation["not_mixed"]}
     retired_gs = retired_groups(groups)
 
     # Clear generated docs so merged/deleted entities don't leave stale files
@@ -846,6 +989,12 @@ def build_entity_docs(records: list[dict]) -> dict:
             index[ent["display"]]["retired"] = retired_by
         if kind == "thing":
             index[ent["display"]]["category"] = ent["attr"]
+        if ent["attrs"]:
+            index[ent["display"]]["attrs"] = dict(ent["attrs"].most_common())
+        if curation_key(kind, ent["name"]) not in not_mixed:
+            flag = mixup_flag(kind, ent["attrs"])
+            if flag:
+                index[ent["display"]]["mixup"] = flag
 
     (ENTITY_DIR / "index.json").write_text(
         json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
