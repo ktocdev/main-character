@@ -290,6 +290,7 @@ class GroupEditIn(BaseModel):
     delete: bool = False
     rollup: bool | None = None  # None = unchanged; collapse members out of the flat list
     retired: bool | None = None  # None = unchanged; retire every member (deep)
+    note: str | None = None      # None = unchanged; what ties the members together
 
 
 class CategoryTagIn(BaseModel):
@@ -2406,6 +2407,7 @@ def list_groups():
             "parent": g["parent"],
             "rollup": bool(g.get("rollup")),
             "retired": bool(g.get("retired")),
+            "note": g.get("note", ""),
             "members": sorted(resolved, key=str.lower),
             "unresolved": sorted(unresolved, key=str.lower),
         })
@@ -2575,6 +2577,14 @@ def edit_group(body: GroupEditIn):
         else:
             group.pop("retired", None)
         actions.append(f"{'retire' if body.retired else 'un-retire'} group {group['name']}")
+
+    if body.note is not None and body.note.strip() != group.get("note", ""):
+        # context for extraction and the companion ("people from the Groundwork job")
+        if body.note.strip():
+            group["note"] = body.note.strip()[:300]
+        else:
+            group.pop("note", None)
+        actions.append(f"note on group {group['name']}")
 
     if body.parent is not None:
         parent = body.parent.strip()

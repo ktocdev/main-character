@@ -184,5 +184,10 @@
   .gp-grid { display: flex; flex-wrap: wrap; gap: .4rem; }
   .gp-ent.dim { opacity: .5; font-style: italic; cursor: default; }
   .gp-empty { color: var(--text-muted); font-style: italic; padding: .2rem 0; }
+  .gp-note { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin: -.4rem 0 .4rem; }
+  .gp-note label { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; flex: 1 1 18rem; }
+  .gp-note .lbl { font: .8rem var(--font-ui); color: var(--text-muted); }
+  .gp-note input { flex: 1 1 14rem; min-width: 0; }
+  .gp-note .saved { font: .78rem var(--font-ui); color: var(--text-accent); }
   .rev-check { color: var(--text-accent-muted); font-size: .75rem; margin-left: .25rem; }
   .thinking { color: var(--text-muted); font-style: italic; }

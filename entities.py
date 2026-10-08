@@ -181,6 +181,12 @@ KNOWN_BLOCK = """\
 matches one of them, use exactly this spelling: {names}.
 """
 
+# Only when the author has described a group ("people from the Groundwork job").
+GROUPS_BLOCK = """\
+- The author keeps these groups, with what ties each together. Use them \
+to tell who or what an entry means: {groups}.
+"""
+
 # Only when a name has been split ("Dev" the coworker and the friend).
 VARIANTS_BLOCK = """\
 - Some known names belong to more than one person. For a mention of one of \
@@ -275,11 +281,12 @@ def known_variants_hint() -> str:
 
 
 def extract_conversation(client, conv: dict, known_people: list[str] | None = None,
-                         variants: str = "") -> dict:
+                         variants: str = "", groups: str = "") -> dict:
     """Extract entities from one conversation via the Claude API."""
     known_block = (
         KNOWN_BLOCK.format(names=", ".join(known_people)) if known_people else ""
-    ) + (VARIANTS_BLOCK.format(variants=variants) if variants else "")
+    ) + (GROUPS_BLOCK.format(groups=groups) if groups else "") \
+      + (VARIANTS_BLOCK.format(variants=variants) if variants else "")
     combined = {group: [] for group, _, _ in KIND_FIELDS}
     for segment in _segments(conv["text"]):
         prompt = EXTRACTION_PROMPT.format(
@@ -316,6 +323,7 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
         print(f"  {len(conversations)} conversations to process")
     known = known_people_hint()
     variants = known_variants_hint()
+    groups = known_groups_hint()
 
     records = []
     for i, conv in enumerate(conversations):
@@ -328,7 +336,8 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
                 print(f"  {label} (cached)")
         else:
             try:
-                entities = extract_conversation(client, conv, known_people=known, variants=variants)
+                entities = extract_conversation(client, conv, known_people=known,
+                                                variants=variants, groups=groups)
             except Exception as e:
                 print(f"  {label} FAILED: {e}")
                 continue
@@ -754,6 +763,38 @@ def group_path(groups: list[dict], name: str) -> str:
     return " › ".join(reversed(chain)) or name
 
 
+def _group_label(groups: list[dict], name: str) -> str:
+    """'Work › Coworkers (people from the Groundwork job)' for an entity doc, so
+    the companion gets what ties the group together."""
+    g = find_group(groups, name)
+    note = (g or {}).get("note", "")
+    return group_path(groups, name) + (f" ({note})" if note else "")
+
+
+def known_groups_hint() -> str:
+    """'Coworkers (people from the Groundwork job): Dev · work, Lena' for every
+    group with a note -- a note is the author saying what ties a group
+    together, which is what helps tell who an entry means. Groups without
+    one aren't listed."""
+    index_file = ENTITY_DIR / "index.json"
+    if not index_file.exists():
+        return ""
+    index = json.loads(index_file.read_text(encoding="utf-8"))
+    lookup = {n.lower(): n for n in index}
+    for n, i in index.items():
+        for a in i.get("aliases", []):
+            lookup.setdefault(a.lower(), n)
+    out = []
+    for g in sorted(load_groups(), key=lambda g: g["name"].lower()):
+        if not g.get("note") or g.get("retired"):
+            continue
+        members = sorted({lookup[m.lower()] for m in g["members"] if m.lower() in lookup},
+                         key=lambda n: -index[n]["mentions"])[:30]
+        if members:
+            out.append(f"{g['name']} ({g['note']}): {', '.join(members)}")
+    return "; ".join(out)
+
+
 def group_would_cycle(groups: list[dict], name: str, parent: str) -> bool:
     """Would setting `name`'s parent to `parent` create a loop?"""
     lname = name.strip().lower()
@@ -1084,7 +1125,7 @@ def build_entity_docs(records: list[dict]) -> dict:
         gnames = sorted(entity_groups.get(ent["display"], []), key=str.lower)
         if gnames:
             lines.append(
-                f"groups: {', '.join(group_path(groups, g) for g in gnames)}"
+                f"groups: {', '.join(_group_label(groups, g) for g in gnames)}"
             )
         # Retired: one by one, or through groups -- but only when every
         # group they're in is retired; membership in an active group keeps
@@ -2107,6 +2148,7 @@ def reextract(terms: list[str], progress=None) -> dict:
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     known = known_people_hint()
     variants = known_variants_hint()
+    groups = known_groups_hint()
     convs = entries_mentioning(terms)
     done, failed = [], []
     for i, conv in enumerate(convs):
@@ -2114,7 +2156,8 @@ def reextract(terms: list[str], progress=None) -> dict:
         if progress:
             progress(i, len(convs), conv)
         try:
-            entities = extract_conversation(client, conv, known_people=known, variants=variants)
+            entities = extract_conversation(client, conv, known_people=known,
+                                            variants=variants, groups=groups)
         except caps.CapExceeded:
             raise  # a spend cap stops the run; what's done is kept
         except Exception as e:
