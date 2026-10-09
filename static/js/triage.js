@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, fmtDate } from './core.js';
 import { state } from './state.js';
-import { loadEntities, showEntity, mixupText } from './entities.js';
+import { loadEntities, showEntity, mixupText, setName, variantsOf } from './entities.js';
 import { showTab } from './main.js';
 
 // ---- triage mode ----
 // Entities come one at a time, junk first (1-mention entities lead). The
-// keyboard does the work: k m c r a t d D x s u e, then 1-4 in retype mode
+// keyboard does the work: k m c r a p t d D x s u e, then 1-4 in retype mode
 // (and 1-6 for a thing's category), Enter and Esc in a field. The buttons
 // mirror the keys. On a card flagged as maybe two people, k asks once.
+// Unsorted mentions of a split name ("Dev · ?") come one entry at a time:
+// 1-9 say which Dev, n names someone new.
 let queue = [], qpos = 0, triageMode = null;
 let skipped = [];        // names skipped in this pass, for the queue-empty offer
 let toastTimer = null;
 let editing = false;     // left for Entities with e; the next start is a return
+let sortChoices = [], sortPicks = [];  // an unsorted card: the qualifiers, this entry's observations
 
 export async function startTriage(only) {
   await loadEntities();
@@ -23,7 +26,8 @@ export async function startTriage(only) {
   const returning = editing && !only;
   editing = false;
   queue = Object.entries(state.entities)
-    .filter(([n, i]) => !i.reviewed && !i.retired && (!only || only.includes(n)) && !(returning && skipped.includes(n)))
+    // unsorted mentions wait here even under a reviewed name
+    .filter(([n, i]) => (!i.reviewed || i.unsorted) && !i.retired && (!only || only.includes(n)) && !(returning && skipped.includes(n)))
     .sort((a, b) => a[1].mentions - b[1].mentions)  // junk (1-mention) first
     .map(([n]) => n);
   qpos = 0;
@@ -63,6 +67,7 @@ async function renderTriage() {
   $('triage-cat-row').hidden = true;
   $('triage-mixed-row').hidden = true;
   $('triage-never-row').hidden = true;
+  $('triage-sort-row').hidden = true;
   $('triage-suggest').innerHTML = '';
   const total = Object.keys(state.entities).length;
   const reviewed = Object.values(state.entities).filter(i => i.reviewed).length;
@@ -91,10 +96,12 @@ async function renderTriage() {
   const info = state.entities[name];
   if (!info) { qpos++; return renderTriage(); }
   progress(reviewed, total, queue.length - qpos);
-  $('triage-name').textContent = name;
+  setName($('triage-name'), name, info);
   const meta = `${info.type}${info.category ? ` · ${info.category}` : ''} · ${info.mentions} mention${info.mentions === 1 ? '' : 's'}`;
   $('triage-meta').textContent = meta;
-  $('triage-aliases').textContent = (info.aliases || []).length ? 'also ' + info.aliases.join(' · ') : '';
+  // the plain name a split person shares with the others isn't news
+  const aka = (info.aliases || []).filter(a => a !== info.variant_of);
+  $('triage-aliases').textContent = aka.length ? 'also ' + aka.join(' · ') : '';
   // a category name ("dive bar") gets d as never-track, said up front so
   // the key needs no confirming
   $('triage-generic').textContent = info.generic
@@ -106,10 +113,39 @@ async function renderTriage() {
   $('triage-mixup').textContent = info.mixup ? `possibly two people: ${mixupText(info.mixup)}` : '';
   const obsEl = $('triage-obs');
   obsEl.innerHTML = '<span class="more">reading <span class="dots">···</span></span>';
+  if (info.unsorted) {
+    triageMode = 'sort';
+    sortChoices = variantsOf(info.variant_of);
+  }
   const r = await (await fetch('/api/entities/observations?name=' + encodeURIComponent(name))).json();
   if (queue[qpos] !== name) return;  // user already moved on
-  const obs = r.observations || [];
-  $('triage-meta').textContent = `${meta} · ${obs.length} observation${obs.length === 1 ? '' : 's'}`;
+  let obs = r.observations || [];
+  if (info.unsorted) {
+    // one entry at a time: its observations, then which one it was
+    const first = obs[0] ? `${obs[0].file}|${obs[0].ent_index}` : '';
+    const left = info.mentions;
+    obs = obs.filter(o => `${o.file}|${o.ent_index}` === first);
+    sortPicks = obs.map(o => ({file: o.file, group: o.group, ent_index: o.ent_index, obs_index: o.obs_index}));
+    $('triage-meta').textContent = `${left} mention${left === 1 ? '' : 's'} to sort`;
+    $('triage-sort-q').textContent = `Which ${info.variant_of} is this?`;
+    const btns = $('triage-sort-btns');
+    btns.innerHTML = '';
+    sortChoices.slice(0, 9).forEach((q, i) => {
+      const b = document.createElement('button');
+      b.className = 'quiet';
+      b.innerHTML = `<span class="key">${i + 1}</span>`;
+      b.append(`${info.variant_of} · ${q}`);
+      b.onclick = () => sortTo(q);
+      btns.appendChild(b);
+    });
+    const nb = document.createElement('button');
+    nb.className = 'quiet';
+    nb.innerHTML = '<span class="key">n</span>someone new';
+    nb.onclick = () => triagePrompt('qualify');
+    btns.appendChild(nb);
+    $('triage-sort-row').hidden = false;
+  }
+  if (!info.unsorted) $('triage-meta').textContent = `${meta} · ${obs.length} observation${obs.length === 1 ? '' : 's'}`;
   obsEl.innerHTML = '';
   obsEl.scrollTop = 0;
   // Every observation, grouped by date, each date tagged with what that
@@ -160,19 +196,24 @@ async function triageAct(fn, successMsg) {
 
 const TRIAGE_LABELS = {
   merge: 'merge into', correct: 'correct to', rename: 'rename to', alias: 'also known as',
+  part: 'part of', qualify: 'someone new:',
 };
 const TRIAGE_PLACEHOLDERS = {
   merge: 'existing entity…', correct: 'the right name…', rename: 'new name…', alias: 'another name…',
+  part: 'what it belongs to…', qualify: 'a word that tells them apart…',
 };
 
 function triagePrompt(mode) {
   triageMode = mode;
-  $('triage-mode-label').textContent = TRIAGE_LABELS[mode];
+  $('triage-mode-label').textContent = mode === 'qualify'
+    ? `someone new: ${state.entities[queue[qpos]]?.variant_of} ·` : TRIAGE_LABELS[mode];
   $('triage-input-row').hidden = false;
   $('triage-kind-row').hidden = true;
+  // a merge of a non-person may really be a part: offered beside apply
+  $('triage-as-part').hidden = mode !== 'merge' || state.entities[queue[qpos]]?.type === 'person';
   const inp = $('triage-input');
   inp.placeholder = TRIAGE_PLACEHOLDERS[mode];
-  inp.value = mode === 'rename' ? queue[qpos] : '';
+  inp.value = mode === 'rename' ? (state.entities[queue[qpos]]?.base || queue[qpos]) : '';
   inp.focus();
   if (mode === 'rename') inp.select();
   suggest();
@@ -183,7 +224,7 @@ function triagePrompt(mode) {
 function suggest() {
   const box = $('triage-suggest');
   box.innerHTML = '';
-  if (triageMode !== 'merge' && triageMode !== 'correct') return;
+  if (!['merge', 'correct', 'part'].includes(triageMode)) return;
   const q = $('triage-input').value.trim().toLowerCase();
   if (!q) return;
   const cur = queue[qpos];
@@ -208,6 +249,8 @@ function triageCancel() {
   $('triage-mixed-row').hidden = true;
   $('triage-never-row').hidden = true;
   $('triage-suggest').innerHTML = '';
+  // a sorting card goes back to asking which one
+  if (state.entities[queue[qpos]]?.unsorted) triageMode = 'sort';
   $('triage').focus();
 }
 
@@ -256,10 +299,10 @@ function neverTrack() {
   );
 }
 
-async function triageApply() {
+async function triageApply(asPart = false) {
   const target = $('triage-input').value.trim();
   if (!target) { $('triage-input').focus(); return; }
-  const name = queue[qpos], mode = triageMode;
+  const name = queue[qpos], mode = asPart === true ? 'part' : triageMode;
   triageMode = null;
   $('triage-input-row').hidden = true;
   $('triage-suggest').innerHTML = '';
@@ -268,6 +311,18 @@ async function triageApply() {
       n => api(`/api/entities/${mode}`, {source: n, target}),
       r => mode === 'merge' ? `${name} merged into ${r.into}, kept as an alias.` : `${name} corrected to ${r.into}. Old name not kept.`,
     );
+  } else if (mode === 'qualify') {
+    await sortTo(target);
+  } else if (mode === 'part') {
+    // its own entity under the parent: the card stays, renamed to its path
+    const r = await api('/api/entities/part-of', {name, parent: target});
+    if (r) {
+      toast(`${state.entities[name]?.base || name} is now part of ${target}, kept separate from it.`);
+      await loadEntities();
+      queue[qpos] = r.name;
+      refreshUndo();
+      renderTriage();
+    }
   } else if (mode === 'rename') {
     const r = await api('/api/entities/rename', {source: name, target});
     if (r) {
@@ -289,7 +344,27 @@ async function triageApply() {
   $('triage').focus();
 }
 
+// an unsorted entry goes to one of the people with this name (or a new
+// one); the card stays until the name has nothing left to sort
+async function sortTo(qualifier) {
+  const name = queue[qpos];
+  const r = await api('/api/entities/split', {name, picks: sortPicks, qualifier});
+  if (!r) return;
+  toast(`sorted to ${r.to}.`);
+  await loadEntities();
+  refreshUndo();
+  if (state.entities[name]) renderTriage(); else triageAdvance();
+}
+
 async function triageKey(key) {
+  if (triageMode === 'sort') {
+    const i = Number(key);
+    if (i >= 1 && i <= Math.min(9, sortChoices.length)) { await sortTo(sortChoices[i - 1]); return; }
+    if (key === 'n') { triagePrompt('qualify'); return; }
+    if (key === 'k') { toast(`say which one: ${sortChoices.length ? `1–${Math.min(9, sortChoices.length)}, or ` : ''}n for someone new.`); return; }
+    if (!['s', 'e', 'u', 'd', 'D'].includes(key)) return;
+    triageMode = null;  // the usual keys work on a sorting card too
+  }
   if (triageMode === 'kind') {
     if (key === 'Escape') { triageCancel(); return; }
     const k = {1: 'person', 2: 'project', 3: 'place', 4: 'thing'}[key];
@@ -338,6 +413,10 @@ async function triageKey(key) {
     case 'c': triagePrompt('correct'); break;
     case 'r': triagePrompt('rename'); break;
     case 'a': triagePrompt('alias'); break;
+    case 'p':
+      if (state.entities[name]?.type === 'person') { toast('people aren\'t parts of anything; a group holds them.'); break; }
+      triagePrompt('part');
+      break;
     case 't':
       triageMode = 'kind';
       $('triage-kind-row').hidden = false;
@@ -372,7 +451,8 @@ async function retype(kind, category = '') {
 }
 
 export function init() {
-  $('triage-apply').onclick = triageApply;
+  $('triage-apply').onclick = () => triageApply();
+  $('triage-as-part').onclick = () => triageApply(true);
   $('triage-cancel').onclick = triageCancel;
   $('triage-kind-cancel').onclick = triageCancel;
   $('triage-cat-cancel').onclick = triageCancel;
@@ -396,7 +476,7 @@ export function init() {
     if (state.activeTab !== 'triage') return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    const keys = ['m', 'c', 'r', 'a', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', '1', '2', '3', '4', '5', '6'];
+    const keys = ['m', 'c', 'r', 'a', 'p', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', 'n', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     if (triageMode === 'never' || triageMode === 'mixed') keys.push('Enter', 'Escape');
     else if (['Enter', 'Escape'].includes(e.key) && triageMode !== 'kind' && triageMode !== 'category') return;
     if (keys.includes(e.key)) e.preventDefault();

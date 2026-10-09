@@ -67,13 +67,18 @@ EXTRACTION_SCHEMA = {
                         "type": "string",
                         "description": "Relationship to the journal author, e.g. friend, ex, coworker, mother, date",
                     },
+                    "qualifier": {
+                        "type": "string",
+                        "description": "Empty, unless the known people list says this name "
+                                       "belongs to more than one person: then which one",
+                    },
                     "observations": {
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Concrete facts or events involving this person in this entry",
                     },
                 },
-                "required": ["name", "relationship", "observations"],
+                "required": ["name", "relationship", "qualifier", "observations"],
                 "additionalProperties": False,
             },
         },
@@ -176,6 +181,20 @@ KNOWN_BLOCK = """\
 matches one of them, use exactly this spelling: {names}.
 """
 
+# Only when the author has described a group ("people from the Groundwork job").
+GROUPS_BLOCK = """\
+- The author keeps these groups, with what ties each together. Use them \
+to tell who or what an entry means: {groups}.
+"""
+
+# Only when a name has been split ("Dev" the coworker and the friend).
+VARIANTS_BLOCK = """\
+- Some known names belong to more than one person. For a mention of one of \
+these, use the plain name and set "qualifier" to the person the entry is \
+about, judging by the context in parentheses. If the entry doesn't make it \
+clear, leave "qualifier" empty; don't guess. {variants}.
+"""
+
 
 # ---------------------------------------------------------------------------
 # GATHERING CONVERSATIONS FROM THE VECTOR STORE
@@ -230,24 +249,44 @@ def _segments(text: str, size: int = SEGMENT_CHARS) -> list[str]:
 
 
 def known_people_hint() -> list[str]:
-    """Canonical people names from the current index, for name consistency."""
+    """Canonical people names from the current index, for name consistency.
+    A split name counts once, by its plain name; the variants go in
+    known_variants_hint."""
     index_file = ENTITY_DIR / "index.json"
     if not index_file.exists():
         return []
     index = json.loads(index_file.read_text(encoding="utf-8"))
-    people = sorted(
-        ((i["mentions"], n) for n, i in index.items()
-         if i["type"] == "person" and not i.get("retired")),
-        reverse=True,
-    )
+    mentions: dict[str, int] = defaultdict(int)
+    for n, i in index.items():
+        if i["type"] == "person" and not i.get("retired"):
+            mentions[i.get("variant_of") or n] += i["mentions"]
+    people = sorted(((m, n) for n, m in mentions.items()), reverse=True)
     return [n for _, n in people[:80]]
 
 
-def extract_conversation(client, conv: dict, known_people: list[str] | None = None) -> dict:
+def known_variants_hint() -> str:
+    """'Dev: work (coworker; Coworkers), friend (friend)' for every split
+    name -- always all of them, not just the most mentioned."""
+    index_file = ENTITY_DIR / "index.json"
+    if not index_file.exists():
+        return ""
+    index = json.loads(index_file.read_text(encoding="utf-8"))
+    by_name: dict[str, list[str]] = defaultdict(list)
+    for n, i in sorted(index.items(), key=lambda kv: -kv[1]["mentions"]):
+        if i.get("variant_of") and not i.get("unsorted"):
+            context = [a for a in list(i.get("attrs", {}))[:2]] + i.get("groups", [])
+            by_name[i["variant_of"]].append(
+                i["qualifier"] + (f" ({'; '.join(context)})" if context else ""))
+    return "; ".join(f"{name}: {', '.join(vs)}" for name, vs in sorted(by_name.items()))
+
+
+def extract_conversation(client, conv: dict, known_people: list[str] | None = None,
+                         variants: str = "", groups: str = "") -> dict:
     """Extract entities from one conversation via the Claude API."""
     known_block = (
         KNOWN_BLOCK.format(names=", ".join(known_people)) if known_people else ""
-    )
+    ) + (GROUPS_BLOCK.format(groups=groups) if groups else "") \
+      + (VARIANTS_BLOCK.format(variants=variants) if variants else "")
     combined = {group: [] for group, _, _ in KIND_FIELDS}
     for segment in _segments(conv["text"]):
         prompt = EXTRACTION_PROMPT.format(
@@ -283,6 +322,8 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
     if not quiet:
         print(f"  {len(conversations)} conversations to process")
     known = known_people_hint()
+    variants = known_variants_hint()
+    groups = known_groups_hint()
 
     records = []
     for i, conv in enumerate(conversations):
@@ -295,7 +336,8 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
                 print(f"  {label} (cached)")
         else:
             try:
-                entities = extract_conversation(client, conv, known_people=known)
+                entities = extract_conversation(client, conv, known_people=known,
+                                                variants=variants, groups=groups)
             except Exception as e:
                 print(f"  {label} FAILED: {e}")
                 continue
@@ -326,6 +368,17 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
 #                   overriding extraction's; set when retyping into a thing
 #   "not_mixed":    [keys]   checked and found to be one person: the mix-up
 #                   flag stays off for good
+#   "part_of":      {key: "kind:Parent"}  its own entity, shown as
+#                   "Parent / Name" -- Tabs is part of Coda, not merged
+#                   into it, so an unrelated "Tabs" isn't folded in by a rule
+#   "hide_path":    [keys]   a part already specific on its own ("Coda
+#                   theme switcher") keeps its plain name
+#   "variants":     {key: [qualifiers]}  a name that's more than one person:
+#                   a mention goes to "Dev · work" by its record's
+#                   qualifier, and one without goes to "Dev · ?" (unsorted)
+#                   instead of being given to either. Rules on the plain key
+#                   resolve the name first; rules on "person:thomas · work"
+#                   act on the one person.
 #   "drop_mentions": {key: [entry cache keys]}  delete just these mentions;
 #                   the name stays free for new entries. Keyed by entry, not
 #                   raw-file index, so it survives raw edits and --force.
@@ -341,6 +394,9 @@ _CURATION_DEFAULTS = {
     "category": {},        # thing key -> category, overriding extraction's
     "not_duplicates": [],  # dismissed duplicate-pair keys ("kind:a|b")
     "not_mixed": [],       # entity keys confirmed as one, so never flagged
+    "part_of": {},         # part key -> "kind:Parent" (Tabs -> Coda)
+    "hide_path": [],       # part keys shown by their own name, not Parent / Name
+    "variants": {},        # person key -> qualifiers, for a name split in two
 }
 
 
@@ -450,11 +506,13 @@ def is_generic(kind: str, name: str) -> bool:
     return False
 
 
-def generic_flag(curation: dict, kind: str, name: str, groups: list[str]) -> bool:
+def generic_flag(curation: dict, kind: str, name: str, groups: list[str],
+                 part_of: str = "") -> bool:
     """is_generic, except for what you clearly treat as one particular
-    thing: a group member, or a name you renamed by hand ("the gym" that's
-    *your* gym can be put in a group to keep it)."""
-    if groups or not is_generic(kind, name):
+    thing: a group member, a part of something ("office" in your
+    apartment), or a name you renamed by hand ("the gym" that's *your* gym
+    can be put in a group to keep it)."""
+    if groups or part_of or not is_generic(kind, name):
         return False
     renamed_to = {v.lower() for v in curation["rename"].values()}
     return name.lower() not in renamed_to
@@ -465,7 +523,8 @@ def mark_generic(index: dict) -> dict:
     before the detector existed, or before a detector change."""
     curation = load_curation()
     for name, info in index.items():
-        if generic_flag(curation, info["type"], info.get("base", name), info.get("groups", [])):
+        if generic_flag(curation, info["type"], info.get("base", name), info.get("groups", []),
+                        info.get("part_of", "")):
             info["generic"] = True
         else:
             info.pop("generic", None)
@@ -579,7 +638,7 @@ def mark_mixups(index: dict) -> dict:
     attrs: dict[tuple, Counter] = defaultdict(Counter)
     fields = {kind: field for _, kind, field in KIND_FIELDS}
     for entry, kind, name, ent in _raw_mentions():
-        resolved = apply_curation(curation, kind, name, entry)
+        resolved = apply_curation(curation, kind, name, entry, ent.get("qualifier", ""))
         if not resolved or resolved[0] != kind:
             continue
         attr = (ent.get(fields[kind]) or "").strip()
@@ -593,7 +652,7 @@ def mark_mixups(index: dict) -> dict:
         info.pop("mixup", None)
         if found:
             info["attrs"] = dict(found.most_common())
-        if curation_key(info["type"], base) not in not_mixed:
+        if curation_key(info["type"], base) not in not_mixed and not info.get("unsorted"):
             flag = mixup_flag(info["type"], found or {})
             if flag:
                 info["mixup"] = flag
@@ -622,8 +681,8 @@ def _raw_mentions():
 def entries_for(curation: dict, key: str) -> list[str]:
     """Entries with a mention that is, or resolves to, `key`."""
     out = set()
-    for entry, kind, name, _ in _raw_mentions():
-        resolved = apply_curation(curation, kind, name, entry)
+    for entry, kind, name, ent in _raw_mentions():
+        resolved = apply_curation(curation, kind, name, entry, ent.get("qualifier", ""))
         if curation_key(kind, name) == key or (
                 resolved and curation_key(resolved[0], resolved[1]) == key):
             out.add(entry)
@@ -704,6 +763,38 @@ def group_path(groups: list[dict], name: str) -> str:
     return " › ".join(reversed(chain)) or name
 
 
+def _group_label(groups: list[dict], name: str) -> str:
+    """'Work › Coworkers (people from the Groundwork job)' for an entity doc, so
+    the companion gets what ties the group together."""
+    g = find_group(groups, name)
+    note = (g or {}).get("note", "")
+    return group_path(groups, name) + (f" ({note})" if note else "")
+
+
+def known_groups_hint() -> str:
+    """'Coworkers (people from the Groundwork job): Dev · work, Lena' for every
+    group with a note -- a note is the author saying what ties a group
+    together, which is what helps tell who an entry means. Groups without
+    one aren't listed."""
+    index_file = ENTITY_DIR / "index.json"
+    if not index_file.exists():
+        return ""
+    index = json.loads(index_file.read_text(encoding="utf-8"))
+    lookup = {n.lower(): n for n in index}
+    for n, i in index.items():
+        for a in i.get("aliases", []):
+            lookup.setdefault(a.lower(), n)
+    out = []
+    for g in sorted(load_groups(), key=lambda g: g["name"].lower()):
+        if not g.get("note") or g.get("retired"):
+            continue
+        members = sorted({lookup[m.lower()] for m in g["members"] if m.lower() in lookup},
+                         key=lambda n: (-index[n]["mentions"], n.lower()))[:30]
+        if members:
+            out.append(f"{g['name']} ({g['note']}): {', '.join(members)}")
+    return "; ".join(out)
+
+
 def group_would_cycle(groups: list[dict], name: str, parent: str) -> bool:
     """Would setting `name`'s parent to `parent` create a loop?"""
     lname = name.strip().lower()
@@ -756,16 +847,73 @@ def _parse_target(value: str, default_kind: str) -> tuple[str, str]:
     return default_kind, value.strip()
 
 
+def resolve_ref(curation: dict, ref: str, default_kind: str):
+    """A stored "kind:Name" reference, followed through renames and merges
+    to the entity it now means: (kind, name), or None when it's gone."""
+    kind, name = _parse_target(ref, default_kind)
+    resolved = apply_curation(curation, kind, name)
+    return (resolved[0], resolved[1]) if resolved else None
+
+
+def part_would_cycle(curation: dict, child_key: str, parent_kind: str, parent_name: str) -> bool:
+    """Would making child_key a part of the parent loop back to itself?"""
+    current, seen = (parent_kind, parent_name), set()
+    while current:
+        key = curation_key(*current)
+        if key == child_key or key in seen:
+            return True
+        seen.add(key)
+        ref = curation["part_of"].get(key)
+        current = resolve_ref(curation, ref, current[0]) if ref else None
+    return False
+
+
+def move_entity_rules(curation: dict, key: str, new_key: str):
+    """An entity's own rules follow it to a new key (retyped, or its path
+    name split off)."""
+    for field in ("reviewed", "retired", "not_mixed", "hide_path"):
+        if any(k.lower() == key for k in curation[field]):
+            curation[field] = [k for k in curation[field] if k.lower() != key] + [new_key]
+    for field in ("alias_add", "alias_remove", "rename", "part_of"):
+        if key in curation[field] and new_key not in curation[field]:
+            curation[field][new_key] = curation[field].pop(key)
+    curation["category"].pop(key, None)
+
+
 def _dropped(curation: dict, key: str, entry: str) -> bool:
     return bool(entry) and entry in curation["drop_mentions"].get(key, ())
 
 
-def apply_curation(curation: dict, kind: str, name: str, entry: str = ""):
+UNSORTED = "?"
+
+
+def split_name(name: str):
+    """("Dev", "work") for "Dev · work"; None for a plain name."""
+    head, sep, tail = name.rpartition(" · ")
+    return (head, tail) if sep and head and tail else None
+
+
+def apply_curation(curation: dict, kind: str, name: str, entry: str = "", qualifier: str = ""):
     """
     Resolve one extracted (kind, name) through the curation rules.
     Returns (kind, canonical_name, alias_of_canonical: bool) or None if deleted.
     `entry` is the record's cache key, for mentions deleted entry by entry.
+    `qualifier` is the record's own, for a name split into variants.
     """
+    resolved = _resolve_rules(curation, kind, name, entry)
+    if not resolved or resolved[0] != "person":
+        return resolved
+    variants = curation["variants"].get(curation_key(resolved[0], resolved[1]))
+    if not variants:
+        return resolved
+    # a split name: which one the entry meant, or unsorted when it didn't say
+    q = (qualifier or "").strip().lower()
+    chosen = next((v for v in variants if v.lower() == q), UNSORTED)
+    again = _resolve_rules(curation, "person", f"{resolved[1]} · {chosen}", entry)
+    return (again[0], again[1], True) if again else None
+
+
+def _resolve_rules(curation: dict, kind: str, name: str, entry: str = ""):
     if curation_key(kind, name) in {d.lower() for d in curation["delete"]}:
         return None
     if _dropped(curation, curation_key(kind, name), entry):
@@ -838,7 +986,8 @@ def build_entity_docs(records: list[dict]) -> dict:
                 name = ent.get("name", "").strip()
                 if not name:
                     continue
-                resolved = apply_curation(curation, kind, name, record.get("key", ""))
+                resolved = apply_curation(curation, kind, name, record.get("key", ""),
+                                          ent.get("qualifier", ""))
                 if resolved is None:
                     continue
                 final_kind, display, is_alias = resolved
@@ -878,6 +1027,22 @@ def build_entity_docs(records: list[dict]) -> dict:
     for ent in merged.values():
         ent["aliases"] = {a for a in ent["aliases"] if a.lower() != ent["name"].lower()}
 
+    # Parts: its own entity, shown under its parent's name ("Coda /
+    # Tabs"). One level, the immediate parent. People are never parts or
+    # parents; grouping people is what groups are for.
+    hidden_paths = {k.lower() for k in curation["hide_path"]}
+    for (kind, lname), ent in merged.items():
+        ent["parent"] = None
+        ref = curation["part_of"].get(f"{kind}:{lname}")
+        parent = resolve_ref(curation, ref, kind) if ref and kind != "person" else None
+        if parent and parent[0] != "person":
+            pkey = (parent[0], parent[1].lower())
+            if pkey in merged and pkey != (kind, lname):
+                ent["parent"] = merged[pkey]
+        ent["display"] = (f"{ent['parent']['name']} / {ent['name']}"
+                          if ent["parent"] and f"{kind}:{lname}" not in hidden_paths
+                          else ent["name"])
+
     # The index is keyed by display name, so two kinds sharing a name
     # ("karaoke" the place and the project) would overwrite each other and
     # one would vanish. The one with the most mentions keeps the plain name;
@@ -885,22 +1050,29 @@ def build_entity_docs(records: list[dict]) -> dict:
     # e.g. to merge one way. Rules still key on the plain name (`base`).
     by_name: dict[str, list[dict]] = {}
     for ent in merged.values():
-        ent["display"] = ent["name"]
-        by_name.setdefault(ent["name"].lower(), []).append(ent)
+        by_name.setdefault(ent["display"].lower(), []).append(ent)
     for same in by_name.values():
         same.sort(key=lambda e: (-len(e["timeline"]), KINDS.index(e["kind"])))
         for ent in same[1:]:
-            ent["display"] = f"{ent['name']} · {ent['kind']}"
+            ent["display"] = f"{ent['display']} · {ent['kind']}"
+    parts: dict[int, list[str]] = defaultdict(list)
+    for ent in merged.values():
+        if ent["parent"]:
+            parts[id(ent["parent"])].append(ent["display"])
 
     # group memberships, resolved through names + aliases
     groups = load_groups()
     name_lookup = {}  # lowercase name/alias -> canonical display name
     for ent in merged.values():
         name_lookup[ent["display"].lower()] = ent["display"]
+    # an alias two entities share (plain "Dev" on both halves of a split
+    # name) picks neither: membership has to name the one it means
+    alias_count = Counter(a.lower() for ent in merged.values() for a in ent["aliases"])
     for ent in merged.values():
         name_lookup.setdefault(ent["name"].lower(), ent["display"])
         for a in ent["aliases"]:
-            name_lookup.setdefault(a.lower(), ent["display"])
+            if alias_count[a.lower()] == 1:
+                name_lookup.setdefault(a.lower(), ent["display"])
     entity_groups: dict[str, list[str]] = {}  # canonical name -> [group names]
     for g in groups:
         for member in g["members"]:
@@ -945,10 +1117,15 @@ def build_entity_docs(records: list[dict]) -> dict:
         ]
         if ent["aliases"]:
             lines.append(f"aliases: {', '.join(sorted(ent['aliases']))}")
+        if ent["parent"]:
+            lines.append(f"part of: {ent['parent']['display']}")
+        kids = sorted(parts.get(id(ent), []), key=str.lower)
+        if kids:
+            lines.append(f"parts: {', '.join(kids)}")
         gnames = sorted(entity_groups.get(ent["display"], []), key=str.lower)
         if gnames:
             lines.append(
-                f"groups: {', '.join(group_path(groups, g) for g in gnames)}"
+                f"groups: {', '.join(_group_label(groups, g) for g in gnames)}"
             )
         # Retired: one by one, or through groups -- but only when every
         # group they're in is retired; membership in an active group keeps
@@ -983,15 +1160,26 @@ def build_entity_docs(records: list[dict]) -> dict:
         }
         if ent["display"] != ent["name"]:
             index[ent["display"]]["base"] = ent["name"]
-        if generic_flag(curation, kind, ent["name"], gnames):
+        if generic_flag(curation, kind, ent["name"], gnames,
+                        ent["parent"]["display"] if ent["parent"] else ""):
             index[ent["display"]]["generic"] = True
         if retired_by:
             index[ent["display"]]["retired"] = retired_by
         if kind == "thing":
             index[ent["display"]]["category"] = ent["attr"]
+        # one half of a split name, or its unsorted mentions
+        split = split_name(ent["name"]) if kind == "person" else None
+        if split and curation["variants"].get(curation_key("person", split[0])):
+            index[ent["display"]].update(variant_of=split[0], qualifier=split[1])
+            if split[1] == UNSORTED:
+                index[ent["display"]]["unsorted"] = True
+        if ent["parent"]:
+            index[ent["display"]]["part_of"] = ent["parent"]["display"]
+        if kids:
+            index[ent["display"]]["parts"] = kids
         if ent["attrs"]:
             index[ent["display"]]["attrs"] = dict(ent["attrs"].most_common())
-        if curation_key(kind, ent["name"]) not in not_mixed:
+        if curation_key(kind, ent["name"]) not in not_mixed and not (split and split[1] == UNSORTED):
             flag = mixup_flag(kind, ent["attrs"])
             if flag:
                 index[ent["display"]]["mixup"] = flag
@@ -1029,7 +1217,9 @@ def _save_history(history: dict):
 
 def record_change(description: str, kind: str, before, after, filename: str = ""):
     """kind: 'curation' (before/after are curation dicts), 'groups'
-    (before/after are the groups list), or 'raw' (file text)."""
+    (before/after are the groups list), 'raw' (file text), or 'batch'
+    ({"files": {name: text}, "curation": dict, "groups": list}, any part
+    optional) for one change that touches several of them."""
     history = _load_history()
     history["undo"].append({
         "description": description, "kind": kind,
@@ -1041,7 +1231,14 @@ def record_change(description: str, kind: str, before, after, filename: str = ""
 
 def _apply_snapshot(entry: dict, direction: str):
     payload = entry[direction]
-    if entry["kind"] == "curation":
+    if entry["kind"] == "batch":
+        for filename, text in payload.get("files", {}).items():
+            (RAW_DIR / Path(filename).name).write_text(text, encoding="utf-8")
+        if "curation" in payload:
+            save_curation(payload["curation"])
+        if "groups" in payload:
+            _apply_snapshot({"kind": "groups", direction: payload["groups"]}, direction)
+    elif entry["kind"] == "curation":
         save_curation(payload)
     elif entry["kind"] == "groups":
         # rollup is a view preference, not journal data — carry the live flags
@@ -1095,7 +1292,7 @@ def history_peek() -> dict:
 # ---------------------------------------------------------------------------
 
 _NEW_RECORD = {
-    "people": lambda name: {"name": name, "relationship": "", "observations": []},
+    "people": lambda name: {"name": name, "relationship": "", "qualifier": "", "observations": []},
     "projects": lambda name: {"name": name, "domain": "personal", "status": "unknown", "observations": []},
     "places": lambda name: {"name": name, "kind": "", "observations": []},
     "things": lambda name: {"name": name, "category": "other", "observations": []},
@@ -1134,7 +1331,7 @@ def list_observations(kind: str, canonical_name: str) -> list[dict]:
                 name = (ent.get("name") or "").strip()
                 if not name:
                     continue
-                resolved = apply_curation(curation, raw_kind, name, path.stem)
+                resolved = apply_curation(curation, raw_kind, name, path.stem, ent.get("qualifier", ""))
                 if not resolved or resolved[0] != kind or resolved[1].lower() != target:
                     continue
                 # this record's own attribute, not the entity's "latest wins"
@@ -1211,6 +1408,184 @@ def reassign_observation(
 
 
 # ---------------------------------------------------------------------------
+# SPLITTING A NAME (work Dev and friend Dev were one entity)
+# ---------------------------------------------------------------------------
+# A split writes a qualifier onto the raw records, the same way extraction
+# will from now on, and declares the name's variants in curation. The
+# first split of a name also names the rest, so nothing stays as a bare
+# "Dev" that new mentions could pile into. Sorting an unsorted mention
+# is the same operation. One undo puts the files, rules and groups back.
+
+def _entity_records(kind: str, canonical: str) -> list[tuple[str, str, int]]:
+    """(file, group, index) of every raw record that resolves to the entity,
+    including ones with no observations (they still count as a mention)."""
+    curation = load_curation()
+    out = []
+    for path in sorted(RAW_DIR.glob("*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for group, raw_kind, _ in KIND_FIELDS:
+            for i, ent in enumerate(data.get(group, [])):
+                name = (ent.get("name") or "").strip()
+                resolved = name and apply_curation(curation, raw_kind, name, path.stem,
+                                                   ent.get("qualifier", ""))
+                if resolved and resolved[0] == kind and resolved[1].lower() == canonical.lower():
+                    out.append((path.name, group, i))
+    return out
+
+
+def _qualify_record(data: dict, group: str, ent_index: int, picked: set[int],
+                    qualifier: str, rest: str):
+    """Give one record's picked observations `qualifier` and the others
+    `rest` (when set), splitting the record in two if it has both."""
+    ent = data[group][ent_index]
+    obs = ent.get("observations", [])
+    if picked and len(picked) == len(obs):
+        ent["qualifier"] = qualifier
+        return
+    moved = [o for i, o in enumerate(obs) if i in picked]
+    ent["observations"] = [o for i, o in enumerate(obs) if i not in picked]
+    if rest:
+        ent["qualifier"] = rest
+    if not moved:
+        return
+    same = next((e for e in data[group] if e is not ent
+                 and (e.get("name") or "").lower() == (ent.get("name") or "").lower()
+                 and (e.get("qualifier") or "").lower() == qualifier.lower()), None)
+    if same:
+        same.setdefault("observations", []).extend(moved)
+    else:
+        data[group].append({**ent, "qualifier": qualifier, "observations": moved})
+
+
+def split_entity(index: dict, name: str, picks: list[dict], qualifier: str,
+                 rest: str = "", groups_to: dict | None = None) -> str:
+    """Move the picked observations of the person `name` to `qualifier`
+    (an existing variant or a new one). A name not split before needs
+    `rest`, the qualifier for everything not picked. `groups_to` maps each
+    of its groups to the qualifier that keeps the membership (default:
+    rest). Returns the history description."""
+    info = index[name]
+    if info["type"] != "person":
+        raise ValueError("only people are split; a place or project gets a part")
+    qualifier, rest = qualifier.strip(), rest.strip()
+    if not qualifier or UNSORTED in (qualifier, rest):
+        raise ValueError("give the qualifier a name")
+    head = info.get("variant_of") or info.get("base", name)
+    first = not info.get("variant_of")
+    if first and not rest:
+        raise ValueError("name the rest too, so nothing stays as a bare name")
+    if rest and rest.lower() == qualifier.lower():
+        raise ValueError("two different qualifiers, one for each")
+
+    curation = load_curation()
+    before_cur = json.loads(json.dumps(curation))
+    head_key = curation_key("person", head)
+    variants = curation["variants"].setdefault(head_key, [])
+    for q in (qualifier, rest):
+        if q and q.lower() not in {v.lower() for v in variants}:
+            variants.append(q)
+
+    picked: dict[tuple[str, str, int], set[int]] = defaultdict(set)
+    for p in picks:
+        picked[(Path(p["file"]).name, p["group"], int(p["ent_index"]))].add(int(p["obs_index"]))
+    records = _entity_records("person", info.get("base", name))
+    if not set(picked) <= set(records):
+        raise ValueError("those observations aren't this person's")
+
+    files_before, files_after = {}, {}
+    by_file = defaultdict(list)
+    for key in records:
+        by_file[key[0]].append(key)
+    for filename, keys in by_file.items():
+        if not rest and not any(k in picked for k in keys):
+            continue
+        path = _raw_path(filename)
+        files_before[filename] = path.read_text(encoding="utf-8")
+        data = json.loads(files_before[filename])
+        # highest index first: a split record appends, it never shifts
+        for key in sorted(keys, key=lambda k: -k[2]):
+            _qualify_record(data, key[1], key[2], picked.get(key, set()), qualifier, rest)
+        _save_raw(path, data)
+        files_after[filename] = path.read_text(encoding="utf-8")
+
+    snapshot = {"files": files_before, "curation": before_cur}
+    after = {"files": files_after}
+    if first:
+        # the plain name's own rules go to the rest; reviewed and the
+        # mix-up dismissal were about the two together, so they go
+        rest_key = curation_key("person", f"{head} · {rest}")
+        for field in ("alias_add", "alias_remove"):
+            if head_key in curation[field]:
+                curation[field].setdefault(rest_key, []).extend(curation[field].pop(head_key))
+        if any(k.lower() == head_key for k in curation["retired"]):
+            curation["retired"].append(rest_key)
+        for field in ("reviewed", "retired", "not_mixed"):
+            curation[field] = [k for k in curation[field] if k.lower() != head_key]
+        groups = load_groups()
+        snapshot["groups"] = json.loads(json.dumps(groups))
+        names = {head.lower(), name.lower()} | {a.lower() for a in info.get("aliases", [])}
+        for g in groups:
+            if any(m.lower() in names for m in g["members"]):
+                keep = (groups_to or {}).get(g["name"]) or rest
+                g["members"] = [m for m in g["members"] if m.lower() not in names]
+                g["members"].append(f"{head} · {keep}")
+        save_groups(groups)
+        after["groups"] = groups
+    save_curation(curation)
+    after["curation"] = curation
+    n = sum(len(v) for v in picked.values())
+    description = f"split {head}: {n} observation{'s' if n != 1 else ''} to {head} · {qualifier}"
+    record_change(description, "batch", snapshot, after)
+    return description
+
+
+def rename_qualifier(index: dict, name: str, new_qualifier: str) -> str:
+    """"Dev · work" -> "Dev · job": the variant and every record
+    that carries it, as one undo."""
+    info = index[name]
+    head, old = info["variant_of"], info["qualifier"]
+    new_qualifier = new_qualifier.strip()
+    if not new_qualifier or new_qualifier == UNSORTED or old == UNSORTED:
+        raise ValueError("unsorted mentions get sorted, not renamed")
+    curation = load_curation()
+    head_key = curation_key("person", head)
+    variants = curation["variants"].get(head_key, [])
+    if new_qualifier.lower() != old.lower() and new_qualifier.lower() in {v.lower() for v in variants}:
+        raise ValueError(f"{head} · {new_qualifier} already exists; merge into it instead")
+    before_cur = json.loads(json.dumps(curation))
+    curation["variants"][head_key] = [new_qualifier if v.lower() == old.lower() else v for v in variants]
+    old_key, new_key = curation_key("person", f"{head} · {old}"), curation_key("person", f"{head} · {new_qualifier}")
+    if old_key != new_key:
+        move_entity_rules(curation, old_key, new_key)
+    files_before, files_after = {}, {}
+    for filename, _, _ in _entity_records("person", info.get("base", name)):
+        files_before.setdefault(filename, None)
+    for filename in files_before:
+        path = _raw_path(filename)
+        files_before[filename] = path.read_text(encoding="utf-8")
+        data = json.loads(files_before[filename])
+        for ent in data.get("people", []):
+            if (ent.get("qualifier") or "").lower() == old.lower():
+                resolved = _resolve_rules(before_cur, "person", (ent.get("name") or "").strip())
+                if resolved and resolved[1].lower() == head.lower():
+                    ent["qualifier"] = new_qualifier
+        _save_raw(path, data)
+        files_after[filename] = path.read_text(encoding="utf-8")
+    save_curation(curation)
+    groups = load_groups()
+    groups_before = json.loads(json.dumps(groups))
+    for g in groups:
+        g["members"] = [f"{head} · {new_qualifier}" if m.lower() == f"{head} · {old}".lower() else m
+                        for m in g["members"]]
+    save_groups(groups)
+    description = f"rename {head} · {old} to {head} · {new_qualifier}"
+    record_change(description, "batch",
+                  {"files": files_before, "curation": before_cur, "groups": groups_before},
+                  {"files": files_after, "curation": curation, "groups": groups})
+    return description
+
+
+# ---------------------------------------------------------------------------
 # LOCAL DUPLICATE DETECTION (free — no API calls)
 # ---------------------------------------------------------------------------
 
@@ -1234,12 +1609,17 @@ def _entity_texts() -> dict:
                 name = (ent.get("name") or "").strip()
                 if not name:
                     continue
-                resolved = apply_curation(curation, raw_kind, name, path.stem)
+                resolved = apply_curation(curation, raw_kind, name, path.stem, ent.get("qualifier", ""))
                 if resolved:
                     texts[(resolved[0], resolved[1].lower())].extend(
                         ent.get("observations", [])
                     )
     return {k: " ".join(v)[:1200] for k, v in texts.items()}
+
+
+def _split_apart(a: dict, b: dict) -> bool:
+    """Two halves of a split name were separated on purpose."""
+    return bool(a.get("variant_of")) and a.get("variant_of") == b.get("variant_of")
 
 
 def find_duplicate_candidates(max_pairs: int = 60, use_embeddings: bool = True) -> list[dict]:
@@ -1273,7 +1653,7 @@ def find_duplicate_candidates(max_pairs: int = 60, use_embeddings: bool = True) 
             a_names = [a] + ia.get("aliases", [])
             for b, ib in items[i + 1:]:
                 pk = pair_key(kind, a, b)
-                if pk in dismissed:
+                if pk in dismissed or _split_apart(ia, ib):
                     continue
                 b_names = [b] + ib.get("aliases", [])
                 best = max(
@@ -1311,7 +1691,7 @@ def find_duplicate_candidates(max_pairs: int = 60, use_embeddings: bool = True) 
                         a, ia, _ = keyed[i]
                         b, ib, _ = keyed[j]
                         pk = pair_key(kind, a, b)
-                        if pk in dismissed or pk in candidates:
+                        if pk in dismissed or pk in candidates or _split_apart(ia, ib):
                             continue
                         if sims[i, j] >= EMB_SIM_THRESHOLD:
                             candidates[pk] = {
@@ -1517,15 +1897,182 @@ def retype_rule(curation: dict, key: str, new_kind: str, new_name: str, category
         curation["retype"].pop(back)
     else:
         curation["retype"][key] = {"type": new_kind, "name": new_name}
-    for field in ("reviewed", "retired"):
-        if any(k.lower() == key for k in curation[field]):
-            curation[field] = [k for k in curation[field] if k.lower() != key] + [new_key]
-    for field in ("alias_add", "alias_remove", "rename"):
-        if key in curation[field] and new_key not in curation[field]:
-            curation[field][new_key] = curation[field].pop(key)
-    curation["category"].pop(key, None)
+    move_entity_rules(curation, key, new_key)
+    if new_kind == "person":
+        curation["part_of"].pop(new_key, None)  # people are never parts
     if new_kind == "thing" and category:
         curation["category"][new_key] = category
+
+
+# ---------------------------------------------------------------------------
+# PARTS REVIEW (one-time: which merges were really parts)
+# ---------------------------------------------------------------------------
+# Before part-of links, a piece of something was merged into it ("tabs" ->
+# Coda) or given a slash name ("Harbor Town / Beach"). A merge is a
+# global name rule, so every future "the beach" lands in Harbor Town. The
+# review lists every merge rule by target, and every "Parent / Name" whose
+# parent exists, so each can become a real part. Nothing converts
+# automatically.
+
+def _slash_split(name: str):
+    """("Harbor Town", "Beach") for a spaced slash name; "7/11" isn't one."""
+    head, sep, tail = name.partition(" / ")
+    return (head.strip(), tail.strip()) if sep and head.strip() and tail.strip() else None
+
+
+def parts_review(index: dict) -> dict:
+    """{slash: [...], targets: [...]} for the review screen."""
+    curation = load_curation()
+    lookup = {n.lower(): n for n in index}
+    slash = []
+    for name, info in index.items():
+        split = _slash_split(info.get("base", name))
+        if not split or info["type"] == "person" or info.get("part_of"):
+            continue
+        parent = lookup.get(split[0].lower())
+        if not parent or index[parent]["type"] == "person":
+            continue
+        joins = lookup.get(split[1].lower())
+        slash.append({"name": name, "parent": parent, "part": split[1],
+                      "mentions": info["mentions"],
+                      "joins": joins if joins and index[joins]["type"] == info["type"] else ""})
+
+    # spelling and a first observation for each merged name, from the raw cache
+    said: dict[str, tuple[str, str, int]] = {}
+    for _, kind, name, ent in _raw_mentions():
+        key = curation_key(kind, name)
+        if key in curation["merge"]:
+            spelled, obs, n = said.get(key, (name, "", 0))
+            first = (ent.get("observations") or [""])[0]
+            said[key] = (spelled, obs or first, n + 1)
+    by_target: dict[str, dict] = {}
+    for key, value in curation["merge"].items():
+        kind = key.partition(":")[0]
+        if kind == "person":
+            continue
+        resolved = resolve_ref(curation, value, kind)
+        if not resolved:
+            continue
+        tkind, tname = resolved
+        target = next((n for n, i in index.items() if i["type"] == tkind
+                       and i.get("base", n).lower() == tname.lower()), None)
+        if not target:
+            continue
+        spelled, obs, n = said.get(key, (key.partition(":")[2], "", 0))
+        t = by_target.setdefault(target, {"target": target, "kind": tkind,
+                                          "mentions": index[target]["mentions"], "sources": []})
+        t["sources"].append({"key": key, "name": spelled, "mentions": n, "said": obs[:160],
+                             "generic": is_generic(kind, spelled)})
+    targets = sorted(by_target.values(), key=lambda t: (-len(t["sources"]), t["target"].lower()))
+    for t in targets:
+        t["sources"].sort(key=lambda src: (-src["mentions"], src["name"].lower()))
+    return {"slash": sorted(slash, key=lambda x: x["name"].lower()), "targets": targets}
+
+
+PARTS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "parts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string"},
+                    "reason": {"type": "string"},
+                },
+                "required": ["key", "reason"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["parts"],
+    "additionalProperties": False,
+}
+
+PARTS_PROMPT = """\
+Below are entities from one person's journal, each with the names that were \
+merged into it, as JSON. Each merged name has a key, how often it was \
+mentioned, and one thing the journal said about it.
+
+A merged name is an ALIAS when it is another name for the same thing (a \
+spelling, a nickname, a longer description of the whole). It is a PART when \
+it is a distinct piece of the target that deserves its own entry: a \
+component or feature of a project, a room of a home, a beach in a town, a \
+venue's stage.
+
+List only the parts, by key, with one short reason. Precision matters more \
+than coverage; the author reviews every suggestion.
+
+<entities>
+{listing}
+</entities>"""
+
+
+def suggest_parts(index: dict) -> list[dict]:
+    """Ask Claude which merged names are really parts of their target."""
+    review = parts_review(index)
+    targets = [t for t in review["targets"] if any(not s["generic"] for s in t["sources"])]
+    if not targets:
+        return []
+    listing = [{"target": t["target"], "kind": t["kind"],
+                "merged": [{"key": s["key"], "name": s["name"], "mentions": s["mentions"],
+                            "said": s["said"]} for s in t["sources"] if not s["generic"]]}
+               for t in targets]
+    client = get_client()
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=8000,
+        **processing_thinking_kwargs(),
+        output_config={"format": {"type": "json_schema", "schema": PARTS_SCHEMA}},
+        messages=[{"role": "user", "content": PARTS_PROMPT.format(
+            listing=json.dumps(listing, ensure_ascii=False))}],
+    )
+    if response.stop_reason == "refusal":
+        return []
+    raw = next(b.text for b in response.content if b.type == "text")
+    known = {s["key"] for t in targets for s in t["sources"] if not s["generic"]}
+    out, seen = [], set()
+    for p in json.loads(raw).get("parts", []):
+        key = p["key"].strip().lower()
+        if key in known and key not in seen:
+            seen.add(key)
+            out.append({"key": key, "reason": p["reason"]})
+    return out
+
+
+def make_part(curation: dict, key: str, parent_kind: str, parent_name: str):
+    """`key` becomes its own entity, a part of the parent: its merge rule
+    goes, a part-of link comes."""
+    curation["merge"].pop(key, None)
+    curation["correct"].pop(key, None)
+    curation["part_of"][key] = f"{parent_kind}:{parent_name}"
+
+
+def split_slash_name(curation: dict, index: dict, name: str, parent: str):
+    """"Harbor Town / Beach" becomes Beach, a part of Harbor Town. Rules that
+    pointed at the slash name point at the new one, and its own rules
+    (reviewed, aliases, ...) follow it."""
+    info = index[name]
+    kind, base = info["type"], info.get("base", name)
+    _, tail = _slash_split(base)
+    old_key, new_key = curation_key(kind, base), curation_key(kind, tail)
+    for field in ("merge", "correct"):
+        for k, v in list(curation[field].items()):
+            vkind, vname = _parse_target(v, k.partition(":")[0])
+            if vkind == kind and vname.lower() == base.lower():
+                qualified = v.partition(":")[0] in KINDS and ":" in v
+                curation[field][k] = f"{kind}:{tail}" if qualified else tail
+    # a record extracted under the slash name itself
+    curation["merge"].setdefault(old_key, tail)
+    # "living room" -> "living room" after the rewrite: not a rule any more
+    for field in ("merge", "correct"):
+        v = curation[field].get(new_key)
+        if v and _parse_target(v, kind) == (kind, tail):
+            curation[field].pop(new_key)
+    move_entity_rules(curation, old_key, new_key)
+    pinfo = index[parent]
+    curation["part_of"][new_key] = f"{pinfo['type']}:{pinfo.get('base', parent)}"
+    return tail
 
 
 # ---------------------------------------------------------------------------
@@ -1600,6 +2147,8 @@ def reextract(terms: list[str], progress=None) -> dict:
     client = get_client()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     known = known_people_hint()
+    variants = known_variants_hint()
+    groups = known_groups_hint()
     convs = entries_mentioning(terms)
     done, failed = [], []
     for i, conv in enumerate(convs):
@@ -1607,7 +2156,8 @@ def reextract(terms: list[str], progress=None) -> dict:
         if progress:
             progress(i, len(convs), conv)
         try:
-            entities = extract_conversation(client, conv, known_people=known)
+            entities = extract_conversation(client, conv, known_people=known,
+                                            variants=variants, groups=groups)
         except caps.CapExceeded:
             raise  # a spend cap stops the run; what's done is kept
         except Exception as e:

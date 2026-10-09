@@ -102,6 +102,22 @@ def _open_session_text() -> str:
     return "\n\n".join(m.get("text", "") for m in cur.get("messages", []))
 
 
+def _holds(joined: str, text: str) -> bool:
+    """Whether `text` is one or more whole messages inside `joined`.
+
+    Closed entries and the open session both join their messages with
+    "\\n\\n", so a covered backup's paragraphs are a run of consecutive
+    segments -- not just any substring, which a short or common backup could
+    also match inside unrelated text and get wrongly skipped. A backup of
+    several paragraphs is several segments; matching it against one segment
+    alone never succeeds, and every multi-paragraph entry was indexed twice.
+    """
+    paras = text.split("\n\n")
+    segs = joined.split("\n\n")
+    n = len(paras)
+    return any(segs[i:i + n] == paras for i in range(len(segs) - n + 1))
+
+
 def _write_mode(entry: dict) -> tuple[str, dict]:
     """The id and metadata `companion.store_entry` would have written.
 
@@ -171,14 +187,9 @@ def build_entries(dry_run: bool) -> dict:
             # the old CLI write-mode entries, and both are in the index today
             # -- dropping them would quietly delete writing from search, which
             # is the one outcome a rebuild must never produce.
-            # Closed entries and the open session both join their messages
-            # with "\n\n" (see close_session / _open_session_text), so a
-            # covered draft's text is one whole joined segment -- not just
-            # any substring, which a short or common draft could also match
-            # inside unrelated text and get wrongly skipped.
             covered = entry["text"] and (
-                entry["text"] in closed.get(entry["date"], "").split("\n\n")
-                or entry["text"] in open_chat.split("\n\n"))
+                _holds(closed.get(entry["date"], ""), entry["text"])
+                or _holds(open_chat, entry["text"]))
             if covered:
                 skipped += 1
                 continue

@@ -263,6 +263,42 @@ def refuse_if_unsandboxed():
                 "bash seed_corpus/run_capture.sh does this for you.")
 
 
+def install_open_backups(open_files: list[Path], dry_run: bool):
+    """The open session's saved entries, on disk the way the app leaves them:
+    `<date>_<HHMM>_<entry id>_entry.md`, holding the session message's text,
+    written by the same `sessions.backup_entry_text` a real save calls.
+
+    Not the corpus files under their titles. A titled file reads as a
+    finished entry, so "rebuild index" would embed it -- and after a
+    visitor's close, the same days would be in the index twice. A backup
+    whose text the open session or a closed entry already holds is skipped
+    by the rebuild, exactly as in a real journal."""
+    import sessions
+    from datetime import datetime
+
+    shipped = json.loads((Path(__file__).parent / "sessions" / "current.json")
+                         .read_text(encoding="utf-8"))
+    saved = [m for m in shipped["messages"]
+             if m.get("kind") == "entry" and not m.get("dream")]
+    waking = [f for f in open_files if not parse_entry(f)["is_dream"]]
+    if len(saved) != len(waking):
+        raise SystemExit(f"the open session saves {len(saved)} entries but the "
+                         f"corpus has {len(waking)} open ones -- rebuild "
+                         f"sessions/current.json with build_sessions.py")
+    print()
+    for m in saved:
+        when = datetime.strptime(m["ts"], "%Y-%m-%d %H:%M")
+        if dry_run:
+            print(f"  [dry] backup {m['entry_id']} ({m['ts']})")
+        else:
+            path = sessions.backup_entry_text(m["text"], when=when,
+                                              entry_id=m["entry_id"])
+            print(f"  backup -> {path.name}")
+    # a dream is never a session message: it keeps its realm-marked file
+    install_files([(f, JOURNAL_DIR / f.name) for f in open_files
+                   if f not in waking], dry_run)
+
+
 def install_files(files: list[tuple[Path, Path]], dry_run: bool):
     print()
     for src, dst in files:
@@ -339,8 +375,7 @@ def main():
     # material and a visitor's close add them a second time.
     print(f"\n{len(open_files)} open-session entr"
           f"{'y' if len(open_files) == 1 else 'ies'} (backup only, not embedded)")
-    install_files([(f, JOURNAL_DIR / f.name) for f in open_files],
-                  args.dry_run)
+    install_open_backups(open_files, args.dry_run)
 
     install_files(to_install, args.dry_run)
     install_files(derived_files(), args.dry_run)

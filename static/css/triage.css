@@ -26,14 +26,14 @@
   #triage-obs .more { color: var(--text-muted); font-style: italic; }
 
   /* the input row and the retype row, inside the card under a hairline */
-  #triage-input-row, #triage-kind-row, #triage-cat-row, #triage-mixed-row, #triage-never-row {
+  #triage-input-row, #triage-kind-row, #triage-cat-row, #triage-mixed-row, #triage-sort-row, #triage-never-row {
     margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border-default);
     display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
     font: .85rem var(--font-ui); color: var(--text-muted);
   }
-  #triage-mode-label, #triage-kind-row .lbl, #triage-cat-row .lbl, #triage-mixed-q, #triage-never-q { color: var(--text-accent); }
+  #triage-mode-label, #triage-kind-row .lbl, #triage-cat-row .lbl, #triage-mixed-q, #triage-sort-q, #triage-never-q { color: var(--text-accent); }
   #triage-input { flex: 1 1 12rem; min-width: 0; }
-  #triage-input-row .btns, #triage-kind-row .btns, #triage-cat-row .btns, #triage-mixed-row .btns, #triage-never-row .btns { display: flex; gap: .4rem; flex-wrap: wrap; }
+  #triage-input-row .btns, #triage-kind-row .btns, #triage-cat-row .btns, #triage-mixed-row .btns, #triage-sort-row .btns, #triage-never-row .btns { display: flex; gap: .4rem; flex-wrap: wrap; }
   #triage-suggest { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
   #triage-suggest:empty { display: none; }
   #triage-suggest .chip { height: 1.7rem; font-size: .78rem; }

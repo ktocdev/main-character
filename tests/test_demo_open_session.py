@@ -139,16 +139,50 @@ def test_the_corpus_has_open_entries_to_test_against():
 
 
 def test_open_entries_are_backed_up_but_not_embedded(installed):
+    """Backed up as a real save leaves them: `<date>_<HHMM>_<id>_entry.md`
+    holding the session message, not the corpus file under its title."""
+    import export
+    saved = [m for m in shipped()["messages"] if m.get("kind") == "entry"]
+    assert len(saved) == len(open_entry_files())
+    for m in saved:
+        date, clock = m["ts"][:10], m["ts"][11:].replace(":", "")
+        backup = installed.root / "journal_entries" / \
+            f"{date}_{clock}_{m['entry_id']}_entry.md"
+        assert backup.read_text(encoding="utf-8").endswith("\n\n" + m["text"])
+        assert export.DRAFT.match(backup.name)
     for f in open_entry_files():
-        backup = installed.root / "journal_entries" / f.name
-        assert backup.read_text(encoding="utf-8") == \
-            f.read_text(encoding="utf-8")
+        assert not (installed.root / "journal_entries" / f.name).exists()
 
     for name in ("journal_entries", "journal_passages", "journal_dreams"):
         dates = [m["date"] for m in
                  installed.client.get_collection(name).get()["metadatas"]]
         assert dates, f"{name} is empty -- the closed corpus went missing"
         assert all(d < OPEN_FROM for d in dates), (name, sorted(dates)[-3:])
+
+
+def test_a_rebuild_of_the_demo_indexes_nothing_new(installed, tmp_path):
+    """"Rebuild index" in the demo must land where the install did: the open
+    week's backups are the open session's, so they stay out, and a close
+    later can't put those days in twice."""
+    import shutil
+    root = tmp_path / "copy"
+    shutil.copytree(installed.root, root)
+    env = {k: v for k, v in os.environ.items() if not k.startswith("MC_")}
+    env.update({"MC_MOCK": "1", "MC_AUTHOR_NAME": "Jordan",
+                **{f"MC_{name.upper()}_DIR": str(root / d) for name, d in [
+                    ("journal", "journal_entries"), ("chroma", "chroma_data"),
+                    ("entity", "entity_graph"), ("summary", "summaries"),
+                    ("category", "categories"), ("pattern", "patterns"),
+                    ("dream", "dreams"), ("session", "sessions")]}})
+    done = subprocess.run(
+        [sys.executable, "-c",
+         "import json, rebuild_index; "
+         "print(json.dumps(rebuild_index.rebuild()['journal_entries']))"],
+        cwd=str(ROOT), env=env, capture_output=True, text=True, timeout=900)
+    assert done.returncode == 0, done.stderr or done.stdout
+    result = json.loads(done.stdout.strip().splitlines()[-1])
+    assert result["skipped"] == len(open_entry_files())
+    assert result["documents"] == 29
 
 
 def test_search_cannot_find_unclosed_material(installed):

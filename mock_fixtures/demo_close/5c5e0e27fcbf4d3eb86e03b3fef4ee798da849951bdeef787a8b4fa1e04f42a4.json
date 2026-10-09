@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Dev\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Jordan went to Dev's place after work on 9/16\",\"Dev is three days out from a gig and ran the setlist front to back in the kitchen\",\"Dev played the transition they marked as worst on the 3rd cleanly\",\"Jordan told Dev they'd be at the gig on the 19th; Dev replied 'obviously'\",\"Dev held up one of Dad's tortoiseshell picks, said 'these are the real thing,' and put it in their case\",\"Dev tried a pick on the low B string, said it makes the attack warmer, and used it for the rest of practice\"]},{\"name\":\"Mika\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Mika texted Jordan on the train home with a listing for an open mic at the Fern on the 27th, with just a question mark\"]},{\"name\":\"Mom\",\"relationship\":\"mother\",\"qualifier\":\"\",\"observations\":[\"Mom left Jordan Dad's old guitar picks, the heavy tortoiseshell set\"]},{\"name\":\"Dad\",\"relationship\":\"father\",\"qualifier\":\"\",\"observations\":[\"Dad's old heavy tortoiseshell guitar picks were given to Dev by Jordan\",\"Jordan thinks Dad would have liked Dev using the picks\"]}],\"projects\":[{\"name\":\"Northlight\",\"domain\":\"work\",\"status\":\"unknown\",\"observations\":[\"Jordan's inner voice once said they didn't have enough experience for Northlight, which wasn't true\"]},{\"name\":\"guitar\",\"domain\":\"creative\",\"status\":\"active\",\"observations\":[\"Jordan signed up for an open mic on September 27th at the Fern, 8pm slot, before getting off the train\",\"Jordan caught the usual 'I'm not ready' thought this time instead of postponing\"]}],\"places\":[{\"name\":\"Dev's place\",\"kind\":\"home\",\"observations\":[\"Jordan went there after work to listen to Dev run the setlist\",\"Jordan sat on the kitchen counter and listened to the whole setlist twice; Dev plays in the kitchen because the acoustics are better than the bedroom\"]},{\"name\":\"the Fern\",\"kind\":\"venue\",\"observations\":[\"Has an open mic on the 27th; Jordan signed up for the 8pm slot\"]}],\"things\":[]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2392,
+    "output_tokens": 752,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

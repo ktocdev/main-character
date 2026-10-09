@@ -178,6 +178,36 @@ def test_a_backup_of_a_closed_entry_is_not_indexed_twice(journal):
     assert titles == ["The session"]
 
 
+def test_a_backup_of_several_paragraphs_is_not_indexed_twice(journal):
+    """An entry with paragraphs is several "\\n\\n"-joined segments of the
+    closed entry, never one. Matching segment by segment let every such
+    entry back in under its placeholder title."""
+    from rag_journal import get_collection
+
+    write("2026-08-01_The session.md",
+          "morning was slow.\n\ni walked to the lake.\n\nthen a nap.",
+          title="The session")
+    write("2026-08-01_1013_entry.md", "i walked to the lake.\n\nthen a nap.",
+          title="Journal entry — 2026-08-01 10:13")
+
+    result = rebuild_index.rebuild()["journal_entries"]
+    assert result["skipped"] == 1
+    titles = {m["title"] for m in
+              get_collection().get(include=["metadatas"])["metadatas"]}
+    assert titles == {"The session"}
+
+
+def test_a_backup_is_covered_only_by_whole_paragraphs(journal):
+    """A backup whose words sit inside a longer paragraph is not that
+    paragraph: it may be writing of its own, so it stays in the index."""
+    write("2026-08-01_The session.md", "i walked to the lake and back.",
+          title="The session")
+    write("2026-08-01_1013_entry.md", "i walked to the lake",
+          title="Journal entry — 2026-08-01 10:13")
+
+    assert rebuild_index.rebuild()["journal_entries"]["skipped"] == 0
+
+
 def test_a_backup_with_no_closed_entry_behind_it_is_kept(journal):
     """The mirror of the test above, and the more important half: a backup
     whose words are in no finished entry is writing that exists nowhere else

@@ -219,6 +219,27 @@ export function showGroup(name) {
   ops.appendChild(flt);
   page.appendChild(ops);
 
+  // what ties them together: extraction uses it to tell who an entry means,
+  // and every member's profile carries it to the companion
+  const note = document.createElement('div');
+  note.className = 'gp-note';
+  note.innerHTML = '<label><span class="lbl">what ties them together</span><input type="text" class="input-xs" maxlength="300"></label><span class="saved"></span>';
+  const ni = note.querySelector('input');
+  ni.value = g.note || '';
+  ni.placeholder = 'e.g. people from my first job';
+  ni.title = 'Extraction sees this when it reads new entries, and so does the companion with each member\'s profile';
+  const saveNote = async () => {
+    if (ni.value.trim() === (g.note || '')) return;
+    if (await api('/api/groups/edit', {name: g.name, note: ni.value})) {
+      g.note = ni.value.trim();
+      note.querySelector('.saved').textContent = 'saved';
+      setTimeout(() => { note.querySelector('.saved').textContent = ''; }, 1600);
+    }
+  };
+  ni.addEventListener('change', saveNote);
+  ni.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ni.blur(); } });
+  page.appendChild(note);
+
   const section = label => {
     const s = document.createElement('div');
     s.className = 'gp-section rule eyebrow';

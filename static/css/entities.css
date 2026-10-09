@@ -123,6 +123,39 @@
   .check-row .ln { display: block; font-size: .85rem; color: var(--text-muted); text-wrap: pretty; }
   .check-row .ln:empty { display: none; }
   .check-row .quiet { flex-shrink: 0; }
+  /* parts review: one target per disclosure, a choice per merged name */
+  #suggest-panel details { border-top: 1px solid var(--border-default); padding-top: .5rem; }
+  #suggest-panel summary { cursor: pointer; font-size: .95rem; color: var(--text-default); }
+  #suggest-panel summary .note { font: .8rem var(--font-ui); color: var(--text-muted); }
+  .part-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .6rem; margin: .45rem 0 0 1rem; font-size: .95rem; }
+  .part-row .note { font: .8rem var(--font-ui); color: var(--text-muted); }
+  .part-row select { margin-left: auto; }
+  .part-row .ln { flex-basis: 100%; font-size: .85rem; color: var(--text-muted); text-wrap: pretty; }
+  .part-row .ln:empty { display: none; }
+  .check-inline { display: inline-flex; align-items: center; gap: .35rem; font: .8rem var(--font-ui); color: var(--text-muted); }
+  /* parts nested under their parent in the list */
+  .parts-toggle {
+    margin: -.2rem 0 .2rem 1.6rem; border: 0; background: transparent; padding: .1rem .3rem;
+    font: .78rem var(--font-ui); color: var(--text-muted); cursor: pointer; text-align: left;
+  }
+  .parts-toggle:hover { color: var(--text-default); }
+  .ent-row.part .list-item { padding-left: 2.2rem; }
+  /* "Dev · work": the qualifier reads after the name, muted */
+  .q { color: var(--text-muted); font-weight: inherit; }
+  /* splitting a name: the bar, a checkbox per observation */
+  .split-bar {
+    border: 1px solid var(--border-accent); border-radius: var(--radius-lg); padding: .9rem 1.1rem;
+    margin: 1rem 0 .4rem; display: flex; flex-direction: column; gap: .5rem; font: .85rem var(--font-ui);
+  }
+  .split-bar .lead { color: var(--text-default); text-wrap: pretty; }
+  .split-bar .ent-actions { align-items: center; }
+  .split-bar .lbl { color: var(--text-muted); width: auto; }
+  .obs input.pick { flex-shrink: 0; margin-top: .3rem; }
+  .obs-date .pick-all {
+    border: 0; background: transparent; padding: 0 0 0 .4rem; cursor: pointer;
+    font: .72rem var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--text-muted);
+    text-decoration: underline; text-underline-offset: .2em;
+  }
 
   /* observations: a section rule, date eyebrows, one serif line each */
   #entity-doc { margin-top: 2rem; }
@@ -151,5 +184,10 @@
   .gp-grid { display: flex; flex-wrap: wrap; gap: .4rem; }
   .gp-ent.dim { opacity: .5; font-style: italic; cursor: default; }
   .gp-empty { color: var(--text-muted); font-style: italic; padding: .2rem 0; }
+  .gp-note { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin: -.4rem 0 .4rem; }
+  .gp-note label { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; flex: 1 1 18rem; }
+  .gp-note .lbl { font: .8rem var(--font-ui); color: var(--text-muted); }
+  .gp-note input { flex: 1 1 14rem; min-width: 0; }
+  .gp-note .saved { font: .78rem var(--font-ui); color: var(--text-accent); }
   .rev-check { color: var(--text-accent-muted); font-size: .75rem; margin-left: .25rem; }
   .thinking { color: var(--text-muted); font-style: italic; }

@@ -23,6 +23,25 @@ const KINDS = ['person', 'project', 'place', 'thing'];
 const PLURAL = {person: 'people', project: 'projects', place: 'places', thing: 'things'};
 const CATEGORIES = ['music', 'game', 'show', 'book', 'event', 'other'];
 
+// "Dev · work": the name reads first, the qualifier muted. Plain names
+// stay plain text.
+export function setName(el, name, info) {
+  el.textContent = '';
+  const q = info?.variant_of ? name.slice(info.variant_of.length) : '';
+  if (!q) { el.textContent = name; return; }
+  const muted = document.createElement('span');
+  muted.className = 'q';
+  muted.textContent = q;
+  el.append(info.variant_of, muted);
+}
+// the other halves of a split name, for "move to"
+export function variantsOf(head) {
+  return Object.entries(state.entities)
+    .filter(([, i]) => i.variant_of === head && !i.unsorted)
+    .sort((a, b) => b[1].mentions - a[1].mentions)
+    .map(([, i]) => i.qualifier);
+}
+
 // a mix-up flag as words: "seen as coworker (9) and friend (4)"
 export function mixupText(flag) {
   const parts = flag.map(([label, n]) => `${label} (${n})`);
@@ -31,6 +50,9 @@ export function mixupText(flag) {
 let sortAlpha = false;
 let selectMode = false;         // checkboxes for batch add-to-group
 const picked = new Set();       // entity names checked for the next batch
+const openParts = new Set();    // parents whose parts are shown in the list
+let splitFor = null;            // the person whose observations are being split
+const splitPicked = new Set();  // "file|group|ent|obs" of the picked ones
 
 function updateBatchCount() {
   $('batch-count').textContent = `${picked.size} selected`;
@@ -63,25 +85,50 @@ export function renderEntityList() {
     if (hideSet && hideSet.has(name.toLowerCase())) continue;
     groups[info.type].push([name, info.mentions, info.reviewed, !!info.mixup]);
   }
+  // parts sit under their parent, collapsed, in the plain view; a search
+  // or filter shows them flat with their path
+  const nest = !filter && !selectMode;
+  const shownNames = new Set(Object.values(groups).flat().map(([n]) => n));
+  const nested = n => nest && state.entities[n].part_of && shownNames.has(state.entities[n].part_of)
+    && state.entities[state.entities[n].part_of].type === state.entities[n].type;
   const wrap = $('entity-groups');
   wrap.innerHTML = '';
   const typeFilter = filters.types.size ? filters.types : null;
   let shown = 0;
   for (const kind of KINDS) {
     if (typeFilter && !typeFilter.has(kind)) continue;
-    const items = groups[kind].sort(sortAlpha
+    const all = groups[kind].sort(sortAlpha
       ? (a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase())
       : (a, b) => b[1] - a[1]);
-    if (!items.length) continue;
-    shown += items.length;
+    if (!all.length) continue;
+    shown += all.length;
+    // each parent followed by its parts (when open), the parts marked
+    const items = [];
+    for (const it of all) {
+      if (nested(it[0])) continue;
+      items.push(it);
+      const kids = all.filter(k => nested(k[0]) && state.entities[k[0]].part_of === it[0]);
+      if (kids.length) items.push(['', 0, true, false, {toggle: it[0], count: kids.length}]);
+      if (kids.length && openParts.has(it[0])) for (const k of kids) items.push([...k, {part: true}]);
+    }
     const h = document.createElement('div');
     h.className = 'list-head';
     h.innerHTML = '<span class="eyebrow"></span>';
-    h.firstChild.textContent = `${PLURAL[kind]} (${items.length})`;
+    h.firstChild.textContent = `${PLURAL[kind]} (${all.length})`;
     wrap.appendChild(h);
-    for (const [name, mentions, reviewed, mixup] of items) {
+    for (const [name, mentions, reviewed, mixup, nestInfo] of items) {
+      if (nestInfo?.toggle) {
+        const t = document.createElement('button');
+        t.className = 'parts-toggle';
+        const open = openParts.has(nestInfo.toggle);
+        t.textContent = `${open ? '▾' : '▸'} ${nestInfo.count} part${nestInfo.count === 1 ? '' : 's'}`;
+        t.setAttribute('aria-expanded', open);
+        t.onclick = () => { if (open) openParts.delete(nestInfo.toggle); else openParts.add(nestInfo.toggle); renderEntityList(); };
+        wrap.appendChild(t);
+        continue;
+      }
       const row = document.createElement('div');
-      row.className = 'ent-row';
+      row.className = 'ent-row' + (nestInfo?.part ? ' part' : '');
 
       if (selectMode) {
         const cb = document.createElement('input');
@@ -100,7 +147,9 @@ export function renderEntityList() {
       const b = document.createElement('button');
       b.className = 'list-item' + (name === state.selected ? ' sel' : '');
       b.innerHTML = '<span class="li-title"></span><span class="li-meta"></span>';
-      b.querySelector('.li-title').textContent = name;
+      // nested under its parent, a part reads by its own name
+      if (nestInfo?.part) b.querySelector('.li-title').textContent = state.entities[name].base || name;
+      else setName(b.querySelector('.li-title'), name, state.entities[name]);
       b.querySelector('.li-meta').textContent = mentions;
       // a ring for maybe-two-people, then the unreviewed dot
       const dots = [];
@@ -352,6 +401,92 @@ async function thingsReview() {
   });
 }
 
+// ---- parts review ----
+// One-time. Before part-of links, a piece of something was merged into it
+// ("tabs" into a project) or given a slash name ("Harbor Town / Beach").
+// A merge is a name rule, so every future "the beach" went to that town.
+// Slash names whose parent exists are offered as parts, checked; each
+// merged name gets keep as alias / part / never track, with generic ones
+// pre-set to never track and Claude's guesses at parts pre-set to part.
+// Applying is one curation change, one undo.
+async function partsReview() {
+  const panel = suggestPanel('parts review');
+  const w = panelSay(panel, 'reading your merges (local, free)…');
+  const r = await (await fetch('/api/entities/parts-review')).json();
+  w.remove();
+  if (!r.slash.length && !r.targets.length) { panelSay(panel, 'no merges or slash names to review.'); return; }
+  panelSay(panel, 'A part is its own entity shown under its parent ("Coda / Tabs"), so it keeps its own timeline and an unrelated one with the same name stays separate. An alias is another name for the same thing. Nothing changes until you apply.');
+  const slashRows = [];
+  if (r.slash.length) {
+    panelHead(panel, `slash names (${r.slash.length})`);
+    for (const s of r.slash) {
+      slashRows.push([s, checkRow(panel, {
+        checked: true, label: s.name,
+        note: `→ ${s.part}, part of ${s.parent}${s.joins ? ` · joins the existing ${s.joins}` : ''}`,
+      })]);
+    }
+  }
+  const sourceRows = [];
+  if (r.targets.length) {
+    panelHead(panel, `merged names, by what they merge into (${r.targets.length})`);
+    for (const t of r.targets) {
+      const d = document.createElement('details');
+      d.innerHTML = '<summary><span class="nm"></span> <span class="note"></span></summary>';
+      d.querySelector('.nm').textContent = t.target;
+      d.querySelector('.note').textContent = `${t.kind} · ${t.sources.length} merged`;
+      for (const s of t.sources) {
+        const row = document.createElement('div');
+        row.className = 'part-row';
+        row.innerHTML = '<span class="nm"></span><span class="note"></span><select class="quiet-select sm"><option value="alias">keep as alias</option><option value="part">part</option><option value="never">never track</option></select><span class="ln"></span>';
+        row.querySelector('.nm').textContent = s.name;
+        row.querySelector('.note').textContent = `${s.mentions} mention${s.mentions === 1 ? '' : 's'}${s.generic ? ' · looks generic' : ''}`;
+        row.querySelector('.ln').textContent = s.said;
+        const sel = row.querySelector('select');
+        sel.setAttribute('aria-label', `what ${s.name} is to ${t.target}`);
+        if (s.generic) { sel.value = 'never'; d.open = true; }
+        d.appendChild(row);
+        sourceRows.push({s, t, sel, row, d});
+      }
+      panel.appendChild(d);
+    }
+  }
+  const b = document.createElement('button');
+  b.className = 'filled sm';
+  const picked = () => ({
+    convert: slashRows.filter(([, row]) => row.querySelector('input').checked).map(([s]) => ({name: s.name, parent: s.parent})),
+    sources: sourceRows.filter(x => x.sel.value !== 'alias').map(x => ({key: x.s.key, target: x.t.target, action: x.sel.value})),
+  });
+  const relabel = () => {
+    const p = picked(), n = p.convert.length + p.sources.length;
+    b.textContent = `apply ${n} change${n === 1 ? '' : 's'}`;
+    b.disabled = !n;
+  };
+  b.onclick = async () => {
+    const res = await api('/api/entities/parts-review', picked());
+    if (res) { closeSuggest(); clearDetail(`parts review: ${res.changed} changes. Undo puts them all back.`); }
+  };
+  panel.addEventListener('change', relabel);
+  panel.appendChild(b);
+  relabel();
+  // Claude's guesses at parts, filled in when they arrive
+  if (!sourceRows.some(x => !x.s.generic)) return;
+  const ask = panelSay(panel, 'asking claude which merged names are really parts…');
+  b.before(ask);
+  const res = await api('/api/entities/suggest-parts', {});
+  if (!res) { ask.textContent = "claude's suggestions didn't come back; choose by hand."; return; }
+  for (const p of res.parts) {
+    const x = sourceRows.find(x => x.s.key === p.key);
+    if (!x || x.sel.value === 'never') continue;
+    x.sel.value = 'part';
+    x.row.querySelector('.ln').textContent = `claude: ${p.reason}`;
+    x.d.open = true;
+  }
+  ask.textContent = res.parts.length
+    ? `claude suggests ${res.parts.length} part${res.parts.length === 1 ? '' : 's'}, set below. Check each before applying.`
+    : 'claude found no parts among them.';
+  relabel();
+}
+
 // ---- targeted re-extract ----
 // A prompt change only reaches entries extracted after it. This re-runs
 // extraction for the entries that mention a word, after showing how many,
@@ -468,7 +603,8 @@ export async function showEntity(name) {
   const info = state.entities[r.name] || {};
   showDetail('entity');
   notice('');
-  $('entity-name').textContent = r.name;
+  if (splitFor !== r.name) { splitFor = info.unsorted ? r.name : null; splitPicked.clear(); }
+  setName($('entity-name'), r.name, info);
   $('entity-meta').textContent = `${r.type}${info.category ? ` · ${info.category}` : ''} · ${r.observations.length} observation${r.observations.length === 1 ? '' : 's'}`
     + (info.mentions ? ` · ${info.mentions} mention${info.mentions === 1 ? '' : 's'}` : '');
   $('merge-target').value = '';
@@ -482,7 +618,7 @@ export async function showEntity(name) {
   chips.innerHTML = '';
   const aliasEd = $('alias-chips');
   aliasEd.innerHTML = '';
-  for (const a of (info.aliases || [])) {
+  for (const a of (info.aliases || []).filter(a => a !== info.variant_of)) {
     const c = document.createElement('span');
     c.className = 'tag';
     c.innerHTML = '<span class="k">aka</span><span class="v"></span>';
@@ -504,7 +640,13 @@ export async function showEntity(name) {
   const mx = $('entity-mixup');
   mx.innerHTML = '';
   if (info.mixup) {
-    mx.append(`possibly two people: ${mixupText(info.mixup)}. Move one person's observations to a new name below, or `);
+    mx.append(`possibly two people: ${mixupText(info.mixup)}. `);
+    const sp = document.createElement('button');
+    sp.className = 'link';
+    sp.textContent = 'split them';
+    sp.title = 'pick one person\'s observations and give each person a name';
+    sp.onclick = () => { splitFor = r.name; splitPicked.clear(); showEntity(r.name); };
+    mx.append(sp, ', or ');
     const one = document.createElement('button');
     one.className = 'link';
     one.textContent = "it's one person";
@@ -518,6 +660,37 @@ export async function showEntity(name) {
       }
     };
     mx.append(one);
+  }
+  // part of a parent, or the parent of parts: each opens the other
+  if (info.part_of) {
+    const c = document.createElement('button');
+    c.className = 'tag';
+    c.innerHTML = '<span class="k">part of</span><span class="v"></span>';
+    c.querySelector('.v').textContent = info.part_of;
+    c.title = 'open it';
+    c.onclick = () => showEntity(info.part_of);
+    chips.appendChild(c);
+  }
+  for (const p of (info.parts || [])) {
+    const c = document.createElement('button');
+    c.className = 'tag';
+    c.innerHTML = '<span class="k">part</span><span class="v"></span>';
+    c.querySelector('.v').textContent = state.entities[p]?.base || p;
+    c.title = 'open it';
+    c.onclick = () => showEntity(p);
+    chips.appendChild(c);
+  }
+  $('part-btn').hidden = r.type === 'person';
+  $('split-btn').hidden = r.type !== 'person';
+  $('split-btn').textContent = info.unsorted ? 'sort…' : 'split…';
+  $('part-row').hidden = !info.part_of;
+  $('part-chip').innerHTML = '';
+  if (info.part_of) {
+    $('part-chip').appendChild(tag(info.part_of, async () => {
+      const res = await api('/api/entities/part-of', {name: r.name, parent: ''});
+      if (res) await reloadEntity(res.name);
+    }, `no longer part of ${info.part_of}`));
+    $('part-path').checked = r.name.includes(' / ');
   }
   // retired through a group can only be undone there
   const rb = $('retire-btn');
@@ -544,21 +717,46 @@ export async function showEntity(name) {
   // observations grouped by date, each editable
   const docEl = $('entity-doc');
   docEl.innerHTML = '<div class="rule eyebrow">observations</div>';
-  // each date says what that entry called it, as in triage ("as coworker"),
-  // which is how two people under one name tell apart
+  // splitting: a bar on top, a checkbox per observation, "all" per entry
+  const splitting = splitFor === r.name && r.type === 'person';
+  const pickKey = o => `${o.file}|${o.group}|${o.ent_index}|${o.obs_index}`;
+  if (splitting) docEl.appendChild(splitBar(r, info));
+  // each entry's mention gets a date line saying what that entry called
+  // it ("as coworker"), which is how two people under one name tell apart
   let lastKey = null;
   for (const o of r.observations) {
-    const key = `${o.date}|${o.attr || ''}|${o.extracted_name}`;
+    const key = `${o.file}|${o.group}|${o.ent_index}`;
     if (key !== lastKey) {
       lastKey = key;
       const d = document.createElement('div');
       d.className = 'obs-date eyebrow';
-      d.textContent = fmtDate(o.date) + (o.extracted_name !== r.name ? ` · as "${o.extracted_name}"` : '')
+      d.textContent = fmtDate(o.date) + (o.extracted_name !== (info.base || info.variant_of || r.name) ? ` · as "${o.extracted_name}"` : '')
         + (r.type === 'person' && o.attr ? ` · as ${o.attr}` : '');
+      if (splitting) {
+        const all = document.createElement('button');
+        all.className = 'link pick-all';
+        all.textContent = 'all from this entry';
+        const mine = r.observations.filter(x => `${x.file}|${x.group}|${x.ent_index}` === key);
+        all.onclick = () => {
+          const on = !mine.every(x => splitPicked.has(pickKey(x)));
+          for (const x of mine) on ? splitPicked.add(pickKey(x)) : splitPicked.delete(pickKey(x));
+          showEntity(r.name);
+        };
+        d.append(' ', all);
+      }
       docEl.appendChild(d);
     }
     const row = document.createElement('div');
     row.className = 'obs';
+    if (splitting) {
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'pick';
+      cb.checked = splitPicked.has(pickKey(o));
+      cb.setAttribute('aria-label', 'pick this observation');
+      cb.onchange = () => { cb.checked ? splitPicked.add(pickKey(o)) : splitPicked.delete(pickKey(o)); refreshSplitBar(); };
+      row.appendChild(cb);
+    }
     const t = document.createElement('span');
     t.className = 't';
     t.textContent = o.text;
@@ -598,6 +796,102 @@ export async function showEntity(name) {
     e.textContent = 'nothing noted yet.';
     docEl.appendChild(e);
   }
+}
+
+// The split bar: where the picked observations go, and -- the first time
+// a name is split -- what the rest are called, and which one keeps each
+// group. Unsorted mentions are the same: pick, then say who.
+let refreshSplitBar = () => {};
+function splitBar(r, info) {
+  const bar = document.createElement('div');
+  bar.className = 'split-bar';
+  const head = info.variant_of || info.base || r.name;
+  const first = !info.variant_of;
+  const others = variantsOf(head).filter(q => q !== info.qualifier);
+  bar.innerHTML = '<p class="lead"></p><div class="ent-actions to"><span class="lbl"></span></div>';
+  bar.querySelector('.lead').textContent = info.unsorted
+    ? `These mentions of ${head} didn't say which ${head}. Pick the ones about the same person and say who.`
+    : first
+      ? `Pick one person's observations ("all from this entry" takes a whole entry), then name both people. Each name is ${head} plus a word that tells them apart, like ${head} · work.`
+      : `Pick observations that belong to another ${head}.`;
+  const to = bar.querySelector('.to');
+  const sel = document.createElement('select');
+  sel.className = 'quiet-select sm';
+  sel.setAttribute('aria-label', 'move them to');
+  for (const q of others) sel.add(new Option(`${head} · ${q}`, q));
+  sel.add(new Option(`${head} · new…`, ''));
+  const qIn = document.createElement('input');
+  qIn.className = 'input-xs';
+  qIn.placeholder = first ? 'e.g. work' : 'a new word…';
+  qIn.setAttribute('aria-label', 'qualifier for the picked ones');
+  const showNew = () => { qIn.hidden = !!sel.value; };
+  sel.onchange = showNew;
+  if (others.length) to.append(sel);
+  to.append(qIn);
+  showNew();
+  let restIn = null;
+  const groupSels = {};
+  if (first) {
+    const rest = document.createElement('div');
+    rest.className = 'ent-actions';
+    rest.innerHTML = '<span class="lbl"></span>';
+    rest.querySelector('.lbl').textContent = `and the rest are ${head} ·`;
+    restIn = document.createElement('input');
+    restIn.className = 'input-xs';
+    restIn.placeholder = 'e.g. friend';
+    restIn.setAttribute('aria-label', 'qualifier for the rest');
+    rest.append(restIn);
+    bar.append(rest);
+    for (const g of (info.groups || [])) {
+      const row = document.createElement('div');
+      row.className = 'ent-actions';
+      row.innerHTML = '<span class="lbl"></span>';
+      row.querySelector('.lbl').textContent = `${g} stays with`;
+      const gs = document.createElement('select');
+      gs.className = 'quiet-select sm';
+      gs.add(new Option('the rest', 'rest'));
+      gs.add(new Option('the picked ones', 'picked'));
+      row.append(gs);
+      bar.append(row);
+      groupSels[g] = gs;
+    }
+  }
+  const btns = document.createElement('div');
+  btns.className = 'ent-actions';
+  const go = document.createElement('button');
+  go.className = 'filled sm';
+  const cancel = document.createElement('button');
+  cancel.className = 'text';
+  cancel.textContent = info.unsorted ? 'close' : 'cancel';
+  cancel.onclick = () => { splitFor = null; splitPicked.clear(); showEntity(r.name); };
+  btns.append(go, cancel);
+  bar.append(btns);
+  refreshSplitBar = () => {
+    const n = splitPicked.size;
+    to.querySelector('.lbl').textContent = `move ${n} picked to`;
+    go.textContent = info.unsorted ? `sort ${n}` : first ? 'split' : `move ${n}`;
+    go.disabled = !n;
+  };
+  refreshSplitBar();
+  go.onclick = async () => {
+    const qualifier = (sel.value && others.length ? sel.value : qIn.value).trim();
+    if (!qualifier) { qIn.focus(); return; }
+    if (restIn && !restIn.value.trim()) { restIn.focus(); return; }
+    const picks = r.observations.filter(o => splitPicked.has(`${o.file}|${o.group}|${o.ent_index}|${o.obs_index}`))
+      .map(o => ({file: o.file, group: o.group, ent_index: o.ent_index, obs_index: o.obs_index}));
+    const groups = Object.fromEntries(Object.entries(groupSels).map(([g, s]) =>
+      [g, s.value === 'picked' ? qualifier : restIn.value.trim()]));
+    const res = await api('/api/entities/split', {name: r.name, picks, qualifier, rest: restIn ? restIn.value.trim() : '', groups});
+    if (!res) return;
+    splitFor = null;
+    splitPicked.clear();
+    await loadEntities();
+    // stay with what's left, or go to where they went
+    const next = state.entities[r.name] ? r.name : (res.rest || res.to);
+    if (state.entities[next]) await showEntity(next); else showNone();
+    notice(`${res.did}. Undo puts it back.`);
+  };
+  return bar;
 }
 
 export async function reloadEntity(name) {
@@ -713,6 +1007,22 @@ export function init() {
   $('find-generic').onclick = genericCleanup;
   $('show-deleted').onclick = showDeleted;
   $('things-review').onclick = thingsReview;
+  $('parts-review').onclick = partsReview;
+  $('split-btn').onclick = () => {
+    splitFor = splitFor === state.selected ? null : state.selected;
+    splitPicked.clear();
+    showEntity(state.selected);
+  };
+  $('part-btn').onclick = async () => {
+    const parent = $('merge-target').value.trim();
+    if (!state.selected || !parent) { $('merge-target').focus(); return; }
+    const r = await api('/api/entities/part-of', {name: state.selected, parent});
+    if (r) await reloadEntity(r.name);
+  };
+  $('part-path').onchange = async () => {
+    const r = await api('/api/entities/hide-path', {name: state.selected, hide: !$('part-path').checked});
+    if (r) await reloadEntity(r.name);
+  };
   $('reextract-open').onclick = reextractPanel;
 
   $('merge-btn').onclick = async () => {
@@ -759,8 +1069,9 @@ export function init() {
 
   $('rename-btn').onclick = async () => {
     if (!state.selected) return;
-    const newName = prompt(`Rename "${state.selected}" to:`, state.selected);
-    if (newName === null || !newName.trim() || newName.trim() === state.selected) return;
+    const own = state.entities[state.selected]?.base || state.selected;
+    const newName = prompt(`Rename "${state.selected}" to:`, own);
+    if (newName === null || !newName.trim() || newName.trim() === own) return;
     const r = await api('/api/entities/rename', {source: state.selected, target: newName.trim()});
     if (r) { state.selected = r.to; await reloadEntity(r.to); }
   };
