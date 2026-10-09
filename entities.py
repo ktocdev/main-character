@@ -196,6 +196,15 @@ clear, leave "qualifier" empty; don't guess. {variants}.
 """
 
 
+# Only when someone is retired (a past chapter, like an old job's coworkers).
+RETIRED_BLOCK = """\
+- These people belong to a past chapter of the author's life. A new \
+mention of one of these names is usually someone else. Set "qualifier" to \
+"past" only when the entry makes clear it is the same person, judging by \
+the context in parentheses; otherwise leave it empty. {retired}.
+"""
+
+
 # ---------------------------------------------------------------------------
 # GATHERING CONVERSATIONS FROM THE VECTOR STORE
 # ---------------------------------------------------------------------------
@@ -258,7 +267,7 @@ def known_people_hint() -> list[str]:
     index = json.loads(index_file.read_text(encoding="utf-8"))
     mentions: dict[str, int] = defaultdict(int)
     for n, i in index.items():
-        if i["type"] == "person" and not i.get("retired"):
+        if i["type"] == "person" and not i.get("retired") and not i.get("closed"):
             mentions[i.get("variant_of") or n] += i["mentions"]
     people = sorted(((m, n) for n, m in mentions.items()), reverse=True)
     return [n for _, n in people[:80]]
@@ -280,13 +289,30 @@ def known_variants_hint() -> str:
     return "; ".join(f"{name}: {', '.join(vs)}" for name, vs in sorted(by_name.items()))
 
 
+def known_retired_hint() -> str:
+    """'Marcus (coworker; Old job)' for every retired person whose
+    profile is closed to bare mentions."""
+    index_file = ENTITY_DIR / "index.json"
+    if not index_file.exists():
+        return ""
+    index = json.loads(index_file.read_text(encoding="utf-8"))
+    closed = load_curation()["retired_through"]
+    out = []
+    for n, i in sorted(index.items(), key=lambda kv: -kv[1]["mentions"]):
+        if i["type"] == "person" and curation_key("person", i.get("base", n)) in closed:
+            context = list(i.get("attrs", {}))[:2] + i.get("groups", [])
+            out.append(n + (f" ({'; '.join(context)})" if context else ""))
+    return "; ".join(out)
+
+
 def extract_conversation(client, conv: dict, known_people: list[str] | None = None,
-                         variants: str = "", groups: str = "") -> dict:
+                         variants: str = "", groups: str = "", retired: str = "") -> dict:
     """Extract entities from one conversation via the Claude API."""
     known_block = (
         KNOWN_BLOCK.format(names=", ".join(known_people)) if known_people else ""
     ) + (GROUPS_BLOCK.format(groups=groups) if groups else "") \
-      + (VARIANTS_BLOCK.format(variants=variants) if variants else "")
+      + (VARIANTS_BLOCK.format(variants=variants) if variants else "") \
+      + (RETIRED_BLOCK.format(retired=retired) if retired else "")
     combined = {group: [] for group, _, _ in KIND_FIELDS}
     for segment in _segments(conv["text"]):
         prompt = EXTRACTION_PROMPT.format(
@@ -324,6 +350,7 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
     known = known_people_hint()
     variants = known_variants_hint()
     groups = known_groups_hint()
+    retired = known_retired_hint()
 
     records = []
     for i, conv in enumerate(conversations):
@@ -337,7 +364,8 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
         else:
             try:
                 entities = extract_conversation(client, conv, known_people=known,
-                                                variants=variants, groups=groups)
+                                                variants=variants, groups=groups,
+                                                retired=retired)
             except Exception as e:
                 print(f"  {label} FAILED: {e}")
                 continue
@@ -364,6 +392,12 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
 #   "delete":       [keys]   never track: every mention, now and future
 #   "retired":      [keys]   a past chapter: out of everyday view, and the
 #                   companion doesn't bring them up unless the author does
+#   "retired_through": {key: date}  a retired person's last mention when
+#                   they were retired (kept by the build). A bare mention in
+#                   a later entry goes to "Marcus · ?" to be sorted, so a
+#                   new Marcus doesn't reopen the old one's profile
+#   "retired_keep": {key: [entry cache keys]}  later entries sorted to the
+#                   retired person after all
 #   "category":     {key: category}  a thing's category (music, game, ...),
 #                   overriding extraction's; set when retyping into a thing
 #   "not_mixed":    [keys]   checked and found to be one person: the mix-up
@@ -391,6 +425,8 @@ _CURATION_DEFAULTS = {
     "alias_add": {}, "alias_remove": {}, "delete": [], "drop_mentions": {},
     "reviewed": [],        # entity keys the user has marked as checked
     "retired": [],         # entity keys retired one by one (groups: groups.json)
+    "retired_through": {}, # retired person key -> last mention date when retired
+    "retired_keep": {},    # retired person key -> later entries that were them
     "category": {},        # thing key -> category, overriding extraction's
     "not_duplicates": [],  # dismissed duplicate-pair keys ("kind:a|b")
     "not_mixed": [],       # entity keys confirmed as one, so never flagged
@@ -874,7 +910,8 @@ def move_entity_rules(curation: dict, key: str, new_key: str):
     for field in ("reviewed", "retired", "not_mixed", "hide_path"):
         if any(k.lower() == key for k in curation[field]):
             curation[field] = [k for k in curation[field] if k.lower() != key] + [new_key]
-    for field in ("alias_add", "alias_remove", "rename", "part_of"):
+    for field in ("alias_add", "alias_remove", "rename", "part_of",
+                  "retired_through", "retired_keep"):
         if key in curation[field] and new_key not in curation[field]:
             curation[field][new_key] = curation[field].pop(key)
     curation["category"].pop(key, None)
@@ -885,6 +922,9 @@ def _dropped(curation: dict, key: str, entry: str) -> bool:
 
 
 UNSORTED = "?"
+# extraction's qualifier for a retired person the entry clearly means, and
+# what the retired one is called when a new person with the name is split off
+PAST_QUALIFIER = "past"
 
 
 def split_name(name: str):
@@ -905,12 +945,31 @@ def apply_curation(curation: dict, kind: str, name: str, entry: str = "", qualif
         return resolved
     variants = curation["variants"].get(curation_key(resolved[0], resolved[1]))
     if not variants:
-        return resolved
+        if not _closed_to(curation, resolved[1], entry, qualifier):
+            return resolved
+        # a retired person, named in a later entry that didn't say it was them
+        again = _resolve_rules(curation, "person", f"{resolved[1]} · {UNSORTED}", entry)
+        return (again[0], again[1], True) if again else None
     # a split name: which one the entry meant, or unsorted when it didn't say
     q = (qualifier or "").strip().lower()
     chosen = next((v for v in variants if v.lower() == q), UNSORTED)
     again = _resolve_rules(curation, "person", f"{resolved[1]} · {chosen}", entry)
     return (again[0], again[1], True) if again else None
+
+
+def _closed_to(curation: dict, name: str, entry: str, qualifier: str) -> bool:
+    """Whether a bare mention in `entry` is kept off the retired person
+    `name`: the entry is dated after their last mention when retired, and
+    neither extraction ("past") nor the author (retired_keep) said it was
+    them."""
+    key = curation_key("person", name)
+    cutoff = curation["retired_through"].get(key)
+    dated = re.match(r"\d{4}-\d{2}-\d{2}", entry or "")
+    if not cutoff or not dated or dated.group(0) <= cutoff:
+        return False
+    if (qualifier or "").strip().lower() == PAST_QUALIFIER:
+        return False
+    return entry not in curation["retired_keep"].get(key, ())
 
 
 def _resolve_rules(curation: dict, kind: str, name: str, entry: str = ""):
@@ -971,12 +1030,13 @@ def slugify(name: str) -> str:
     return slug or "unnamed"
 
 
-def build_entity_docs(records: list[dict]) -> dict:
+def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
     """
     Merge per-conversation extractions into one markdown doc per entity.
     Returns the entity index {name: {type, path, mentions}}.
     """
     curation = load_curation()
+    closed_before = dict(curation["retired_through"])
 
     # merged[(kind, name_lower)] = {name, kind, attr, aliases, timeline}
     merged = {}
@@ -1089,6 +1149,7 @@ def build_entity_docs(records: list[dict]) -> dict:
         if kind == "thing":
             ent["attr"] = categories.get(f"thing:{lname}") or ent["attr"] or "other"
     index = {}
+    closed = {}  # retired, unsplit people -> the date their profile closes after
     retired_keys = {r.lower() for r in curation["retired"]}
     not_mixed = {k.lower() for k in curation["not_mixed"]}
     retired_gs = retired_groups(groups)
@@ -1104,7 +1165,8 @@ def build_entity_docs(records: list[dict]) -> dict:
 
         subdir = ENTITY_DIR / f"{kind}s" if kind != "person" else ENTITY_DIR / "people"
         subdir.mkdir(parents=True, exist_ok=True)
-        path = subdir / f"{slugify(ent['name'])}.md"
+        # "Marcus · ?" beside a retired Marcus needs its own file
+        path = subdir / f"{slugify(ent['name'].replace(f' · {UNSORTED}', ' · unsorted'))}.md"
 
         lines = [
             "---",
@@ -1165,14 +1227,22 @@ def build_entity_docs(records: list[dict]) -> dict:
             index[ent["display"]]["generic"] = True
         if retired_by:
             index[ent["display"]]["retired"] = retired_by
+            if kind == "person" and not split_name(ent["name"]):
+                ckey = curation_key(kind, ent["name"])
+                closed[ckey] = closed_before.get(ckey) or dates[-1]
         if kind == "thing":
             index[ent["display"]]["category"] = ent["attr"]
         # one half of a split name, or its unsorted mentions
         split = split_name(ent["name"]) if kind == "person" else None
-        if split and curation["variants"].get(curation_key("person", split[0])):
+        head_key = split and curation_key("person", split[0])
+        if split and (curation["variants"].get(head_key)
+                      or (split[1] == UNSORTED and head_key in closed_before)):
             index[ent["display"]].update(variant_of=split[0], qualifier=split[1])
             if split[1] == UNSORTED:
                 index[ent["display"]]["unsorted"] = True
+                if not curation["variants"].get(head_key):
+                    # a retired person's later mentions, not a split name's
+                    index[ent["display"]]["closed"] = True
         if ent["parent"]:
             index[ent["display"]]["part_of"] = ent["parent"]["display"]
         if kids:
@@ -1183,6 +1253,18 @@ def build_entity_docs(records: list[dict]) -> dict:
             flag = mixup_flag(kind, ent["attrs"])
             if flag:
                 index[ent["display"]]["mixup"] = flag
+
+    # Retiring closes the profile after its last mention so far. The build
+    # is where retired-ness is known (a group can retire someone), so the
+    # cutoffs are kept here: a new one is the last mention now, which moves
+    # nothing; one dropped (un-retired, split, merged away) frees mentions
+    # that this pass sent to sorting, so it builds once more.
+    keep = {k: v for k, v in curation["retired_keep"].items() if k in closed}
+    if closed != closed_before or keep != curation["retired_keep"]:
+        curation["retired_through"], curation["retired_keep"] = closed, keep
+        save_curation(curation)
+        if _again and set(closed_before) - set(closed):
+            return build_entity_docs(records, _again=False)
 
     (ENTITY_DIR / "index.json").write_text(
         json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -1463,15 +1545,22 @@ def split_entity(index: dict, name: str, picks: list[dict], qualifier: str,
     (an existing variant or a new one). A name not split before needs
     `rest`, the qualifier for everything not picked. `groups_to` maps each
     of its groups to the qualifier that keeps the membership (default:
-    rest). Returns the history description."""
+    rest). Returns the history description.
+
+    A retired person's later mentions ("Marcus · ?", `closed`) split the
+    same way: the picked ones are someone new, and the retired Marcus
+    becomes the rest, "Marcus · past" unless named."""
     info = index[name]
     if info["type"] != "person":
         raise ValueError("only people are split; a place or project gets a part")
     qualifier, rest = qualifier.strip(), rest.strip()
+    closed = bool(info.get("closed"))
+    if closed and not rest:
+        rest = PAST_QUALIFIER
     if not qualifier or UNSORTED in (qualifier, rest):
         raise ValueError("give the qualifier a name")
     head = info.get("variant_of") or info.get("base", name)
-    first = not info.get("variant_of")
+    first = not info.get("variant_of") or closed
     if first and not rest:
         raise ValueError("name the rest too, so nothing stays as a bare name")
     if rest and rest.lower() == qualifier.lower():
@@ -1489,6 +1578,10 @@ def split_entity(index: dict, name: str, picks: list[dict], qualifier: str,
     for p in picks:
         picked[(Path(p["file"]).name, p["group"], int(p["ent_index"]))].add(int(p["obs_index"]))
     records = _entity_records("person", info.get("base", name))
+    sorting = set()  # later mentions not picked: they stay to be sorted
+    if closed:
+        sorting = set(records) - set(picked)
+        records += _entity_records("person", head)
     if not set(picked) <= set(records):
         raise ValueError("those observations aren't this person's")
 
@@ -1497,14 +1590,15 @@ def split_entity(index: dict, name: str, picks: list[dict], qualifier: str,
     for key in records:
         by_file[key[0]].append(key)
     for filename, keys in by_file.items():
-        if not rest and not any(k in picked for k in keys):
+        if not any(k in picked for k in keys) and (not rest or set(keys) <= sorting):
             continue
         path = _raw_path(filename)
         files_before[filename] = path.read_text(encoding="utf-8")
         data = json.loads(files_before[filename])
         # highest index first: a split record appends, it never shifts
         for key in sorted(keys, key=lambda k: -k[2]):
-            _qualify_record(data, key[1], key[2], picked.get(key, set()), qualifier, rest)
+            _qualify_record(data, key[1], key[2], picked.get(key, set()), qualifier,
+                            "" if key in sorting else rest)
         _save_raw(path, data)
         files_after[filename] = path.read_text(encoding="utf-8")
 
@@ -1521,6 +1615,9 @@ def split_entity(index: dict, name: str, picks: list[dict], qualifier: str,
             curation["retired"].append(rest_key)
         for field in ("reviewed", "retired", "not_mixed"):
             curation[field] = [k for k in curation[field] if k.lower() != head_key]
+        # a split name's bare mentions go to sorting anyway
+        curation["retired_through"].pop(head_key, None)
+        curation["retired_keep"].pop(head_key, None)
         groups = load_groups()
         snapshot["groups"] = json.loads(json.dumps(groups))
         names = {head.lower(), name.lower()} | {a.lower() for a in info.get("aliases", [])}
@@ -1537,6 +1634,21 @@ def split_entity(index: dict, name: str, picks: list[dict], qualifier: str,
     description = f"split {head}: {n} observation{'s' if n != 1 else ''} to {head} · {qualifier}"
     record_change(description, "batch", snapshot, after)
     return description
+
+
+def keep_with_retired(curation: dict, index: dict, name: str, picks: list[dict]) -> str:
+    """Later mentions in "Marcus · ?" that were the retired Marcus after
+    all: their entries go to `retired_keep`, so they resolve to her again.
+    Returns the retired one's name."""
+    info = index[name]
+    if not info.get("closed"):
+        raise ValueError("only a retired person's later mentions are kept this way")
+    head_key = curation_key("person", info["variant_of"])
+    keep = curation["retired_keep"].setdefault(head_key, [])
+    for entry in sorted({Path(p["file"]).stem for p in picks}):
+        if entry not in keep:
+            keep.append(entry)
+    return info["variant_of"]
 
 
 def rename_qualifier(index: dict, name: str, new_qualifier: str) -> str:
@@ -2149,6 +2261,7 @@ def reextract(terms: list[str], progress=None) -> dict:
     known = known_people_hint()
     variants = known_variants_hint()
     groups = known_groups_hint()
+    retired = known_retired_hint()
     convs = entries_mentioning(terms)
     done, failed = [], []
     for i, conv in enumerate(convs):
@@ -2157,7 +2270,8 @@ def reextract(terms: list[str], progress=None) -> dict:
             progress(i, len(convs), conv)
         try:
             entities = extract_conversation(client, conv, known_people=known,
-                                            variants=variants, groups=groups)
+                                            variants=variants, groups=groups,
+                                            retired=retired)
         except caps.CapExceeded:
             raise  # a spend cap stops the run; what's done is kept
         except Exception as e:

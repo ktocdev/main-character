@@ -240,6 +240,11 @@ class SplitIn(BaseModel):
     groups: dict[str, str] = {}  # group -> the qualifier that keeps it
 
 
+class KeepRetiredIn(BaseModel):
+    name: str                # the retired person's later mentions ("Marcus · ?")
+    picks: list[PickIn]
+
+
 class PartOfIn(BaseModel):
     name: str
     parent: str = ""       # empty: no longer a part
@@ -2283,6 +2288,27 @@ def split(body: SplitIn):
     return out
 
 
+@app.post("/api/entities/keep-retired")
+def keep_retired(body: KeepRetiredIn):
+    """A later mention of a retired person that was them after all: it
+    goes back to their profile, and they stay retired."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    try:
+        head = entities.keep_with_retired(curation, index, name, [p.model_dump() for p in body.picks])
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if curation != before:
+        entities.save_curation(curation)
+        _record_curation(f"kept a later mention with the retired {head}", before)
+        _rebuild()
+    return {"ok": True, "to": _display_for("person", head, head)}
+
+
 @app.post("/api/entities/part-of")
 def part_of(body: PartOfIn):
     """Its own entity, shown as "Parent / Name". Not a merge: an unrelated
@@ -2973,6 +2999,10 @@ def retire_entity(body: RetireIn):
     curation["retired"] = [r for r in curation["retired"] if r.lower() != key]
     if body.retired:
         curation["retired"].append(key)
+    else:
+        # open again: later mentions waiting to be sorted come back
+        curation["retired_through"].pop(key, None)
+        curation["retired_keep"].pop(key, None)
     if curation == before:
         return {"ok": True, "name": name, "retired": body.retired}
     entities.save_curation(curation)
