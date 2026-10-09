@@ -1,0 +1,21 @@
+{
+  "key": "organic.scan",
+  "text": "{\"clusters\":[{\"index\":0,\"keep\":true,\"name\":\"Side Projects\",\"reason\":\"Coda and the portfolio are Jordan's own creative work done outside the day job, often at Groundwork, while the office entry is a loose fit.\"},{\"index\":1,\"keep\":true,\"name\":\"The Reorg\",\"reason\":\"All entries are about the company restructuring and the teams Jordan is being moved between.\"},{\"index\":2,\"keep\":true,\"name\":\"Dashboard Work\",\"reason\":\"All three are the same internal dashboard redesign and the feedback cycles around it.\"},{\"index\":3,\"keep\":true,\"name\":\"Job Hunt\",\"reason\":\"Northlight's application and interviews, the exit plan, and the Meridian portfolio work all trace Jordan's move toward leaving the job.\"},{\"index\":4,\"keep\":true,\"name\":\"Music and Open Mics\",\"reason\":\"Guitar, singing practice, open mic venues, and rehearsal spaces all connect to Jordan's performing, with Dev and the Thai place as near neighbors.\"}]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2425,
+    "output_tokens": 346,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

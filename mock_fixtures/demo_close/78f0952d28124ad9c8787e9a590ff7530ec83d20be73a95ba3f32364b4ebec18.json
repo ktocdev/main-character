@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Marcus\",\"relationship\":\"stakeholder at Meridian (inferred)\",\"qualifier\":\"\",\"observations\":[\"The stakeholder management section of the Meridian deck is really about designing around Marcus without saying so\"]},{\"name\":\"Ana\",\"relationship\":\"colleague (inferred)\",\"qualifier\":\"\",\"observations\":[\"Already knows the honest version of the Meridian story from the screen\"]},{\"name\":\"Dev\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Was with Jordan at the Thai place where the napkin sketch happened\"]},{\"name\":\"Lena\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Texted asking if Jordan needs anything for the 24th\",\"Replied to Jordan's 'I'm good' with a single thumbs up and no follow-up questions\"]},{\"name\":\"Priya\",\"relationship\":\"interviewer at Northlight (inferred)\",\"qualifier\":\"\",\"observations\":[\"Sent a calendar invite this afternoon: 'intro chat, Monday 9/21, 30 min'\",\"Jordan worries about getting an offer before having a real conversation with Priya\"]}],\"projects\":[{\"name\":\"Coda\",\"domain\":\"creative\",\"status\":\"active\",\"observations\":[\"Spent two hours going back through journal entries to find the narrative thread for the deck\",\"Key moments: first night at Groundwork on July 28th, building the timer after the crash on August 4th, the napkin at the Thai place with Dev, nine days of missing the blind spot\",\"Features include the practice log, the metronome, and free play\",\"The deck story is now about the blind spot, not the features\",\"Rewrote the Coda case study from the 9th for the deck: from defensive to 'I missed this and here's what I learned'\"]},{\"name\":\"Meridian\",\"domain\":\"work\",\"status\":\"unknown\",\"observations\":[\"The Meridian section of the portfolio presentation wrote itself\",\"Includes dashboard metrics, user flow before and after, and a stakeholder management section\"]},{\"name\":\"Portfolio presentation\",\"domain\":\"work\",\"status\":\"active\",\"observations\":[\"Started building it today for the 24th\",\"Four interviews plus a presentation to the full design team, one week out\",\"Re-reading journal entries changed what the presentation is about\"]},{\"name\":\"Journal\",\"domain\":\"personal\",\"status\":\"active\",\"observations\":[\"Has been working as a design log without Jordan designing it that way\",\"Held the thread of the work while Jordan was too busy living it to see the shape\"]}],\"places\":[{\"name\":\"Groundwork\",\"kind\":\"venue\",\"observations\":[\"July 28th was the first night there\"]},{\"name\":\"Thai place\",\"kind\":\"restaurant\",\"observations\":[\"The napkin sketch with Dev happened here\"]},{\"name\":\"Jordan's home\",\"kind\":\"home\",\"observations\":[\"Pepper is asleep on the green rug again, same spot, same curl\"]}],\"things\":[{\"name\":\"Northlight onsite\",\"category\":\"event\",\"observations\":[\"The onsite is three days after the Monday 9/21 intro chat with Priya\"]}]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2745,
+    "output_tokens": 984,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}
