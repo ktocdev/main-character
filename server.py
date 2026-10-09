@@ -658,6 +658,10 @@ def _persist_entry(text: str, entry_id: str, when, dream: bool):
     with sessions.LOCK:
         if entry_catalog.is_saved(entry_id, STATE["collection"]):
             return False, None
+        # one clock reading for both copies: a save at midnight must not put
+        # the backup on one day and the session message (which decides the
+        # closed entry's day) on the next, or a rebuild can't match them
+        when = when or sessions.now_local()
         dream_id = None
         if dream:
             import dreams
