@@ -789,7 +789,7 @@ def known_groups_hint() -> str:
         if not g.get("note") or g.get("retired"):
             continue
         members = sorted({lookup[m.lower()] for m in g["members"] if m.lower() in lookup},
-                         key=lambda n: -index[n]["mentions"])[:30]
+                         key=lambda n: (-index[n]["mentions"], n.lower()))[:30]
         if members:
             out.append(f"{g['name']} ({g['note']}): {', '.join(members)}")
     return "; ".join(out)
