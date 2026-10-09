@@ -126,6 +126,11 @@ def build_plan(keys: list[tuple[str, str]]) -> Plan:
         ]:
             if path.exists():
                 plan.files.append(path)
+    # the open week installs as save backups under the demo's own entry ids
+    for date in sorted({d for d, _ in keys}):
+        for path in sorted(Path(config.JOURNAL_DIR).glob(f"{date}_*_demo-*_entry.md")):
+            if path not in plan.files:
+                plan.files.append(path)
 
     # Chroma: matched on metadata, not on id, because ids are content hashes
     # and a re-import would have produced different ones.

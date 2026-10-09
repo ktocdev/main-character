@@ -41,3 +41,22 @@ def test_both_spellings_of_a_title_are_looked_for():
     keys = remover.seed_entries()
     assert ("2026-09-09", "Lenas referral") in keys       # as it is filed
     assert ("2026-09-09", "Lena's referral") in keys      # as it is titled
+
+
+def test_the_open_week_backups_are_found(tmp_path, monkeypatch):
+    """The demo installs its open week as save backups under `demo-` entry
+    ids, not under the corpus titles; removal has to find those too."""
+    import config
+    for name in ("JOURNAL_DIR", "CHROMA_DIR", "ENTITY_DIR", "CATEGORY_DIR",
+                 "SUMMARY_DIR"):
+        monkeypatch.setattr(config, name, tmp_path / name.lower())
+    journal = tmp_path / "journal_dir"
+    journal.mkdir()
+    backup = journal / "2026-09-15_2115_demo-2026-09-15-Rebuilding-free-play_entry.md"
+    backup.write_text("x", encoding="utf-8")
+    real = journal / "2026-09-15_0930_3c2fdfbb_entry.md"
+    real.write_text("y", encoding="utf-8")
+
+    plan = remover.build_plan([("2026-09-15", "Rebuilding free play")])
+    assert backup in plan.files
+    assert real not in plan.files
