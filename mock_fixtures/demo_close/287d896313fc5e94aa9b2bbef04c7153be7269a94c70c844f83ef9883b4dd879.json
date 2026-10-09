@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Dev\",\"relationship\":\"friend\",\"observations\":[\"Rehearsed the full setlist in their kitchen, three days before the gig, because the acoustics are better than the bedroom\",\"Cleaned up the transition they had marked as worst on the 3rd and played it without flinching\",\"Said \\\"obviously\\\" when Jordan said they'd be at the gig on the 19th\",\"Held up one of Dad's tortoiseshell picks to the light, said \\\"these are the real thing\\\" and put it in their case\",\"Tried a pick on the low B string, said it makes the attack warmer, and used it for the rest of practice\"]},{\"name\":\"Mom\",\"relationship\":\"mother\",\"observations\":[\"Left behind Dad's old tortoiseshell guitar picks, which Jordan brought to Dev\"]},{\"name\":\"Dad\",\"relationship\":\"father\",\"observations\":[\"His old heavy tortoiseshell guitar picks were given to Dev\",\"Jordan thinks he would have liked that Dev used his pick\"]},{\"name\":\"Mika\",\"relationship\":\"friend\",\"observations\":[\"Texted Jordan on the train home with a listing for an open mic at the Fern on the 27th, sending only a question mark\"]},{\"name\":\"Pepper\",\"relationship\":\"pet\",\"observations\":[\"Met Jordan at the door when they got home, which she only does when hungry\"]}],\"projects\":[{\"name\":\"Dev's gig\",\"domain\":\"creative\",\"status\":\"active\",\"observations\":[\"Gig is on the 19th, three days after the rehearsal; Jordan plans to attend\",\"Dev ran the setlist front to back twice for Jordan\"]},{\"name\":\"Open mic\",\"domain\":\"creative\",\"status\":\"active\",\"observations\":[\"Jordan signed up on the train for the 8pm slot at the Fern on September 27th\",\"Jordan's first instinct was 'I'm not ready' but caught that voice this time\"]},{\"name\":\"Guitar\",\"domain\":\"creative\",\"status\":\"active\",\"observations\":[\"Jordan is preparing to perform at an open mic, doubting their practice level at first\"]}],\"places\":[{\"name\":\"Dev's place\",\"kind\":\"home\",\"observations\":[\"Jordan went there after work to hear Dev rehearse; sat on the kitchen counter and listened to the setlist twice\"]},{\"name\":\"The Fern\",\"kind\":\"venue\",\"observations\":[\"Hosts an open mic on September 27th; Jordan signed up for the 8pm slot\"]},{\"name\":\"Northlight\",\"kind\":\"workplace\",\"observations\":[\"Jordan's inner voice once claimed they didn't have enough experience for it, which wasn't true\"]}],\"things\":[]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2332,
+    "output_tokens": 845,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

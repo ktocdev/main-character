@@ -108,19 +108,20 @@ NAMING_SCHEMA = {
 
 def entity_records() -> dict:
     """(kind, canonical) -> {"name", "kind", "text", "convs": {key: date},
-    "weeks": set} for places and projects, curation applied."""
+    "weeks": set} for places, projects and things, curation applied."""
     curation = load_curation()
     records = {}
     for path in sorted(RAW_DIR.glob("*.json")):
         key = path.stem
         date = key[:10]
         data = json.loads(path.read_text(encoding="utf-8"))
-        for group, raw_kind in (("projects", "project"), ("places", "place")):
+        for group, raw_kind in (("projects", "project"), ("places", "place"),
+                                ("things", "thing")):
             for ent in data.get(group, []):
                 name = (ent.get("name") or "").strip()
                 if not name:
                     continue
-                resolved = apply_curation(curation, raw_kind, name)
+                resolved = apply_curation(curation, raw_kind, name, key)
                 if not resolved:
                     continue
                 kind, canonical = resolved[0], resolved[1]

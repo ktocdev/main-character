@@ -22,7 +22,7 @@ C._install(captured)
 import entities, sessions, config
 # suggest_merges: reached only from the server, needs a built entity graph
 print("suggest_merges…")
-for kind in ("person", "place", "project"):
+for kind in ("person", "place", "project", "thing"):
     groups = entities.suggest_merges(kind)
     print(f"   {kind}: {json.dumps(groups, ensure_ascii=False)[:220]}")
 

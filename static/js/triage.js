@@ -1,25 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, fmtDate } from './core.js';
 import { state } from './state.js';
-import { loadEntities } from './entities.js';
+import { loadEntities, showEntity, mixupText } from './entities.js';
 import { showTab } from './main.js';
 
 // ---- triage mode ----
 // Entities come one at a time, junk first (1-mention entities lead). The
-// keyboard does the work: k m c r a t d s u, then 1/2/3 in retype mode,
-// Enter and Esc in a field. The buttons mirror the keys.
+// keyboard does the work: k m c r a t d D x s u e, then 1-4 in retype mode
+// (and 1-6 for a thing's category), Enter and Esc in a field. The buttons
+// mirror the keys. On a card flagged as maybe two people, k asks once.
 let queue = [], qpos = 0, triageMode = null;
 let skipped = [];        // names skipped in this pass, for the queue-empty offer
 let toastTimer = null;
+let editing = false;     // left for Entities with e; the next start is a return
 
 export async function startTriage(only) {
   await loadEntities();
+  // Coming back from the edit link keeps the pass going: what was skipped
+  // stays skipped (and out of the way), so the queue, sorted the same way,
+  // lands on the entity that was open -- or its successor if it was
+  // reviewed or deleted over there.
+  const returning = editing && !only;
+  editing = false;
   queue = Object.entries(state.entities)
-    .filter(([n, i]) => !i.reviewed && (!only || only.includes(n)))
+    .filter(([n, i]) => !i.reviewed && !i.retired && (!only || only.includes(n)) && !(returning && skipped.includes(n)))
     .sort((a, b) => a[1].mentions - b[1].mentions)  // junk (1-mention) first
     .map(([n]) => n);
   qpos = 0;
-  if (!only) skipped = [];
+  if (!only && !returning) skipped = [];
   refreshUndo();
   renderTriage();
 }
@@ -52,6 +60,9 @@ async function renderTriage() {
   triageMode = null;
   $('triage-input-row').hidden = true;
   $('triage-kind-row').hidden = true;
+  $('triage-cat-row').hidden = true;
+  $('triage-mixed-row').hidden = true;
+  $('triage-never-row').hidden = true;
   $('triage-suggest').innerHTML = '';
   const total = Object.keys(state.entities).length;
   const reviewed = Object.values(state.entities).filter(i => i.reviewed).length;
@@ -81,21 +92,38 @@ async function renderTriage() {
   if (!info) { qpos++; return renderTriage(); }
   progress(reviewed, total, queue.length - qpos);
   $('triage-name').textContent = name;
-  $('triage-meta').textContent = `${info.type} · ${info.mentions} mention${info.mentions === 1 ? '' : 's'}`;
+  const meta = `${info.type}${info.category ? ` · ${info.category}` : ''} · ${info.mentions} mention${info.mentions === 1 ? '' : 's'}`;
+  $('triage-meta').textContent = meta;
   $('triage-aliases').textContent = (info.aliases || []).length ? 'also ' + info.aliases.join(' · ') : '';
+  // a category name ("dive bar") gets d as never-track, said up front so
+  // the key needs no confirming
+  $('triage-generic').textContent = info.generic
+    ? `looks generic: d stops tracking the name, so a future "${name}" is ignored too`
+    : '';
+  $('triage-btns').querySelector('[data-tkey="d"]').classList.toggle('suggested', !!info.generic);
+  // entries that disagree about who this is: the dated eyebrows below
+  // ("Mar 4 · as coworker") show which mentions are which
+  $('triage-mixup').textContent = info.mixup ? `possibly two people: ${mixupText(info.mixup)}` : '';
   const obsEl = $('triage-obs');
   obsEl.innerHTML = '<span class="more">reading <span class="dots">···</span></span>';
   const r = await (await fetch('/api/entities/observations?name=' + encodeURIComponent(name))).json();
   if (queue[qpos] !== name) return;  // user already moved on
+  const obs = r.observations || [];
+  $('triage-meta').textContent = `${meta} · ${obs.length} observation${obs.length === 1 ? '' : 's'}`;
   obsEl.innerHTML = '';
-  let group = null, lastDate = null;
-  for (const o of (r.observations || []).slice(0, 12)) {
-    if (o.date !== lastDate) {
-      lastDate = o.date;
+  obsEl.scrollTop = 0;
+  // Every observation, grouped by date, each date tagged with what that
+  // entry called it ("Mar 4 · as coworker"). The tail is where a second
+  // person under the same name tends to turn up, so none of it is cut.
+  let group = null, lastKey = null;
+  for (const o of obs) {
+    const key = `${o.date}|${o.attr || ''}`;
+    if (key !== lastKey) {
+      lastKey = key;
       group = document.createElement('div');
       const d = document.createElement('div');
       d.className = 'eyebrow';
-      d.textContent = fmtDate(o.date);
+      d.textContent = fmtDate(o.date) + (o.attr ? ` · ${info.type === 'person' ? 'as ' : ''}${o.attr}` : '');
       group.appendChild(d);
       obsEl.appendChild(group);
     }
@@ -105,12 +133,15 @@ async function renderTriage() {
     p.lastChild.textContent = o.text;
     group.appendChild(p);
   }
-  if ((r.observations || []).length > 12) {
-    const more = document.createElement('div');
-    more.className = 'more';
-    more.textContent = `… and ${r.observations.length - 12} more`;
-    obsEl.appendChild(more);
-  }
+}
+
+// e: open this entity in Entities for a deeper edit. Its detail pane offers
+// the way back, and the pass (skips included) picks up where it was.
+function editInEntities(name) {
+  editing = true;
+  state.triageReturn = true;
+  showTab('entities');
+  showEntity(name);
 }
 
 function triageAdvance() { qpos++; renderTriage(); }
@@ -173,8 +204,56 @@ function triageCancel() {
   triageMode = null;
   $('triage-input-row').hidden = true;
   $('triage-kind-row').hidden = true;
+  $('triage-cat-row').hidden = true;
+  $('triage-mixed-row').hidden = true;
+  $('triage-never-row').hidden = true;
   $('triage-suggest').innerHTML = '';
   $('triage').focus();
+}
+
+// k on a flagged card: one more press says it's one person, and the flag
+// stays off for good; e goes to Entities to move one person's mentions out
+function askMixed(name) {
+  triageMode = 'mixed';
+  $('triage-mixed-q').textContent = `Keep "${name}" as one person?`;
+  $('triage-mixed-row').hidden = false;
+}
+async function keep(name, oneConfirmed = false) {
+  triageMode = null;
+  $('triage-mixed-row').hidden = true;
+  if (oneConfirmed && !await api('/api/entities/not-mixed', {name, not_mixed: true})) return;
+  if (await api('/api/entities/reviewed', {name, reviewed: true})) {
+    state.entities[name].reviewed = true;
+    if (oneConfirmed) delete state.entities[name].mixup;
+    toast(oneConfirmed ? `${name} kept as one person ✓` : `${name} kept ✓`);
+    refreshUndo();
+    triageAdvance();
+  }
+}
+
+// Two kinds of delete, neither touching the entries themselves. d drops the
+// mentions there are now and leaves the name free (a new Allen starts
+// fresh); for a generic name it stops tracking the name instead. D always
+// stops tracking, after one confirming press.
+function deleteMentions(name) {
+  const generic = state.entities[name]?.generic;
+  return triageAct(
+    n => api('/api/entities/delete', {name: n, mode: generic ? 'name' : 'mentions'}),
+    r => generic ? `no longer tracking ${r.deleted}. u brings it back.` : `deleted ${r.deleted}. The name stays free; u brings it back.`,
+  );
+}
+function askNeverTrack(name) {
+  triageMode = 'never';
+  $('triage-never-q').textContent = `Never track "${name}"? Every future "${name}" will be ignored too.`;
+  $('triage-never-row').hidden = false;
+}
+function neverTrack() {
+  triageMode = null;
+  $('triage-never-row').hidden = true;
+  return triageAct(
+    n => api('/api/entities/delete', {name: n, mode: 'name'}),
+    r => `no longer tracking ${r.deleted}. u brings it back.`,
+  );
 }
 
 async function triageApply() {
@@ -213,8 +292,26 @@ async function triageApply() {
 async function triageKey(key) {
   if (triageMode === 'kind') {
     if (key === 'Escape') { triageCancel(); return; }
-    const k = {1: 'person', 2: 'project', 3: 'place'}[key];
-    if (k) retype(k);
+    const k = {1: 'person', 2: 'project', 3: 'place', 4: 'thing'}[key];
+    if (k === 'thing') askCategory();
+    else if (k) retype(k);
+    return;
+  }
+  if (triageMode === 'category') {
+    if (key === 'Escape') { triageCancel(); return; }
+    const c = CATEGORIES[Number(key) - 1];
+    if (c) retype('thing', c);
+    return;
+  }
+  if (triageMode === 'mixed') {
+    if (key === 'k' || key === 'Enter') keep(queue[qpos], true);
+    else if (key === 'e') { triageCancel(); editInEntities(queue[qpos]); }
+    else if (key === 'Escape') triageCancel();
+    return;
+  }
+  if (triageMode === 'never') {
+    if (key === 'D' || key === 'Enter') neverTrack();
+    else if (key === 'Escape') triageCancel();
     return;
   }
   if (triageMode !== null) return;
@@ -222,21 +319,21 @@ async function triageKey(key) {
   const name = queue[qpos];
   switch (key) {
     case 'k':
-      if (await api('/api/entities/reviewed', {name, reviewed: true})) {
-        state.entities[name].reviewed = true;
-        toast(`${name} kept ✓`);
-        refreshUndo();
-        triageAdvance();
-      }
+      if (state.entities[name]?.mixup) askMixed(name);
+      else await keep(name);
       break;
     case 's':
       skipped.push(name);
       toast('skipped. Back in the queue next time.');
       triageAdvance();
       break;
-    case 'd':
-      await triageAct(n => api('/api/entities/delete', {name: n}), r => `deleted ${r.deleted}. u brings it back.`);
+    case 'd': await deleteMentions(name); break;
+    case 'D': askNeverTrack(name); break;
+    case 'x':
+      await triageAct(n => api('/api/entities/retire', {name: n, retired: true}),
+        r => `${r.name} retired: out of everyday view. u brings them back.`);
       break;
+    case 'e': editInEntities(name); break;
     case 'm': triagePrompt('merge'); break;
     case 'c': triagePrompt('correct'); break;
     case 'r': triagePrompt('rename'); break;
@@ -256,12 +353,21 @@ async function triageKey(key) {
   }
 }
 
-async function retype(kind) {
+// a thing asks which kind of thing it is, one more key
+const CATEGORIES = ['music', 'game', 'show', 'book', 'event', 'other'];
+function askCategory() {
+  triageMode = 'category';
+  $('triage-kind-row').hidden = true;
+  $('triage-cat-row').hidden = false;
+}
+
+async function retype(kind, category = '') {
   triageMode = null;
   $('triage-kind-row').hidden = true;
+  $('triage-cat-row').hidden = true;
   await triageAct(
-    n => api('/api/entities/retype', {name: n, new_type: kind, new_name: ''}),
-    r => `${r.to || queue[qpos]} is now a ${kind}.`,
+    n => api('/api/entities/retype', {name: n, new_type: kind, new_name: '', category}),
+    r => `${r.retyped} is now a ${kind}${category ? ` (${category})` : ''}.`,
   );
 }
 
@@ -269,6 +375,12 @@ export function init() {
   $('triage-apply').onclick = triageApply;
   $('triage-cancel').onclick = triageCancel;
   $('triage-kind-cancel').onclick = triageCancel;
+  $('triage-cat-cancel').onclick = triageCancel;
+  $('triage-never-yes').onclick = neverTrack;
+  $('triage-mixed-yes').onclick = () => keep(queue[qpos], true);
+  $('triage-mixed-edit').onclick = () => { triageCancel(); editInEntities(queue[qpos]); };
+  $('triage-mixed-cancel').onclick = triageCancel;
+  $('triage-never-cancel').onclick = triageCancel;
   $('triage-input').addEventListener('input', suggest);
   $('triage-input').addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.preventDefault(); triageCancel(); }
@@ -276,13 +388,18 @@ export function init() {
     e.stopPropagation();
   });
 
-  document.querySelectorAll('#triage-kind-row button[data-kind]').forEach(b => b.onclick = () => retype(b.dataset.kind));
+  document.querySelectorAll('#triage-kind-row button[data-kind]').forEach(b => b.onclick = () =>
+    b.dataset.kind === 'thing' ? askCategory() : retype(b.dataset.kind));
+  document.querySelectorAll('#triage-cat-row button[data-cat]').forEach(b => b.onclick = () => retype('thing', b.dataset.cat));
 
   document.addEventListener('keydown', e => {
     if (state.activeTab !== 'triage') return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (['m', 'c', 'r', 'a', 'k', 'd', 's', 't', 'u', '1', '2', '3'].includes(e.key)) e.preventDefault();
+    const keys = ['m', 'c', 'r', 'a', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', '1', '2', '3', '4', '5', '6'];
+    if (triageMode === 'never' || triageMode === 'mixed') keys.push('Enter', 'Escape');
+    else if (['Enter', 'Escape'].includes(e.key) && triageMode !== 'kind' && triageMode !== 'category') return;
+    if (keys.includes(e.key)) e.preventDefault();
     triageKey(e.key);
   });
 

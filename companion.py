@@ -63,11 +63,12 @@ of recent dreams, nothing more.
 each under its date and title. A passage is a piece of an entry with a \
 little of the text around it, not the whole entry.
 - <related_summaries>: the app's summaries of an entry, a week, an area of \
-life, or a person, place or project, each labelled by its level. Under an \
-entry summary there may be a passage headed "From the entry itself, in \
-their words": the part of that entry that best matches the message.
-- <entity_context>: the app's profiles of people, places and projects the \
-message names.
+life, or a person, place, project or thing, each labelled by its level. \
+Under an entry summary there may be a passage headed "From the entry \
+itself, in their words": the part of that entry that best matches the \
+message.
+- <entity_context>: the app's profiles of people, places, projects and \
+things (bands, games, shows, books) the message names.
 - <dream_context>: only when dreams come up. Their dream entries and dreams \
 the app retold from the journal. A separate realm: a dream about someone \
 is not an event with them.
@@ -476,7 +477,11 @@ def build_context_block(question: str, collection, entity_index: dict,
 
     mentioned = match_entities(question, entity_index)
 
-    summary_hits = get_summary_hits(question, skip_entities=set(mentioned))
+    # Retired profiles (a past chapter) come up only when named: they're
+    # left out of the zoomed-out hits. Entry summaries stay -- what
+    # happened is still part of what happened.
+    retired = {n for n, i in entity_index.items() if i.get("retired")}
+    summary_hits = get_summary_hits(question, skip_entities=set(mentioned) | retired)
     if summary_hits:
         lines.append("")
         lines.append("<related_summaries>")
@@ -801,7 +806,7 @@ def resolve_entity(entity_index: dict, name: str) -> str | None:
 
 MANAGE_HELP = """\
   commands:
-    list [people|projects|places]   top entities by mentions
+    list [people|projects|places|things]   top entities by mentions
     show <name>                     view an entity's doc
     merge <name> into <name>        combine duplicates (e.g. merge orbit-web into Orbit)
     delete <name>                   remove an entity entirely
@@ -835,9 +840,11 @@ def manage_mode(entity_index: dict) -> dict:
             print(MANAGE_HELP)
 
         elif verb == "list":
-            kind_filter = parts[1].rstrip("s") if len(parts) > 1 else None
-            for kind in ("person", "project", "place"):
-                if kind_filter and not kind_filter.startswith(kind[:5]) and kind_filter != kind:
+            plural = {g: k for k, g in entities.GROUP_FOR_KIND.items()}
+            kind_filter = parts[1].lower() if len(parts) > 1 else None
+            kind_filter = plural.get(kind_filter, kind_filter)
+            for kind in entities.KINDS:
+                if kind_filter and kind_filter != kind:
                     continue
                 names = sorted(
                     (n for n, i in entity_index.items() if i["type"] == kind),
@@ -873,11 +880,13 @@ def manage_mode(entity_index: dict) -> dict:
                 print("  those are already the same entity\n")
                 continue
             curation = entities.load_curation()
-            kind = entity_index[src]["type"]
-            curation["merge"][entities.curation_key(kind, src)] = dst
+            if dst in entity_index:
+                dst = entities.base_name(entity_index, dst)
+            curation["merge"][entities.index_key(entity_index, src)] = dst
             # re-point anything already merged into src
+            src_base = entities.base_name(entity_index, src)
             for k, v in list(curation["merge"].items()):
-                if v.lower() == src.lower():
+                if v.lower() == src_base.lower():
                     curation["merge"][k] = dst
             entities.save_curation(curation)
             print(f"  merged {src} -> {dst}")
@@ -893,8 +902,7 @@ def manage_mode(entity_index: dict) -> dict:
                 print("  kept\n")
                 continue
             curation = entities.load_curation()
-            kind = entity_index[name]["type"]
-            curation["delete"].append(entities.curation_key(kind, name))
+            curation["delete"].append(entities.index_key(entity_index, name))
             entities.save_curation(curation)
             print(f"  deleted {name}")
             dirty = True

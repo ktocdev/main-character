@@ -7,6 +7,8 @@ export const state = {
   entities: {},          // entity index (entities.js owns; triage reads)
   selected: null,        // selected entity name (entities.js owns; groups reads)
   activeTab: 'write',    // main.js owns; write + triage read
+  triageReturn: false,   // an entity opened from triage (e): its detail
+                         // pane shows the way back. Triage sets, main clears.
   sessionSel: 'current', // history selection; write's closeSession resets it
   dateStyle: 'long',     // MC_DATE_FORMAT, via /api/status; write renders stamps with it
   clockSkewMs: 0,        // server clock − browser clock, via /api/status; write stamps against it
@@ -23,4 +25,4 @@ export const state = {
                          // already on this machine. null = couldn't tell, and
                          // the wait wording hedges rather than guessing.
 };
-export const filters = {unreviewed: false, single: false, group: null, types: new Set()};
+export const filters = {unreviewed: false, single: false, retired: false, mixup: false, group: null, types: new Set()};

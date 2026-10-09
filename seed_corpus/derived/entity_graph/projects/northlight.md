@@ -1,5 +1,5 @@
 ---
-name: Northlight
+name: Northlight · project
 type: project
 status: active
 first_seen: 2026-09-14

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, esc, fmtDate, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
+import { showTab } from './main.js';
 import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection, showGroup as showGroupByName } from './groups.js';
 
 // ---- entities ----
@@ -18,7 +19,15 @@ export async function loadEntities() {
   refreshStatus();
 }
 
-const PLURAL = {person: 'people', project: 'projects', place: 'places'};
+const KINDS = ['person', 'project', 'place', 'thing'];
+const PLURAL = {person: 'people', project: 'projects', place: 'places', thing: 'things'};
+const CATEGORIES = ['music', 'game', 'show', 'book', 'event', 'other'];
+
+// a mix-up flag as words: "seen as coworker (9) and friend (4)"
+export function mixupText(flag) {
+  const parts = flag.map(([label, n]) => `${label} (${n})`);
+  return 'seen as ' + (parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]);
+}
 let sortAlpha = false;
 let selectMode = false;         // checkboxes for batch add-to-group
 const picked = new Set();       // entity names checked for the next batch
@@ -34,21 +43,31 @@ export function renderEntityList() {
   // the plain view; an active search, group filter, or select mode reveals them
   const hideSet = (!filter && !activeGroupSet && !selectMode) ? rolledUpMemberSet() : null;
   if (selectMode) for (const n of [...picked]) if (!state.entities[n]) picked.delete(n);
-  const groups = {person: [], project: [], place: []};
+  const groups = Object.fromEntries(KINDS.map(k => [k, []]));
+  // retired entities (a past chapter) live behind their own chip
+  const retiredCount = Object.values(state.entities).filter(i => i.retired).length;
+  $('flt-retired').hidden = !retiredCount && !filters.retired;
+  $('flt-retired').textContent = `retired (${retiredCount})`;
+  // names whose entries disagree about who they are
+  const mixupCount = Object.values(state.entities).filter(i => i.mixup && !i.retired).length;
+  $('flt-mixup').hidden = !mixupCount && !filters.mixup;
+  $('flt-mixup').textContent = `maybe two (${mixupCount})`;
   for (const [name, info] of Object.entries(state.entities)) {
+    if (!!info.retired !== filters.retired) continue;
     const hay = (name + ' ' + (info.aliases || []).join(' ')).toLowerCase();
     if (filter && !hay.includes(filter)) continue;
     if (filters.unreviewed && info.reviewed) continue;
     if (filters.single && info.mentions !== 1) continue;
+    if (filters.mixup && !info.mixup) continue;
     if (activeGroupSet && !(info.groups || []).some(g => activeGroupSet.has(g.toLowerCase()))) continue;
     if (hideSet && hideSet.has(name.toLowerCase())) continue;
-    groups[info.type].push([name, info.mentions, info.reviewed]);
+    groups[info.type].push([name, info.mentions, info.reviewed, !!info.mixup]);
   }
   const wrap = $('entity-groups');
   wrap.innerHTML = '';
   const typeFilter = filters.types.size ? filters.types : null;
   let shown = 0;
-  for (const kind of ['person', 'project', 'place']) {
+  for (const kind of KINDS) {
     if (typeFilter && !typeFilter.has(kind)) continue;
     const items = groups[kind].sort(sortAlpha
       ? (a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase())
@@ -60,7 +79,7 @@ export function renderEntityList() {
     h.innerHTML = '<span class="eyebrow"></span>';
     h.firstChild.textContent = `${PLURAL[kind]} (${items.length})`;
     wrap.appendChild(h);
-    for (const [name, mentions, reviewed] of items) {
+    for (const [name, mentions, reviewed, mixup] of items) {
       const row = document.createElement('div');
       row.className = 'ent-row';
 
@@ -83,12 +102,17 @@ export function renderEntityList() {
       b.innerHTML = '<span class="li-title"></span><span class="li-meta"></span>';
       b.querySelector('.li-title').textContent = name;
       b.querySelector('.li-meta').textContent = mentions;
-      if (!reviewed) {
+      // a ring for maybe-two-people, then the unreviewed dot
+      const dots = [];
+      if (mixup) dots.push(['flag', 'maybe two people']);
+      if (!reviewed) dots.push(['', 'unreviewed']);
+      dots.forEach(([cls, label], i) => {
         const dot = document.createElement('span');
-        dot.className = 'dot right';
-        dot.setAttribute('aria-label', 'unreviewed');
+        dot.className = ['dot', cls, i ? '' : 'right'].filter(Boolean).join(' ');
+        dot.setAttribute('aria-label', label);
+        dot.title = label;
         b.appendChild(dot);
-      }
+      });
       b.onclick = () => selectMode
         ? row.querySelector('.ent-check')?.click()
         : showEntity(name);
@@ -194,12 +218,211 @@ async function findDups() {
   }
 }
 
+// A checkbox row for the review panels: name, muted note, optional line.
+function checkRow(panel, {checked, label, note, line}) {
+  const row = document.createElement('label');
+  row.className = 'check-row';
+  row.innerHTML = '<input type="checkbox"><span class="body"><span class="nm"></span> <span class="note"></span><span class="ln"></span></span>';
+  row.querySelector('input').checked = checked;
+  row.querySelector('.nm').textContent = label;
+  row.querySelector('.note').textContent = note;
+  row.querySelector('.ln').textContent = line || '';
+  panel.appendChild(row);
+  return row;
+}
+function panelHead(panel, text) {
+  const h = document.createElement('div');
+  h.className = 'sub eyebrow';
+  h.textContent = text;
+  panel.appendChild(h);
+}
+// the apply button under a checklist, its label kept to the checked count
+function panelApply(panel, rows, label, fn) {
+  const b = document.createElement('button');
+  b.className = 'filled sm';
+  const checked = () => rows.filter(([, row]) => row.isConnected && row.querySelector('input').checked).map(([x]) => x);
+  b.onclick = () => { const xs = checked(); if (xs.length) fn(xs); };
+  const relabel = () => { const n = checked().length; b.textContent = label(n); b.disabled = !n; };
+  panel.addEventListener('change', relabel);
+  panel.appendChild(b);
+  relabel();
+}
+
+// ---- generic names ----
+// The local detector's hits as a checklist, pre-checked. Uncheck a "the
+// gym" that is your gym. Applying is one never-track change, one undo.
+async function genericCleanup() {
+  const panel = suggestPanel('generic names');
+  const w = panelSay(panel, 'looking for category names (local, free)…');
+  const r = await (await fetch('/api/entities/generic')).json();
+  w.remove();
+  if (!r.candidates || !r.candidates.length) { panelSay(panel, 'no generic names found.'); return; }
+  panelSay(panel, "A category isn't an entity. Checked names stop being tracked; your entries keep every word, so search and the companion still find them. Uncheck one you mean as one particular place.");
+  const rows = r.candidates.map(c => [c, checkRow(panel, {
+    checked: true, label: c.name, line: c.first,
+    note: `${c.kind} · ${c.mentions} mention${c.mentions === 1 ? '' : 's'}`,
+  })]);
+  panelApply(panel, rows, n => `stop tracking ${n}`, async picked => {
+    const res = await api('/api/entities/delete-names', {names: picked.map(c => c.name)});
+    if (res) { closeSuggest(); clearDetail(`stopped tracking ${res.deleted.length} generic names. Undo brings them back.`); }
+  });
+}
+
+// ---- deleted, both kinds ----
+// Never-tracked names (rules that block every future mention too) and
+// mentions deleted entry by entry. A blocked name can be let back in: what
+// it hid stays hidden, but new entries start it fresh. People are
+// pre-checked for that -- a deleted Allen shouldn't block every Allen.
+async function showDeleted() {
+  const panel = suggestPanel('deleted');
+  const r = await (await fetch('/api/entities/deleted')).json();
+  if (!r.names || (!r.names.length && !r.mentions.length)) { panelSay(panel, 'nothing deleted.'); return; }
+  const restoreBtn = (row, key, mode) => {
+    const b = document.createElement('button');
+    b.className = 'quiet xs';
+    b.textContent = 'restore';
+    b.title = 'bring back everything this delete hid';
+    b.onclick = async e => {
+      e.preventDefault();
+      if (await api('/api/entities/deleted/restore', {key, mode})) { row.remove(); panel.dispatchEvent(new Event('change')); loadEntities(); }
+    };
+    row.appendChild(b);
+  };
+  if (r.names.length) {
+    panelHead(panel, `never tracked (${r.names.length})`);
+    panelSay(panel, 'Checked names are let back in: their old mentions stay deleted, and a new entry that mentions one starts it fresh.');
+    const rows = r.names.map(n => {
+      const row = checkRow(panel, {
+        checked: n.kind === 'person' && !n.generic, label: n.name,
+        note: `${n.kind} · ${n.mentions} mention${n.mentions === 1 ? '' : 's'}${n.generic ? ' · looks generic' : ''}`,
+      });
+      restoreBtn(row, n.key, 'name');
+      return [n, row];
+    });
+    panelApply(panel, rows, n => `let ${n} name${n === 1 ? '' : 's'} back in`, async picked => {
+      if (await api('/api/entities/deleted/free', {keys: picked.map(n => n.key)})) { showDeleted(); loadEntities(); }
+    });
+  }
+  if (r.mentions.length) {
+    panelHead(panel, `deleted mentions (${r.mentions.length})`);
+    for (const m of r.mentions) {
+      const row = document.createElement('div');
+      row.className = 'dup-row';
+      row.innerHTML = '<span><strong></strong> <span class="note"></span></span>';
+      row.querySelector('strong').textContent = m.name;
+      row.querySelector('.note').textContent = `${m.kind} · from ${m.entries} entr${m.entries === 1 ? 'y' : 'ies'}`;
+      restoreBtn(row, m.key, 'mentions');
+      panel.appendChild(row);
+    }
+  }
+}
+
+// ---- things review ----
+// Before the thing kind, games and shows were filed as projects and a
+// festival as a place. Claude proposes which are really things; each is
+// pre-checked with its category, editable. One retype change, one undo.
+async function thingsReview() {
+  const panel = suggestPanel('things review');
+  const w = panelSay(panel, 'asking claude which projects and places are really things…');
+  const r = await api('/api/entities/suggest-things', {});
+  w.remove();
+  if (!r) { closeSuggest(); return; }
+  if (!r.things.length) { panelSay(panel, 'nothing looks like a thing. Looks clean.'); return; }
+  panelSay(panel, 'A project is something you make or work on; a thing is something you enjoy or follow. Checked names become things, with the category shown. Observations come along.');
+  const rows = r.things.map(t => {
+    const row = checkRow(panel, {
+      checked: true, label: t.name, line: t.reason,
+      note: `${t.kind} · ${t.mentions} mention${t.mentions === 1 ? '' : 's'} →`,
+    });
+    const sel = document.createElement('select');
+    sel.className = 'quiet-select sm';
+    sel.setAttribute('aria-label', `category for ${t.name}`);
+    for (const c of CATEGORIES) {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      sel.appendChild(o);
+    }
+    sel.value = t.category;
+    row.querySelector('.note').after(' ', sel);
+    return [{name: t.name, sel}, row];
+  });
+  panelApply(panel, rows, n => `make ${n} thing${n === 1 ? '' : 's'}`, async picked => {
+    const res = await api('/api/entities/retype-things', {items: picked.map(p => ({name: p.name, category: p.sel.value}))});
+    if (res) { closeSuggest(); clearDetail(`${res.retyped.length} now things. Undo puts them back.`); }
+  });
+}
+
+// ---- targeted re-extract ----
+// A prompt change only reaches entries extracted after it. This re-runs
+// extraction for the entries that mention a word, after showing how many,
+// roughly what it costs, and which of them have hand edits it would lose.
+async function reextractPanel() {
+  const panel = suggestPanel('re-extract');
+  panelSay(panel, 'Re-run extraction for just the entries that mention a word or name, e.g. a show that was missed. Separate several with commas. Case and spaces don\'t matter: "live journal" finds LiveJournal.');
+  const form = document.createElement('div');
+  form.className = 'ent-actions';
+  form.innerHTML = '<input type="text" class="input-xs" placeholder="90 day, live journal…"><button class="quiet sm">find entries</button>';
+  panel.appendChild(form);
+  const out = document.createElement('div');
+  panel.appendChild(out);
+  const input = form.querySelector('input');
+  const terms = () => input.value.split(',').map(t => t.trim()).filter(Boolean);
+  const find = async () => {
+    if (!terms().length) { input.focus(); return; }
+    out.innerHTML = '';
+    const r = await api('/api/entities/reextract/preview', {terms: terms()});
+    if (!r) return;
+    if (!r.entries.length) { panelSay(out, 'no entries mention that.'); return; }
+    const edited = r.entries.filter(e => e.edited);
+    panelSay(out, `${r.entries.length} entr${r.entries.length === 1 ? 'y mentions' : 'ies mention'} ${r.terms.length > 1 ? 'one of them' : 'it'}. Re-extracting costs about $${r.estimate.toFixed(2)} on ${r.model}.`);
+    if (edited.length) {
+      panelHead(out, `hand edits that would be lost (${edited.length})`);
+      panelSay(out, 'You edited, moved or deleted observations in the entries marked (edited) below. Re-extracting replaces them with fresh ones.');
+    }
+    panelHead(out, 'entries');
+    for (const e of r.entries) panelSay(out, `${fmtDate(e.date)} · ${e.title}${e.edited ? ' (edited)' : ''}`);
+    const go = document.createElement('button');
+    go.className = 'filled sm';
+    go.textContent = `re-extract ${r.entries.length} entr${r.entries.length === 1 ? 'y' : 'ies'} (~$${r.estimate.toFixed(2)})`;
+    go.onclick = async () => {
+      go.disabled = true;
+      if (await api('/api/entities/reextract', {terms: r.terms})) watchReextract(out);
+      else go.disabled = false;
+    };
+    out.appendChild(go);
+  };
+  form.querySelector('button').onclick = find;
+  input.onkeydown = e => { if (e.key === 'Enter') find(); };
+  input.focus();
+}
+async function watchReextract(out) {
+  out.innerHTML = '';
+  const line = panelSay(out, 'starting…');
+  for (;;) {
+    const s = await (await fetch('/api/entities/reextract/status')).json();
+    if (!s.running) {
+      if (s.error) line.textContent = `stopped: ${s.error}`;
+      else {
+        const res = s.result || {done: [], failed: []};
+        line.textContent = `re-extracted ${res.done.length} entr${res.done.length === 1 ? 'y' : 'ies'}`
+          + (res.failed.length ? `; ${res.failed.length} failed and kept their old extraction` : '')
+          + '. New names are waiting in triage.';
+      }
+      loadEntities();
+      return;
+    }
+    line.textContent = s.total ? `${s.done + 1} of ${s.total} · ${s.current}` : 'starting…';
+    await new Promise(r => setTimeout(r, 1500));
+  }
+}
+
 // The detail pane shows one of: an entity, a group page, or the prompt to
 // pick one. The edit box and its toggle only exist for an entity.
 function showDetail(kind) {
   $('entity-detail-col').hidden = kind === 'none';
   $('entity-none').hidden = kind !== 'none';
   $('entity-edit-toggle').hidden = kind !== 'entity';
+  $('entity-to-triage').hidden = kind !== 'entity' || !state.triageReturn;
   if (kind !== 'entity') { $('entity-edit').hidden = true; $('entity-chips').innerHTML = ''; }
   setEditOpen(kind === 'entity' && editOpen);
   $('entities-pane').classList.toggle('drilled', kind !== 'none' || !$('suggest-wrap').hidden);
@@ -246,10 +469,13 @@ export async function showEntity(name) {
   showDetail('entity');
   notice('');
   $('entity-name').textContent = r.name;
-  $('entity-meta').textContent = `${r.type} · ${r.observations.length} observation${r.observations.length === 1 ? '' : 's'}`
+  $('entity-meta').textContent = `${r.type}${info.category ? ` · ${info.category}` : ''} · ${r.observations.length} observation${r.observations.length === 1 ? '' : 's'}`
     + (info.mentions ? ` · ${info.mentions} mention${info.mentions === 1 ? '' : 's'}` : '');
   $('merge-target').value = '';
   $('retype-kind').value = '';
+  // a thing's category, changeable in place
+  $('thing-category').hidden = r.type !== 'thing';
+  $('thing-category').value = info.category || 'other';
 
   // aka / in chips under the meta, and the editable rows in the edit box
   const chips = $('entity-chips');
@@ -266,6 +492,39 @@ export async function showEntity(name) {
       if (await api('/api/entities/alias', {name: r.name, remove: a})) await reloadEntity(r.name);
     }, `remove alias ${a}`));
   }
+  if (info.retired) {
+    const c = document.createElement('span');
+    c.className = 'tag muted';
+    c.innerHTML = '<span class="v">retired</span>';
+    if (info.retired !== 'self') c.title = `retired with the group ${info.retired}`;
+    chips.appendChild(c);
+  }
+  // maybe two people: confirm one, or move one person's mentions out
+  // with "move" below (each date says what that entry called them)
+  const mx = $('entity-mixup');
+  mx.innerHTML = '';
+  if (info.mixup) {
+    mx.append(`possibly two people: ${mixupText(info.mixup)}. Move one person's observations to a new name below, or `);
+    const one = document.createElement('button');
+    one.className = 'link';
+    one.textContent = "it's one person";
+    one.title = 'stop flagging this name';
+    one.onclick = async () => {
+      if (await api('/api/entities/not-mixed', {name: r.name, not_mixed: true})) {
+        delete info.mixup;
+        renderEntityList();
+        mx.innerHTML = '';
+        notice(`${r.name} won't be flagged again. Undo brings the flag back.`);
+      }
+    };
+    mx.append(one);
+  }
+  // retired through a group can only be undone there
+  const rb = $('retire-btn');
+  rb.textContent = info.retired ? 'un-retire' : 'retire';
+  rb.disabled = !!info.retired && info.retired !== 'self';
+  rb.title = rb.disabled ? `retired with the group ${info.retired}; un-retire the group, or add them to an active one`
+    : info.retired ? 'back into everyday view' : 'a past chapter: out of the list and triage, and the companion only brings them up when you do. Nothing is deleted';
   $('group-add-input').value = '';
   const gchips = $('group-chips');
   gchips.innerHTML = '';
@@ -285,13 +544,17 @@ export async function showEntity(name) {
   // observations grouped by date, each editable
   const docEl = $('entity-doc');
   docEl.innerHTML = '<div class="rule eyebrow">observations</div>';
-  let lastDate = null;
+  // each date says what that entry called it, as in triage ("as coworker"),
+  // which is how two people under one name tell apart
+  let lastKey = null;
   for (const o of r.observations) {
-    if (o.date !== lastDate) {
-      lastDate = o.date;
+    const key = `${o.date}|${o.attr || ''}|${o.extracted_name}`;
+    if (key !== lastKey) {
+      lastKey = key;
       const d = document.createElement('div');
       d.className = 'obs-date eyebrow';
-      d.textContent = fmtDate(o.date) + (o.extracted_name !== r.name ? ` · as "${o.extracted_name}"` : '');
+      d.textContent = fmtDate(o.date) + (o.extracted_name !== r.name ? ` · as "${o.extracted_name}"` : '')
+        + (r.type === 'person' && o.attr ? ` · as ${o.attr}` : '');
       docEl.appendChild(d);
     }
     const row = document.createElement('div');
@@ -313,10 +576,10 @@ export async function showEntity(name) {
       if (await api('/api/observation', {...o, action: 'edit', text: text.trim()})) await reloadEntity(r.name);
     });
     mk('move', 'move this observation to another entity', async () => {
-      const target = prompt('Move this observation to which entity?\n(prefix with person:/project:/place: if it\'s new)', '');
+      const target = prompt('Move this observation to which entity?\n(prefix with person:/project:/place:/thing: if it\'s new)', '');
       if (!target) return;
       let kind = r.type, tname = target.trim();
-      const m = tname.match(/^(person|project|place):(.+)$/);
+      const m = tname.match(/^(person|project|place|thing):(.+)$/);
       if (m) { kind = m[1]; tname = m[2].trim(); }
       else if (state.entities[tname]) kind = state.entities[tname].type;
       if (await api('/api/observation', {...o, action: 'reassign', target_kind: kind, target_name: tname})) await reloadEntity(r.name);
@@ -402,6 +665,24 @@ export function init() {
     pressed('flt-unreviewed', filters.unreviewed);
     renderEntityList();
   };
+  $('flt-retired').onclick = () => {
+    filters.retired = !filters.retired;
+    pressed('flt-retired', filters.retired);
+    loadGroups();  // the group browser shows retired groups only under this chip
+    renderEntityList();
+  };
+  $('retire-btn').onclick = async () => {
+    if (!state.selected) return;
+    const retire = !state.entities[state.selected]?.retired;
+    const r = await api('/api/entities/retire', {name: state.selected, retired: retire});
+    if (r) await reloadEntity(r.name);
+    if (r && retire) flash(`${r.name} retired. The retired chip shows them.`);
+  };
+  $('flt-mixup').onclick = () => {
+    filters.mixup = !filters.mixup;
+    pressed('flt-mixup', filters.mixup);
+    renderEntityList();
+  };
   $('flt-single').onclick = () => {
     filters.single = !filters.single;
     pressed('flt-single', filters.single);
@@ -422,12 +703,17 @@ export function init() {
   };
   $('entity-edit-toggle').onclick = () => setEditOpen(!editOpen);
   $('entity-back').onclick = () => $('entities-pane').classList.remove('drilled');
+  $('entity-to-triage').onclick = () => showTab('triage');
   $('suggest-back').onclick = () => $('entities-pane').classList.remove('drilled');
   $('batch-add').onclick = batchAdd;
   $('batch-group').onkeydown = e => { if (e.key === 'Enter') batchAdd(); };
   $('batch-clear').onclick = () => { picked.clear(); updateBatchCount(); renderEntityList(); };
   $('search').oninput = renderEntityList;
   $('find-dups').onclick = findDups;
+  $('find-generic').onclick = genericCleanup;
+  $('show-deleted').onclick = showDeleted;
+  $('things-review').onclick = thingsReview;
+  $('reextract-open').onclick = reextractPanel;
 
   $('merge-btn').onclick = async () => {
     const target = $('merge-target').value.trim();
@@ -448,10 +734,18 @@ export function init() {
   $('retype-kind').onchange = async () => {
     const kind = $('retype-kind').value;
     if (!state.selected || !kind) return;
-    const newName = prompt(`Move "${state.selected}" to ${kind}s. Rename it? (leave as-is to keep the name)`, state.selected);
+    const newName = prompt(`Move "${state.selected}" to ${PLURAL[kind]}. Rename it? (leave as-is to keep the name)`, state.selected);
     if (newName === null) { $('retype-kind').value = ''; return; }
+    // a new thing starts as "other"; its category picker shows once it's open
     const r = await api('/api/entities/retype', {name: state.selected, new_type: kind, new_name: newName.trim()});
-    if (r) clearDetail(`moved to ${kind}s`);
+    if (r && kind === 'thing') await reloadEntity(newName.trim() || state.selected);
+    else if (r) clearDetail(`moved to ${PLURAL[kind]}`);
+  };
+
+  $('thing-category').onchange = async () => {
+    if (!state.selected) return;
+    const r = await api('/api/entities/category', {name: state.selected, category: $('thing-category').value});
+    if (r) await reloadEntity(r.name);
   };
 
   $('alias-add-btn').onclick = async () => {
@@ -473,9 +767,16 @@ export function init() {
 
   $('delete-btn').onclick = async () => {
     if (!state.selected) return;
-    if (!confirm(`Delete "${state.selected}" from the entity graph?`)) return;
-    const r = await api('/api/entities/delete', {name: state.selected});
+    if (!confirm(`Delete the mentions of "${state.selected}"?\n(your entries are untouched, and a new entry that mentions "${state.selected}" starts it fresh)`)) return;
+    const r = await api('/api/entities/delete', {name: state.selected, mode: 'mentions'});
     if (r) clearDetail('deleted');
+  };
+
+  $('never-btn').onclick = async () => {
+    if (!state.selected) return;
+    if (!confirm(`Never track "${state.selected}"?\nEvery future "${state.selected}" will be ignored too. Meant for generic terms and junk.`)) return;
+    const r = await api('/api/entities/delete', {name: state.selected, mode: 'name'});
+    if (r) clearDetail(`no longer tracking ${r.deleted}`);
   };
 
   $('undo-btn').onclick = () => histStep('/api/undo');

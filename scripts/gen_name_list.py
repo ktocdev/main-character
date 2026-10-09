@@ -29,6 +29,12 @@ Names that merely collide with common words (Max, Pat, Cat, Major, Mark)
 are NOT listed here: they are real people, and case-sensitive matching
 already keeps them quiet, since the collisions are lowercase in code.
 
+Names the demo's fiction also uses as an entity are dropped and listed,
+not checked: every hit on them is the fiction, so the check would only
+cry wolf, and an exemption list in this file would publish the very
+names it exists to protect. If a listed name is a real person who
+matters, rename the fiction's entity instead.
+
 Usage:  python scripts/gen_name_list.py [--dry-run]
 
 The output is gitignored — the list is itself sensitive.
@@ -41,6 +47,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GRAPH = ROOT / "entity_graph" / "index.json"
 OUT = ROOT / "third-party-names.txt"
+# the demo's entities: the fiction everyone's repo ships
+FICTION = ROOT / "seed_corpus" / "derived" / "entity_graph" / "index.json"
 
 # Kinship terms only. See the module docstring for why name/word
 # collisions are deliberately absent.
@@ -57,7 +65,8 @@ HEADER = """\
 # by hand is fine but will be overwritten; add durable exclusions to
 # GENERIC in that script instead.
 #
-# People only, capitalized only, kinship terms removed. See the script's
+# People only, capitalized only, kinship terms and names the demo's
+# fiction also uses removed. See the script's
 # docstring for why each of those rules exists.
 #
 # Gitignored: the list is itself sensitive.
@@ -70,8 +79,9 @@ def main():
     if not GRAPH.exists():
         sys.exit(f"no entity graph at {GRAPH} — nothing to generate from")
     graph = json.loads(GRAPH.read_text(encoding="utf-8"))
+    fiction = json.loads(FICTION.read_text(encoding="utf-8")) if FICTION.exists() else {}
 
-    def names_of(kinds):
+    def names_of(kinds, graph=graph):
         out = set()
         for name, entity in graph.items():
             if entity.get("type") not in kinds:
@@ -81,7 +91,9 @@ def main():
         return {n.strip() for n in out if n and n.strip()}
 
     people = {n for n in names_of({"person"}) if n[:1].isupper()}
-    not_people = names_of({"place", "project"})
+    # lowercase: a name filed as a person once and later retyped is often
+    # stored in different case ("Guitar" carried, `guitar` the project)
+    not_people = {n.lower() for n in names_of({"place", "project", "thing"})}
 
     carried = set()
     if OUT.exists():
@@ -89,14 +101,18 @@ def main():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            if line[:1].isupper() and line not in not_people:
+            if line[:1].isupper() and line.lower() not in not_people:
                 carried.add(line)
 
-    names = sorted((people | carried) - GENERIC)
+    in_fiction = {n.lower() for n in names_of({"person", "place", "project", "thing"}, fiction)}
+    collisions = sorted(n for n in (people | carried) - GENERIC if n.lower() in in_fiction)
+    names = sorted((people | carried) - GENERIC - set(collisions))
 
     print(f"  {len(people)} people in the graph")
     print(f"  {len(carried - people)} carried forward (no longer in the graph)")
     print(f"  {len((people | carried) & GENERIC)} kinship terms dropped")
+    if collisions:
+        print(f"  {len(collisions)} also in the demo's fiction, so not checked: {', '.join(collisions)}")
     print(f"  -> {len(names)} names")
 
     if dry_run:

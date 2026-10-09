@@ -100,7 +100,7 @@ def startup():
     # dirs are empty on a first run, which is a state the app already handles.
     STATE["client"] = get_client() if config.is_configured() else None
     STATE["collection"] = get_collection()
-    STATE["entity_index"] = companion.load_entity_index()
+    STATE["entity_index"] = entities.mark_mixups(entities.mark_generic(companion.load_entity_index()))
     # the open session survives restarts — rebuild the conversation from it
     STATE["messages"] = sessions.conversation_messages()
     # A full recount, not the cached one: startup is when anything done
@@ -138,10 +138,49 @@ class NameIn(BaseModel):
     name: str
 
 
+class DeleteIn(BaseModel):
+    name: str
+    # "mentions": drop the mentions there are now, leave the name free (the
+    # default). "name": never track it again -- for generic terms and junk.
+    mode: str = "mentions"
+
+
+class NamesIn(BaseModel):
+    names: list[str]
+
+
+class DeletedIn(BaseModel):
+    key: str
+    mode: str  # which kind of delete to undo: "name" or "mentions"
+
+
+class KeysIn(BaseModel):
+    keys: list[str]
+
+
 class RetypeIn(BaseModel):
     name: str
     new_type: str
     new_name: str = ""
+    category: str = ""  # into a thing: music, game, show, book, event, other
+
+
+class CategoryIn(BaseModel):
+    name: str
+    category: str
+
+
+class ThingIn(BaseModel):
+    name: str
+    category: str
+
+
+class ThingsIn(BaseModel):
+    items: list[ThingIn]
+
+
+class TermsIn(BaseModel):
+    terms: list[str]
 
 
 class AliasIn(BaseModel):
@@ -170,10 +209,20 @@ class ReviewedIn(BaseModel):
     reviewed: bool
 
 
+class RetireIn(BaseModel):
+    name: str
+    retired: bool
+
+
 class DismissDupIn(BaseModel):
     kind: str
     a: str
     b: str
+
+
+class NotMixedIn(BaseModel):
+    name: str
+    not_mixed: bool = True
 
 
 class GroupIn(BaseModel):
@@ -199,6 +248,7 @@ class GroupEditIn(BaseModel):
     parent: str | None = None  # None = unchanged, "" = make root
     delete: bool = False
     rollup: bool | None = None  # None = unchanged; collapse members out of the flat list
+    retired: bool | None = None  # None = unchanged; retire every member (deep)
 
 
 class CategoryTagIn(BaseModel):
@@ -452,7 +502,7 @@ def reset_lookup():
 CLOSE_STEPS = [
     ("seed", "writing your life summary candidate"),
     ("categories", "tagging the entry"),
-    ("entities", "extracting people, places and projects"),
+    ("entities", "extracting people, places, projects and things"),
     ("summaries", "refreshing weekly arcs and summaries"),
     ("dreams", "scanning for dreams"),
 ]
@@ -1828,15 +1878,17 @@ def _combine(body: MergeIn, field: str, verb: str):
     before = _snapshot()
     curation = entities.load_curation()
     src_kind = index[src]["type"]
+    src_base = entities.base_name(index, src)
     # kind-qualify the target when it exists under a different kind
     # (e.g. merge place:Reyes into person:Dr. Reyes)
     dst_kind = index[dst]["type"] if dst in index else src_kind
-    value = f"{dst_kind}:{dst}" if dst_kind != src_kind else dst
-    curation[field][entities.curation_key(src_kind, src)] = value
+    dst_base = entities.base_name(index, dst) if dst in index else dst
+    value = f"{dst_kind}:{dst_base}" if dst_kind != src_kind else dst_base
+    curation[field][entities.index_key(index, src)] = value
     for other in ("merge", "correct"):
         for k, v in list(curation[other].items()):
             _, tname = entities._parse_target(v, src_kind)
-            if tname.lower() == src.lower():
+            if tname.lower() == src_base.lower():
                 curation[other][k] = value
     entities.save_curation(curation)
     _record_curation(f"{verb} {src} into {dst}", before)
@@ -1862,17 +1914,80 @@ def retype_entity(body: RetypeIn):
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
     if body.new_type not in entities.KINDS:
         return JSONResponse({"error": f"kind must be one of {entities.KINDS}"}, status_code=400)
+    if body.category and body.category not in entities.THING_CATEGORIES:
+        return JSONResponse({"error": f"category must be one of {entities.THING_CATEGORIES}"},
+                            status_code=400)
 
     before = _snapshot()
     curation = entities.load_curation()
-    curation["retype"][entities.curation_key(index[name]["type"], name)] = {
-        "type": body.new_type,
-        "name": body.new_name.strip() or name,
-    }
+    entities.retype_rule(curation, entities.index_key(index, name), body.new_type,
+                         body.new_name.strip() or entities.base_name(index, name),
+                         body.category)
+    if curation == before:
+        return {"ok": True, "retyped": name, "to": body.new_type}
     entities.save_curation(curation)
     _record_curation(f"retype {name} to {body.new_type}", before)
     _rebuild()
     return {"ok": True, "retyped": name, "to": body.new_type}
+
+
+@app.post("/api/entities/category")
+def set_category(body: CategoryIn):
+    """A thing's category (music, game, show, book, event, other)."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    if index[name]["type"] != "thing":
+        return JSONResponse({"error": "only things have a category"}, status_code=400)
+    if body.category not in entities.THING_CATEGORIES:
+        return JSONResponse({"error": f"category must be one of {entities.THING_CATEGORIES}"},
+                            status_code=400)
+    before = _snapshot()
+    curation = entities.load_curation()
+    curation["category"][entities.index_key(index, name)] = body.category
+    if curation == before:
+        return {"ok": True, "name": name, "category": body.category}
+    entities.save_curation(curation)
+    _record_curation(f"{name} is a {body.category}", before)
+    _rebuild()
+    return {"ok": True, "name": name, "category": body.category}
+
+
+@app.post("/api/entities/suggest-things")
+def suggest_things():
+    """Claude's guesses at which projects and places are really things."""
+    try:
+        return {"things": entities.suggest_things()}
+    except caps.CapExceeded as exc:
+        return _refused(exc)
+
+
+@app.post("/api/entities/retype-things")
+def retype_things(body: ThingsIn):
+    """The things review: retype every accepted name, each with its
+    category. One curation change, so one undo puts them all back."""
+    index = STATE["entity_index"]
+    for item in body.items:
+        if item.category not in entities.THING_CATEGORIES:
+            return JSONResponse({"error": f"category must be one of {entities.THING_CATEGORIES}"},
+                                status_code=400)
+    found = []
+    for item in body.items:
+        name = companion.resolve_entity(index, item.name)
+        if name:
+            found.append((name, item.category))
+    if not found:
+        return JSONResponse({"error": "none of those were found"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    for name, category in found:
+        entities.retype_rule(curation, entities.index_key(index, name), "thing",
+                             entities.base_name(index, name), category)
+    entities.save_curation(curation)
+    _record_curation(f"{len(found)} retyped to things", before)
+    _rebuild()
+    return {"ok": True, "retyped": [n for n, _ in found]}
 
 
 @app.post("/api/entities/rename")
@@ -1888,7 +2003,7 @@ def rename_entity(body: MergeIn):
 
     before = _snapshot()
     curation = entities.load_curation()
-    curation["rename"][entities.curation_key(index[name]["type"], name)] = new_name
+    curation["rename"][entities.index_key(index, name)] = new_name
     entities.save_curation(curation)
     _record_curation(f"rename {name} to {new_name}", before)
     _rebuild()
@@ -1904,7 +2019,7 @@ def alias_entity(body: AliasIn):
 
     before = _snapshot()
     curation = entities.load_curation()
-    key = entities.curation_key(index[name]["type"], name)
+    key = entities.index_key(index, name)
     if body.add.strip():
         curation["alias_add"].setdefault(key, [])
         if body.add.strip() not in curation["alias_add"][key]:
@@ -1932,7 +2047,7 @@ def entity_observations(name: str):
     kind = index[canonical]["type"]
     return {
         "name": canonical, "type": kind,
-        "observations": entities.list_observations(kind, canonical),
+        "observations": entities.list_observations(kind, entities.base_name(index, canonical)),
     }
 
 
@@ -2004,7 +2119,7 @@ def mark_reviewed(body: ReviewedIn):
     if not name:
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
 
-    key = entities.curation_key(index[name]["type"], name)
+    key = entities.index_key(index, name)
     curation = entities.load_curation()
     reviewed = {r.lower() for r in curation["reviewed"]}
     if body.reviewed and key not in reviewed:
@@ -2031,6 +2146,40 @@ def dismiss_duplicate(body: DismissDupIn):
     return {"ok": True}
 
 
+@app.get("/api/entities/mixups")
+def mixups():
+    """People whose entries disagree about who they are, so the name
+    probably covers two."""
+    return {"mixups": entities.find_mixups(STATE["entity_index"])}
+
+
+@app.post("/api/entities/not-mixed")
+def not_mixed(body: NotMixedIn):
+    """Checked and found to be one: the flag stays off for good. Patches the
+    index in place, so confirming a keep in triage stays instant; undo
+    rebuilds as usual."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    key = entities.index_key(index, name)
+    curation["not_mixed"] = [k for k in curation["not_mixed"] if k.lower() != key]
+    if body.not_mixed:
+        curation["not_mixed"].append(key)
+    if curation != before:
+        entities.save_curation(curation)
+        _record_curation(f"{'confirm' if body.not_mixed else 'unconfirm'} {name} is one person", before)
+    info = index[name]
+    info.pop("mixup", None)
+    if not body.not_mixed:
+        flag = entities.mixup_flag(info["type"], info.get("attrs") or {})
+        if flag:
+            info["mixup"] = flag
+    return {"ok": True, "name": name, "mixup": info.get("mixup", [])}
+
+
 @app.get("/api/groups")
 def list_groups():
     """Entity groups with members resolved through current names/aliases.
@@ -2047,6 +2196,7 @@ def list_groups():
             "name": g["name"],
             "parent": g["parent"],
             "rollup": bool(g.get("rollup")),
+            "retired": bool(g.get("retired")),
             "members": sorted(resolved, key=str.lower),
             "unresolved": sorted(unresolved, key=str.lower),
         })
@@ -2209,6 +2359,13 @@ def edit_group(body: GroupEditIn):
                 child["parent"] = rename
         group["name"] = rename
         actions.append(f"rename group {old} to {rename}")
+
+    if body.retired is not None and bool(group.get("retired")) != body.retired:
+        if body.retired:
+            group["retired"] = True
+        else:
+            group.pop("retired", None)
+        actions.append(f"{'retire' if body.retired else 'un-retire'} group {group['name']}")
 
     if body.parent is not None:
         parent = body.parent.strip()
@@ -2579,20 +2736,203 @@ def entry_text(date: str, title: str):
             "text": "\n\n".join(doc for _, doc in chunks)}
 
 
-@app.post("/api/entities/delete")
-def delete_entity(body: NameIn):
+@app.post("/api/entities/retire")
+def retire_entity(body: RetireIn):
+    """A past chapter: out of the list and triage, and the companion only
+    brings them up when you do. Nothing is deleted."""
     index = STATE["entity_index"]
     name = companion.resolve_entity(index, body.name)
     if not name:
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    key = entities.index_key(index, name)
+    curation["retired"] = [r for r in curation["retired"] if r.lower() != key]
+    if body.retired:
+        curation["retired"].append(key)
+    if curation == before:
+        return {"ok": True, "name": name, "retired": body.retired}
+    entities.save_curation(curation)
+    _record_curation(f"{'retire' if body.retired else 'un-retire'} {name}", before)
+    _rebuild()
+    still = STATE["entity_index"].get(name, {}).get("retired", "")
+    return {"ok": True, "name": name, "retired": bool(still), "by": still}
+
+
+@app.post("/api/entities/delete")
+def delete_entity(body: DeleteIn):
+    """Two kinds of delete; neither touches journal entries, so search and
+    the companion still find the text either way."""
+    index = STATE["entity_index"]
+    name = companion.resolve_entity(index, body.name)
+    if not name:
+        return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
+    if body.mode not in ("mentions", "name"):
+        return JSONResponse({"error": "mode must be mentions or name"}, status_code=400)
 
     before = _snapshot()
     curation = entities.load_curation()
-    curation["delete"].append(entities.curation_key(index[name]["type"], name))
+    key = entities.index_key(index, name)
+    if body.mode == "name":
+        _never_track(curation, key)
+    else:
+        entities.drop_mentions(curation, key)
     entities.save_curation(curation)
-    _record_curation(f"delete {name}", before)
+    verb = "stop tracking" if body.mode == "name" else "delete"
+    _record_curation(f"{verb} {name}", before)
     _rebuild()
-    return {"ok": True, "deleted": name}
+    return {"ok": True, "deleted": name, "mode": body.mode}
+
+
+def _never_track(curation: dict, key: str):
+    """A never-track rule, plus removing merge rules that pointed the
+    generic name somewhere ("work plan -> Nebula" goes, not redirected)."""
+    if key not in {d.lower() for d in curation["delete"]}:
+        curation["delete"].append(key)
+    for field in ("merge", "correct"):
+        curation[field].pop(key, None)
+
+
+@app.post("/api/entities/delete-names")
+def delete_names(body: NamesIn):
+    """The generic cleanup: never track every checked name. One curation
+    change, so one undo brings them all back."""
+    index = STATE["entity_index"]
+    found = [n for n in (companion.resolve_entity(index, x) for x in body.names) if n]
+    if not found:
+        return JSONResponse({"error": "none of those were found"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    for name in found:
+        _never_track(curation, entities.index_key(index, name))
+    entities.save_curation(curation)
+    _record_curation(f"stop tracking {len(found)} generic names", before)
+    _rebuild()
+    return {"ok": True, "deleted": found}
+
+
+@app.get("/api/entities/generic")
+def generic_candidates():
+    """Entities the local detector calls generic, with what they say, for
+    the cleanup checklist."""
+    out = []
+    for name, info in STATE["entity_index"].items():
+        if not info.get("generic"):
+            continue
+        obs = entities.list_observations(info["type"], entities.base_name(STATE["entity_index"], name))
+        out.append({"name": name, "kind": info["type"], "mentions": info["mentions"],
+                    "first": obs[0]["text"] if obs else ""})
+    out.sort(key=lambda c: (c["kind"], -c["mentions"], c["name"].lower()))
+    return {"candidates": out}
+
+
+# ---- targeted re-extract ----
+# A prompt change only reaches entries extracted after it; this re-runs
+# extraction for just the entries that mention a term. Paid, so the page
+# shows the preview (entries, estimate, hand-edited files) first.
+_REEXTRACT = {"running": False, "done": 0, "total": 0, "current": "",
+              "result": None, "error": ""}
+_REEXTRACT_LOCK = threading.Lock()
+
+
+def _clean_terms(terms: list[str]) -> list[str]:
+    return [t.strip() for t in terms if t.strip()][:10]
+
+
+@app.post("/api/entities/reextract/preview")
+def reextract_preview(body: TermsIn):
+    terms = _clean_terms(body.terms)
+    if not terms:
+        return JSONResponse({"error": "type a word or name to look for"}, status_code=400)
+    return {"terms": terms, **entities.reextract_preview(terms)}
+
+
+def _run_reextract(terms: list[str]):
+    def progress(i, total, conv):
+        _REEXTRACT.update(done=i, total=total, current=f"{conv['date']} {conv['title']}")
+    try:
+        result = entities.reextract(terms, progress=progress)
+        _rebuild()
+        _REEXTRACT.update(result=result, done=_REEXTRACT["total"], current="")
+    except caps.CapExceeded as exc:
+        _rebuild()  # keep what was re-extracted before the cap
+        _REEXTRACT.update(error=exc.detail, current="")
+    except Exception as exc:
+        _REEXTRACT.update(error=str(exc), current="")
+    finally:
+        _REEXTRACT["running"] = False
+
+
+@app.post("/api/entities/reextract")
+def reextract(body: TermsIn, background_tasks: BackgroundTasks):
+    if config.MOCK_MODE:
+        return JSONResponse({"error": "re-extracting needs your own journal and key, not the demo"},
+                            status_code=400)
+    terms = _clean_terms(body.terms)
+    if not terms:
+        return JSONResponse({"error": "type a word or name to look for"}, status_code=400)
+    if _CLOSE["active"]:
+        return JSONResponse({"error": "a chapter is closing; try again when it's done"},
+                            status_code=409)
+    try:
+        caps.check()
+    except caps.CapExceeded as exc:
+        return _refused(exc)
+    with _REEXTRACT_LOCK:
+        if _REEXTRACT["running"]:
+            return JSONResponse({"error": "a re-extract is already running"}, status_code=409)
+        _REEXTRACT.update(running=True, done=0, total=0, current="", result=None, error="")
+    _tracked(background_tasks, _run_reextract, terms)
+    return {"ok": True, "terms": terms}
+
+
+@app.get("/api/entities/reextract/status")
+def reextract_status():
+    return _REEXTRACT
+
+
+@app.get("/api/entities/deleted")
+def deleted_entities():
+    return entities.deleted_list(entities.load_curation())
+
+
+@app.post("/api/entities/deleted/restore")
+def restore_deleted(body: DeletedIn):
+    """Undo one delete from the list: a never-track rule or a set of
+    deleted mentions. What it hid comes back on the rebuild."""
+    key = body.key.strip().lower()
+    before = _snapshot()
+    curation = entities.load_curation()
+    if body.mode == "name":
+        curation["delete"] = [d for d in curation["delete"] if d.lower() != key]
+    elif body.mode == "mentions":
+        curation["drop_mentions"].pop(key, None)
+    else:
+        return JSONResponse({"error": "mode must be name or mentions"}, status_code=400)
+    if curation == before:
+        return JSONResponse({"error": "nothing to restore"}, status_code=404)
+    entities.save_curation(curation)
+    _record_curation(f"restore {key.partition(':')[2]}", before)
+    _rebuild()
+    return {"ok": True}
+
+
+@app.post("/api/entities/deleted/free")
+def free_names(body: KeysIn):
+    """Let names back in: each never-track rule becomes delete-these-
+    mentions, so what it hid stays hidden but a new entry starts fresh."""
+    blocked = {d.lower() for d in entities.load_curation()["delete"]}
+    keys = [k.strip().lower() for k in body.keys if k.strip().lower() in blocked]
+    if not keys:
+        return JSONResponse({"error": "none of those are blocked"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    for key in keys:
+        entities.free_name(curation, key)
+    entities.save_curation(curation)
+    _record_curation(f"allow {len(keys)} name{'s' if len(keys) != 1 else ''} again", before)
+    _rebuild()
+    return {"ok": True, "freed": keys}
 
 
 if __name__ == "__main__":
