@@ -212,9 +212,13 @@ async function batchAdd() {
 }
 // ---- local duplicate finder ----
 // The suggestion panel sits above whatever the detail pane shows, and
-// shows on its own when nothing is picked yet.
+// shows on its own when nothing is picked yet. Each open swaps in a fresh
+// element: the last review's listeners go with the old one, and a review
+// still waiting on Claude writes into that detached copy, not this one.
 function suggestPanel(title) {
-  const panel = $('suggest-panel');
+  const old = $('suggest-panel');
+  const panel = old.cloneNode(false);
+  old.replaceWith(panel);
   $('suggest-wrap').hidden = false;
   $('entities-pane').classList.add('drilled');
   panel.innerHTML = '<div class="head"><span class="eyebrow"></span>'
@@ -375,6 +379,7 @@ async function thingsReview() {
   const w = panelSay(panel, 'asking claude which projects and places are really things…');
   const r = await api('/api/entities/suggest-things', {});
   w.remove();
+  if (!panel.isConnected) return;  // another review opened meanwhile
   if (!r) { closeSuggest(); return; }
   if (!r.things.length) { panelSay(panel, 'nothing looks like a thing. Looks clean.'); return; }
   panelSay(panel, 'A project is something you make or work on; a thing is something you enjoy or follow. Checked names become things, with the category shown. Observations come along.');
