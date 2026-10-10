@@ -182,13 +182,8 @@ class CategoryIn(BaseModel):
     category: str
 
 
-class ThingIn(BaseModel):
-    name: str
-    category: str
-
-
 class ThingsIn(BaseModel):
-    items: list[ThingIn]
+    items: list[CategoryIn]
 
 
 class TermsIn(BaseModel):

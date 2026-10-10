@@ -267,10 +267,9 @@ def known_people_hint() -> list[str]:
     """Canonical people names from the current index, for name consistency.
     A split name counts once, by its plain name; the variants go in
     known_variants_hint."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return []
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     mentions: dict[str, int] = defaultdict(int)
     for n, i in index.items():
         if i["type"] == "person" and not i.get("retired") and not i.get("closed"):
@@ -279,35 +278,37 @@ def known_people_hint() -> list[str]:
     return [n for _, n in people[:80]]
 
 
+def _with_context(label: str, info: dict) -> str:
+    """'Dev (coworker; Coworkers)': a label with what tells the person apart,
+    their two commonest relationships and their groups."""
+    context = list(info.get("attrs", {}))[:2] + info.get("groups", [])
+    return label + (f" ({'; '.join(context)})" if context else "")
+
+
 def known_variants_hint() -> str:
     """'Dev: work (coworker; Coworkers), friend (friend)' for every split
     name -- always all of them, not just the most mentioned."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return ""
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     by_name: dict[str, list[str]] = defaultdict(list)
     for n, i in sorted(index.items(), key=lambda kv: -kv[1]["mentions"]):
         if i.get("variant_of") and not i.get("unsorted"):
-            context = [a for a in list(i.get("attrs", {}))[:2]] + i.get("groups", [])
-            by_name[i["variant_of"]].append(
-                i["qualifier"] + (f" ({'; '.join(context)})" if context else ""))
+            by_name[i["variant_of"]].append(_with_context(i["qualifier"], i))
     return "; ".join(f"{name}: {', '.join(vs)}" for name, vs in sorted(by_name.items()))
 
 
 def known_retired_hint() -> str:
     """'Marcus (coworker; Old job)' for every retired person whose
     profile is closed to bare mentions."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return ""
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     closed = load_curation()["retired_through"]
     out = []
     for n, i in sorted(index.items(), key=lambda kv: -kv[1]["mentions"]):
         if i["type"] == "person" and curation_key("person", i.get("base", n)) in closed:
-            context = list(i.get("attrs", {}))[:2] + i.get("groups", [])
-            out.append(n + (f" ({'; '.join(context)})" if context else ""))
+            out.append(_with_context(n, i))
     return "; ".join(out)
 
 
@@ -452,6 +453,12 @@ def load_curation() -> dict:
     # (run per mention) tests the list as is instead of lowering it each time
     curation["delete"] = [d.lower() for d in curation["delete"]]
     return curation
+
+
+def load_index() -> dict:
+    """The built index, name -> info; empty before the first build."""
+    path = ENTITY_DIR / "index.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 def save_curation(curation: dict):
@@ -823,10 +830,9 @@ def known_groups_hint() -> str:
     group with a note -- a note is the author saying what ties a group
     together, which is what helps tell who an entry means. Groups without
     one aren't listed."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return ""
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     lookup = {n.lower(): n for n in index}
     for n, i in index.items():
         for a in i.get("aliases", []):
@@ -1786,10 +1792,9 @@ def find_duplicate_candidates(max_pairs: int = 60, use_embeddings: bool = True) 
     """
     import difflib
 
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return []
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     curation = load_curation()
     dismissed = {d.lower() for d in curation["not_duplicates"]}
 
@@ -1906,12 +1911,20 @@ it (do not repeat the canonical), and "reason" is one short sentence.
 </entities>"""
 
 
+def _json_reply(response) -> dict:
+    """A structured-output reply as data; {} when Claude declined. The
+    create() calls stay in each caller: the mock client files a call by the
+    function that makes it."""
+    if response.stop_reason == "refusal":
+        return {}
+    return json.loads(next(b.text for b in response.content if b.type == "text"))
+
+
 def suggest_merges(kind: str) -> list[dict]:
     """Ask Claude to propose merge groups for one entity kind."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return []
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     listing = [
         {"name": n, "attribute": "", "mentions": i["mentions"]}
         for n, i in sorted(index.items(), key=lambda kv: -kv[1]["mentions"])
@@ -1933,10 +1946,7 @@ def suggest_merges(kind: str) -> list[dict]:
             ),
         }],
     )
-    if response.stop_reason == "refusal":
-        return []
-    raw = next(b.text for b in response.content if b.type == "text")
-    groups = json.loads(raw).get("groups", [])
+    groups = _json_reply(response).get("groups", [])
     known = {n.lower() for n in index}
     cleaned = []
     for g in groups:
@@ -1998,10 +2008,9 @@ than coverage; the author reviews every suggestion.
 
 def suggest_things() -> list[dict]:
     """Ask Claude which projects and places are really things."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return []
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     candidates = [(n, i) for n, i in index.items()
                   if i["type"] in ("project", "place") and not i.get("generic")]
     if not candidates:
@@ -2022,11 +2031,8 @@ def suggest_things() -> list[dict]:
         messages=[{"role": "user", "content": THINGS_PROMPT.format(
             listing=json.dumps(listing, ensure_ascii=False))}],
     )
-    if response.stop_reason == "refusal":
-        return []
-    raw = next(b.text for b in response.content if b.type == "text")
     out, seen = [], set()
-    for s in json.loads(raw).get("things", []):
+    for s in _json_reply(response).get("things", []):
         name = next((n for n, _ in candidates if n.lower() == s["name"].strip().lower()), None)
         if name and name not in seen:
             seen.add(name)
@@ -2182,12 +2188,9 @@ def suggest_parts(index: dict) -> list[dict]:
         messages=[{"role": "user", "content": PARTS_PROMPT.format(
             listing=json.dumps(listing, ensure_ascii=False))}],
     )
-    if response.stop_reason == "refusal":
-        return []
-    raw = next(b.text for b in response.content if b.type == "text")
     known = {s["key"] for t in targets for s in t["sources"] if not s["generic"]}
     out, seen = [], set()
-    for p in json.loads(raw).get("parts", []):
+    for p in _json_reply(response).get("parts", []):
         key = p["key"].strip().lower()
         if key in known and key not in seen:
             seen.add(key)
@@ -2346,11 +2349,10 @@ def build(force: bool = False, quiet: bool = False) -> dict:
 
 
 def show_index():
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         print("  No entity graph yet — run: python entities.py build")
         return
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     for kind in KINDS:
         names = sorted(
             (n for n, i in index.items() if i["type"] == kind),
