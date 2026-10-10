@@ -189,7 +189,7 @@
   .dot.dashed { background: transparent; border: 1px dashed var(--border-accent); }
   /* maybe two people: a ring, beside the unreviewed dot */
   .dot.flag { background: transparent; border: 1.5px solid var(--fill-accent); }
-  .dot + .dot { margin-left: .3rem; }
+  .dot + .dot { margin-left: var(--space-1); }
   /* a group header inside a list, with optional right meta */
   .list-head {
     display: flex; align-items: baseline; gap: .5rem; padding: .9rem .9rem .3rem;
