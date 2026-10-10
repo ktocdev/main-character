@@ -913,14 +913,24 @@ def part_would_cycle(curation: dict, child_key: str, parent_kind: str, parent_na
 
 def move_entity_rules(curation: dict, key: str, new_key: str):
     """An entity's own rules follow it to a new key (retyped, or its path
-    name split off)."""
+    name split off). Keys are curation_key()s, lowercase as stored. Where
+    the new key already has a rule, list rules are combined and a single
+    value keeps the new key's own; either way none is left on the old key."""
     for field in ("reviewed", "retired", "not_mixed", "hide_path"):
-        if any(k.lower() == key for k in curation[field]):
-            curation[field] = [k for k in curation[field] if k.lower() != key] + [new_key]
+        if key in curation[field]:
+            curation[field] = [k for k in curation[field] if k != key]
+            if new_key not in curation[field]:
+                curation[field].append(new_key)
     for field in ("alias_add", "alias_remove", "rename", "part_of",
                   "retired_through", "retired_keep"):
-        if key in curation[field] and new_key not in curation[field]:
-            curation[field][new_key] = curation[field].pop(key)
+        if key not in curation[field]:
+            continue
+        moved = curation[field].pop(key)
+        there = curation[field].get(new_key)
+        if there is None:
+            curation[field][new_key] = moved
+        elif isinstance(there, list):
+            there.extend(v for v in moved if v not in there)
     curation["category"].pop(key, None)
 
 
