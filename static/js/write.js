@@ -152,7 +152,16 @@ export function askToCloseIfLong() {
 // a real key; against a live key the stages are genuinely long. When the seed
 // stage lands, its candidate banner appears the way watching /api/seed used to.
 let closePoll = null;
-let closeWatch = 0;   // which close the box belongs to, for late ticks and timers
+let closeWatch = 0;   // which close the box belongs to, for late ticks
+// The finished list stays up until the next entry is sent, so a close that
+// ran while the author looked away still says it's done when they look back.
+let closeFinished = false;
+function clearFinishedClose() {
+  if (!closeFinished) return;
+  closeFinished = false;
+  const b = $('close-progress');
+  if (b) b.hidden = true;
+}
 const CP_GLYPH = {done: '·', running: '…', failed: '✕', pending: '·'};
 function renderCloseProgress(steps, done) {
   const box = $('close-progress');
@@ -172,13 +181,14 @@ function trackCloseProgress() {
   let seedShown = false;
   let tries = 0;
   let answered = false;
+  closeFinished = false;
   renderCloseProgress([{label: 'saving the chapter as a journal entry', status: 'running'}], false);
   const hide = () => { const b = $('close-progress'); if (b) b.hidden = true; };
   const stop = () => {
     clearInterval(closePoll);
     refreshSeedMenu();
     refreshStatus();  // entity counts change after the background refresh
-    setTimeout(() => { if (live()) hide(); }, 8000);
+    if (live()) closeFinished = true;
   };
   const tick = async () => {
     let p;
@@ -417,6 +427,7 @@ export function init() {
   $('entry-send').onclick = async () => {
     const text = $('entry-text').value.trim();
     if (!text) return;
+    clearFinishedClose();
     const ts = entryStamp ? stampString(entryStamp) : null;
 
     // No-reply mode (item 3): save the entry and skip the companion call
