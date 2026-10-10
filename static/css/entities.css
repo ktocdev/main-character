@@ -78,7 +78,7 @@
   #entity-detail-col[hidden], #entity-none[hidden] { display: none; }
   #entity-edit-toggle { margin-left: auto; }
   /* opened from triage with e: the way back, above the title on every width */
-  #entity-to-triage { display: inline-flex; margin: 0 0 .6rem; padding-left: 0; font-size: .85rem; min-height: 2.2rem; }
+  #entity-to-triage { display: inline-flex; margin: 0 0 var(--space-4); padding-left: 0; font-size: var(--font-sm); min-height: 2.2rem; }
   #entity-chips { margin-top: .6rem; gap: .3rem; }
   #entity-chips .tag { color: var(--text-muted); height: 1.7rem; padding: 0 .7rem; font-size: .8rem; }
   #entity-chips .tag .k { font-size: .7rem; opacity: .7; }
@@ -111,32 +111,32 @@
   .dup-row, .sg { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; font-size: .95rem; }
   .dup-row .why, .sg .r { font: .78rem var(--font-ui); color: var(--text-muted); flex-basis: 100%; }
   .dup-row .quiet, .sg .quiet { min-height: 1.8rem; padding: .2rem .7rem; }
-  .dup-row .note { font: .8rem var(--font-ui); color: var(--text-muted); }
-  #suggest-panel .sub { margin-top: .6rem; }
-  #suggest-panel > .filled { align-self: flex-start; margin-top: .3rem; }
-  /* review checklists (generic names, never-tracked names) */
-  .check-row { display: flex; align-items: baseline; gap: .6rem; font-size: .95rem; cursor: pointer; }
-  .check-row input { flex-shrink: 0; translate: 0 .1rem; }
-  .check-row .body { flex: 1; min-width: 0; }
-  .check-row .nm { color: var(--text-default); }
-  .check-row .note { font: .8rem var(--font-ui); color: var(--text-muted); }
-  .check-row .ln { display: block; font-size: .85rem; color: var(--text-muted); text-wrap: pretty; }
-  .check-row .ln:empty { display: none; }
-  .check-row .quiet { flex-shrink: 0; }
+  .dup-row .note { font: var(--font-xs) var(--font-ui); color: var(--text-muted); }
+  #suggest-panel .sub { margin-top: var(--space-4); }
+  #suggest-panel > .filled { align-self: flex-start; margin-top: var(--space-1); }
+  /* review checklists (generic names, never-tracked names): the CheckboxFieldset
+     row from components.css; only what goes inside it is styled here */
+  #suggest-panel .check-row .body { flex: 1; min-width: 0; }
+  #suggest-panel .check-row .nm { color: var(--text-default); }
+  #suggest-panel .check-row .note { font: var(--font-xs) var(--font-ui); color: var(--text-muted); }
+  #suggest-panel .check-row .ln { display: block; font-size: var(--font-sm); color: var(--text-muted); text-wrap: pretty; }
+  #suggest-panel .check-row .ln:empty { display: none; }
   /* parts review: one target per disclosure, a choice per merged name */
-  #suggest-panel details { border-top: 1px solid var(--border-default); padding-top: .5rem; }
-  #suggest-panel summary { cursor: pointer; font-size: .95rem; color: var(--text-default); }
-  #suggest-panel summary .note { font: .8rem var(--font-ui); color: var(--text-muted); }
-  .part-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .6rem; margin: .45rem 0 0 1rem; font-size: .95rem; }
-  .part-row .note { font: .8rem var(--font-ui); color: var(--text-muted); }
+  #suggest-panel details { border-top: 1px solid var(--border-default); padding-top: var(--space-3); }
+  #suggest-panel summary { cursor: pointer; font-size: var(--font-base); color: var(--text-default); }
+  #suggest-panel summary .note { font: var(--font-xs) var(--font-ui); color: var(--text-muted); }
+  .part-row {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4);
+    margin: var(--space-2) 0 0 var(--space-6); font-size: var(--font-base);
+  }
+  .part-row .note { font: var(--font-xs) var(--font-ui); color: var(--text-muted); }
   .part-row select { margin-left: auto; }
-  .part-row .ln { flex-basis: 100%; font-size: .85rem; color: var(--text-muted); text-wrap: pretty; }
+  .part-row .ln { flex-basis: 100%; font-size: var(--font-sm); color: var(--text-muted); text-wrap: pretty; }
   .part-row .ln:empty { display: none; }
-  .check-inline { display: inline-flex; align-items: center; gap: .35rem; font: .8rem var(--font-ui); color: var(--text-muted); }
   /* parts nested under their parent in the list */
   .parts-toggle {
-    margin: -.2rem 0 .2rem 1.6rem; border: 0; background: transparent; padding: .1rem .3rem;
-    font: .78rem var(--font-ui); color: var(--text-muted); cursor: pointer; text-align: left;
+    margin: -.2rem 0 .2rem 1.6rem; border: 0; background: transparent; padding: .1rem var(--space-1);
+    font: var(--font-2xs) var(--font-ui); color: var(--text-muted); cursor: pointer; text-align: left;
   }
   .parts-toggle:hover { color: var(--text-default); }
   .ent-row.part .list-item { padding-left: 2.2rem; }
@@ -145,15 +145,16 @@
   /* splitting a name: the bar, a checkbox per observation */
   .split-bar {
     border: 1px solid var(--border-accent); border-radius: var(--radius-lg); padding: .9rem 1.1rem;
-    margin: 1rem 0 .4rem; display: flex; flex-direction: column; gap: .5rem; font: .85rem var(--font-ui);
+    margin: var(--space-6) 0 var(--space-2); display: flex; flex-direction: column; gap: var(--space-3);
+    font: var(--font-sm) var(--font-ui);
   }
   .split-bar .lead { color: var(--text-default); text-wrap: pretty; }
   .split-bar .ent-actions { align-items: center; }
   .split-bar .lbl { color: var(--text-muted); width: auto; }
   .obs input.pick { flex-shrink: 0; margin-top: .3rem; }
   .obs-date .pick-all {
-    border: 0; background: transparent; padding: 0 0 0 .4rem; cursor: pointer;
-    font: .72rem var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--text-muted);
+    border: 0; background: transparent; padding: 0 0 0 var(--space-2); cursor: pointer;
+    font: var(--font-3xs) var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--text-muted);
     text-decoration: underline; text-underline-offset: .2em;
   }
 
@@ -184,10 +185,13 @@
   .gp-grid { display: flex; flex-wrap: wrap; gap: .4rem; }
   .gp-ent.dim { opacity: .5; font-style: italic; cursor: default; }
   .gp-empty { color: var(--text-muted); font-style: italic; padding: .2rem 0; }
-  .gp-note { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin: -.4rem 0 .4rem; }
-  .gp-note label { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; flex: 1 1 18rem; }
-  .gp-note .lbl { font: .8rem var(--font-ui); color: var(--text-muted); }
+  .gp-note {
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5);
+    margin: calc(-1 * var(--space-2)) 0 var(--space-2);
+  }
+  .gp-note label { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); flex: 1 1 18rem; }
+  .gp-note .lbl { font: var(--font-xs) var(--font-ui); color: var(--text-muted); }
   .gp-note input { flex: 1 1 14rem; min-width: 0; }
-  .gp-note .saved { font: .78rem var(--font-ui); color: var(--text-accent); }
+  .gp-note .saved { font: var(--font-2xs) var(--font-ui); color: var(--text-accent); }
   .rev-check { color: var(--text-accent-muted); font-size: .75rem; margin-left: .25rem; }
   .thinking { color: var(--text-muted); font-style: italic; }

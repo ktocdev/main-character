@@ -17,7 +17,7 @@
   #triage-meta { font: .85rem var(--font-ui); color: var(--text-accent-muted); }
   #triage-aliases { margin-top: .2rem; font: .8rem var(--font-ui); color: var(--text-muted); }
   #triage-aliases:empty { display: none; }
-  #triage-generic, #triage-mixup { margin-top: .4rem; font: .8rem var(--font-ui); color: var(--text-accent); }
+  #triage-generic, #triage-mixup { margin-top: var(--space-2); font: var(--font-xs) var(--font-ui); color: var(--text-accent); }
   #triage-generic:empty, #triage-mixup:empty { display: none; }
   #triage-obs { margin-top: 1.1rem; font-size: .92rem; max-height: 22rem; overflow-y: auto; display: flex; flex-direction: column; gap: .7rem; }
   #triage-obs .eyebrow { margin-bottom: .15rem; }
