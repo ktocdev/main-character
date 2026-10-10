@@ -2,7 +2,7 @@
 """
 Entity Graph.
 
-Extracts people, projects, places and things from imported journal conversations
+Extracts people, projects, places, things and animals from imported journal conversations
 using the Claude API, then aggregates them into per-entity markdown docs
 that the companion loads as context when an entity is mentioned (Layer 3
 of the retrieval architecture in persona-spec.md).
@@ -18,6 +18,7 @@ Layout (all gitignored — this is personal data):
     entity_graph/projects/  one markdown doc per project
     entity_graph/places/    one markdown doc per place
     entity_graph/things/    one markdown doc per thing (bands, games, shows...)
+    entity_graph/animals/   one markdown doc per animal (pets, a friend's dog...)
     entity_graph/index.json name -> doc path, used by the companion
 """
 
@@ -46,17 +47,23 @@ SEGMENT_CHARS = 45_000  # long conversations are split, not truncated
 # none lands on top of another. Reentrant: an edit rebuilds inside its hold.
 WRITE_LOCK = threading.RLock()
 
-# Four kinds. A project is something the author makes or works on; a thing
-# is something they enjoy or follow. One row per kind: the raw file's
-# group, the kind, and the field that carries its attribute.
+# Five kinds. A project is something the author makes or works on; a thing
+# is something they enjoy or follow; an animal is a pet or someone else's
+# animal, never a person. One row per kind: the raw file's group, the
+# kind, and the field that carries its attribute.
 KIND_FIELDS = (
     ("people", "person", "relationship"),
     ("projects", "project", "status"),
     ("places", "place", "kind"),
     ("things", "thing", "category"),
+    ("animals", "animal", "relationship"),
 )
 KINDS = tuple(kind for _, kind, _ in KIND_FIELDS)
 GROUP_FOR_KIND = {kind: group for group, kind, _ in KIND_FIELDS}
+ATTR_FIELD = {kind: field for _, kind, field in KIND_FIELDS}
+# never a part or a parent: a cat isn't part of a home, and grouping people
+# or animals is what groups are for
+NO_PARTS = {"person", "animal"}
 # a thing's subgrouping, as a place has a type and a project a status
 THING_CATEGORIES = ("music", "game", "show", "book", "event", "other")
 
@@ -521,6 +528,11 @@ GENERIC_NOUNS = {
         "album", "song", "songs", "music", "playlist", "podcast", "festival",
         "concert", "event", "fest",
     },
+    "animal": {
+        "animal", "animals", "pet", "pets", "cat", "cats", "kitten", "kitty",
+        "dog", "dogs", "puppy", "pup", "doggo", "bird", "fish", "rabbit",
+        "bunny", "hamster", "guinea pig", "horse", "squirrel",
+    },
 }
 
 # words that only describe ("late night bar", "mid pizza place", "personal
@@ -686,12 +698,11 @@ def mark_mixups(index: dict) -> dict:
     existed. Read-only on disk, like mark_generic."""
     curation = load_curation()
     attrs: dict[tuple, Counter] = defaultdict(Counter)
-    fields = {kind: field for _, kind, field in KIND_FIELDS}
     for entry, kind, name, ent in _raw_mentions():
         resolved = apply_curation(curation, kind, name, entry, ent.get("qualifier", ""))
-        if not resolved or resolved[0] != kind:
+        if not resolved or ATTR_FIELD[resolved[0]] != ATTR_FIELD[kind]:
             continue
-        attr = (ent.get(fields[kind]) or "").strip()
+        attr = (ent.get(ATTR_FIELD[kind]) or "").strip()
         if attr and attr != "unknown":
             attrs[(kind, resolved[1].lower())][attr.lower()] += 1
     not_mixed = {k.lower() for k in curation["not_mixed"]}
@@ -1086,9 +1097,10 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
                     }
                 if is_alias:
                     merged[key]["aliases"].add(name)
-                # attr only carries over within the same kind (a person's
-                # relationship isn't a place's type)
-                if final_kind == kind:
+                # attr only carries over between kinds that share the field
+                # (a person's relationship isn't a place's type, but a pet
+                # filed as a person has a relationship as an animal too)
+                if attr_field == ATTR_FIELD[final_kind]:
                     attr = (ent.get(attr_field) or "").strip()
                     if attr and attr != "unknown":
                         # shown: the latest; kept: all of them, since a
@@ -1115,14 +1127,14 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
         ent["aliases"] = {a for a in ent["aliases"] if a.lower() != ent["name"].lower()}
 
     # Parts: its own entity, shown under its parent's name ("Coda /
-    # Tabs"). One level, the immediate parent. People are never parts or
-    # parents; grouping people is what groups are for.
+    # Tabs"). One level, the immediate parent. People and animals are never
+    # parts or parents (NO_PARTS).
     hidden_paths = {k.lower() for k in curation["hide_path"]}
     for (kind, lname), ent in merged.items():
         ent["parent"] = None
         ref = curation["part_of"].get(f"{kind}:{lname}")
-        parent = resolve_ref(curation, ref, kind) if ref and kind != "person" else None
-        if parent and parent[0] != "person":
+        parent = resolve_ref(curation, ref, kind) if ref and kind not in NO_PARTS else None
+        if parent and parent[0] not in NO_PARTS:
             pkey = (parent[0], parent[1].lower())
             if pkey in merged and pkey != (kind, lname):
                 ent["parent"] = merged[pkey]
@@ -1168,7 +1180,7 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
                 entity_groups.setdefault(canon, []).append(g["name"])
 
     attr_labels = {"person": "relationship", "project": "status", "place": "type",
-                   "thing": "category"}
+                   "thing": "category", "animal": "relationship"}
     # a thing's category: the curated one, else what extraction said, else
     # "other" (one retyped in from another kind has none of its own)
     categories = {k.lower(): v for k, v in curation["category"].items()}
@@ -1426,6 +1438,7 @@ _NEW_RECORD = {
     "projects": lambda name: {"name": name, "domain": "personal", "status": "unknown", "observations": []},
     "places": lambda name: {"name": name, "kind": "", "observations": []},
     "things": lambda name: {"name": name, "category": "other", "observations": []},
+    "animals": lambda name: {"name": name, "relationship": "", "observations": []},
 }
 
 
@@ -2081,8 +2094,8 @@ def retype_rule(curation: dict, key: str, new_kind: str, new_name: str, category
     else:
         curation["retype"][key] = {"type": new_kind, "name": new_name}
     move_entity_rules(curation, key, new_key)
-    if new_kind == "person":
-        curation["part_of"].pop(new_key, None)  # people are never parts
+    if new_kind in NO_PARTS:
+        curation["part_of"].pop(new_key, None)  # people and animals are never parts
     if new_kind == "thing" and category:
         curation["category"][new_key] = category
 
@@ -2110,10 +2123,10 @@ def parts_review(index: dict) -> dict:
     slash = []
     for name, info in index.items():
         split = _slash_split(info.get("base", name))
-        if not split or info["type"] == "person" or info.get("part_of"):
+        if not split or info["type"] in NO_PARTS or info.get("part_of"):
             continue
         parent = lookup.get(split[0].lower())
-        if not parent or index[parent]["type"] == "person":
+        if not parent or index[parent]["type"] in NO_PARTS:
             continue
         joins = lookup.get(split[1].lower())
         slash.append({"name": name, "parent": parent, "part": split[1],
@@ -2131,7 +2144,7 @@ def parts_review(index: dict) -> dict:
     by_target: dict[str, dict] = {}
     for key, value in curation["merge"].items():
         kind = key.partition(":")[0]
-        if kind == "person":
+        if kind in NO_PARTS:
             continue
         resolved = resolve_ref(curation, value, kind)
         if not resolved:
@@ -2363,7 +2376,7 @@ def build(force: bool = False, quiet: bool = False) -> dict:
     print(
         f"\n  Entity graph built: {by_kind['person']} people, "
         f"{by_kind['project']} projects, {by_kind['place']} places, "
-        f"{by_kind['thing']} things"
+        f"{by_kind['thing']} things, {by_kind['animal']} animals"
     )
     if not quiet:
         print(f"  Docs in {ENTITY_DIR}")

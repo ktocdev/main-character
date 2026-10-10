@@ -12,9 +12,10 @@ that cries wolf is one people learn to skim.
 
 Three rules, each one earned from a specific false positive:
 
-1. **People only.** Places and projects are what contributed the app's
-   own name ("RAG Journal"), products ("Figma"), and generic venues
-   ("Thai restaurant").
+1. **People (and animals) only.** Places and projects are what
+   contributed the app's own name ("RAG Journal"), products ("Figma"), and
+   generic venues ("Thai restaurant"). A pet's name is as identifying as
+   a person's, so animals are listed too.
 2. **Capitalized only.** A real name used as an illustrative example is
    capitalized; the lowercase entries are the extractor's noise.
 3. **Carry forward what we cannot reclassify.** Entries in the existing
@@ -65,7 +66,7 @@ HEADER = """\
 # by hand is fine but will be overwritten; add durable exclusions to
 # GENERIC in that script instead.
 #
-# People only, capitalized only, kinship terms and names the demo's
+# People and animals only, capitalized only, kinship terms and names the demo's
 # fiction also uses removed. See the script's
 # docstring for why each of those rules exists.
 #
@@ -90,7 +91,8 @@ def main():
             out.update(entity.get("aliases") or [])
         return {n.strip() for n in out if n and n.strip()}
 
-    people = {n for n in names_of({"person"}) if n[:1].isupper()}
+    # a pet's name is as identifying as a person's
+    people = {n for n in names_of({"person", "animal"}) if n[:1].isupper()}
     # lowercase: a name filed as a person once and later retyped is often
     # stored in different case ("Guitar" carried, `guitar` the project)
     not_people = {n.lower() for n in names_of({"place", "project", "thing"})}
@@ -104,11 +106,11 @@ def main():
             if line[:1].isupper() and line.lower() not in not_people:
                 carried.add(line)
 
-    in_fiction = {n.lower() for n in names_of({"person", "place", "project", "thing"}, fiction)}
+    in_fiction = {n.lower() for n in names_of({"person", "place", "project", "thing", "animal"}, fiction)}
     collisions = sorted(n for n in (people | carried) - GENERIC if n.lower() in in_fiction)
     names = sorted((people | carried) - GENERIC - set(collisions))
 
-    print(f"  {len(people)} people in the graph")
+    print(f"  {len(people)} people and animals in the graph")
     print(f"  {len(carried - people)} carried forward (no longer in the graph)")
     print(f"  {len((people | carried) & GENERIC)} kinship terms dropped")
     if collisions:

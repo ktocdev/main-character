@@ -581,7 +581,7 @@ CLOSE_STEPS = [
     ("chapter", "saving the chapter as a journal entry"),
     ("seed", "writing your life summary candidate"),
     ("categories", "tagging the entry"),
-    ("entities", "extracting people, places, projects and things"),
+    ("entities", "extracting people, places, projects, things and animals"),
     ("summaries", "refreshing weekly arcs and summaries"),
     ("dreams", "scanning for dreams"),
 ]
@@ -2382,8 +2382,9 @@ def part_of(body: PartOfIn):
     name = companion.resolve_entity(index, body.name)
     if not name:
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
-    if index[name]["type"] == "person":
-        return JSONResponse({"error": "people aren't parts of anything; put them in a group"},
+    if index[name]["type"] in entities.NO_PARTS:
+        return JSONResponse({"error": f"{entities.GROUP_FOR_KIND[index[name]['type']]} aren't "
+                                      "parts of anything; put them in a group"},
                             status_code=400)
     key = entities.index_key(index, name)
     before = _snapshot()
@@ -2395,8 +2396,8 @@ def part_of(body: PartOfIn):
         if parent == name:
             return JSONResponse({"error": "can't be a part of itself"}, status_code=400)
         pkind, pbase = index[parent]["type"], entities.base_name(index, parent)
-        if pkind == "person":
-            return JSONResponse({"error": "a person can't have parts; use a group"}, status_code=400)
+        if pkind in entities.NO_PARTS:
+            return JSONResponse({"error": f"a {pkind} can't have parts; use a group"}, status_code=400)
         if entities.part_would_cycle(curation, key, pkind, pbase):
             return JSONResponse({"error": f"{parent} is already part of {name}"}, status_code=400)
         entities.make_part(curation, key, pkind, pbase)
@@ -2474,7 +2475,7 @@ def apply_parts_review(body: PartsReviewIn):
             done += 1
         elif src.action == "part":
             target = companion.resolve_entity(index, src.target)
-            if not target or index[target]["type"] == "person":
+            if not target or index[target]["type"] in entities.NO_PARTS:
                 continue
             entities.make_part(curation, key, index[target]["type"],
                                converted.get(target) or entities.base_name(index, target))
