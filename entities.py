@@ -721,29 +721,33 @@ def _raw_mentions():
                     yield path.stem, kind, name, ent
 
 
-def entries_for(curation: dict, key: str) -> list[str]:
-    """Entries with a mention that is, or resolves to, `key`."""
-    out = set()
+def entries_for(curation: dict, *keys: str) -> dict[str, list[str]]:
+    """Entries with a mention that is, or resolves to, each key: one pass
+    over the raw cache however many keys there are."""
+    out = {key: set() for key in keys}
     for entry, kind, name, ent in _raw_mentions():
         resolved = apply_curation(curation, kind, name, entry, ent.get("qualifier", ""))
-        if curation_key(kind, name) == key or (
-                resolved and curation_key(resolved[0], resolved[1]) == key):
-            out.add(entry)
-    return sorted(out)
+        for key in {curation_key(kind, name),
+                    resolved and curation_key(resolved[0], resolved[1])}:
+            if key in out:
+                out[key].add(entry)
+    return {key: sorted(entries) for key, entries in out.items()}
 
 
-def drop_mentions(curation: dict, key: str):
-    """Delete the mentions `key` has now; leave the name free."""
-    entries = set(curation["drop_mentions"].get(key, [])) | set(entries_for(curation, key))
-    if entries:
-        curation["drop_mentions"][key] = sorted(entries)
+def drop_mentions(curation: dict, *keys: str):
+    """Delete the mentions each key has now; leave the names free."""
+    for key, entries in entries_for(curation, *keys).items():
+        entries = set(curation["drop_mentions"].get(key, [])) | set(entries)
+        if entries:
+            curation["drop_mentions"][key] = sorted(entries)
 
 
-def free_name(curation: dict, key: str):
-    """Turn a never-track rule into delete-these-mentions: what it hid stays
-    hidden, but a new entry with the name starts fresh."""
-    curation["delete"] = [d for d in curation["delete"] if d.lower() != key]
-    drop_mentions(curation, key)
+def free_names(curation: dict, keys: list[str]):
+    """Turn never-track rules into delete-these-mentions: what they hid
+    stays hidden, but a new entry with the name starts fresh."""
+    freed = set(keys)
+    curation["delete"] = [d for d in curation["delete"] if d not in freed]
+    drop_mentions(curation, *keys)
 
 
 def deleted_list(curation: dict) -> dict:
@@ -1531,11 +1535,13 @@ def reassign_observation(
 # "Dev" that new mentions could pile into. Sorting an unsorted mention
 # is the same operation. One undo puts the files, rules and groups back.
 
-def _entity_records(kind: str, canonical: str) -> list[tuple[str, str, int]]:
-    """(file, group, index) of every raw record that resolves to the entity,
-    including ones with no observations (they still count as a mention)."""
+def _entity_records(kind: str, *canonicals: str) -> dict[str, list[tuple[str, str, int]]]:
+    """(file, group, index) of every raw record that resolves to each
+    entity, including ones with no observations (they still count as a
+    mention). One pass over the raw files for all of them."""
     curation = load_curation()
-    out = []
+    wanted = {c.lower(): c for c in canonicals}
+    out = {c: [] for c in canonicals}
     for path in sorted(RAW_DIR.glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
         for group, raw_kind, _ in KIND_FIELDS:
@@ -1543,8 +1549,8 @@ def _entity_records(kind: str, canonical: str) -> list[tuple[str, str, int]]:
                 name = (ent.get("name") or "").strip()
                 resolved = name and apply_curation(curation, raw_kind, name, path.stem,
                                                    ent.get("qualifier", ""))
-                if resolved and resolved[0] == kind and resolved[1].lower() == canonical.lower():
-                    out.append((path.name, group, i))
+                if resolved and resolved[0] == kind and resolved[1].lower() in wanted:
+                    out[wanted[resolved[1].lower()]].append((path.name, group, i))
     return out
 
 
@@ -1610,11 +1616,13 @@ def split_entity(index: dict, name: str, picks: list[dict], qualifier: str,
     picked: dict[tuple[str, str, int], set[int]] = defaultdict(set)
     for p in picks:
         picked[(Path(p["file"]).name, p["group"], int(p["ent_index"]))].add(int(p["obs_index"]))
-    records = _entity_records("person", info.get("base", name))
+    base = info.get("base", name)
+    found = _entity_records("person", base, head) if closed else _entity_records("person", base)
+    records = found[base]
     sorting = set()  # later mentions not picked: they stay to be sorted
     if closed:
         sorting = set(records) - set(picked)
-        records += _entity_records("person", head)
+        records += found[head]
     if not set(picked) <= set(records):
         raise ValueError("those observations aren't this person's")
 
@@ -1703,7 +1711,8 @@ def rename_qualifier(index: dict, name: str, new_qualifier: str) -> str:
     if old_key != new_key:
         move_entity_rules(curation, old_key, new_key)
     files_before, files_after = {}, {}
-    for filename, _, _ in _entity_records("person", info.get("base", name)):
+    base = info.get("base", name)
+    for filename, _, _ in _entity_records("person", base)[base]:
         files_before.setdefault(filename, None)
     for filename in files_before:
         path = _raw_path(filename)

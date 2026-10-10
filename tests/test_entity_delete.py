@@ -67,13 +67,32 @@ def test_never_track_drops_every_mention_and_free_name_lets_new_ones_in(tmp_path
                                 "mentions": 2, "generic": False}]
 
     # freeing it now keeps today's mentions hidden; only later entries count
-    entities.free_name(curation, "person:allen")
+    entities.free_names(curation, ["person:allen"])
     assert curation["delete"] == []
     assert curation["drop_mentions"]["person:allen"] == ["2026-05-02_a", "2026-06-01_c"]
     (tmp_path / "raw" / "2026-07-01_d.json").write_text(json.dumps(_allen("later")), encoding="utf-8")
     assert _build(tmp_path, curation)["Allen"]["mentions"] == 1
     assert entities.deleted_list(curation)["mentions"][0]["entries"] == 2
 
+
+
+def test_freeing_several_names_reads_the_entries_once(tmp_path, monkeypatch):
+    both = {"people": [{"name": "Allen", "observations": ["a"]}, {"name": "Bea", "observations": ["b"]}]}
+    _setup(tmp_path, monkeypatch, {"2026-05-02_a": both, "2026-05-03_b": _allen("call")})
+    one_by_one = entities.load_curation()
+    one_by_one["delete"] += ["person:allen", "person:bea"]
+    together = json.loads(json.dumps(one_by_one))
+    for key in ("person:allen", "person:bea"):
+        entities.free_names(one_by_one, [key])
+
+    passes = []
+    scan = entities._raw_mentions
+    monkeypatch.setattr(entities, "_raw_mentions", lambda: passes.append(1) or scan())
+    entities.free_names(together, ["person:allen", "person:bea"])
+    assert passes == [1]
+    assert together == one_by_one
+    assert together["drop_mentions"] == {"person:allen": ["2026-05-02_a", "2026-05-03_b"],
+                                         "person:bea": ["2026-05-02_a"]}
 
 def test_is_generic():
     for kind, name in [("place", "restaurant"), ("place", "the bar"), ("place", "late night bar"),

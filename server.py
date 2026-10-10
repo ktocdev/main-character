@@ -3233,8 +3233,7 @@ def free_names(body: KeysIn):
         return JSONResponse({"error": "none of those are blocked"}, status_code=404)
     before = _snapshot()
     curation = entities.load_curation()
-    for key in keys:
-        entities.free_name(curation, key)
+    entities.free_names(curation, keys)
     entities.save_curation(curation)
     _record_curation(f"allow {len(keys)} name{'s' if len(keys) != 1 else ''} again", before)
     _rebuild()
