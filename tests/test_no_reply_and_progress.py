@@ -79,7 +79,7 @@ def test_progress_lists_every_stage_in_order():
         p = server.close_progress()
         assert p["active"] and not p["done"]
         assert [s["key"] for s in p["steps"]] == \
-            ["seed", "categories", "entities", "summaries", "dreams"]
+            ["chapter", "seed", "categories", "entities", "summaries", "dreams"]
         assert all(s["status"] == "pending" for s in p["steps"])
     finally:
         server._close_finish()
@@ -90,8 +90,8 @@ def test_a_step_reads_running_then_done():
     server._close_begin()
     try:
         with server._close_step("seed"):
-            assert server.close_progress()["steps"][0]["status"] == "running"
-        assert server.close_progress()["steps"][0]["status"] == "done"
+            assert _status("seed") == "running"
+        assert _status("seed") == "done"
     finally:
         server._close_finish()
 
@@ -119,3 +119,46 @@ def test_finish_flips_done_for_the_client_to_stop_polling():
     p = server.close_progress()
     assert p["done"] and not p["active"]
 
+
+def _status(key):
+    import server
+    return {s["key"]: s["status"] for s in server.close_progress()["steps"]}[key]
+
+
+def test_the_close_request_is_the_first_step_the_client_can_watch(client, monkeypatch):
+    """Saving the chapter takes seconds before the close answers (the title
+    call, embedding the new chunks), so the record is armed before it and
+    reads it as running -- the client polls from the moment it sends."""
+    import server
+    seen = {}
+
+    def close(*a, **k):
+        p = server.close_progress()
+        seen.update(active=p["active"], chapter=_status("chapter"))
+        return {"key": "k", "title": "t"}
+    monkeypatch.setattr(server.sessions, "close_session", close)
+    monkeypatch.setattr(server, "_tracked", lambda *a: None)   # no pipeline
+    try:
+        assert client.post("/api/sessions/close", json={}).status_code == 200
+        assert seen == {"active": True, "chapter": "running"}
+        assert _status("chapter") == "done" and server.close_progress()["active"]
+    finally:
+        server._close_finish()
+
+
+def test_a_close_that_breaks_does_not_lock_out_the_next_one(client, monkeypatch):
+    import server
+
+    def close(*a, **k):
+        raise RuntimeError("disk full")
+    monkeypatch.setattr(server.sessions, "close_session", close)
+    with pytest.raises(RuntimeError):
+        client.post("/api/sessions/close", json={})
+    assert not server.close_progress()["active"]
+    assert _status("chapter") == "failed"
+
+
+def test_nothing_to_close_clears_the_record(client):
+    import server
+    assert client.post("/api/sessions/close", json={}).status_code == 400
+    assert not server.close_progress()["active"]

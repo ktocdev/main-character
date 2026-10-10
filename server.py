@@ -543,11 +543,15 @@ def reset_lookup():
 # ---- close-pipeline progress (Phase 2 item 1) ----
 # The post-close pipeline runs as background tasks, so /api/sessions/close
 # returns before any of it has started. The client polls the record below to
-# show which stage is running instead of one static "closed" line. The two
-# tasks run in the order they are queued -- seed first, then the refresh -- so
-# the steps are listed in that order. Progress is what the mock-mode per-call
+# show which stage is running instead of one static "closed" line. The first
+# step is the close request itself (the title call and embedding the new
+# chunks take seconds, longer while the embedders load after a restart), so
+# the client polls from the moment it sends it. The two tasks then run in
+# the order they are queued -- seed first, then the refresh -- so the steps
+# are listed in that order. Progress is what the mock-mode per-call
 # delays exist to make visible; against a real key each stage is genuinely long.
 CLOSE_STEPS = [
+    ("chapter", "saving the chapter as a journal entry"),
     ("seed", "writing your life summary candidate"),
     ("categories", "tagging the entry"),
     ("entities", "extracting people, places, projects and things"),
@@ -926,13 +930,18 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
             {"error": "the memory pipeline from a previous close is still "
                       "running -- wait for it to finish before closing again."},
             status_code=409)
+    _close_begin()   # armed before the slow part, which is the first step
     try:
-        result = sessions.close_session(
-            STATE["collection"], STATE["client"], title_hint=body.title,
-        )
+        with _close_step("chapter"):
+            result = sessions.close_session(
+                STATE["collection"], STATE["client"], title_hint=body.title,
+            )
     except ValueError as e:
         _close_finish()
         return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception:
+        _close_finish()   # or every later close answers 409 until a restart
+        raise
     STATE["messages"] = []
     if demo_script.active():
         demo_script.after_close()
@@ -946,7 +955,6 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     # incurred is a wrong number. So the new session starts at zero now and
     # wears the pipeline's processing cost.
     metering.reset()
-    _close_begin()   # arm the progress record before the tasks are queued (item 1)
     _tracked(background_tasks, _after_close_seed, result["key"])
     _tracked(background_tasks, _after_close_refresh)
     return {"ok": True, **result}

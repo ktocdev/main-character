@@ -98,12 +98,17 @@ export async function closeSession(question = 'Close this chapter?') {
       + 'but drops out of the summary. Download and upload it first to keep it.\n'
     : '';
   if (!confirm(question + pending + '\n\nYour side of it becomes a journal entry, and tagging, entities, summaries, dream extraction, and the life summary candidate run in the background. The next chapter starts empty.')) return false;
-  const r = await api('/api/sessions/close', {});
+  // Watched from the click, not from the answer: saving the chapter (a title
+  // call, embedding its chunks) is the first step and takes seconds itself.
+  const watch = trackCloseProgress();
+  let r = null;
+  try { r = await api('/api/sessions/close', {}); }
+  finally { if (!r) watch.cancel(); }
   if (!r) return;
+  watch.answered();
   $('write-log').innerHTML = '';
   $('entry-saved').textContent = `chapter closed and saved as "${r.title}".`;
   document.dispatchEvent(new CustomEvent('mc:closed'));
-  trackCloseProgress();
   state.sessionSel = 'current';
   if (state.activeTab === 'history') await loadHistory();
   refreshStatus();
@@ -140,10 +145,14 @@ export function askToCloseIfLong() {
 // After a close, the memory pipeline runs as background tasks — so the close
 // response returns before any of it has happened (item 1). Poll the server's
 // progress record and show which stage is running instead of one static line.
+// Polling starts as the close is sent, since saving the chapter is the first
+// stage; until it answers, a record that isn't active is the previous close's
+// (this one isn't armed yet) and is skipped.
 // The per-call delays mock mode adds are what make each stage visible without
 // a real key; against a live key the stages are genuinely long. When the seed
 // stage lands, its candidate banner appears the way watching /api/seed used to.
 let closePoll = null;
+let closeWatch = 0;   // which close the box belongs to, for late ticks and timers
 const CP_GLYPH = {done: '·', running: '…', failed: '✕', pending: '·'};
 function renderCloseProgress(steps, done) {
   const box = $('close-progress');
@@ -158,35 +167,46 @@ function renderCloseProgress(steps, done) {
 }
 function trackCloseProgress() {
   clearInterval(closePoll);
+  const mine = ++closeWatch;
+  const live = () => mine === closeWatch;
   let seedShown = false;
   let tries = 0;
+  let answered = false;
+  renderCloseProgress([{label: 'saving the chapter as a journal entry', status: 'running'}], false);
+  const hide = () => { const b = $('close-progress'); if (b) b.hidden = true; };
   const stop = () => {
     clearInterval(closePoll);
     refreshSeedMenu();
     refreshStatus();  // entity counts change after the background refresh
-    setTimeout(() => { const b = $('close-progress'); if (b) b.hidden = true; }, 8000);
+    setTimeout(() => { if (live()) hide(); }, 8000);
   };
   const tick = async () => {
     let p;
     try { p = await (await fetch('/api/sessions/close/progress')).json(); }
     catch {
       // transient — the next tick tries again, but a run of failures still
-      // has to hit the same ~120 s ceiling normal polling does, or a
-      // persistently erroring endpoint polls forever.
-      if (++tries > 120) stop();
+      // has to hit the same ceiling normal polling does, or a persistently
+      // erroring endpoint polls forever.
+      if (live() && ++tries > 600) stop();
       return;
     }
+    if (!live() || (!answered && !p.active)) return;
     renderCloseProgress(p.steps, p.done);
     if (!seedShown && p.steps.some(s => s.key === 'seed' && s.status === 'done')) {
       seedShown = true;
       refreshSeedMenu();
     }
-    // ~120 s ceiling so a stuck pipeline can't poll forever; the pipeline is
-    // seconds in mock mode and well under this against a real key.
-    if (p.done || ++tries > 120) stop();
+    // a ~10 minute ceiling so a stuck pipeline can't poll forever; the server
+    // clears `active` however each stage ends, and in mock mode the whole
+    // close runs close to two minutes.
+    if ((answered && p.done) || ++tries > 600) stop();
   };
   closePoll = setInterval(tick, 1000);
   tick();
+  return {
+    answered() { answered = true; },
+    cancel() { if (live()) { clearInterval(closePoll); closeWatch++; hide(); } },
+  };
 }
 
 // ---- the seed ritual (close → download candidate → edit in VS Code → upload) ----
