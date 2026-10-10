@@ -122,6 +122,15 @@ match (`MC_PASSAGE_TOKENS`, `MC_PASSAGE_NEIGHBORS`).
 The companion is told to bring up a pattern only when the conversation
 genuinely echoes it.
 
+Profiles are matched by name (`companion.match_entities`), most-mentioned
+first. A name split into two people (`Dev · work`, `Dev · friend`) loads both
+when the entry says plain "Dev", and puts the one first whose qualifier the
+entry also uses ("Dev from work"). A part (`Coda / Tabs`) is matched by its own
+name. Mentions still waiting to be sorted (`Dev · ?`) are never loaded.
+Retired people, from a chapter that's over, are left out of related summaries
+and load only when the entry names them; their profile asks the companion not
+to bring them up otherwise.
+
 ### Why it can know *when*, but not *what exactly*
 
 The life summary and the open chapter are always there. Everything older arrives
