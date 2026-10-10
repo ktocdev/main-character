@@ -24,6 +24,7 @@ Layout (all gitignored — this is personal data):
 import json
 import re
 import sys
+import threading
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -39,6 +40,11 @@ RAW_DIR = ENTITY_DIR / "raw"
 CURATION_FILE = ENTITY_DIR / "curation.json"
 GROUPS_FILE = ENTITY_DIR / "groups.json"
 SEGMENT_CHARS = 45_000  # long conversations are split, not truncated
+# One writer at a time on the graph's files (raw cache, curation, groups,
+# docs, index). A re-extract runs for minutes in the background, beside
+# the close pipeline and hand edits; each read-modify-write holds this so
+# none lands on top of another. Reentrant: an edit rebuilds inside its hold.
+WRITE_LOCK = threading.RLock()
 
 # Four kinds. A project is something the author makes or works on; a thing
 # is something they enjoy or follow. One row per kind: the raw file's
@@ -2295,15 +2301,18 @@ def reextract(terms: list[str], progress=None) -> dict:
         except Exception as e:
             failed.append({"key": key, "error": str(e)})
             continue
-        (RAW_DIR / f"{key}.json").write_text(
-            json.dumps(entities, indent=2, ensure_ascii=False), encoding="utf-8")
+        # held only for the write, not the API call, so edits wait seconds at most
+        with WRITE_LOCK:
+            (RAW_DIR / f"{key}.json").write_text(
+                json.dumps(entities, indent=2, ensure_ascii=False), encoding="utf-8")
         done.append(key)
     return {"done": done, "failed": failed}
 
 
 def build(force: bool = False, quiet: bool = False) -> dict:
-    records = run_extraction(force=force, quiet=quiet)
-    index = build_entity_docs(records)
+    with WRITE_LOCK:
+        records = run_extraction(force=force, quiet=quiet)
+        index = build_entity_docs(records)
     by_kind = defaultdict(int)
     for info in index.values():
         by_kind[info["type"]] += 1

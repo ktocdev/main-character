@@ -22,6 +22,7 @@ import threading
 import time
 import uuid
 from contextlib import contextmanager
+from functools import wraps
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -1896,6 +1897,19 @@ def entity_doc(name: str):
     return {"name": canonical, "doc": path.read_text(encoding="utf-8")}
 
 
+def _entity_write(endpoint):
+    """An endpoint that edits the entity graph: its reads, writes and
+    rebuild all happen under entities.WRITE_LOCK, so a background
+    re-extract, the close pipeline or a second request can't interleave
+    with them. Sync endpoints run on one threadpool thread, which is what
+    lets the reentrant lock span the body."""
+    @wraps(endpoint)
+    def locked(*args, **kwargs):
+        with entities.WRITE_LOCK:
+            return endpoint(*args, **kwargs)
+    return locked
+
+
 def _rebuild():
     STATE["entity_index"] = entities.build(quiet=True)
 
@@ -1966,16 +1980,19 @@ def _combine(body: MergeIn, field: str, verb: str):
 
 
 @app.post("/api/entities/merge")
+@_entity_write
 def merge_entities(body: MergeIn):
     return _combine(body, "merge", "merged")
 
 
 @app.post("/api/entities/correct")
+@_entity_write
 def correct_entity(body: MergeIn):
     return _combine(body, "correct", "corrected")
 
 
 @app.post("/api/entities/retype")
+@_entity_write
 def retype_entity(body: RetypeIn):
     index = STATE["entity_index"]
     name = companion.resolve_entity(index, body.name)
@@ -2001,6 +2018,7 @@ def retype_entity(body: RetypeIn):
 
 
 @app.post("/api/entities/category")
+@_entity_write
 def set_category(body: CategoryIn):
     """A thing's category (music, game, show, book, event, other)."""
     index = STATE["entity_index"]
@@ -2033,6 +2051,7 @@ def suggest_things():
 
 
 @app.post("/api/entities/retype-things")
+@_entity_write
 def retype_things(body: ThingsIn):
     """The things review: retype every accepted name, each with its
     category. One curation change, so one undo puts them all back."""
@@ -2060,6 +2079,7 @@ def retype_things(body: ThingsIn):
 
 
 @app.post("/api/entities/rename")
+@_entity_write
 def rename_entity(body: MergeIn):
     """Rename an entity's display spelling (case-only changes included)."""
     index = STATE["entity_index"]
@@ -2095,6 +2115,7 @@ def rename_entity(body: MergeIn):
 
 
 @app.post("/api/entities/alias")
+@_entity_write
 def alias_entity(body: AliasIn):
     index = STATE["entity_index"]
     name = companion.resolve_entity(index, body.name)
@@ -2136,6 +2157,7 @@ def entity_observations(name: str):
 
 
 @app.post("/api/observation")
+@_entity_write
 def mutate_observation(body: ObservationIn):
     try:
         raw_path = entities._raw_path(body.file)
@@ -2167,6 +2189,7 @@ def history_state():
 
 
 @app.post("/api/undo")
+@_entity_write
 def undo_change():
     description = entities.undo()
     if description is None:
@@ -2176,6 +2199,7 @@ def undo_change():
 
 
 @app.post("/api/redo")
+@_entity_write
 def redo_change():
     description = entities.redo()
     if description is None:
@@ -2195,6 +2219,7 @@ def suggest(body: KindIn):
 
 
 @app.post("/api/entities/reviewed")
+@_entity_write
 def mark_reviewed(body: ReviewedIn):
     """Toggle the reviewed flag. Patches the index in place — no rebuild,
     so rapid triage keystrokes stay instant. Not recorded in undo history."""
@@ -2221,6 +2246,7 @@ def duplicate_candidates():
 
 
 @app.post("/api/entities/duplicates/dismiss")
+@_entity_write
 def dismiss_duplicate(body: DismissDupIn):
     curation = entities.load_curation()
     pk = entities.pair_key(body.kind, body.a, body.b)
@@ -2238,6 +2264,7 @@ def mixups():
 
 
 @app.post("/api/entities/not-mixed")
+@_entity_write
 def not_mixed(body: NotMixedIn):
     """Checked and found to be one: the flag stays off for good. Patches the
     index in place, so confirming a keep in triage stays instant; undo
@@ -2265,6 +2292,7 @@ def not_mixed(body: NotMixedIn):
 
 
 @app.post("/api/entities/split")
+@_entity_write
 def split(body: SplitIn):
     """Two people under one name: the picked observations go to one
     qualifier ("Dev · work"), and on the first split everything else to
@@ -2289,6 +2317,7 @@ def split(body: SplitIn):
 
 
 @app.post("/api/entities/keep-retired")
+@_entity_write
 def keep_retired(body: KeepRetiredIn):
     """A later mention of a retired person that was them after all: it
     goes back to their profile, and they stay retired."""
@@ -2310,6 +2339,7 @@ def keep_retired(body: KeepRetiredIn):
 
 
 @app.post("/api/entities/part-of")
+@_entity_write
 def part_of(body: PartOfIn):
     """Its own entity, shown as "Parent / Name". Not a merge: an unrelated
     "Tabs" stays separate instead of being folded in by a name rule."""
@@ -2349,6 +2379,7 @@ def part_of(body: PartOfIn):
 
 
 @app.post("/api/entities/hide-path")
+@_entity_write
 def hide_path(body: HidePathIn):
     """A part whose own name is already specific keeps it plain."""
     index = STATE["entity_index"]
@@ -2384,6 +2415,7 @@ def suggest_parts():
 
 
 @app.post("/api/entities/parts-review")
+@_entity_write
 def apply_parts_review(body: PartsReviewIn):
     """The one-time review: slash names become parts, and merged names
     become parts or stop being tracked. One curation change, one undo."""
@@ -2445,6 +2477,7 @@ def list_groups():
 
 
 @app.post("/api/groups")
+@_entity_write
 def create_group(body: GroupIn):
     name = body.name.strip()
     if not name:
@@ -2464,6 +2497,7 @@ def create_group(body: GroupIn):
 
 
 @app.post("/api/groups/member")
+@_entity_write
 def group_member(body: GroupMemberIn):
     """Add an entity to a group (creating the group if it's new) or,
     with remove=true, drop a member — including dangling unresolved ones."""
@@ -2513,6 +2547,7 @@ def group_member(body: GroupMemberIn):
 
 
 @app.post("/api/groups/members")
+@_entity_write
 def group_members(body: GroupMembersIn):
     """Batch-add several entities to a group at once, creating the group if
     it's new. One save, one history record — so a single undo reverts the
@@ -2560,6 +2595,7 @@ def group_members(body: GroupMembersIn):
 
 
 @app.post("/api/groups/edit")
+@_entity_write
 def edit_group(body: GroupEditIn):
     """Rename / reparent / delete a group. Deleting promotes children to
     the deleted group's parent; renaming rewrites children's pointers."""
@@ -2986,6 +3022,7 @@ def entry_text(date: str, title: str):
 
 
 @app.post("/api/entities/retire")
+@_entity_write
 def retire_entity(body: RetireIn):
     """A past chapter: out of the list and triage, and the companion only
     brings them up when you do. Nothing is deleted."""
@@ -3013,6 +3050,7 @@ def retire_entity(body: RetireIn):
 
 
 @app.post("/api/entities/delete")
+@_entity_write
 def delete_entity(body: DeleteIn):
     """Two kinds of delete; neither touches journal entries, so search and
     the companion still find the text either way."""
@@ -3047,6 +3085,7 @@ def _never_track(curation: dict, key: str):
 
 
 @app.post("/api/entities/delete-names")
+@_entity_write
 def delete_names(body: NamesIn):
     """The generic cleanup: never track every checked name. One curation
     change, so one undo brings them all back."""
@@ -3149,6 +3188,7 @@ def deleted_entities():
 
 
 @app.post("/api/entities/deleted/restore")
+@_entity_write
 def restore_deleted(body: DeletedIn):
     """Undo one delete from the list: a never-track rule or a set of
     deleted mentions. What it hid comes back on the rebuild."""
@@ -3170,6 +3210,7 @@ def restore_deleted(body: DeletedIn):
 
 
 @app.post("/api/entities/deleted/free")
+@_entity_write
 def free_names(body: KeysIn):
     """Let names back in: each never-track rule becomes delete-these-
     mentions, so what it hid stays hidden but a new entry starts fresh."""
