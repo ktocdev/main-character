@@ -152,7 +152,7 @@
   .split-bar .ent-actions { align-items: center; }
   .split-bar .lbl { color: var(--text-muted); width: auto; }
   .obs input.pick { flex-shrink: 0; margin-top: .3rem; }
-  .obs-date .pick-all {
+  .obs-date .pick-all, .obs-date .rel-edit {
     border: 0; background: transparent; padding: 0 0 0 var(--space-2); cursor: pointer;
     font: var(--font-3xs) var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--text-muted);
     text-decoration: underline; text-underline-offset: .2em;
@@ -162,6 +162,10 @@
   #entity-doc { margin-top: 2rem; }
   #entity-doc .rule { margin-bottom: .2rem; }
   .obs-date { margin: 1.2rem 0 0; }
+  /* like an observation's ops: there on hover or focus, quiet otherwise */
+  /* (opacity, not visibility, so it stays in the tab order) */
+  .obs-date .rel-edit { opacity: 0; }
+  .obs-date:hover .rel-edit, .obs-date .rel-edit:focus-visible { opacity: 1; }
   .obs {
     display: flex; align-items: flex-start; gap: .6rem; margin: .25rem 0 0 -.5rem;
     padding: .15rem .5rem; border-radius: var(--radius-base); font-size: .98rem; text-wrap: pretty;

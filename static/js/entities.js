@@ -796,6 +796,18 @@ export async function showEntity(name) {
           showEntity(r.name);
         };
         d.append(' ', all);
+      } else if (HAS_RELATIONSHIP.has(r.type)) {
+        // only this entry's label; the others under the name keep theirs
+        const rel = document.createElement('button');
+        rel.className = 'link rel-edit';
+        rel.textContent = o.attr ? 'change' : 'add relationship';
+        rel.title = `what this entry calls ${o.extracted_name}`;
+        rel.onclick = async () => {
+          const text = prompt(`What was ${o.extracted_name} in this entry? (e.g. friend, pet cat)\nLeave it empty to clear it.`, o.attr);
+          if (text === null || text.trim() === o.attr) return;
+          if (await api('/api/observation', {...o, action: 'relationship', text: text.trim()})) await reloadEntity(r.name);
+        };
+        d.append(' ', rel);
       }
       docEl.appendChild(d);
     }

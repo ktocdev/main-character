@@ -7,6 +7,8 @@ has to carry each record's attribute rather than the entity's latest one.
 """
 import json
 
+import pytest
+
 import entities
 
 
@@ -113,3 +115,31 @@ def test_rules_on_the_labelled_one_use_its_plain_name(tmp_path, monkeypatch):
     key = entities.index_key(index, "karaoke · place")
     index = _build(tmp_path, monkeypatch, records, {"merge": {key: "project:karaoke"}})
     assert set(index) == {"karaoke"} and index["karaoke"]["mentions"] == 3
+
+
+def test_setting_one_records_relationship_leaves_the_others(tmp_path, monkeypatch):
+    # the entity page relabels one entry's "as pet" without touching the
+    # other entries under the same name; it's a hand edit, so it's flagged
+    monkeypatch.setattr(entities, "RAW_DIR", tmp_path)
+    monkeypatch.setattr(entities, "CURATION_FILE", tmp_path / "curation.json")
+    monkeypatch.setattr(entities, "_conversation_lookup", lambda: {
+        "a": ("2026-02-25", "trip"), "b": ("2026-03-01", "vet")})
+    _raw(tmp_path, "a", {"animals": [
+        {"name": "Biscuit", "relationship": "pet", "observations": ["hated the singing"]}]})
+    _raw(tmp_path, "b", {"animals": [
+        {"name": "Biscuit", "relationship": "pet", "observations": ["got a checkup"]}]})
+
+    entities.set_record_relationship("a.json", "animals", 0, 0, "  pet cat ")
+    assert [o["attr"] for o in entities.list_observations("animal", "Biscuit")] == ["pet cat", "pet"]
+    assert json.loads((tmp_path / "a.json").read_text(encoding="utf-8"))["edited"] is True
+    assert "edited" not in json.loads((tmp_path / "b.json").read_text(encoding="utf-8"))
+
+    entities.set_record_relationship("a.json", "animals", 0, 0, "")
+    assert entities.list_observations("animal", "Biscuit")[0]["attr"] == ""
+
+
+def test_only_people_and_animals_take_a_relationship(tmp_path, monkeypatch):
+    monkeypatch.setattr(entities, "RAW_DIR", tmp_path)
+    _raw(tmp_path, "a", {"places": [{"name": "Edelweiss", "kind": "bar", "observations": ["x"]}]})
+    with pytest.raises(ValueError):
+        entities.set_record_relationship("a.json", "places", 0, 0, "friend")
