@@ -91,6 +91,17 @@ STATE = {
 }
 
 
+def _load_entity_index() -> dict:
+    """The stored index, flagged by the current generic detector. A build
+    records each entity's attrs and mix-up flag; only an index built before
+    mix-ups existed has none, so only that one re-reads every raw file for
+    them (about a second on a real journal, at every start otherwise)."""
+    index = entities.mark_generic(companion.load_entity_index())
+    if index and not any("attrs" in info for info in index.values()):
+        index = entities.mark_mixups(index)
+    return index
+
+
 @app.on_event("startup")
 def startup():
     # No key and not mock: boot anyway, with no client, so the onboarding
@@ -101,7 +112,7 @@ def startup():
     # dirs are empty on a first run, which is a state the app already handles.
     STATE["client"] = get_client() if config.is_configured() else None
     STATE["collection"] = get_collection()
-    STATE["entity_index"] = entities.mark_mixups(entities.mark_generic(companion.load_entity_index()))
+    STATE["entity_index"] = _load_entity_index()
     # the open session survives restarts — rebuild the conversation from it
     STATE["messages"] = sessions.conversation_messages()
     # A full recount, not the cached one: startup is when anything done
