@@ -1302,8 +1302,9 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
 # UNDO / REDO HISTORY
 # ---------------------------------------------------------------------------
 # Every curation or observation mutation records a before/after snapshot.
-# Curation snapshots are the whole curation dict (small); observation
-# snapshots are the affected raw file's content.
+# A curation snapshot holds only the top-level fields the change touched
+# (older entries hold the whole dict, which restores the same way);
+# observation snapshots are the affected raw file's content.
 
 HISTORY_FILE = ENTITY_DIR / "history.json"
 HISTORY_LIMIT = 50
@@ -1323,11 +1324,32 @@ def _save_history(history: dict):
     )
 
 
+def _changed_fields(before: dict, after: dict) -> tuple[dict, dict]:
+    """The curation fields a change touched, as they were and as they are.
+    The whole dict twice was ~80 KB an entry on a real journal, and the
+    history file is read and rewritten whole on every change."""
+    fields = [f for f in dict.fromkeys([*before, *after]) if before.get(f) != after.get(f)]
+    return ({f: before[f] for f in fields if f in before},
+            {f: after[f] for f in fields if f in after})
+
+
+def _restore_curation(fields: dict):
+    curation = load_curation()
+    curation.update(fields)
+    save_curation(curation)
+
+
 def record_change(description: str, kind: str, before, after, filename: str = ""):
     """kind: 'curation' (before/after are curation dicts), 'groups'
     (before/after are the groups list), 'raw' (file text), or 'batch'
     ({"files": {name: text}, "curation": dict, "groups": list}, any part
     optional) for one change that touches several of them."""
+    if kind == "curation":
+        before, after = _changed_fields(before, after)
+    elif kind == "batch" and "curation" in before and "curation" in after:
+        before = {**before}
+        after = {**after}
+        before["curation"], after["curation"] = _changed_fields(before["curation"], after["curation"])
     history = _load_history()
     history["undo"].append({
         "description": description, "kind": kind,
@@ -1343,11 +1365,11 @@ def _apply_snapshot(entry: dict, direction: str):
         for filename, text in payload.get("files", {}).items():
             (RAW_DIR / Path(filename).name).write_text(text, encoding="utf-8")
         if "curation" in payload:
-            save_curation(payload["curation"])
+            _restore_curation(payload["curation"])
         if "groups" in payload:
             _apply_snapshot({"kind": "groups", direction: payload["groups"]}, direction)
     elif entry["kind"] == "curation":
-        save_curation(payload)
+        _restore_curation(payload)
     elif entry["kind"] == "groups":
         # rollup is a view preference, not journal data — carry the live flags
         # across so undo/redo of membership/nesting never toggles a group's
