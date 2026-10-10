@@ -24,6 +24,7 @@ Layout (all gitignored — this is personal data):
 import json
 import re
 import sys
+import threading
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -39,6 +40,11 @@ RAW_DIR = ENTITY_DIR / "raw"
 CURATION_FILE = ENTITY_DIR / "curation.json"
 GROUPS_FILE = ENTITY_DIR / "groups.json"
 SEGMENT_CHARS = 45_000  # long conversations are split, not truncated
+# One writer at a time on the graph's files (raw cache, curation, groups,
+# docs, index). A re-extract runs for minutes in the background, beside
+# the close pipeline and hand edits; each read-modify-write holds this so
+# none lands on top of another. Reentrant: an edit rebuilds inside its hold.
+WRITE_LOCK = threading.RLock()
 
 # Four kinds. A project is something the author makes or works on; a thing
 # is something they enjoy or follow. One row per kind: the raw file's
@@ -261,10 +267,9 @@ def known_people_hint() -> list[str]:
     """Canonical people names from the current index, for name consistency.
     A split name counts once, by its plain name; the variants go in
     known_variants_hint."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return []
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     mentions: dict[str, int] = defaultdict(int)
     for n, i in index.items():
         if i["type"] == "person" and not i.get("retired") and not i.get("closed"):
@@ -273,35 +278,37 @@ def known_people_hint() -> list[str]:
     return [n for _, n in people[:80]]
 
 
+def _with_context(label: str, info: dict) -> str:
+    """'Dev (coworker; Coworkers)': a label with what tells the person apart,
+    their two commonest relationships and their groups."""
+    context = list(info.get("attrs", {}))[:2] + info.get("groups", [])
+    return label + (f" ({'; '.join(context)})" if context else "")
+
+
 def known_variants_hint() -> str:
     """'Dev: work (coworker; Coworkers), friend (friend)' for every split
     name -- always all of them, not just the most mentioned."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return ""
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     by_name: dict[str, list[str]] = defaultdict(list)
     for n, i in sorted(index.items(), key=lambda kv: -kv[1]["mentions"]):
         if i.get("variant_of") and not i.get("unsorted"):
-            context = [a for a in list(i.get("attrs", {}))[:2]] + i.get("groups", [])
-            by_name[i["variant_of"]].append(
-                i["qualifier"] + (f" ({'; '.join(context)})" if context else ""))
+            by_name[i["variant_of"]].append(_with_context(i["qualifier"], i))
     return "; ".join(f"{name}: {', '.join(vs)}" for name, vs in sorted(by_name.items()))
 
 
 def known_retired_hint() -> str:
     """'Marcus (coworker; Old job)' for every retired person whose
     profile is closed to bare mentions."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return ""
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     closed = load_curation()["retired_through"]
     out = []
     for n, i in sorted(index.items(), key=lambda kv: -kv[1]["mentions"]):
         if i["type"] == "person" and curation_key("person", i.get("base", n)) in closed:
-            context = list(i.get("attrs", {}))[:2] + i.get("groups", [])
-            out.append(n + (f" ({'; '.join(context)})" if context else ""))
+            out.append(_with_context(n, i))
     return "; ".join(out)
 
 
@@ -437,14 +444,21 @@ _CURATION_DEFAULTS = {
 
 
 def load_curation() -> dict:
-    curation = dict(_CURATION_DEFAULTS)
-    if CURATION_FILE.exists():
-        stored = json.loads(CURATION_FILE.read_text(encoding="utf-8"))
-        for field, default in _CURATION_DEFAULTS.items():
-            curation[field] = stored.get(field, default if isinstance(default, list) else dict(default))
-    else:
-        curation = {k: (list(v) if isinstance(v, list) else dict(v)) for k, v in _CURATION_DEFAULTS.items()}
+    # a fresh copy of each default: a field missing from the file must not
+    # hand out the module's own list for a caller to append to
+    stored = json.loads(CURATION_FILE.read_text(encoding="utf-8")) if CURATION_FILE.exists() else {}
+    curation = {field: stored[field] if field in stored else type(default)(default)
+                for field, default in _CURATION_DEFAULTS.items()}
+    # keys are lowercase when written; normalized here too, so the resolver
+    # (run per mention) tests the list as is instead of lowering it each time
+    curation["delete"] = [d.lower() for d in curation["delete"]]
     return curation
+
+
+def load_index() -> dict:
+    """The built index, name -> info; empty before the first build."""
+    path = ENTITY_DIR / "index.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 def save_curation(curation: dict):
@@ -714,29 +728,33 @@ def _raw_mentions():
                     yield path.stem, kind, name, ent
 
 
-def entries_for(curation: dict, key: str) -> list[str]:
-    """Entries with a mention that is, or resolves to, `key`."""
-    out = set()
+def entries_for(curation: dict, *keys: str) -> dict[str, list[str]]:
+    """Entries with a mention that is, or resolves to, each key: one pass
+    over the raw cache however many keys there are."""
+    out = {key: set() for key in keys}
     for entry, kind, name, ent in _raw_mentions():
         resolved = apply_curation(curation, kind, name, entry, ent.get("qualifier", ""))
-        if curation_key(kind, name) == key or (
-                resolved and curation_key(resolved[0], resolved[1]) == key):
-            out.add(entry)
-    return sorted(out)
+        for key in {curation_key(kind, name),
+                    resolved and curation_key(resolved[0], resolved[1])}:
+            if key in out:
+                out[key].add(entry)
+    return {key: sorted(entries) for key, entries in out.items()}
 
 
-def drop_mentions(curation: dict, key: str):
-    """Delete the mentions `key` has now; leave the name free."""
-    entries = set(curation["drop_mentions"].get(key, [])) | set(entries_for(curation, key))
-    if entries:
-        curation["drop_mentions"][key] = sorted(entries)
+def drop_mentions(curation: dict, *keys: str):
+    """Delete the mentions each key has now; leave the names free."""
+    for key, entries in entries_for(curation, *keys).items():
+        entries = set(curation["drop_mentions"].get(key, [])) | set(entries)
+        if entries:
+            curation["drop_mentions"][key] = sorted(entries)
 
 
-def free_name(curation: dict, key: str):
-    """Turn a never-track rule into delete-these-mentions: what it hid stays
-    hidden, but a new entry with the name starts fresh."""
-    curation["delete"] = [d for d in curation["delete"] if d.lower() != key]
-    drop_mentions(curation, key)
+def free_names(curation: dict, keys: list[str]):
+    """Turn never-track rules into delete-these-mentions: what they hid
+    stays hidden, but a new entry with the name starts fresh."""
+    freed = set(keys)
+    curation["delete"] = [d for d in curation["delete"] if d not in freed]
+    drop_mentions(curation, *keys)
 
 
 def deleted_list(curation: dict) -> dict:
@@ -812,10 +830,9 @@ def known_groups_hint() -> str:
     group with a note -- a note is the author saying what ties a group
     together, which is what helps tell who an entry means. Groups without
     one aren't listed."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return ""
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     lookup = {n.lower(): n for n in index}
     for n, i in index.items():
         for a in i.get("aliases", []):
@@ -906,14 +923,24 @@ def part_would_cycle(curation: dict, child_key: str, parent_kind: str, parent_na
 
 def move_entity_rules(curation: dict, key: str, new_key: str):
     """An entity's own rules follow it to a new key (retyped, or its path
-    name split off)."""
+    name split off). Keys are curation_key()s, lowercase as stored. Where
+    the new key already has a rule, list rules are combined and a single
+    value keeps the new key's own; either way none is left on the old key."""
     for field in ("reviewed", "retired", "not_mixed", "hide_path"):
-        if any(k.lower() == key for k in curation[field]):
-            curation[field] = [k for k in curation[field] if k.lower() != key] + [new_key]
+        if key in curation[field]:
+            curation[field] = [k for k in curation[field] if k != key]
+            if new_key not in curation[field]:
+                curation[field].append(new_key)
     for field in ("alias_add", "alias_remove", "rename", "part_of",
                   "retired_through", "retired_keep"):
-        if key in curation[field] and new_key not in curation[field]:
-            curation[field][new_key] = curation[field].pop(key)
+        if key not in curation[field]:
+            continue
+        moved = curation[field].pop(key)
+        there = curation[field].get(new_key)
+        if there is None:
+            curation[field][new_key] = moved
+        elif isinstance(there, list):
+            there.extend(v for v in moved if v not in there)
     curation["category"].pop(key, None)
 
 
@@ -973,7 +1000,7 @@ def _closed_to(curation: dict, name: str, entry: str, qualifier: str) -> bool:
 
 
 def _resolve_rules(curation: dict, kind: str, name: str, entry: str = ""):
-    if curation_key(kind, name) in {d.lower() for d in curation["delete"]}:
+    if curation_key(kind, name) in curation["delete"]:
         return None
     if _dropped(curation, curation_key(kind, name), entry):
         return None
@@ -1009,7 +1036,7 @@ def _resolve_rules(curation: dict, kind: str, name: str, entry: str = ""):
         kind = rt_final.get("type", kind)
         name = rt_final.get("name") or name
 
-    if curation_key(kind, name) in {d.lower() for d in curation["delete"]}:
+    if curation_key(kind, name) in curation["delete"]:
         return None
     if _dropped(curation, curation_key(kind, name), entry):
         return None
@@ -1151,6 +1178,7 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
     index = {}
     closed = {}  # retired, unsplit people -> the date their profile closes after
     retired_keys = {r.lower() for r in curation["retired"]}
+    reviewed_keys = {r.lower() for r in curation["reviewed"]}
     not_mixed = {k.lower() for k in curation["not_mixed"]}
     retired_gs = retired_groups(groups)
 
@@ -1216,9 +1244,7 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
             "mentions": len(ent["timeline"]),
             "aliases": sorted(ent["aliases"]),
             "groups": gnames,
-            "reviewed": curation_key(kind, ent["name"]) in {
-                r.lower() for r in curation["reviewed"]
-            },
+            "reviewed": curation_key(kind, ent["name"]) in reviewed_keys,
         }
         if ent["display"] != ent["name"]:
             index[ent["display"]]["base"] = ent["name"]
@@ -1276,8 +1302,9 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
 # UNDO / REDO HISTORY
 # ---------------------------------------------------------------------------
 # Every curation or observation mutation records a before/after snapshot.
-# Curation snapshots are the whole curation dict (small); observation
-# snapshots are the affected raw file's content.
+# A curation snapshot holds only the top-level fields the change touched
+# (older entries hold the whole dict, which restores the same way);
+# observation snapshots are the affected raw file's content.
 
 HISTORY_FILE = ENTITY_DIR / "history.json"
 HISTORY_LIMIT = 50
@@ -1297,11 +1324,32 @@ def _save_history(history: dict):
     )
 
 
+def _changed_fields(before: dict, after: dict) -> tuple[dict, dict]:
+    """The curation fields a change touched, as they were and as they are.
+    The whole dict twice was ~80 KB an entry on a real journal, and the
+    history file is read and rewritten whole on every change."""
+    fields = [f for f in dict.fromkeys([*before, *after]) if before.get(f) != after.get(f)]
+    return ({f: before[f] for f in fields if f in before},
+            {f: after[f] for f in fields if f in after})
+
+
+def _restore_curation(fields: dict):
+    curation = load_curation()
+    curation.update(fields)
+    save_curation(curation)
+
+
 def record_change(description: str, kind: str, before, after, filename: str = ""):
     """kind: 'curation' (before/after are curation dicts), 'groups'
     (before/after are the groups list), 'raw' (file text), or 'batch'
     ({"files": {name: text}, "curation": dict, "groups": list}, any part
     optional) for one change that touches several of them."""
+    if kind == "curation":
+        before, after = _changed_fields(before, after)
+    elif kind == "batch" and "curation" in before and "curation" in after:
+        before = {**before}
+        after = {**after}
+        before["curation"], after["curation"] = _changed_fields(before["curation"], after["curation"])
     history = _load_history()
     history["undo"].append({
         "description": description, "kind": kind,
@@ -1317,11 +1365,11 @@ def _apply_snapshot(entry: dict, direction: str):
         for filename, text in payload.get("files", {}).items():
             (RAW_DIR / Path(filename).name).write_text(text, encoding="utf-8")
         if "curation" in payload:
-            save_curation(payload["curation"])
+            _restore_curation(payload["curation"])
         if "groups" in payload:
             _apply_snapshot({"kind": "groups", direction: payload["groups"]}, direction)
     elif entry["kind"] == "curation":
-        save_curation(payload)
+        _restore_curation(payload)
     elif entry["kind"] == "groups":
         # rollup is a view preference, not journal data — carry the live flags
         # across so undo/redo of membership/nesting never toggles a group's
@@ -1430,6 +1478,23 @@ def list_observations(kind: str, canonical_name: str) -> list[dict]:
     return out
 
 
+def first_observations() -> dict:
+    """(kind, name_lower) -> each entity's earliest observation, in one pass
+    over the raw cache -- for lists that show one line per entity, where
+    list_observations per entity would rescan everything each time.
+    Raw files are named by date, so their order is list_observations'."""
+    curation = load_curation()
+    out = {}
+    for entry, kind, name, ent in _raw_mentions():
+        obs = ent.get("observations") or []
+        if not obs:
+            continue
+        resolved = apply_curation(curation, kind, name, entry, ent.get("qualifier", ""))
+        if resolved:
+            out.setdefault((resolved[0], resolved[1].lower()), obs[0])
+    return out
+
+
 def _mutate_raw(filename: str, group: str, ent_index: int, obs_index: int):
     """Load a raw file and validate indices; returns (path, data, entity)."""
     path = _raw_path(filename)
@@ -1498,11 +1563,13 @@ def reassign_observation(
 # "Dev" that new mentions could pile into. Sorting an unsorted mention
 # is the same operation. One undo puts the files, rules and groups back.
 
-def _entity_records(kind: str, canonical: str) -> list[tuple[str, str, int]]:
-    """(file, group, index) of every raw record that resolves to the entity,
-    including ones with no observations (they still count as a mention)."""
+def _entity_records(kind: str, *canonicals: str) -> dict[str, list[tuple[str, str, int]]]:
+    """(file, group, index) of every raw record that resolves to each
+    entity, including ones with no observations (they still count as a
+    mention). One pass over the raw files for all of them."""
     curation = load_curation()
-    out = []
+    wanted = {c.lower(): c for c in canonicals}
+    out = {c: [] for c in canonicals}
     for path in sorted(RAW_DIR.glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
         for group, raw_kind, _ in KIND_FIELDS:
@@ -1510,8 +1577,8 @@ def _entity_records(kind: str, canonical: str) -> list[tuple[str, str, int]]:
                 name = (ent.get("name") or "").strip()
                 resolved = name and apply_curation(curation, raw_kind, name, path.stem,
                                                    ent.get("qualifier", ""))
-                if resolved and resolved[0] == kind and resolved[1].lower() == canonical.lower():
-                    out.append((path.name, group, i))
+                if resolved and resolved[0] == kind and resolved[1].lower() in wanted:
+                    out[wanted[resolved[1].lower()]].append((path.name, group, i))
     return out
 
 
@@ -1577,11 +1644,13 @@ def split_entity(index: dict, name: str, picks: list[dict], qualifier: str,
     picked: dict[tuple[str, str, int], set[int]] = defaultdict(set)
     for p in picks:
         picked[(Path(p["file"]).name, p["group"], int(p["ent_index"]))].add(int(p["obs_index"]))
-    records = _entity_records("person", info.get("base", name))
+    base = info.get("base", name)
+    found = _entity_records("person", base, head) if closed else _entity_records("person", base)
+    records = found[base]
     sorting = set()  # later mentions not picked: they stay to be sorted
     if closed:
         sorting = set(records) - set(picked)
-        records += _entity_records("person", head)
+        records += found[head]
     if not set(picked) <= set(records):
         raise ValueError("those observations aren't this person's")
 
@@ -1670,7 +1739,8 @@ def rename_qualifier(index: dict, name: str, new_qualifier: str) -> str:
     if old_key != new_key:
         move_entity_rules(curation, old_key, new_key)
     files_before, files_after = {}, {}
-    for filename, _, _ in _entity_records("person", info.get("base", name)):
+    base = info.get("base", name)
+    for filename, _, _ in _entity_records("person", base)[base]:
         files_before.setdefault(filename, None)
     for filename in files_before:
         path = _raw_path(filename)
@@ -1744,10 +1814,9 @@ def find_duplicate_candidates(max_pairs: int = 60, use_embeddings: bool = True) 
     """
     import difflib
 
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return []
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     curation = load_curation()
     dismissed = {d.lower() for d in curation["not_duplicates"]}
 
@@ -1864,12 +1933,20 @@ it (do not repeat the canonical), and "reason" is one short sentence.
 </entities>"""
 
 
+def _json_reply(response) -> dict:
+    """A structured-output reply as data; {} when Claude declined. The
+    create() calls stay in each caller: the mock client files a call by the
+    function that makes it."""
+    if response.stop_reason == "refusal":
+        return {}
+    return json.loads(next(b.text for b in response.content if b.type == "text"))
+
+
 def suggest_merges(kind: str) -> list[dict]:
     """Ask Claude to propose merge groups for one entity kind."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return []
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     listing = [
         {"name": n, "attribute": "", "mentions": i["mentions"]}
         for n, i in sorted(index.items(), key=lambda kv: -kv[1]["mentions"])
@@ -1891,10 +1968,7 @@ def suggest_merges(kind: str) -> list[dict]:
             ),
         }],
     )
-    if response.stop_reason == "refusal":
-        return []
-    raw = next(b.text for b in response.content if b.type == "text")
-    groups = json.loads(raw).get("groups", [])
+    groups = _json_reply(response).get("groups", [])
     known = {n.lower() for n in index}
     cleaned = []
     for g in groups:
@@ -1956,19 +2030,19 @@ than coverage; the author reviews every suggestion.
 
 def suggest_things() -> list[dict]:
     """Ask Claude which projects and places are really things."""
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         return []
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     candidates = [(n, i) for n, i in index.items()
                   if i["type"] in ("project", "place") and not i.get("generic")]
     if not candidates:
         return []
+    firsts = first_observations()
     listing = []
     for name, info in sorted(candidates, key=lambda kv: -kv[1]["mentions"]):
-        obs = list_observations(info["type"], info.get("base", name))
+        said = firsts.get((info["type"], info.get("base", name).lower()), "")
         listing.append({"name": name, "kind": info["type"], "mentions": info["mentions"],
-                        "said": obs[0]["text"][:160] if obs else ""})
+                        "said": said[:160]})
 
     client = get_client()
     response = client.messages.create(
@@ -1979,11 +2053,8 @@ def suggest_things() -> list[dict]:
         messages=[{"role": "user", "content": THINGS_PROMPT.format(
             listing=json.dumps(listing, ensure_ascii=False))}],
     )
-    if response.stop_reason == "refusal":
-        return []
-    raw = next(b.text for b in response.content if b.type == "text")
     out, seen = [], set()
-    for s in json.loads(raw).get("things", []):
+    for s in _json_reply(response).get("things", []):
         name = next((n for n, _ in candidates if n.lower() == s["name"].strip().lower()), None)
         if name and name not in seen:
             seen.add(name)
@@ -2139,12 +2210,9 @@ def suggest_parts(index: dict) -> list[dict]:
         messages=[{"role": "user", "content": PARTS_PROMPT.format(
             listing=json.dumps(listing, ensure_ascii=False))}],
     )
-    if response.stop_reason == "refusal":
-        return []
-    raw = next(b.text for b in response.content if b.type == "text")
     known = {s["key"] for t in targets for s in t["sources"] if not s["generic"]}
     out, seen = [], set()
-    for p in json.loads(raw).get("parts", []):
+    for p in _json_reply(response).get("parts", []):
         key = p["key"].strip().lower()
         if key in known and key not in seen:
             seen.add(key)
@@ -2277,15 +2345,18 @@ def reextract(terms: list[str], progress=None) -> dict:
         except Exception as e:
             failed.append({"key": key, "error": str(e)})
             continue
-        (RAW_DIR / f"{key}.json").write_text(
-            json.dumps(entities, indent=2, ensure_ascii=False), encoding="utf-8")
+        # held only for the write, not the API call, so edits wait seconds at most
+        with WRITE_LOCK:
+            (RAW_DIR / f"{key}.json").write_text(
+                json.dumps(entities, indent=2, ensure_ascii=False), encoding="utf-8")
         done.append(key)
     return {"done": done, "failed": failed}
 
 
 def build(force: bool = False, quiet: bool = False) -> dict:
-    records = run_extraction(force=force, quiet=quiet)
-    index = build_entity_docs(records)
+    with WRITE_LOCK:
+        records = run_extraction(force=force, quiet=quiet)
+        index = build_entity_docs(records)
     by_kind = defaultdict(int)
     for info in index.values():
         by_kind[info["type"]] += 1
@@ -2300,11 +2371,10 @@ def build(force: bool = False, quiet: bool = False) -> dict:
 
 
 def show_index():
-    index_file = ENTITY_DIR / "index.json"
-    if not index_file.exists():
+    index = load_index()
+    if not index:
         print("  No entity graph yet — run: python entities.py build")
         return
-    index = json.loads(index_file.read_text(encoding="utf-8"))
     for kind in KINDS:
         names = sorted(
             (n for n, i in index.items() if i["type"] == kind),

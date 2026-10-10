@@ -194,3 +194,18 @@ def test_companion_loads_every_half():
     # a bare name means neither on its own
     assert companion.resolve_entity(index, "Dev") is None
     assert companion.resolve_entity(index, "dev · friend") == "Dev · friend"
+
+
+def test_rules_moved_onto_a_key_that_has_its_own_combine_and_leave_nothing_behind():
+    old, new = "person:dev · work", "person:dev · office"
+    cur = {f: type(d)(d) for f, d in entities._CURATION_DEFAULTS.items()}
+    cur["reviewed"] = [old, new]
+    cur["retired"] = [old]
+    cur["alias_add"] = {old: ["Devon"], new: ["Dev O", "Devon"]}
+    cur["rename"] = {old: "Dev W", new: "Dev O"}
+    entities.move_entity_rules(cur, old, new)
+    assert cur["reviewed"] == [new]          # not listed twice
+    assert cur["retired"] == [new]
+    assert cur["alias_add"] == {new: ["Dev O", "Devon"]}
+    assert cur["rename"] == {new: "Dev O"}   # its own rule wins; the old one goes
+

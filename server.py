@@ -22,6 +22,7 @@ import threading
 import time
 import uuid
 from contextlib import contextmanager
+from functools import wraps
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -90,6 +91,35 @@ STATE = {
 }
 
 
+def _load_entity_index() -> dict:
+    """The stored index, flagged by the current generic detector. A build
+    records each entity's attrs and mix-up flag; only an index built before
+    mix-ups existed has none, so only that one re-reads every raw file for
+    them (about a second on a real journal, at every start otherwise)."""
+    index = entities.mark_generic(companion.load_entity_index())
+    if index and not any("attrs" in info for info in index.values()):
+        index = entities.mark_mixups(index)
+    return index
+
+
+def _warm_search():
+    """Load the two embedders and both search indexes in the background, so
+    the first close or search after a start doesn't wait for them. After a
+    reboot, reading them off disk took most of a close's first eight
+    seconds. Only what is already on disk: a model not downloaded yet is
+    fetched by the first thing that needs it, never quietly at startup."""
+    import passages
+    try:
+        from chromadb.utils.embedding_functions.onnx_mini_lm_l6_v2 import ONNXMiniLM_L6_V2 as onnx
+        col = STATE["collection"]
+        if col.count() and (onnx.DOWNLOAD_PATH / onnx.EXTRACTED_FOLDER_NAME / "model.onnx").exists():
+            col.query(query_texts=["warm"], n_results=1)
+        if passages.model_cached():
+            passages.search("warm", 1, neighbors=0)
+    except Exception as exc:
+        print(f"  warming search failed, so the first search loads it: {exc}")
+
+
 @app.on_event("startup")
 def startup():
     # No key and not mock: boot anyway, with no client, so the onboarding
@@ -100,12 +130,15 @@ def startup():
     # dirs are empty on a first run, which is a state the app already handles.
     STATE["client"] = get_client() if config.is_configured() else None
     STATE["collection"] = get_collection()
-    STATE["entity_index"] = entities.mark_mixups(entities.mark_generic(companion.load_entity_index()))
+    STATE["entity_index"] = _load_entity_index()
     # the open session survives restarts — rebuild the conversation from it
     STATE["messages"] = sessions.conversation_messages()
     # A full recount, not the cached one: startup is when anything done
     # behind the running app's back (an import, a restore) gets picked up.
     entry_catalog.refresh(STATE["collection"])
+    # the running app only: tests start this app dozens of times
+    if __name__ == "__main__":
+        threading.Thread(target=_warm_search, daemon=True).start()
 
 
 class ChatIn(BaseModel):
@@ -170,13 +203,8 @@ class CategoryIn(BaseModel):
     category: str
 
 
-class ThingIn(BaseModel):
-    name: str
-    category: str
-
-
 class ThingsIn(BaseModel):
-    items: list[ThingIn]
+    items: list[CategoryIn]
 
 
 class TermsIn(BaseModel):
@@ -542,11 +570,15 @@ def reset_lookup():
 # ---- close-pipeline progress (Phase 2 item 1) ----
 # The post-close pipeline runs as background tasks, so /api/sessions/close
 # returns before any of it has started. The client polls the record below to
-# show which stage is running instead of one static "closed" line. The two
-# tasks run in the order they are queued -- seed first, then the refresh -- so
-# the steps are listed in that order. Progress is what the mock-mode per-call
+# show which stage is running instead of one static "closed" line. The first
+# step is the close request itself (the title call and embedding the new
+# chunks take seconds, longer while the embedders load after a restart), so
+# the client polls from the moment it sends it. The two tasks then run in
+# the order they are queued -- seed first, then the refresh -- so the steps
+# are listed in that order. Progress is what the mock-mode per-call
 # delays exist to make visible; against a real key each stage is genuinely long.
 CLOSE_STEPS = [
+    ("chapter", "saving the chapter as a journal entry"),
     ("seed", "writing your life summary candidate"),
     ("categories", "tagging the entry"),
     ("entities", "extracting people, places, projects and things"),
@@ -925,13 +957,18 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
             {"error": "the memory pipeline from a previous close is still "
                       "running -- wait for it to finish before closing again."},
             status_code=409)
+    _close_begin()   # armed before the slow part, which is the first step
     try:
-        result = sessions.close_session(
-            STATE["collection"], STATE["client"], title_hint=body.title,
-        )
+        with _close_step("chapter"):
+            result = sessions.close_session(
+                STATE["collection"], STATE["client"], title_hint=body.title,
+            )
     except ValueError as e:
         _close_finish()
         return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception:
+        _close_finish()   # or every later close answers 409 until a restart
+        raise
     STATE["messages"] = []
     if demo_script.active():
         demo_script.after_close()
@@ -945,7 +982,6 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     # incurred is a wrong number. So the new session starts at zero now and
     # wears the pipeline's processing cost.
     metering.reset()
-    _close_begin()   # arm the progress record before the tasks are queued (item 1)
     _tracked(background_tasks, _after_close_seed, result["key"])
     _tracked(background_tasks, _after_close_refresh)
     return {"ok": True, **result}
@@ -1896,6 +1932,19 @@ def entity_doc(name: str):
     return {"name": canonical, "doc": path.read_text(encoding="utf-8")}
 
 
+def _entity_write(endpoint):
+    """An endpoint that edits the entity graph: its reads, writes and
+    rebuild all happen under entities.WRITE_LOCK, so a background
+    re-extract, the close pipeline or a second request can't interleave
+    with them. Sync endpoints run on one threadpool thread, which is what
+    lets the reentrant lock span the body."""
+    @wraps(endpoint)
+    def locked(*args, **kwargs):
+        with entities.WRITE_LOCK:
+            return endpoint(*args, **kwargs)
+    return locked
+
+
 def _rebuild():
     STATE["entity_index"] = entities.build(quiet=True)
 
@@ -1966,16 +2015,19 @@ def _combine(body: MergeIn, field: str, verb: str):
 
 
 @app.post("/api/entities/merge")
+@_entity_write
 def merge_entities(body: MergeIn):
     return _combine(body, "merge", "merged")
 
 
 @app.post("/api/entities/correct")
+@_entity_write
 def correct_entity(body: MergeIn):
     return _combine(body, "correct", "corrected")
 
 
 @app.post("/api/entities/retype")
+@_entity_write
 def retype_entity(body: RetypeIn):
     index = STATE["entity_index"]
     name = companion.resolve_entity(index, body.name)
@@ -2001,6 +2053,7 @@ def retype_entity(body: RetypeIn):
 
 
 @app.post("/api/entities/category")
+@_entity_write
 def set_category(body: CategoryIn):
     """A thing's category (music, game, show, book, event, other)."""
     index = STATE["entity_index"]
@@ -2033,6 +2086,7 @@ def suggest_things():
 
 
 @app.post("/api/entities/retype-things")
+@_entity_write
 def retype_things(body: ThingsIn):
     """The things review: retype every accepted name, each with its
     category. One curation change, so one undo puts them all back."""
@@ -2060,6 +2114,7 @@ def retype_things(body: ThingsIn):
 
 
 @app.post("/api/entities/rename")
+@_entity_write
 def rename_entity(body: MergeIn):
     """Rename an entity's display spelling (case-only changes included)."""
     index = STATE["entity_index"]
@@ -2095,6 +2150,7 @@ def rename_entity(body: MergeIn):
 
 
 @app.post("/api/entities/alias")
+@_entity_write
 def alias_entity(body: AliasIn):
     index = STATE["entity_index"]
     name = companion.resolve_entity(index, body.name)
@@ -2136,6 +2192,7 @@ def entity_observations(name: str):
 
 
 @app.post("/api/observation")
+@_entity_write
 def mutate_observation(body: ObservationIn):
     try:
         raw_path = entities._raw_path(body.file)
@@ -2167,6 +2224,7 @@ def history_state():
 
 
 @app.post("/api/undo")
+@_entity_write
 def undo_change():
     description = entities.undo()
     if description is None:
@@ -2176,6 +2234,7 @@ def undo_change():
 
 
 @app.post("/api/redo")
+@_entity_write
 def redo_change():
     description = entities.redo()
     if description is None:
@@ -2195,6 +2254,7 @@ def suggest(body: KindIn):
 
 
 @app.post("/api/entities/reviewed")
+@_entity_write
 def mark_reviewed(body: ReviewedIn):
     """Toggle the reviewed flag. Patches the index in place — no rebuild,
     so rapid triage keystrokes stay instant. Not recorded in undo history."""
@@ -2221,6 +2281,7 @@ def duplicate_candidates():
 
 
 @app.post("/api/entities/duplicates/dismiss")
+@_entity_write
 def dismiss_duplicate(body: DismissDupIn):
     curation = entities.load_curation()
     pk = entities.pair_key(body.kind, body.a, body.b)
@@ -2238,6 +2299,7 @@ def mixups():
 
 
 @app.post("/api/entities/not-mixed")
+@_entity_write
 def not_mixed(body: NotMixedIn):
     """Checked and found to be one: the flag stays off for good. Patches the
     index in place, so confirming a keep in triage stays instant; undo
@@ -2265,6 +2327,7 @@ def not_mixed(body: NotMixedIn):
 
 
 @app.post("/api/entities/split")
+@_entity_write
 def split(body: SplitIn):
     """Two people under one name: the picked observations go to one
     qualifier ("Dev · work"), and on the first split everything else to
@@ -2289,6 +2352,7 @@ def split(body: SplitIn):
 
 
 @app.post("/api/entities/keep-retired")
+@_entity_write
 def keep_retired(body: KeepRetiredIn):
     """A later mention of a retired person that was them after all: it
     goes back to their profile, and they stay retired."""
@@ -2310,6 +2374,7 @@ def keep_retired(body: KeepRetiredIn):
 
 
 @app.post("/api/entities/part-of")
+@_entity_write
 def part_of(body: PartOfIn):
     """Its own entity, shown as "Parent / Name". Not a merge: an unrelated
     "Tabs" stays separate instead of being folded in by a name rule."""
@@ -2349,6 +2414,7 @@ def part_of(body: PartOfIn):
 
 
 @app.post("/api/entities/hide-path")
+@_entity_write
 def hide_path(body: HidePathIn):
     """A part whose own name is already specific keeps it plain."""
     index = STATE["entity_index"]
@@ -2384,6 +2450,7 @@ def suggest_parts():
 
 
 @app.post("/api/entities/parts-review")
+@_entity_write
 def apply_parts_review(body: PartsReviewIn):
     """The one-time review: slash names become parts, and merged names
     become parts or stop being tracked. One curation change, one undo."""
@@ -2445,6 +2512,7 @@ def list_groups():
 
 
 @app.post("/api/groups")
+@_entity_write
 def create_group(body: GroupIn):
     name = body.name.strip()
     if not name:
@@ -2464,6 +2532,7 @@ def create_group(body: GroupIn):
 
 
 @app.post("/api/groups/member")
+@_entity_write
 def group_member(body: GroupMemberIn):
     """Add an entity to a group (creating the group if it's new) or,
     with remove=true, drop a member — including dangling unresolved ones."""
@@ -2513,6 +2582,7 @@ def group_member(body: GroupMemberIn):
 
 
 @app.post("/api/groups/members")
+@_entity_write
 def group_members(body: GroupMembersIn):
     """Batch-add several entities to a group at once, creating the group if
     it's new. One save, one history record — so a single undo reverts the
@@ -2560,6 +2630,7 @@ def group_members(body: GroupMembersIn):
 
 
 @app.post("/api/groups/edit")
+@_entity_write
 def edit_group(body: GroupEditIn):
     """Rename / reparent / delete a group. Deleting promotes children to
     the deleted group's parent; renaming rewrites children's pointers."""
@@ -2986,6 +3057,7 @@ def entry_text(date: str, title: str):
 
 
 @app.post("/api/entities/retire")
+@_entity_write
 def retire_entity(body: RetireIn):
     """A past chapter: out of the list and triage, and the companion only
     brings them up when you do. Nothing is deleted."""
@@ -3013,6 +3085,7 @@ def retire_entity(body: RetireIn):
 
 
 @app.post("/api/entities/delete")
+@_entity_write
 def delete_entity(body: DeleteIn):
     """Two kinds of delete; neither touches journal entries, so search and
     the companion still find the text either way."""
@@ -3047,6 +3120,7 @@ def _never_track(curation: dict, key: str):
 
 
 @app.post("/api/entities/delete-names")
+@_entity_write
 def delete_names(body: NamesIn):
     """The generic cleanup: never track every checked name. One curation
     change, so one undo brings them all back."""
@@ -3068,13 +3142,12 @@ def delete_names(body: NamesIn):
 def generic_candidates():
     """Entities the local detector calls generic, with what they say, for
     the cleanup checklist."""
-    out = []
-    for name, info in STATE["entity_index"].items():
-        if not info.get("generic"):
-            continue
-        obs = entities.list_observations(info["type"], entities.base_name(STATE["entity_index"], name))
-        out.append({"name": name, "kind": info["type"], "mentions": info["mentions"],
-                    "first": obs[0]["text"] if obs else ""})
+    index = STATE["entity_index"]
+    generic = [(n, i) for n, i in index.items() if i.get("generic")]
+    firsts = entities.first_observations() if generic else {}
+    out = [{"name": name, "kind": info["type"], "mentions": info["mentions"],
+            "first": firsts.get((info["type"], entities.base_name(index, name).lower()), "")}
+           for name, info in generic]
     out.sort(key=lambda c: (c["kind"], -c["mentions"], c["name"].lower()))
     return {"candidates": out}
 
@@ -3105,14 +3178,19 @@ def _run_reextract(terms: list[str]):
         _REEXTRACT.update(done=i, total=total, current=f"{conv['date']} {conv['title']}")
     try:
         result = entities.reextract(terms, progress=progress)
-        _rebuild()
         _REEXTRACT.update(result=result, done=_REEXTRACT["total"], current="")
     except caps.CapExceeded as exc:
-        _rebuild()  # keep what was re-extracted before the cap
         _REEXTRACT.update(error=exc.detail, current="")
     except Exception as exc:
         _REEXTRACT.update(error=str(exc), current="")
     finally:
+        # however it stopped, the entries re-extracted so far are on disk:
+        # the index has to show them
+        try:
+            _rebuild()
+        except Exception as exc:
+            print(f"  re-extract: rebuild failed: {exc}")
+            _REEXTRACT["error"] = _REEXTRACT["error"] or f"re-extracted, but the rebuild failed: {exc}"
         _REEXTRACT["running"] = False
 
 
@@ -3150,6 +3228,7 @@ def deleted_entities():
 
 
 @app.post("/api/entities/deleted/restore")
+@_entity_write
 def restore_deleted(body: DeletedIn):
     """Undo one delete from the list: a never-track rule or a set of
     deleted mentions. What it hid comes back on the rebuild."""
@@ -3171,6 +3250,7 @@ def restore_deleted(body: DeletedIn):
 
 
 @app.post("/api/entities/deleted/free")
+@_entity_write
 def free_names(body: KeysIn):
     """Let names back in: each never-track rule becomes delete-these-
     mentions, so what it hid stays hidden but a new entry starts fresh."""
@@ -3180,8 +3260,7 @@ def free_names(body: KeysIn):
         return JSONResponse({"error": "none of those are blocked"}, status_code=404)
     before = _snapshot()
     curation = entities.load_curation()
-    for key in keys:
-        entities.free_name(curation, key)
+    entities.free_names(curation, keys)
     entities.save_curation(curation)
     _record_curation(f"allow {len(keys)} name{'s' if len(keys) != 1 else ''} again", before)
     _rebuild()

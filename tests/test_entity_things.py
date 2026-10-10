@@ -179,3 +179,21 @@ def test_reextract_replaces_only_matching_caches(tmp_path, monkeypatch):
     assert json.loads((tmp_path / "raw" / "2026-03-20_Memories.json").read_text(encoding="utf-8")) == fresh
     untouched = json.loads((tmp_path / "raw" / "2026-03-21_Unrelated.json").read_text(encoding="utf-8"))
     assert untouched["people"][0]["name"] == "Kim"
+
+
+def test_a_reextract_that_breaks_still_indexes_what_it_wrote(monkeypatch):
+    """Entries re-extracted before an unexpected error are on disk; the run
+    rebuilds the index however it stops, and still reports the error."""
+    import server
+    rebuilt = []
+    monkeypatch.setattr(server, "_rebuild", lambda: rebuilt.append(1))
+
+    def breaks(terms, progress):
+        progress(0, 2, {"date": "2026-03-20", "title": "Memories"})
+        raise OSError("disk full")
+    monkeypatch.setattr(entities, "reextract", breaks)
+    server._REEXTRACT.update(running=True, error="", result=None)
+    server._run_reextract(["90 day"])
+    assert rebuilt == [1]
+    assert server._REEXTRACT["error"] == "disk full" and not server._REEXTRACT["running"]
+

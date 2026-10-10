@@ -212,9 +212,13 @@ async function batchAdd() {
 }
 // ---- local duplicate finder ----
 // The suggestion panel sits above whatever the detail pane shows, and
-// shows on its own when nothing is picked yet.
+// shows on its own when nothing is picked yet. Each open swaps in a fresh
+// element: the last review's listeners go with the old one, and a review
+// still waiting on Claude writes into that detached copy, not this one.
 function suggestPanel(title) {
-  const panel = $('suggest-panel');
+  const old = $('suggest-panel');
+  const panel = old.cloneNode(false);
+  old.replaceWith(panel);
   $('suggest-wrap').hidden = false;
   $('entities-pane').classList.add('drilled');
   panel.innerHTML = '<div class="head"><span class="eyebrow"></span>'
@@ -375,6 +379,7 @@ async function thingsReview() {
   const w = panelSay(panel, 'asking claude which projects and places are really things…');
   const r = await api('/api/entities/suggest-things', {});
   w.remove();
+  if (!panel.isConnected) return;  // another review opened meanwhile
   if (!r) { closeSuggest(); return; }
   if (!r.things.length) { panelSay(panel, 'nothing looks like a thing. Looks clean.'); return; }
   panelSay(panel, 'A project is something you make or work on; a thing is something you enjoy or follow. Checked names become things, with the category shown. Observations come along.');
@@ -529,12 +534,31 @@ async function reextractPanel() {
   form.querySelector('button').onclick = find;
   input.onkeydown = e => { if (e.key === 'Enter') find(); };
   input.focus();
+  // a run started earlier (this panel closed, the page reloaded) is still
+  // going in the background: show it rather than offer a second one
+  try {
+    const s = await (await fetch('/api/entities/reextract/status')).json();
+    if (s.running && panel.isConnected) watchReextract(out);
+  } catch { }
 }
 async function watchReextract(out) {
   out.innerHTML = '';
   const line = panelSay(out, 'starting…');
+  let misses = 0;
   for (;;) {
-    const s = await (await fetch('/api/entities/reextract/status')).json();
+    let s;
+    try { s = await (await fetch('/api/entities/reextract/status')).json(); }
+    catch {
+      // a blip, or the server restarting: keep trying for about half a
+      // minute, then say so instead of freezing on the last count
+      if (++misses > 20) {
+        line.textContent = 'lost touch with the server. Open re-extract again to check on it.';
+        return;
+      }
+      await new Promise(r => setTimeout(r, 1500));
+      continue;
+    }
+    misses = 0;
     if (!s.running) {
       if (s.error) line.textContent = `stopped: ${s.error}`;
       else {

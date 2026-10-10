@@ -131,3 +131,18 @@ def test_startup_refresh_matches_the_build(tmp_path, monkeypatch):
     curation["not_mixed"].append("person:dev")
     entities.save_curation(curation)
     assert "mixup" not in entities.mark_mixups(old)["Dev"]
+
+
+def test_startup_reads_the_raw_files_only_for_an_index_from_before_mixups(monkeypatch):
+    import server
+    marked = []
+    monkeypatch.setattr(entities, "mark_mixups", lambda index: marked.append(1) or index)
+    monkeypatch.setattr(entities, "mark_generic", lambda index: index)
+    built = {"Dev": {"type": "person", "attrs": {"coworker": 2}}, "Kim": {"type": "person"}}
+    monkeypatch.setattr(server.companion, "load_entity_index", lambda: built)
+    server._load_entity_index()
+    assert marked == []
+    monkeypatch.setattr(server.companion, "load_entity_index", lambda: {"Dev": {"type": "person"}})
+    server._load_entity_index()
+    assert marked == [1]
+
