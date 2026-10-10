@@ -1,7 +1,12 @@
 {
   "merge": {},
   "correct": {},
-  "retype": {},
+  "retype": {
+    "person:pepper": {
+      "type": "animal",
+      "name": "Pepper"
+    }
+  },
   "rename": {},
   "alias_add": {
     "person:dev": [

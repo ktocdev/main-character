@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Marcus\",\"relationship\":\"stakeholder at Meridian\",\"qualifier\":\"\",\"observations\":[\"The stakeholder management section of the Meridian deck is really about designing around Marcus without saying so\"]},{\"name\":\"Ana\",\"relationship\":\"colleague\",\"qualifier\":\"\",\"observations\":[\"Ana already knows the honest version of the Meridian story from the screen\"]},{\"name\":\"Dev\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Napkin sketch at the Thai place with Dev is one of the moments Jordan revisited in old entries\"]},{\"name\":\"Lena\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Texted asking if Jordan needs anything for the 24th\",\"Jordan said they're good; Lena replied with a single thumbs up and no follow-up questions\"]},{\"name\":\"Priya\",\"relationship\":\"contact at Northlight\",\"qualifier\":\"\",\"observations\":[\"Sent a calendar invite on 9/17 for an intro chat on Monday 9/21, 30 min\"]}],\"projects\":[{\"name\":\"Coda\",\"domain\":\"personal\",\"status\":\"active\",\"observations\":[\"Jordan spent two hours re-reading old entries to find the narrative thread for the deck\",\"Key moments revisited: first night at Groundwork on July 28th, building the timer after the crash on August 4th, nine days of missing a blind spot\",\"Features include a practice log, metronome and free play\",\"Someone else saw the blind spot clearly in forty minutes\",\"Rewrote the Coda case study for the deck: the 9th version was defensive, the deck version says 'I missed this and here's what I learned'\"]},{\"name\":\"Meridian\",\"domain\":\"work\",\"status\":\"completed\",\"observations\":[\"The Meridian section of the portfolio deck wrote itself\",\"Includes dashboard metrics, user flow before and after, and a stakeholder management section\"]},{\"name\":\"Portfolio presentation\",\"domain\":\"work\",\"status\":\"active\",\"observations\":[\"Started building on 9/17 for the 24th: four interviews plus a presentation to the full design team\",\"One week out\",\"The story shifted from features to the blind spot after re-reading journal entries\"]}],\"places\":[{\"name\":\"Groundwork\",\"kind\":\"venue\",\"observations\":[\"Site of the first night of Coda work on July 28th\"]},{\"name\":\"Thai place\",\"kind\":\"restaurant\",\"observations\":[\"Where Jordan made a napkin sketch with Dev\"]}],\"things\":[{\"name\":\"Northlight\",\"category\":\"event\",\"observations\":[\"Onsite interview is three days after the Monday 9/21 intro chat with Priya\"]}],\"animals\":[{\"name\":\"Pepper\",\"relationship\":\"pet\",\"observations\":[\"Asleep on the green rug again, same spot, same curl\"]}]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 3071,
+    "output_tokens": 897,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

@@ -136,3 +136,33 @@ def test_applying_the_review_is_one_undo(tmp_path, monkeypatch):
     assert entities.history_peek()["undo"].endswith("2 retyped to animals")
     entities.undo()
     assert entities.load_curation()["retype"] == {}
+
+
+def test_extraction_asks_for_animals_and_names_the_known_ones(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    assert "animals" in entities.EXTRACTION_SCHEMA["required"]
+    item = entities.EXTRACTION_SCHEMA["properties"]["animals"]["items"]
+    assert item["required"] == ["name", "relationship", "observations"]
+
+    _setup(tmp_path, monkeypatch, {
+        "2026-03-01_a": {"animals": [{"name": "Pip", "relationship": "pet cat", "observations": ["x"]}],
+                         "people": [_person("Dev", "friend", "y")]},
+    })
+    _build(tmp_path)
+    assert entities.known_animals_hint() == ["Pip"]
+    reply = {"people": [], "projects": [], "places": [], "things": [],
+             "animals": [{"name": "Pip", "relationship": "pet cat", "observations": ["zoomies"]}]}
+    seen = []
+
+    class Messages:
+        def create(self, **kwargs):
+            seen.append(kwargs["messages"][0]["content"])
+            return SimpleNamespace(stop_reason="end_turn",
+                                   content=[SimpleNamespace(type="text", text=json.dumps(reply))])
+
+    out = entities.extract_conversation(SimpleNamespace(messages=Messages()),
+                                        {"date": "2026-03-02", "title": "t", "text": "zoomies"},
+                                        known_people=["Dev"], known_animals=["Pip"])
+    assert out["animals"][0]["name"] == "Pip"
+    assert "ANIMALS" in seen[0] and "never people" in seen[0]
+    assert "file it under animals with exactly this spelling: Pip." in seen[0]

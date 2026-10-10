@@ -1,4 +1,15 @@
 {
+  "Pepper": {
+    "type": "animal",
+    "path": "animals/pepper.md",
+    "mentions": 15,
+    "aliases": [],
+    "groups": [],
+    "reviewed": false,
+    "attrs": {
+      "pet": 15
+    }
+  },
   "Ana": {
     "type": "person",
     "path": "people/ana.md",
@@ -105,17 +116,6 @@
     "reviewed": false,
     "attrs": {
       "mother": 4
-    }
-  },
-  "Pepper": {
-    "type": "person",
-    "path": "people/pepper.md",
-    "mentions": 15,
-    "aliases": [],
-    "groups": [],
-    "reviewed": false,
-    "attrs": {
-      "pet": 15
     }
   },
   "Priya": {

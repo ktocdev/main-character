@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Dev\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Jordan went to Dev's place after work on 9/16\",\"Dev is three days out from a gig and ran the setlist front to back, standing in the kitchen for the acoustics\",\"Jordan sat on the counter and listened to the whole setlist twice\",\"The transition Dev marked as worst on the 3rd is clean now and they played it without flinching\",\"Jordan said they'd be at the gig on the 19th and Dev said 'obviously'\",\"Dev held up one of Dad's tortoiseshell picks, said 'these are the real thing' and put it in their case\",\"Dev tried a pick on the low B string, said it makes the attack warmer, and used it for the rest of practice\"]},{\"name\":\"Mom\",\"relationship\":\"mother\",\"qualifier\":\"\",\"observations\":[\"Mom left Dad's old guitar picks, the heavy tortoiseshell set, which Jordan brought to Dev\"]},{\"name\":\"Dad\",\"relationship\":\"father\",\"qualifier\":\"\",\"observations\":[\"Dad's old heavy tortoiseshell guitar picks were given to Dev\",\"Jordan thought Dad would have liked Dev using his pick\"]},{\"name\":\"Mika\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Mika texted Jordan while on the train home with a listing for an open mic at the Fern on the 27th, with just a question mark\"]}],\"projects\":[{\"name\":\"Dev's band\",\"domain\":\"creative\",\"status\":\"active\",\"observations\":[\"Dev is rehearsing the setlist for a gig on the 19th\",\"Jordan plans to attend the gig on the 19th\"]},{\"name\":\"Open mic\",\"domain\":\"creative\",\"status\":\"active\",\"observations\":[\"Jordan signed up for the open mic at the Fern on September 27th, 8pm slot, before getting off the train\",\"Jordan caught the usual 'I'm not ready' voice this time and signed up anyway\"]}],\"places\":[{\"name\":\"Dev's place\",\"kind\":\"home\",\"observations\":[\"Jordan went there after work on 9/16 to hear Dev rehearse in the kitchen\"]},{\"name\":\"The Fern\",\"kind\":\"venue\",\"observations\":[\"Hosts an open mic on September 27th where Jordan signed up for the 8pm slot\"]},{\"name\":\"Northlight\",\"kind\":\"workplace\",\"observations\":[\"Jordan's inner voice once said they didn't have enough experience for Northlight, which wasn't true\"]}],\"things\":[],\"animals\":[{\"name\":\"Pepper\",\"relationship\":\"pet\",\"observations\":[\"Pepper met Jordan at the door when they got home, which she only does when hungry; Jordan chose to see it as moral support\"]}]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2718,
+    "output_tokens": 884,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

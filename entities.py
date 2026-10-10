@@ -144,8 +144,25 @@ EXTRACTION_SCHEMA = {
                 "additionalProperties": False,
             },
         },
+        "animals": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "relationship": {
+                        "type": "string",
+                        "description": "What animal and whose, e.g. pet cat, mom's dog, "
+                                       "neighbor's guinea pig",
+                    },
+                    "observations": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["name", "relationship", "observations"],
+                "additionalProperties": False,
+            },
+        },
     },
-    "required": ["people", "projects", "places", "things"],
+    "required": ["people", "projects", "places", "things", "animals"],
     "additionalProperties": False,
 }
 
@@ -154,7 +171,7 @@ You are building an entity graph from one person's journal. The journal \
 author is {author}. Below is one journal entry (originally a conversation \
 with an AI companion; only the author's side is included), written on {date}.
 
-Extract the PEOPLE, PROJECTS, PLACES, and THINGS that actually appear.
+Extract the PEOPLE, PROJECTS, PLACES, THINGS, and ANIMALS that actually appear.
 
 Rules:
 - Never include the author ({author}) themselves — first-person statements \
@@ -179,6 +196,10 @@ recurring events like a yearly festival (event); anything else is other. \
 Track a thing the author plays, watches, reads, listens to or attends, \
 even once. A one-off event is not a thing: seeing a band play belongs to \
 the entry, the band is the thing, and a specific venue is a place.
+- Animals are pets and other animals the author knows (their cat, a \
+friend's dog), never people. Use the animal's name when it has one, \
+otherwise whose it is ("Mom's dog"). Skip an animal that only passes by \
+("a dog barked").
 - Places must be specific, identifiable places that matter to the story \
 (a named venue, a particular person's home, a city) — not incidental \
 geography. Skip generic categories ("a restaurant", "a dive bar", "the \
@@ -192,6 +213,11 @@ gym") unless the author clearly treats it as one particular recurring place.
 KNOWN_BLOCK = """\
 - These people are already known from earlier entries — when a mention \
 matches one of them, use exactly this spelling: {names}.
+"""
+
+KNOWN_ANIMALS_BLOCK = """\
+- These animals are already known from earlier entries — when a mention \
+matches one of them, file it under animals with exactly this spelling: {names}.
 """
 
 # Only when the author has described a group ("people from the Groundwork job").
@@ -285,6 +311,14 @@ def known_people_hint() -> list[str]:
     return [n for _, n in people[:80]]
 
 
+def known_animals_hint() -> list[str]:
+    """Animal names from the current index, most mentioned first. Without
+    them, a pet the author writes about daily drifts back into people."""
+    animals = sorted(((i["mentions"], n) for n, i in load_index().items()
+                      if i["type"] == "animal"), reverse=True)
+    return [n for _, n in animals[:40]]
+
+
 def _with_context(label: str, info: dict) -> str:
     """'Dev (coworker; Coworkers)': a label with what tells the person apart,
     their two commonest relationships and their groups."""
@@ -320,11 +354,13 @@ def known_retired_hint() -> str:
 
 
 def extract_conversation(client, conv: dict, known_people: list[str] | None = None,
-                         variants: str = "", groups: str = "", retired: str = "") -> dict:
+                         variants: str = "", groups: str = "", retired: str = "",
+                         known_animals: list[str] | None = None) -> dict:
     """Extract entities from one conversation via the Claude API."""
     known_block = (
         KNOWN_BLOCK.format(names=", ".join(known_people)) if known_people else ""
-    ) + (GROUPS_BLOCK.format(groups=groups) if groups else "") \
+    ) + (KNOWN_ANIMALS_BLOCK.format(names=", ".join(known_animals)) if known_animals else "") \
+      + (GROUPS_BLOCK.format(groups=groups) if groups else "") \
       + (VARIANTS_BLOCK.format(variants=variants) if variants else "") \
       + (RETIRED_BLOCK.format(retired=retired) if retired else "")
     combined = {group: [] for group, _, _ in KIND_FIELDS}
@@ -362,6 +398,7 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
     if not quiet:
         print(f"  {len(conversations)} conversations to process")
     known = known_people_hint()
+    animals = known_animals_hint()
     variants = known_variants_hint()
     groups = known_groups_hint()
     retired = known_retired_hint()
@@ -379,7 +416,7 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
             try:
                 entities = extract_conversation(client, conv, known_people=known,
                                                 variants=variants, groups=groups,
-                                                retired=retired)
+                                                retired=retired, known_animals=animals)
             except Exception as e:
                 print(f"  {label} FAILED: {e}")
                 continue
@@ -2382,6 +2419,7 @@ def reextract(terms: list[str], progress=None) -> dict:
     client = get_client()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     known = known_people_hint()
+    animals = known_animals_hint()
     variants = known_variants_hint()
     groups = known_groups_hint()
     retired = known_retired_hint()
@@ -2394,7 +2432,7 @@ def reextract(terms: list[str], progress=None) -> dict:
         try:
             entities = extract_conversation(client, conv, known_people=known,
                                             variants=variants, groups=groups,
-                                            retired=retired)
+                                            retired=retired, known_animals=animals)
         except caps.CapExceeded:
             raise  # a spend cap stops the run; what's done is kept
         except Exception as e:

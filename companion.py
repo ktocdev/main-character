@@ -828,7 +828,7 @@ def resolve_entity(entity_index: dict, name: str) -> str | None:
 
 MANAGE_HELP = """\
   commands:
-    list [people|projects|places|things]   top entities by mentions
+    list [people|projects|places|things|animals]   top entities by mentions
     show <name>                     view an entity's doc
     merge <name> into <name>        combine duplicates (e.g. merge orbit-web into Orbit)
     delete <name>                   remove an entity entirely
