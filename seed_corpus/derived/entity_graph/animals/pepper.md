@@ -1,6 +1,6 @@
 ---
 name: Pepper
-type: person
+type: animal
 relationship: pet
 first_seen: 2026-07-30
 last_seen: 2026-09-14

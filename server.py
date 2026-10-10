@@ -581,7 +581,7 @@ CLOSE_STEPS = [
     ("chapter", "saving the chapter as a journal entry"),
     ("seed", "writing your life summary candidate"),
     ("categories", "tagging the entry"),
-    ("entities", "extracting people, places, projects and things"),
+    ("entities", "extracting people, places, projects, things and animals"),
     ("summaries", "refreshing weekly arcs and summaries"),
     ("dreams", "scanning for dreams"),
 ]
@@ -2113,6 +2113,33 @@ def retype_things(body: ThingsIn):
     return {"ok": True, "retyped": [n for n, _ in found]}
 
 
+@app.get("/api/entities/animals-review")
+def animals_review():
+    """People whose relationship labels say they're animals (local, free)."""
+    return {"animals": entities.animals_review(STATE["entity_index"])}
+
+
+@app.post("/api/entities/retype-animals")
+@_entity_write
+def retype_animals(body: NamesIn):
+    """The animals review: retype every accepted person to an animal. One
+    curation change, so one undo puts them all back."""
+    index = STATE["entity_index"]
+    found = [n for n in (companion.resolve_entity(index, name) for name in body.names)
+             if n and index[n]["type"] == "person" and not index[n].get("variant_of")]
+    if not found:
+        return JSONResponse({"error": "none of those are people"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    for name in found:
+        entities.retype_rule(curation, entities.index_key(index, name), "animal",
+                             entities.base_name(index, name))
+    entities.save_curation(curation)
+    _record_curation(f"{len(found)} retyped to animals", before)
+    _rebuild()
+    return {"ok": True, "retyped": found}
+
+
 @app.post("/api/entities/rename")
 @_entity_write
 def rename_entity(body: MergeIn):
@@ -2382,8 +2409,9 @@ def part_of(body: PartOfIn):
     name = companion.resolve_entity(index, body.name)
     if not name:
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
-    if index[name]["type"] == "person":
-        return JSONResponse({"error": "people aren't parts of anything; put them in a group"},
+    if index[name]["type"] in entities.NO_PARTS:
+        return JSONResponse({"error": f"{entities.GROUP_FOR_KIND[index[name]['type']]} aren't "
+                                      "parts of anything; put them in a group"},
                             status_code=400)
     key = entities.index_key(index, name)
     before = _snapshot()
@@ -2395,8 +2423,8 @@ def part_of(body: PartOfIn):
         if parent == name:
             return JSONResponse({"error": "can't be a part of itself"}, status_code=400)
         pkind, pbase = index[parent]["type"], entities.base_name(index, parent)
-        if pkind == "person":
-            return JSONResponse({"error": "a person can't have parts; use a group"}, status_code=400)
+        if pkind in entities.NO_PARTS:
+            return JSONResponse({"error": f"a {pkind} can't have parts; use a group"}, status_code=400)
         if entities.part_would_cycle(curation, key, pkind, pbase):
             return JSONResponse({"error": f"{parent} is already part of {name}"}, status_code=400)
         entities.make_part(curation, key, pkind, pbase)
@@ -2474,7 +2502,7 @@ def apply_parts_review(body: PartsReviewIn):
             done += 1
         elif src.action == "part":
             target = companion.resolve_entity(index, src.target)
-            if not target or index[target]["type"] == "person":
+            if not target or index[target]["type"] in entities.NO_PARTS:
                 continue
             entities.make_part(curation, key, index[target]["type"],
                                converted.get(target) or entities.base_name(index, target))

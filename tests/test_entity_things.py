@@ -39,8 +39,8 @@ def _project(name, obs):
     return {"name": name, "domain": "personal", "status": "active", "observations": [obs]}
 
 
-def test_four_kinds_share_one_table():
-    assert entities.KINDS == ("person", "project", "place", "thing")
+def test_the_kinds_share_one_table():
+    assert entities.KINDS == ("person", "project", "place", "thing", "animal")
     assert entities.GROUP_FOR_KIND["thing"] == "things"
     things = entities.EXTRACTION_SCHEMA["properties"]["things"]["items"]
     assert things["properties"]["category"]["enum"] == list(entities.THING_CATEGORIES)
@@ -78,7 +78,7 @@ def test_extract_conversation_collects_things(monkeypatch):
     out = entities.extract_conversation(SimpleNamespace(messages=Messages()),
                                         {"date": "2026-03-01", "title": "t", "text": "played"})
     assert out["things"][0]["name"] == "Cities Skylines"
-    assert set(out) == {"people", "projects", "places", "things"}
+    assert set(out) == {"people", "projects", "places", "things", "animals"}
 
 
 def test_retype_into_a_thing_takes_its_merged_aliases_along(tmp_path, monkeypatch):

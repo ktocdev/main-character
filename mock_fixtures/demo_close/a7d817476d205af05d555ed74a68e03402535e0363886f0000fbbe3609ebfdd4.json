@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Priya\",\"relationship\":\"manager\",\"qualifier\":\"\",\"observations\":[\"Will assign someone to take over the analytics dashboard after the 21st\",\"Jordan has a meeting with Priya in six days\"]},{\"name\":\"Dev\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Dev's session on the 3rd broke something open for Jordan and inspired the fix to the review screen\"]}],\"projects\":[{\"name\":\"Analytics dashboard\",\"domain\":\"work\",\"status\":\"active\",\"observations\":[\"Spent the afternoon writing documentation for it: screenshots and flow diagrams\",\"Documenting it so it survives Jordan's departure from Meridian\"]},{\"name\":\"Free-play review screen\",\"domain\":\"creative\",\"status\":\"active\",\"observations\":[\"Rebuilt it at Groundwork in two hours, throwing out more code than was written\",\"Replaced highlights with neutral marks; the review step now asks what each mark means\",\"Removed the 'your best moments' header and highlight reel framing\",\"Removed trophy-case assumptions from export naming, share text and the summary card\",\"Ran a test session, marked four spots, and the review asked about each one\"]}],\"places\":[{\"name\":\"Groundwork\",\"kind\":\"cafe\",\"observations\":[\"Jordan sat at a window table with a cortado and laptop\",\"Rebuilt the free-play review screen there\"]},{\"name\":\"Meridian\",\"kind\":\"workplace\",\"observations\":[\"Jordan is in their last good week there\",\"Company plans to replace the site the dashboard runs on\"]}],\"things\":[],\"animals\":[{\"name\":\"Pepper\",\"relationship\":\"pet (Jordan's)\",\"observations\":[\"Sat on the back of the couch watching the window like she was expecting someone\",\"Was watching the Tuesday bird\"]}]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2882,
+    "output_tokens": 578,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

@@ -15,6 +15,7 @@ const GROUPS = [
     {key: 'place', icon: 'location-1'},
     {key: 'project', icon: 'rocket', note: 'Something you’re building or launching.'},
     {key: 'thing', icon: 'bookmark-heart', note: 'Something you enjoy or follow. Any thing category without its own icon.'},
+    {key: 'animal', icon: 'cat', note: 'A pet, or someone else’s animal. Shares the pets category icon.'},
   ]],
   ['Categories', 'The ten built-in life categories (categories.py).', [
     {key: 'work', icon: 'work'},

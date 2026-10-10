@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, fmtDate } from './core.js';
 import { state } from './state.js';
-import { loadEntities, showEntity, mixupText, setName, variantsOf } from './entities.js';
+import { loadEntities, showEntity, mixupText, setName, variantsOf, NO_PARTS, HAS_RELATIONSHIP } from './entities.js';
 import { showTab } from './main.js';
 
 // ---- triage mode ----
@@ -179,7 +179,7 @@ async function renderTriage() {
       group = document.createElement('div');
       const d = document.createElement('div');
       d.className = 'eyebrow';
-      d.textContent = fmtDate(o.date) + (o.attr ? ` · ${info.type === 'person' ? 'as ' : ''}${o.attr}` : '');
+      d.textContent = fmtDate(o.date) + (o.attr ? ` · ${HAS_RELATIONSHIP.has(info.type) ? 'as ' : ''}${o.attr}` : '');
       group.appendChild(d);
       obsEl.appendChild(group);
     }
@@ -230,7 +230,7 @@ function triagePrompt(mode) {
   $('triage-input-row').hidden = false;
   $('triage-kind-row').hidden = true;
   // a merge of a non-person may really be a part: offered beside apply
-  $('triage-as-part').hidden = mode !== 'merge' || state.entities[queue[qpos]]?.type === 'person';
+  $('triage-as-part').hidden = mode !== 'merge' || NO_PARTS.has(state.entities[queue[qpos]]?.type);
   const inp = $('triage-input');
   inp.placeholder = TRIAGE_PLACEHOLDERS[mode];
   inp.value = mode === 'rename' ? (state.entities[queue[qpos]]?.base || queue[qpos]) : '';
@@ -422,7 +422,7 @@ async function triageKey(key) {
   }
   if (triageMode === 'kind') {
     if (key === 'Escape') { triageCancel(); return; }
-    const k = {1: 'person', 2: 'project', 3: 'place', 4: 'thing'}[key];
+    const k = {1: 'person', 2: 'project', 3: 'place', 4: 'thing', 5: 'animal'}[key];
     if (k === 'thing') askCategory();
     else if (k) retype(k);
     return;
@@ -469,7 +469,7 @@ async function triageKey(key) {
     case 'r': triagePrompt('rename'); break;
     case 'a': triagePrompt('alias'); break;
     case 'p':
-      if (state.entities[name]?.type === 'person') { toast('people aren\'t parts of anything; a group holds them.'); break; }
+      if (NO_PARTS.has(state.entities[name]?.type)) { toast(`${state.entities[name].type === 'person' ? 'people' : 'animals'} aren't parts of anything; a group holds them.`); break; }
       triagePrompt('part');
       break;
     case 't':

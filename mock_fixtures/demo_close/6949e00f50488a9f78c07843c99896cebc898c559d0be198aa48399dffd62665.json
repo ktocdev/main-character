@@ -1,0 +1,21 @@
+{
+  "key": "organic.scan",
+  "text": "{\"clusters\":[{\"index\":0,\"keep\":true,\"name\":\"Side Projects\",\"reason\":\"Jordan's personal creative work like Coda and the portfolio, often tackled at Groundwork, versus the office where work drains energy.\"},{\"index\":1,\"keep\":false,\"name\":\"Reorg\",\"reason\":\"A mix of teams and the restructuring itself that are really one workplace event rather than a browsable category of places or projects.\"},{\"index\":2,\"keep\":true,\"name\":\"Dashboard Work\",\"reason\":\"All three members are Jordan's iterations on the same internal dashboard and the design feedback it drew.\"},{\"index\":3,\"keep\":true,\"name\":\"Music & Dev\",\"reason\":\"Singing practice, open mics, and time with Dev and his band all revolve around Jordan's music and the people and venues around it.\"},{\"index\":4,\"keep\":true,\"name\":\"Job Search\",\"reason\":\"The Northlight application and interviews, plus the Meridian portfolio and documentation work, all feed Jordan's move to a new job.\"}]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2495,
+    "output_tokens": 337,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}
