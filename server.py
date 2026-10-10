@@ -589,17 +589,22 @@ _CLOSE = {"active": False, "running": None, "done": set(), "failed": set()}
 _CLOSE_LOCK = threading.Lock()
 
 
-def _close_reserve() -> bool:
+def _close_reserve() -> str:
     """Atomically claim the progress record for a new close, so a second
     close (a stray double-click, two tabs) can't start while a previous
     close's background pipeline is still writing into the same record --
     without this, the second close's reset would corrupt the first's
-    in-flight progress. Returns False if a close is already active."""
+    in-flight progress. A re-extract claims its own flag under the same
+    lock, so the two never overlap. Returns why it can't, or "" once
+    reserved."""
     with _CLOSE_LOCK:
         if _CLOSE["active"]:
-            return False
+            return ("the memory pipeline from a previous close is still "
+                    "running -- wait for it to finish before closing again.")
+        if _REEXTRACT["running"]:
+            return "a re-extract is running -- close the chapter when it's done."
         _CLOSE["active"] = True
-        return True
+        return ""
 
 
 def _close_begin():
@@ -952,11 +957,9 @@ def close_session(body: CloseIn, background_tasks: BackgroundTasks):
     Reserves the close-progress record before doing any work, so a second
     close (a stray double-click, two tabs) can't start while a previous
     close's background pipeline is still writing into the same record."""
-    if not _close_reserve():
-        return JSONResponse(
-            {"error": "the memory pipeline from a previous close is still "
-                      "running -- wait for it to finish before closing again."},
-            status_code=409)
+    busy = _close_reserve()
+    if busy:
+        return JSONResponse({"error": busy}, status_code=409)
     _close_begin()   # armed before the slow part, which is the first step
     try:
         with _close_step("chapter"):
@@ -3232,14 +3235,16 @@ def reextract(body: TermsIn, background_tasks: BackgroundTasks):
     terms = _clean_terms(body.terms)
     if not terms:
         return JSONResponse({"error": "type a word or name to look for"}, status_code=400)
-    if _CLOSE["active"]:
-        return JSONResponse({"error": "a chapter is closing; try again when it's done"},
-                            status_code=409)
     try:
         caps.check()
     except caps.CapExceeded as exc:
         return _refused(exc)
-    with _REEXTRACT_LOCK:
+    # the close's lock too: checked and claimed in one step, so a close
+    # can't start between them (it checks this flag under the same lock)
+    with _REEXTRACT_LOCK, _CLOSE_LOCK:
+        if _CLOSE["active"]:
+            return JSONResponse({"error": "a chapter is closing; try again when it's done"},
+                                status_code=409)
         if _REEXTRACT["running"]:
             return JSONResponse({"error": "a re-extract is already running"}, status_code=409)
         _REEXTRACT.update(running=True, done=0, total=0, current="", result=None, error="")

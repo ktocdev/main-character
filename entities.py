@@ -1547,6 +1547,8 @@ def first_observations() -> dict:
 
 def _mutate_raw(filename: str, group: str, ent_index: int, obs_index: int):
     """Load a raw file and validate indices; returns (path, data, entity)."""
+    if group not in GROUP_FOR_KIND.values():
+        raise ValueError(f"group must be one of {', '.join(GROUP_FOR_KIND.values())}")
     path = _raw_path(filename)
     data = json.loads(path.read_text(encoding="utf-8"))
     ents = data.get(group, [])

@@ -197,3 +197,23 @@ def test_a_reextract_that_breaks_still_indexes_what_it_wrote(monkeypatch):
     assert rebuilt == [1]
     assert server._REEXTRACT["error"] == "disk full" and not server._REEXTRACT["running"]
 
+
+
+def test_a_close_and_a_reextract_never_overlap(monkeypatch):
+    """Each checks the other's flag and claims its own under one lock, so
+    neither can start between the other's check and claim."""
+    import caps
+    import config
+    import server
+    from fastapi import BackgroundTasks
+    monkeypatch.setattr(config, "MOCK_MODE", False)
+    monkeypatch.setattr(caps, "check", lambda: None)
+    monkeypatch.setitem(server._CLOSE, "active", False)
+    monkeypatch.setitem(server._REEXTRACT, "running", True)
+    assert "re-extract" in server._close_reserve()
+    assert not server._CLOSE["active"]
+
+    server._REEXTRACT["running"] = False
+    assert server._close_reserve() == ""
+    refused = server.reextract(server.TermsIn(terms=["90 day"]), BackgroundTasks())
+    assert refused.status_code == 409 and not server._REEXTRACT["running"]
