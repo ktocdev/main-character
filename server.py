@@ -102,6 +102,24 @@ def _load_entity_index() -> dict:
     return index
 
 
+def _warm_search():
+    """Load the two embedders and both search indexes in the background, so
+    the first close or search after a start doesn't wait for them. After a
+    reboot, reading them off disk took most of a close's first eight
+    seconds. Only what is already on disk: a model not downloaded yet is
+    fetched by the first thing that needs it, never quietly at startup."""
+    import passages
+    try:
+        from chromadb.utils.embedding_functions.onnx_mini_lm_l6_v2 import ONNXMiniLM_L6_V2 as onnx
+        col = STATE["collection"]
+        if col.count() and (onnx.DOWNLOAD_PATH / onnx.EXTRACTED_FOLDER_NAME / "model.onnx").exists():
+            col.query(query_texts=["warm"], n_results=1)
+        if passages.model_cached():
+            passages.search("warm", 1, neighbors=0)
+    except Exception as exc:
+        print(f"  warming search failed, so the first search loads it: {exc}")
+
+
 @app.on_event("startup")
 def startup():
     # No key and not mock: boot anyway, with no client, so the onboarding
@@ -118,6 +136,9 @@ def startup():
     # A full recount, not the cached one: startup is when anything done
     # behind the running app's back (an import, a restore) gets picked up.
     entry_catalog.refresh(STATE["collection"])
+    # the running app only: tests start this app dozens of times
+    if __name__ == "__main__":
+        threading.Thread(target=_warm_search, daemon=True).start()
 
 
 class ChatIn(BaseModel):
