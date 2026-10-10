@@ -534,12 +534,31 @@ async function reextractPanel() {
   form.querySelector('button').onclick = find;
   input.onkeydown = e => { if (e.key === 'Enter') find(); };
   input.focus();
+  // a run started earlier (this panel closed, the page reloaded) is still
+  // going in the background: show it rather than offer a second one
+  try {
+    const s = await (await fetch('/api/entities/reextract/status')).json();
+    if (s.running && panel.isConnected) watchReextract(out);
+  } catch { }
 }
 async function watchReextract(out) {
   out.innerHTML = '';
   const line = panelSay(out, 'starting…');
+  let misses = 0;
   for (;;) {
-    const s = await (await fetch('/api/entities/reextract/status')).json();
+    let s;
+    try { s = await (await fetch('/api/entities/reextract/status')).json(); }
+    catch {
+      // a blip, or the server restarting: keep trying for about half a
+      // minute, then say so instead of freezing on the last count
+      if (++misses > 20) {
+        line.textContent = 'lost touch with the server. Open re-extract again to check on it.';
+        return;
+      }
+      await new Promise(r => setTimeout(r, 1500));
+      continue;
+    }
+    misses = 0;
     if (!s.running) {
       if (s.error) line.textContent = `stopped: ${s.error}`;
       else {

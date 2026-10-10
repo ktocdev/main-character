@@ -3151,14 +3151,19 @@ def _run_reextract(terms: list[str]):
         _REEXTRACT.update(done=i, total=total, current=f"{conv['date']} {conv['title']}")
     try:
         result = entities.reextract(terms, progress=progress)
-        _rebuild()
         _REEXTRACT.update(result=result, done=_REEXTRACT["total"], current="")
     except caps.CapExceeded as exc:
-        _rebuild()  # keep what was re-extracted before the cap
         _REEXTRACT.update(error=exc.detail, current="")
     except Exception as exc:
         _REEXTRACT.update(error=str(exc), current="")
     finally:
+        # however it stopped, the entries re-extracted so far are on disk:
+        # the index has to show them
+        try:
+            _rebuild()
+        except Exception as exc:
+            print(f"  re-extract: rebuild failed: {exc}")
+            _REEXTRACT["error"] = _REEXTRACT["error"] or f"re-extracted, but the rebuild failed: {exc}"
         _REEXTRACT["running"] = False
 
 
