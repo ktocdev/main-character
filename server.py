@@ -222,7 +222,7 @@ class KindIn(BaseModel):
 
 
 class ObservationIn(BaseModel):
-    action: str  # edit | delete | reassign
+    action: str  # edit | delete | reassign | relationship
     file: str
     group: str
     ent_index: int
@@ -2228,6 +2228,8 @@ def mutate_observation(body: ObservationIn):
             entities.edit_observation(body.file, body.group, body.ent_index, body.obs_index, body.text)
         elif body.action == "delete":
             entities.delete_observation(body.file, body.group, body.ent_index, body.obs_index)
+        elif body.action == "relationship":
+            entities.set_record_relationship(body.file, body.group, body.ent_index, body.obs_index, body.text)
         elif body.action == "reassign":
             entities.reassign_observation(
                 body.file, body.group, body.ent_index, body.obs_index,

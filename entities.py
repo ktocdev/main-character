@@ -1569,6 +1569,16 @@ def edit_observation(filename: str, group: str, ent_index: int, obs_index: int, 
     _save_raw(path, data)
 
 
+def set_record_relationship(filename: str, group: str, ent_index: int, obs_index: int, value: str):
+    """What one entry called a person or animal ("as pet"). The record's own
+    attribute, so the other entries under the same name keep theirs."""
+    if group not in ("people", "animals"):
+        raise ValueError("only people and animals have a relationship")
+    path, data, ent = _mutate_raw(filename, group, ent_index, obs_index)
+    ent["relationship"] = value.strip()
+    _save_raw(path, data)
+
+
 def delete_observation(filename: str, group: str, ent_index: int, obs_index: int):
     path, data, ent = _mutate_raw(filename, group, ent_index, obs_index)
     ent["observations"].pop(obs_index)
