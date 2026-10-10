@@ -996,6 +996,8 @@ export async function reloadEntity(name) {
 // that was open (merged, deleted, undone), said once on the list side.
 function showNone() {
   state.selected = null;
+  clearGroupSelection();
+  renderEntityList();
   showDetail('none');
   $('entities-pane').classList.remove('drilled');
 }
@@ -1089,6 +1091,13 @@ export function init() {
   };
   $('entity-edit-toggle').onclick = () => setEditOpen(!editOpen);
   $('entity-back').onclick = () => $('entities-pane').classList.remove('drilled');
+  $('entity-close').onclick = showNone;
+  // Esc closes the open entity or group, unless a field has focus
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || state.activeTab !== 'entities' || $('entity-detail-col').hidden) return;
+    if (e.target.closest('input, textarea, select, dialog')) return;
+    showNone();
+  });
   $('entity-to-triage').onclick = () => showTab('triage');
   $('suggest-back').onclick = () => $('entities-pane').classList.remove('drilled');
   $('batch-add').onclick = batchAdd;
@@ -1197,7 +1206,7 @@ export function init() {
     renderEntityList();
   });
 
-  // ---- merge suggestions (ask claude, by type) ----
+  // ---- merge suggestions (find duplicates via claude, by type) ----
   $('suggest-kind').onchange = e => {
     const kind = e.target.value;
     e.target.value = '';               // reset to the placeholder for next time

@@ -77,6 +77,9 @@
   /* ---- detail ---- */
   #entity-detail-col[hidden], #entity-none[hidden] { display: none; }
   #entity-edit-toggle { margin-left: auto; }
+  #entity-close { font-size: 1.1rem; line-height: 1; }
+  #entity-edit-toggle[hidden] + #entity-close { margin-left: auto; }   /* a group page has no edit */
+  @media (max-width: 719.98px) { #entity-close { display: none; } }   /* the back link does this on a phone */
   /* opened from triage with e: the way back, above the title on every width */
   #entity-to-triage { display: inline-flex; margin: 0 0 var(--space-4); padding-left: 0; font-size: var(--font-sm); min-height: 2.2rem; }
   #entity-chips { margin-top: .6rem; gap: .3rem; }
@@ -98,7 +101,7 @@
   .ent-actions .lbl { font: .85rem var(--font-ui); color: var(--text-muted); width: 4rem; }
   #merge-target { flex: 1 1 10rem; min-width: 0; }
   #alias-new, #group-add-input { width: 9rem; }
-  /* the suggestion panel (find duplicates / ask claude) above the name */
+  /* the suggestion panel (find duplicates, local or via claude) above the name */
   #suggest-wrap { padding-bottom: 0; }
   #suggest-wrap[hidden] { display: none; }
   #suggest-panel {

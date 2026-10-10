@@ -504,7 +504,7 @@
 
       <div class="help-step">
         <span class="step-n">2</span>
-        <div class="step-h"><h3>ask claude (optional)</h3><span class="where">entities → ask claude: people / projects / places / things / animals</span></div>
+        <div class="step-h"><h3>find duplicates with claude (optional)</h3><span class="where">entities → find duplicates (api call): people / projects / places / things / animals</span></div>
         <div class="step-body"><p>Catches conceptual duplicates the local scan can't, like long descriptive names that mean the
         same project. Costs one API call per kind. Worth one pass on projects
         especially. Apply or dismiss each group. Nothing merges without your click.</p></div>
@@ -679,8 +679,8 @@
             <button class="quiet sm" id="find-dups">find duplicates (free)</button>
             <button class="quiet sm" id="find-generic" title="names that are a category, not one particular place or project (local, free)">generic names</button>
             <button class="quiet sm" id="show-deleted" title="everything deleted, both kinds, to restore or let a name back in">deleted</button>
-            <select class="quiet-select sm" id="suggest-kind" title="ask claude to suggest merges for a type (uses the API)">
-              <option value="">ask claude…</option>
+            <select class="quiet-select sm" id="suggest-kind" title="claude looks for duplicates in one type, including names worded differently that mean the same thing (uses the API)">
+              <option value="">find duplicates (api call)…</option>
               <option value="person">people</option>
               <option value="project">projects</option>
               <option value="place">places</option>
@@ -716,6 +716,7 @@
           <div class="title-row">
             <h2 class="title" id="entity-name"></h2>
             <button class="quiet sm" id="entity-edit-toggle" aria-expanded="false" hidden>edit ▾</button>
+            <button class="quiet sm" id="entity-close" title="close (Esc)" aria-label="close">×</button>
           </div>
           <div class="title-meta" id="entity-meta"></div>
           <div id="entity-chips" class="chip-row"></div>
