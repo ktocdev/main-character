@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, esc } from './core.js';
 import { state, filters } from './state.js';
-import { loadEntities, renderEntityList, showEntity, reloadEntity, showGroupPane } from './entities.js';
+import { loadEntities, renderEntityList, showEntity, reloadEntity, showGroupPane, hideSuggest } from './entities.js';
 
 // ---- entity groups (viewing & associating; nestable via parent) ----
 let groupsData = [];
@@ -155,7 +155,9 @@ function renderGroupBrowser() {
     const edit = document.createElement('button');
     edit.className = 'grp-edit' + (expandedGroup === g.name ? ' on' : '');
     edit.textContent = '✎';
-    edit.title = 'edit this group';
+    edit.title = 'rename or delete this group';
+    edit.dataset.tipPlace = 'above-end';
+    edit.setAttribute('aria-label', `edit group ${g.name}`);
     edit.onclick = () => {
       expandedGroup = expandedGroup === g.name ? null : g.name;
       renderGroupBrowser();
@@ -182,7 +184,7 @@ export function showGroup(name) {
 
   // this pane is shared with the entity view; entities.js hides the
   // entity-only controls when it is told a group is showing
-  $('suggest-wrap').hidden = true;
+  hideSuggest();
   showGroupPane();
 
   const byName = (a, b) => a.toLowerCase().localeCompare(b.toLowerCase());

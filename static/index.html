@@ -495,7 +495,7 @@
 
       <div class="help-step">
         <span class="step-n">1</span>
-        <div class="step-h"><h3>find duplicates first</h3><span class="where">entities → find duplicates (free)</span></div>
+        <div class="step-h"><h3>find duplicates first</h3><span class="where">entities → clean up → free: find duplicates</span></div>
         <div class="step-body"><p>Runs locally in a few seconds, no API cost. Work through every pair, merging the real ones
         in whichever direction keeps the name you actually use, and hit <em>not duplicates</em> for the rest.
         Dismissals are permanent, so this list only ever shrinks. Doing merges first matters because
@@ -504,7 +504,7 @@
 
       <div class="help-step">
         <span class="step-n">2</span>
-        <div class="step-h"><h3>find duplicates with claude (optional)</h3><span class="where">entities → find duplicates (api call): people / projects / places / things / animals</span></div>
+        <div class="step-h"><h3>find duplicates with claude (optional)</h3><span class="where">entities → clean up → api call: find duplicates → people / projects / places / things / animals</span></div>
         <div class="step-body"><p>Catches conceptual duplicates the local scan can't, like long descriptive names that mean the
         same project. Costs one API call per kind. Worth one pass on projects
         especially. Apply or dismiss each group. Nothing merges without your click.</p></div>
@@ -584,7 +584,7 @@
         <div class="row"><span class="when">Right entity, wrong kind (person vs place)</span><span class="fix"><b>retype</b></span></div>
         <div class="row"><span class="when">A game, show or band filed as a project or place</span><span class="fix"><b>retype to thing</b> <span class="t">or the <em>things review</em> on the entities screen, for all of them at once</span></span></div>
         <div class="row"><span class="when">A pet filed as a person</span><span class="fix"><b>retype to animal</b> <span class="t">or the <em>animals review</em> on the entities screen, for all of them at once</span></span></div>
-        <div class="row"><span class="when">Entries from before a prompt change missed something</span><span class="fix"><b>re-extract</b> <span class="t">entities → re-extract: only the entries that mention it, with a cost estimate first</span></span></div>
+        <div class="row"><span class="when">Entries from before a prompt change missed something</span><span class="fix"><b>re-extract</b> <span class="t">entities → clean up → re-extract: only the entries that mention it, with a cost estimate first</span></span></div>
         <div class="row"><span class="when">One wrong memory inside a right entity</span><span class="fix"><b>observation edit / move / ×</b></span></div>
         <div class="row"><span class="when">Shouldn't exist at all</span><span class="fix"><b>delete</b></span></div>
       </div>
@@ -650,57 +650,76 @@
       <aside id="entity-list">
         <div class="side-tools">
           <div class="row" id="curation-tools">
-            <button class="quiet sm" id="undo-btn" title="undo last entity change">↺ undo</button>
-            <button class="quiet sm" id="redo-btn" title="redo">↻ redo</button>
+            <button class="quiet sm" id="undo-btn" data-tip-place="below" title="undo the last change">↺ undo</button>
+            <button class="quiet sm" id="redo-btn" data-tip-place="below" title="redo what you just undid">↻ redo</button>
+            <button class="quiet sm" id="cleanup-btn" aria-haspopup="true" aria-expanded="false" aria-controls="cleanup-menu" data-tip-place="below-end" title="duplicates, reviews and re-extract">clean up <span class="caret">▾</span></button>
+            <!-- every run-once tool, grouped by what it costs -->
+            <div class="popover" id="cleanup-menu" hidden>
+              <div class="menu-head">free</div>
+              <button class="menu-item" id="find-dups" data-tip-place="menu" title="Names that look alike: spelling, case, initials (local, free)">find duplicates</button>
+              <button class="menu-item" id="find-generic" data-tip-place="menu" title="Names that are a category, not one particular place or project (local, free)">suggest generic names</button>
+              <button class="menu-item" id="animals-review" data-tip-place="menu" title="People whose relationship says they're a pet or an animal, to move to animals at once (local, free)">animals review</button>
+              <div class="menu-head ruled">api call</div>
+              <button class="menu-item" id="suggest-toggle" aria-expanded="false" aria-controls="suggest-kinds" data-tip-place="menu" title="Claude looks for duplicates in one type, including names worded differently that mean the same thing (uses the API)">find duplicates <span class="caret">▸</span></button>
+              <div id="suggest-kinds" hidden>
+                <button class="menu-item sub" data-kind="person">people</button>
+                <button class="menu-item sub" data-kind="project">projects</button>
+                <button class="menu-item sub" data-kind="place">places</button>
+                <button class="menu-item sub" data-kind="thing">things</button>
+                <button class="menu-item sub" data-kind="animal">animals</button>
+              </div>
+              <button class="menu-item" id="things-review" data-tip-place="menu" title="Ask Claude which projects and places are really things (a game, a show, a band), then accept or skip each (uses the API)">things review</button>
+              <button class="menu-item" id="parts-review" data-tip-place="menu" title="One-time: which merged names are really parts of something (Tabs of a project, a beach in a town). Claude suggests, you choose (uses the API)">parts review</button>
+              <button class="menu-item" id="reextract-open" data-tip-place="menu" title="Re-run extraction for just the entries that mention a word or name (uses the API, estimate first)">re-extract…</button>
+            </div>
           </div>
           <input type="text" id="search" class="input-sm" placeholder="filter…" autocomplete="off">
-          <div id="type-chips" class="chip-row">
-            <button class="chip-toggle" data-type="person" aria-pressed="false" title="show only people">people</button>
-            <button class="chip-toggle" data-type="project" aria-pressed="false" title="show only projects">projects</button>
-            <button class="chip-toggle" data-type="place" aria-pressed="false" title="show only places">places</button>
-            <button class="chip-toggle" data-type="thing" aria-pressed="false" title="show only things: bands, games, shows, books, events">things</button>
-            <button class="chip-toggle" data-type="animal" aria-pressed="false" title="show only animals: pets, and other people's">animals</button>
+          <div id="type-chips" class="side-row">
+            <span class="side-lbl">show</span>
+            <button class="chip-toggle" data-type="person" aria-pressed="false" title="show only people; pick several to combine">people</button>
+            <button class="chip-toggle" data-type="project" aria-pressed="false" title="show only projects; pick several to combine">projects</button>
+            <button class="chip-toggle" data-type="place" aria-pressed="false" title="show only places; pick several to combine">places</button>
+            <button class="chip-toggle" data-type="thing" aria-pressed="false" title="show only things: bands, games, shows, books, events; pick several to combine">things</button>
+            <button class="chip-toggle" data-type="animal" aria-pressed="false" title="show only animals: pets, and other people's; pick several to combine">animals</button>
           </div>
-          <div id="filter-chips" class="chip-row">
-            <button class="chip-toggle" id="flt-unreviewed" aria-pressed="false" title="only entities you haven't confirmed yet">unreviewed</button>
-            <button class="chip-toggle" id="flt-single" aria-pressed="false" title="entities that appear in only one entry, which is usually noise">1 mention</button>
-            <button class="chip-toggle" id="flt-mixup" aria-pressed="false" hidden title="people whose entries disagree about who they are, so the name may cover two">maybe two</button>
-            <button class="chip-toggle" id="flt-retired" aria-pressed="false" hidden title="people and groups from a past chapter, kept out of everyday view">retired</button>
+          <div class="side-row">
+            <span class="side-lbl">sort</span>
             <button class="chip-toggle" id="sort-az" aria-pressed="false" title="sort each group A–Z instead of by most mentions">A–Z</button>
-            <button class="chip-toggle" id="flt-select" aria-pressed="false" title="check entities to add several to a group at once">select</button>
-          </div>
-          <div id="batch-bar" hidden>
-            <span id="batch-count">0 selected</span>
-            <input type="text" id="batch-group" class="input-2xs" list="group-names" placeholder="group name…">
-            <button class="quiet sm" id="batch-add" title="add all checked entities to this group (new group if the name doesn't exist)">add to group</button>
-            <button class="quiet sm" id="batch-clear" title="uncheck everything">clear</button>
-          </div>
-          <div id="suggest-btns">
-            <button class="quiet sm" id="find-dups">find duplicates (free)</button>
-            <button class="quiet sm" id="find-generic" title="names that are a category, not one particular place or project (local, free)">generic names</button>
-            <button class="quiet sm" id="show-deleted" title="everything deleted, both kinds, to restore or let a name back in">deleted</button>
-            <select class="quiet-select sm" id="suggest-kind" title="claude looks for duplicates in one type, including names worded differently that mean the same thing (uses the API)">
-              <option value="">find duplicates (api call)…</option>
-              <option value="person">people</option>
-              <option value="project">projects</option>
-              <option value="place">places</option>
-              <option value="thing">things</option>
-              <option value="animal">animals</option>
-            </select>
-            <button class="quiet sm" id="things-review" title="ask claude which projects and places are really things (a game, a show, a band), then accept or skip each (uses the API)">things review</button>
-            <button class="quiet sm" id="animals-review" title="people whose relationship says they're a pet or an animal, to move to animals at once (local, free)">animals review</button>
-            <button class="quiet sm" id="parts-review"title="one-time: which merged names are really parts of something (Tabs of a project, a beach in a town). Claude suggests, you choose (uses the API)">parts review</button>
-            <button class="quiet sm" id="reextract-open" title="re-run extraction for just the entries that mention a word or name (uses the API, estimate first)">re-extract…</button>
           </div>
           <div id="group-browser">
-            <div id="group-header"><span class="eyebrow">groups</span>
-              <button class="quiet xs" id="group-new-btn" title="create a group">+ new</button>
+            <div id="group-header"><span class="side-lbl">groups</span>
+              <button class="chip-toggle" id="group-new-btn" title="make a new group">+ new</button>
+              <button class="chip-toggle" id="flt-select" aria-pressed="false" title="check entities to add several to a group at once">select</button>
+            </div>
+            <div id="batch-bar" hidden>
+              <span id="batch-count">0 selected</span>
+              <input type="text" id="batch-group" class="input-2xs" list="group-names" placeholder="group name…">
+              <button class="quiet sm" id="batch-add" title="add all checked entities to this group (new group if the name doesn't exist)">add to group</button>
+              <button class="quiet sm" id="batch-clear" title="uncheck everything">clear</button>
             </div>
             <div id="group-newform">
               <input type="text" id="group-new-name" class="input-2xs" placeholder="group name…">
               <button class="quiet sm" id="group-new-save">create</button>
             </div>
             <div id="group-list"></div>
+          </div>
+          <!-- the filters you reach for now and then, folded away; a count
+               on the trigger says when any of them is on -->
+          <div class="side-rule">
+            <button class="text" id="extra-toggle" aria-expanded="false" aria-controls="extra-panel"><span class="caret">▸</span><span>triage &amp; recycling bin</span><span class="count" id="extra-count" hidden></span></button>
+          </div>
+          <div id="extra-panel" hidden>
+            <div class="side-row">
+              <span class="side-lbl">triage</span>
+              <button class="chip-toggle" id="flt-unreviewed" aria-pressed="false" title="only entities you haven't confirmed yet">unreviewed</button>
+              <button class="chip-toggle" id="flt-single" aria-pressed="false" title="entities that appear in only one entry, usually noise">1 mention</button>
+              <button class="chip-toggle" id="flt-mixup" aria-pressed="false" hidden title="people whose entries disagree about who they are, so the name may cover two">maybe two</button>
+            </div>
+            <div class="side-row ruled">
+              <span class="side-lbl">recycling bin</span>
+              <button class="chip-toggle" id="flt-retired" aria-pressed="false" hidden title="people and groups from a past chapter, kept out of everyday view">retired</button>
+              <button class="chip-toggle" id="show-deleted" aria-pressed="false" title="entities you deleted, to restore or never track">deleted</button>
+            </div>
           </div>
         </div>
         <div id="entity-groups" class="side-list"></div>

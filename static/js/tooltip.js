@@ -38,22 +38,38 @@ function textFor(el) {
   return el.dataset.tip || '';
 }
 
+// A control can ask for a side with data-tip-place: "below" (undo, redo),
+// "below-end" / "above-end" (right-aligned with the control: a menu trigger
+// at a row's end, a row's hover button), or "menu" (beside the menu the
+// item sits in, over the content pane, centred on the item). The room rule
+// still wins when the asked-for side has none.
 function place(el) {
   const t = ensure();
   const r = el.getBoundingClientRect();
   const w = t.offsetWidth, h = t.offsetHeight;
   const vw = window.innerWidth, vh = window.innerHeight;
+  const want = el.dataset.tipPlace || '';
+  if (want === 'menu') {
+    const m = (el.closest('.popover') || el).getBoundingClientRect();
+    const left = m.right + 12;
+    if (left + w <= vw - EDGE) {
+      t.style.left = left + 'px';
+      t.style.top = Math.max(EDGE, Math.min((r.top + r.bottom) / 2 - h / 2, vh - h - EDGE)) + 'px';
+      return;
+    }
+    // no room beside it (a phone): below the item like any other
+  }
   // above unless it would run into the header (or off the top)
   const header = document.querySelector('header');
   const top0 = header ? header.getBoundingClientRect().bottom : 0;
   const inHeader = header && header.contains(el);
   let top = r.top - GAP - h;
-  const wantBelow = el.dataset.tipPlace === 'below';
+  const wantBelow = want.startsWith('below') || want === 'menu';
   if (wantBelow || (!inHeader && top < top0 + 4) || top < EDGE) top = r.bottom + GAP;
   if (top + h > vh - EDGE) top = Math.max(EDGE, r.top - GAP - h);
   // left-aligned with the control, kept inside the viewport; right-aligned
   // when the control hugs the right edge (the cost meter)
-  let left = r.left;
+  let left = want.endsWith('-end') ? r.right - w : r.left;
   if (left + w > vw - EDGE) left = r.right - w;
   left = Math.max(EDGE, Math.min(left, vw - w - EDGE));
   t.style.left = left + 'px';
@@ -63,6 +79,8 @@ function place(el) {
 export function show(el) {
   const text = textFor(el);
   if (!text) return;
+  // a menu trigger says nothing while its menu is open
+  if (el.getAttribute('aria-haspopup') && el.getAttribute('aria-expanded') === 'true') return;
   const t = ensure();
   anchor = el;
   t.textContent = text;
