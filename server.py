@@ -2113,6 +2113,33 @@ def retype_things(body: ThingsIn):
     return {"ok": True, "retyped": [n for n, _ in found]}
 
 
+@app.get("/api/entities/animals-review")
+def animals_review():
+    """People whose relationship labels say they're animals (local, free)."""
+    return {"animals": entities.animals_review(STATE["entity_index"])}
+
+
+@app.post("/api/entities/retype-animals")
+@_entity_write
+def retype_animals(body: NamesIn):
+    """The animals review: retype every accepted person to an animal. One
+    curation change, so one undo puts them all back."""
+    index = STATE["entity_index"]
+    found = [n for n in (companion.resolve_entity(index, name) for name in body.names)
+             if n and index[n]["type"] == "person" and not index[n].get("variant_of")]
+    if not found:
+        return JSONResponse({"error": "none of those are people"}, status_code=404)
+    before = _snapshot()
+    curation = entities.load_curation()
+    for name in found:
+        entities.retype_rule(curation, entities.index_key(index, name), "animal",
+                             entities.base_name(index, name))
+    entities.save_curation(curation)
+    _record_curation(f"{len(found)} retyped to animals", before)
+    _rebuild()
+    return {"ok": True, "retyped": found}
+
+
 @app.post("/api/entities/rename")
 @_entity_write
 def rename_entity(body: MergeIn):

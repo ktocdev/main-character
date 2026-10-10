@@ -2101,6 +2101,48 @@ def retype_rule(curation: dict, key: str, new_kind: str, new_name: str, category
 
 
 # ---------------------------------------------------------------------------
+# ANIMALS REVIEW (one-time: pets that were filed as people)
+# ---------------------------------------------------------------------------
+# Before the animal kind, a pet was a person with relationship "pet" or
+# "pet cat". Local and free: the labels say which people are animals. One
+# whose labels are mostly animal words is suggested; one with a stray label
+# (a coworker who was once "dog", for their dog) is listed unsuggested, so
+# its odd observation can be found and moved instead.
+
+ANIMAL_WORDS = {
+    "pet", "pets", "animal", "cat", "kitten", "kitty", "dog", "puppy", "pup",
+    "pig", "rabbit", "bunny", "hamster", "gerbil", "ferret", "rat", "mouse",
+    "bird", "parrot", "budgie", "cockatiel", "chicken", "fish", "horse", "pony",
+    "lizard", "gecko", "snake", "tortoise",
+}
+
+
+def is_animal_label(label: str) -> bool:
+    """"pet", "pet cat", "mom's dog", "guinea pig" -- not "dog walker"."""
+    words = re.sub(r"[^\w\s]", " ", label.lower()).split()
+    return bool(words) and (words[-1] in ANIMAL_WORDS or words[0] == "pet")
+
+
+def animals_review(index: dict) -> list[dict]:
+    """People with any animal label, suggested first, then by mentions."""
+    firsts = first_observations()
+    out = []
+    for name, info in index.items():
+        if info["type"] != "person" or info.get("variant_of"):
+            continue
+        attrs = info.get("attrs") or {}
+        animal = sum(n for label, n in attrs.items() if is_animal_label(label))
+        if not animal:
+            continue
+        base = base_name(index, name)
+        out.append({"name": name, "mentions": info["mentions"], "labels": attrs,
+                    "suggest": animal * 2 >= sum(attrs.values()),
+                    "first": firsts.get(("person", base.lower()), "")})
+    out.sort(key=lambda a: (not a["suggest"], -a["mentions"], a["name"].lower()))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # PARTS REVIEW (one-time: which merges were really parts)
 # ---------------------------------------------------------------------------
 # Before part-of links, a piece of something was merged into it ("tabs" ->

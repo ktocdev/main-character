@@ -21,7 +21,7 @@ The companion never reads the whole journal. It reads what the search picked, pl
 | `journal_entries/` | Every entry as markdown | Through the passage index |
 | `chroma_data/` | Local vector indexes: the journal (each entry stored in chunks of up to ~6,000 characters), the passage index (the same entries in short, overlapping passages, used only for search), the summaries, and dreams | Yes |
 | `summaries/` | Entry summaries, weekly arcs, domain docs, the life summary (`seed_summary.md`) | Through the summary index |
-| `entity_graph/` | People, projects, places and things (bands, games, shows, books, recurring events), with a profile doc each | Through the summary index, and by name |
+| `entity_graph/` | People, projects, places, things (bands, games, shows, books, recurring events) and animals (pets, and other people's), with a profile doc each | Through the summary index, and by name |
 | `patterns/`, `categories/`, `dreams/` | Pattern library, tags, dream realm | Dreams have their own index |
 
 Embeddings are computed locally, so building and searching the indexes never calls an API. Two small models do it:
@@ -69,7 +69,7 @@ The call has three parts.
 | Recent entries | Always, the newest entries by date, each up to 2,000 characters | 3 |
 | Related history | Search by meaning and by keyword over the passage index, the two lists merged. Keyword search (BM25, `keywords.py`) finds names and rare words that search by meaning misses; it matches a word's other forms ("Robin's", "lanterns") and, for a longer word the journal never uses, near spellings of it. A question that names a time ("in March", "around Christmas", "last summer", a date) is also searched within that time's entries (`timeframe.py`), so those rank higher, while entries from other times can still be found. A long query, such as a whole new entry, is searched piece by piece, and each piece gets its turn at the results, so the ending of an entry counts as much as its opening. Each passage is shown whole, with the passage on either side of it, and one already shown under recent entries is skipped | 12 passages |
 | Related summaries | Search by meaning over the summary index: entry summaries, weekly arcs, domain docs, entity profiles. A long query is searched piece by piece here too. An entry summary brings that entry's best-matching passage (with its neighbours) under it, marked as your words, unless that part is already shown above | 3, plus one passage per entry summary |
-| People, places, projects and things | Anything the entry names, matched by name or alias | Up to 3 profiles |
+| People, places, projects, things and animals | Anything the entry names, matched by name or alias | Up to 3 profiles |
 | Dreams | Only when the entry is a dream or mentions dreaming | 4 |
 | Patterns | Always, the whole pattern library up to a size budget | One line per pattern |
 
@@ -100,7 +100,7 @@ The passage index is what narrows this gap. Before it, search by meaning read on
 |---|---|---|
 | Life summary | Draft an updated life summary from the closed chapter. It is saved as a candidate for you to review, and never replaces yours on its own | `seed.generate_candidate` |
 | Categories | Tag the new entry | `categories.build` |
-| Entities | Extract people, projects, places and things from the new entry. A project is something you make or work on; a thing is something you enjoy or follow. Entries already processed are cached and skipped | `entities.build` |
+| Entities | Extract people, projects, places, things and animals from the new entry. A project is something you make or work on; a thing is something you enjoy or follow; a pet is an animal, never a person. Entries already processed are cached and skipped | `entities.build` |
 | Summaries | Write the new entry's summary, and regenerate weekly arcs and domain docs whose entries changed. Then embed the new and changed summaries and entity profiles into the summary index, locally | `summarizer.build` |
 | Dreams | Scan the new entry for dreams. Then embed new and changed dreams into the dream index, locally | `dreams.extract` |
 

@@ -95,3 +95,44 @@ def test_animals_are_never_parts_or_parents(tmp_path, monkeypatch):
     index = _build(tmp_path, curation)
     assert "Pip" in index and "part_of" not in index["Pip"]
     assert "Pip's bed" in index and "part_of" not in index["Pip's bed"]
+
+
+def test_the_review_suggests_people_whose_labels_are_mostly_animal():
+    for label in ("pet", "pet cat", "mom's dog", "guinea pig", "Pet Guinea Pig", "cat"):
+        assert entities.is_animal_label(label), label
+    for label in ("dog walker", "friend", "catering manager", "petite friend"):
+        assert not entities.is_animal_label(label), label
+
+
+def test_animals_review_lists_strays_unsuggested(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch, {
+        "2026-03-01_a": {"people": [_person("Pip", "pet", "asleep on the pillow"),
+                                    _person("Dev", "coworker", "standup ran long"),
+                                    _person("Mika", "friend", "brunch")]},
+        "2026-03-02_b": {"people": [_person("Pip", "pet cat", "brought in a mouse"),
+                                    _person("Dev", "dog", "his dog chewed a shoe"),
+                                    _person("Dev", "coworker", "code review")]},
+    })
+    index = _build(tmp_path)
+    review = entities.animals_review(index)
+    assert [(a["name"], a["suggest"]) for a in review] == [("Pip", True), ("Dev", False)]
+    assert review[0]["first"] == "asleep on the pillow"
+    assert review[1]["labels"] == {"coworker": 2, "dog": 1}
+
+
+def test_applying_the_review_is_one_undo(tmp_path, monkeypatch):
+    import server
+    _setup(tmp_path, monkeypatch, {
+        "2026-03-01_a": {"people": [_person("Pip", "pet", "asleep on the pillow"),
+                                    _person("Biscuit", "pet dog", "fetch")]},
+    })
+    index = _build(tmp_path)
+    monkeypatch.setitem(server.STATE, "entity_index", index)
+    monkeypatch.setattr(server, "_rebuild",
+                        lambda: server.STATE.__setitem__("entity_index", _build(tmp_path)))
+    out = server.retype_animals(server.NamesIn(names=["Pip", "Biscuit", "nobody"]))
+    assert sorted(out["retyped"]) == ["Biscuit", "Pip"]
+    assert {server.STATE["entity_index"][n]["type"] for n in ("Pip", "Biscuit")} == {"animal"}
+    assert entities.history_peek()["undo"].endswith("2 retyped to animals")
+    entities.undo()
+    assert entities.load_curation()["retype"] == {}

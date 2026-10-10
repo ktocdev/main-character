@@ -9,7 +9,7 @@
 const LABELS = {
   summary: 'summary', category: 'category', dream: 'dream category',
   favorite: 'favorite', person: 'person', place: 'place', project: 'project',
-  thing: 'thing',
+  thing: 'thing', animal: 'animal',
 };
 // ---- icons (static/icons/, chosen on static/design/icons.html) ----
 // One per type, and one per subtype where it has its own: a built-in
@@ -18,7 +18,7 @@ const LABELS = {
 // icon: they show their initials.
 const TYPE_ICONS = {
   summary: 'root-list', category: 'category', dream: 'moon', favorite: 'star',
-  place: 'location-1', project: 'rocket', thing: 'bookmark-heart',
+  place: 'location-1', project: 'rocket', thing: 'bookmark-heart', animal: 'cat',
 };
 const SUBTYPE_ICONS = {
   category: {

@@ -19,8 +19,12 @@ export async function loadEntities() {
   refreshStatus();
 }
 
-const KINDS = ['person', 'project', 'place', 'thing'];
-const PLURAL = {person: 'people', project: 'projects', place: 'places', thing: 'things'};
+const KINDS = ['person', 'project', 'place', 'thing', 'animal'];
+const PLURAL = {person: 'people', project: 'projects', place: 'places', thing: 'things', animal: 'animals'};
+// never a part or a parent (entities.NO_PARTS); a group holds them instead
+export const NO_PARTS = new Set(['person', 'animal']);
+// kinds whose attribute is a relationship, shown as "as pet cat"
+export const HAS_RELATIONSHIP = new Set(['person', 'animal']);
 const CATEGORIES = ['music', 'game', 'show', 'book', 'event', 'other'];
 
 // "Dev · work": the name reads first, the qualifier muted. Plain names
@@ -324,8 +328,8 @@ async function genericCleanup() {
 // ---- deleted, both kinds ----
 // Never-tracked names (rules that block every future mention too) and
 // mentions deleted entry by entry. A blocked name can be let back in: what
-// it hid stays hidden, but new entries start it fresh. People are
-// pre-checked for that -- a deleted Allen shouldn't block every Allen.
+// it hid stays hidden, but new entries start it fresh. People and animals
+// are pre-checked for that -- a deleted Allen shouldn't block every Allen.
 async function showDeleted() {
   const panel = suggestPanel('deleted');
   const r = await (await fetch('/api/entities/deleted')).json();
@@ -346,7 +350,7 @@ async function showDeleted() {
     panelSay(panel, 'Checked names are let back in: their old mentions stay deleted, and a new entry that mentions one starts it fresh.');
     const rows = r.names.map(n => {
       const row = checkRow(panel, {
-        checked: n.kind === 'person' && !n.generic, label: n.name,
+        checked: HAS_RELATIONSHIP.has(n.kind) && !n.generic, label: n.name,
         note: `${n.kind} · ${n.mentions} mention${n.mentions === 1 ? '' : 's'}${n.generic ? ' · looks generic' : ''}`,
       });
       restoreBtn(row, n.key, 'name');
@@ -403,6 +407,31 @@ async function thingsReview() {
   panelApply(panel, rows, n => `make ${n} thing${n === 1 ? '' : 's'}`, async picked => {
     const res = await api('/api/entities/retype-things', {items: picked.map(p => ({name: p.name, category: p.sel.value}))});
     if (res) { closeSuggest(); clearDetail(`${res.retyped.length} now things. Undo puts them back.`); }
+  });
+}
+
+// ---- animals review ----
+// Before the animal kind, a pet was a person with relationship "pet".
+// The labels say which (local, free): mostly animal labels is pre-checked;
+// a stray one (a coworker once called "dog") is listed unchecked, since
+// it's an observation to move, not a person to retype.
+async function animalsReview() {
+  const panel = suggestPanel('animals review');
+  const r = await (await fetch('/api/entities/animals-review')).json();
+  if (!panel.isConnected) return;  // another review opened meanwhile
+  if (!r.animals?.length) { panelSay(panel, 'no people with an animal label. Looks clean.'); return; }
+  panelSay(panel, 'Checked people become animals; observations, aliases and groups come along. An unchecked one has a stray animal label: open it and move that observation instead.');
+  const rows = r.animals.map(a => {
+    const labels = Object.entries(a.labels).map(([l, n]) => n > 1 ? `${l} ×${n}` : l).join(', ');
+    const row = checkRow(panel, {
+      checked: a.suggest, label: a.name, line: a.first,
+      note: `${a.mentions} mention${a.mentions === 1 ? '' : 's'} · ${labels}`,
+    });
+    return [a.name, row];
+  });
+  panelApply(panel, rows, n => `make ${n} animal${n === 1 ? '' : 's'}`, async picked => {
+    const res = await api('/api/entities/retype-animals', {names: picked});
+    if (res) { closeSuggest(); clearDetail(`${res.retyped.length} now animals. Undo puts them back.`); }
   });
 }
 
@@ -704,7 +733,7 @@ export async function showEntity(name) {
     c.onclick = () => showEntity(p);
     chips.appendChild(c);
   }
-  $('part-btn').hidden = r.type === 'person';
+  $('part-btn').hidden = NO_PARTS.has(r.type);
   $('split-btn').hidden = r.type !== 'person';
   $('split-btn').textContent = info.unsorted ? 'sort…' : 'split…';
   $('part-row').hidden = !info.part_of;
@@ -755,7 +784,7 @@ export async function showEntity(name) {
       const d = document.createElement('div');
       d.className = 'obs-date eyebrow';
       d.textContent = fmtDate(o.date) + (o.extracted_name !== (info.base || info.variant_of || r.name) ? ` · as "${o.extracted_name}"` : '')
-        + (r.type === 'person' && o.attr ? ` · as ${o.attr}` : '');
+        + (HAS_RELATIONSHIP.has(r.type) && o.attr ? ` · as ${o.attr}` : '');
       if (splitting) {
         const all = document.createElement('button');
         all.className = 'link pick-all';
@@ -798,10 +827,10 @@ export async function showEntity(name) {
       if (await api('/api/observation', {...o, action: 'edit', text: text.trim()})) await reloadEntity(r.name);
     });
     mk('move', 'move this observation to another entity', async () => {
-      const target = prompt('Move this observation to which entity?\n(prefix with person:/project:/place:/thing: if it\'s new)', '');
+      const target = prompt('Move this observation to which entity?\n(prefix with person:/project:/place:/thing:/animal: if it\'s new)', '');
       if (!target) return;
       let kind = r.type, tname = target.trim();
-      const m = tname.match(/^(person|project|place|thing):(.+)$/);
+      const m = tname.match(/^(person|project|place|thing|animal):(.+)$/);
       if (m) { kind = m[1]; tname = m[2].trim(); }
       else if (state.entities[tname]) kind = state.entities[tname].type;
       if (await api('/api/observation', {...o, action: 'reassign', target_kind: kind, target_name: tname})) await reloadEntity(r.name);
@@ -1058,6 +1087,7 @@ export function init() {
   $('find-generic').onclick = genericCleanup;
   $('show-deleted').onclick = showDeleted;
   $('things-review').onclick = thingsReview;
+  $('animals-review').onclick = animalsReview;
   $('parts-review').onclick = partsReview;
   $('split-btn').onclick = () => {
     splitFor = splitFor === state.selected ? null : state.selected;
