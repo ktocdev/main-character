@@ -3068,13 +3068,12 @@ def delete_names(body: NamesIn):
 def generic_candidates():
     """Entities the local detector calls generic, with what they say, for
     the cleanup checklist."""
-    out = []
-    for name, info in STATE["entity_index"].items():
-        if not info.get("generic"):
-            continue
-        obs = entities.list_observations(info["type"], entities.base_name(STATE["entity_index"], name))
-        out.append({"name": name, "kind": info["type"], "mentions": info["mentions"],
-                    "first": obs[0]["text"] if obs else ""})
+    index = STATE["entity_index"]
+    generic = [(n, i) for n, i in index.items() if i.get("generic")]
+    firsts = entities.first_observations() if generic else {}
+    out = [{"name": name, "kind": info["type"], "mentions": info["mentions"],
+            "first": firsts.get((info["type"], entities.base_name(index, name).lower()), "")}
+           for name, info in generic]
     out.sort(key=lambda c: (c["kind"], -c["mentions"], c["name"].lower()))
     return {"candidates": out}
 

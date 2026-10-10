@@ -38,6 +38,41 @@ def test_each_observation_carries_its_own_records_attribute(tmp_path, monkeypatc
     assert entities.list_observations("project", "Tabs")[0]["attr"] == ""
 
 
+def test_first_observations_matches_list_observations_in_one_pass(tmp_path, monkeypatch):
+    # the generic-names list and the things review show one line per
+    # entity; one pass gives each the line list_observations would lead with
+    monkeypatch.setattr(entities, "RAW_DIR", tmp_path)
+    monkeypatch.setattr(entities, "CURATION_FILE", tmp_path / "curation.json")
+    monkeypatch.setattr(entities, "_conversation_lookup", lambda: {})
+    _raw(tmp_path, "2026-06-10_dinner", {"people": [
+        {"name": "tobias", "observations": ["cooked pasta"]}],
+        "places": [{"name": "dive bar", "observations": ["after dinner"]}]})
+    _raw(tmp_path, "2026-03-04_standup", {"people": [
+        {"name": "Tobias", "observations": []},
+        {"name": "Tobias", "observations": ["ran the standup"]}],
+        "projects": [{"name": "Tabs", "observations": ["shipped"]}]})
+    (tmp_path / "curation.json").write_text(json.dumps({
+        "rename": {"person:tobias": "Tobias"}, "merge": {"project:tabs": "Coda"}}), encoding="utf-8")
+
+    firsts = entities.first_observations()
+    for kind, name in (("person", "Tobias"), ("place", "dive bar"), ("project", "Coda")):
+        assert firsts[(kind, name.lower())] == entities.list_observations(kind, name)[0]["text"]
+    assert firsts[("person", "tobias")] == "ran the standup"
+
+
+def test_load_curation_never_hands_out_its_defaults(tmp_path, monkeypatch):
+    # an older curation.json without a list field used to get the module's
+    # own default list, so an append leaked into every later load
+    monkeypatch.setattr(entities, "CURATION_FILE", tmp_path / "curation.json")
+    (tmp_path / "curation.json").write_text(json.dumps({"delete": ["Place:Dive Bar"]}), encoding="utf-8")
+    entities.load_curation()["not_mixed"].append("person:dev")
+    assert entities.load_curation()["not_mixed"] == []
+    assert entities._CURATION_DEFAULTS["not_mixed"] == []
+    # stored keys are lowercase; an old hand-edited one still resolves
+    assert entities.load_curation()["delete"] == ["place:dive bar"]
+    assert entities.apply_curation(entities.load_curation(), "place", "dive bar") is None
+
+
 def _build(tmp_path, monkeypatch, records, curation=None):
     monkeypatch.setattr(entities, "ENTITY_DIR", tmp_path)
     monkeypatch.setattr(entities, "CURATION_FILE", tmp_path / "curation.json")

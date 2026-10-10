@@ -437,13 +437,14 @@ _CURATION_DEFAULTS = {
 
 
 def load_curation() -> dict:
-    curation = dict(_CURATION_DEFAULTS)
-    if CURATION_FILE.exists():
-        stored = json.loads(CURATION_FILE.read_text(encoding="utf-8"))
-        for field, default in _CURATION_DEFAULTS.items():
-            curation[field] = stored.get(field, default if isinstance(default, list) else dict(default))
-    else:
-        curation = {k: (list(v) if isinstance(v, list) else dict(v)) for k, v in _CURATION_DEFAULTS.items()}
+    # a fresh copy of each default: a field missing from the file must not
+    # hand out the module's own list for a caller to append to
+    stored = json.loads(CURATION_FILE.read_text(encoding="utf-8")) if CURATION_FILE.exists() else {}
+    curation = {field: stored[field] if field in stored else type(default)(default)
+                for field, default in _CURATION_DEFAULTS.items()}
+    # keys are lowercase when written; normalized here too, so the resolver
+    # (run per mention) tests the list as is instead of lowering it each time
+    curation["delete"] = [d.lower() for d in curation["delete"]]
     return curation
 
 
@@ -973,7 +974,7 @@ def _closed_to(curation: dict, name: str, entry: str, qualifier: str) -> bool:
 
 
 def _resolve_rules(curation: dict, kind: str, name: str, entry: str = ""):
-    if curation_key(kind, name) in {d.lower() for d in curation["delete"]}:
+    if curation_key(kind, name) in curation["delete"]:
         return None
     if _dropped(curation, curation_key(kind, name), entry):
         return None
@@ -1009,7 +1010,7 @@ def _resolve_rules(curation: dict, kind: str, name: str, entry: str = ""):
         kind = rt_final.get("type", kind)
         name = rt_final.get("name") or name
 
-    if curation_key(kind, name) in {d.lower() for d in curation["delete"]}:
+    if curation_key(kind, name) in curation["delete"]:
         return None
     if _dropped(curation, curation_key(kind, name), entry):
         return None
@@ -1151,6 +1152,7 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
     index = {}
     closed = {}  # retired, unsplit people -> the date their profile closes after
     retired_keys = {r.lower() for r in curation["retired"]}
+    reviewed_keys = {r.lower() for r in curation["reviewed"]}
     not_mixed = {k.lower() for k in curation["not_mixed"]}
     retired_gs = retired_groups(groups)
 
@@ -1216,9 +1218,7 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
             "mentions": len(ent["timeline"]),
             "aliases": sorted(ent["aliases"]),
             "groups": gnames,
-            "reviewed": curation_key(kind, ent["name"]) in {
-                r.lower() for r in curation["reviewed"]
-            },
+            "reviewed": curation_key(kind, ent["name"]) in reviewed_keys,
         }
         if ent["display"] != ent["name"]:
             index[ent["display"]]["base"] = ent["name"]
@@ -1427,6 +1427,23 @@ def list_observations(kind: str, canonical_name: str) -> list[dict]:
                         "extracted_name": name, "attr": attr,
                     })
     out.sort(key=lambda o: o["date"])
+    return out
+
+
+def first_observations() -> dict:
+    """(kind, name_lower) -> each entity's earliest observation, in one pass
+    over the raw cache -- for lists that show one line per entity, where
+    list_observations per entity would rescan everything each time.
+    Raw files are named by date, so their order is list_observations'."""
+    curation = load_curation()
+    out = {}
+    for entry, kind, name, ent in _raw_mentions():
+        obs = ent.get("observations") or []
+        if not obs:
+            continue
+        resolved = apply_curation(curation, kind, name, entry, ent.get("qualifier", ""))
+        if resolved:
+            out.setdefault((resolved[0], resolved[1].lower()), obs[0])
     return out
 
 
@@ -1964,11 +1981,12 @@ def suggest_things() -> list[dict]:
                   if i["type"] in ("project", "place") and not i.get("generic")]
     if not candidates:
         return []
+    firsts = first_observations()
     listing = []
     for name, info in sorted(candidates, key=lambda kv: -kv[1]["mentions"]):
-        obs = list_observations(info["type"], info.get("base", name))
+        said = firsts.get((info["type"], info.get("base", name).lower()), "")
         listing.append({"name": name, "kind": info["type"], "mentions": info["mentions"],
-                        "said": obs[0]["text"][:160] if obs else ""})
+                        "said": said[:160]})
 
     client = get_client()
     response = client.messages.create(
