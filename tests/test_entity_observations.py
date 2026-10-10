@@ -143,3 +143,18 @@ def test_only_people_and_animals_take_a_relationship(tmp_path, monkeypatch):
     _raw(tmp_path, "a", {"places": [{"name": "Edelweiss", "kind": "bar", "observations": ["x"]}]})
     with pytest.raises(ValueError):
         entities.set_record_relationship("a.json", "places", 0, 0, "friend")
+
+
+def test_an_edit_only_reaches_the_entity_lists(tmp_path, monkeypatch):
+    # the group comes from the request: anything but the five lists is
+    # refused before the file is read, never written as a hand edit
+    monkeypatch.setattr(entities, "RAW_DIR", tmp_path)
+    _raw(tmp_path, "a", {"edited": True, "people": [
+        {"name": "Dev", "relationship": "coworker", "observations": ["ran the standup"]}]})
+    before = (tmp_path / "a.json").read_text(encoding="utf-8")
+    for group in ("edited", "summary", ""):
+        with pytest.raises(ValueError):
+            entities.edit_observation("a.json", group, 0, 0, "changed")
+    assert (tmp_path / "a.json").read_text(encoding="utf-8") == before
+    entities.edit_observation("a.json", "people", 0, 0, "changed")
+    assert json.loads((tmp_path / "a.json").read_text(encoding="utf-8"))["people"][0]["observations"] == ["changed"]
