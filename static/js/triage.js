@@ -117,6 +117,8 @@ async function renderTriage() {
     triageMode = 'sort';
     sortChoices = variantsOf(info.variant_of);
   }
+  // on a retired person's later mentions, x is un-retire (in the sort row)
+  $('triage-btns').querySelector('[data-tkey="x"]').disabled = !!info.closed;
   const r = await (await fetch('/api/entities/observations?name=' + encodeURIComponent(name))).json();
   if (queue[qpos] !== name) return;  // user already moved on
   let obs = r.observations || [];
@@ -127,9 +129,27 @@ async function renderTriage() {
     obs = obs.filter(o => `${o.file}|${o.ent_index}` === first);
     sortPicks = obs.map(o => ({file: o.file, group: o.group, ent_index: o.ent_index, obs_index: o.obs_index}));
     $('triage-meta').textContent = `${left} mention${left === 1 ? '' : 's'} to sort`;
-    $('triage-sort-q').textContent = `Which ${info.variant_of} is this?`;
+    const head = info.variant_of;
+    $('triage-sort-q').textContent = info.closed
+      ? `${head} is retired. Is this the same ${head}?`
+      : `Which ${head} is this?`;
     const btns = $('triage-sort-btns');
     btns.innerHTML = '';
+    if (info.closed) {
+      // a past chapter's name in a later entry: them after all, someone
+      // new, or not a past chapter any more
+      const kb = document.createElement('button');
+      kb.className = 'quiet';
+      kb.innerHTML = '<span class="key">1</span>';
+      kb.append(`the retired ${head}`);
+      kb.onclick = keepRetired;
+      const xb = document.createElement('button');
+      xb.className = 'quiet';
+      xb.innerHTML = '<span class="key">x</span>un-retire';
+      xb.title = `${head} is back in the present: every later mention goes to them`;
+      xb.onclick = unretireHead;
+      btns.append(kb, xb);
+    }
     sortChoices.slice(0, 9).forEach((q, i) => {
       const b = document.createElement('button');
       b.className = 'quiet';
@@ -348,15 +368,50 @@ async function triageApply(asPart = false) {
 // one); the card stays until the name has nothing left to sort
 async function sortTo(qualifier) {
   const name = queue[qpos];
+  const closed = state.entities[name]?.closed;
   const r = await api('/api/entities/split', {name, picks: sortPicks, qualifier});
   if (!r) return;
-  toast(`sorted to ${r.to}.`);
+  // someone new beside a retired person: the retired one gets a word too
+  toast(closed && r.rest
+    ? `sorted to ${r.to}. The retired one is now ${r.rest}; rename it in entities.`
+    : `sorted to ${r.to}.`);
+  await sortedOn(name);
+}
+
+async function sortedOn(name) {
   await loadEntities();
   refreshUndo();
   if (state.entities[name]) renderTriage(); else triageAdvance();
 }
 
+// a retired person's later mention that was them after all
+async function keepRetired() {
+  const name = queue[qpos];
+  const r = await api('/api/entities/keep-retired', {name, picks: sortPicks});
+  if (!r) return;
+  toast(`kept with ${r.to}, who stays retired.`);
+  await sortedOn(name);
+}
+
+async function unretireHead() {
+  const name = queue[qpos], head = state.entities[name]?.variant_of;
+  const r = await api('/api/entities/retire', {name: head, retired: false});
+  if (!r) return;
+  toast(r.retired
+    ? `${head} is retired through ${r.by}; un-retire the group instead.`
+    : `${head} is back: later mentions go to them again.`);
+  await sortedOn(name);
+}
+
 async function triageKey(key) {
+  if (triageMode === 'sort' && state.entities[queue[qpos]]?.closed) {
+    if (key === '1') { await keepRetired(); return; }
+    if (key === 'x') { await unretireHead(); return; }
+    if (key === 'n') { triagePrompt('qualify'); return; }
+    if (key === 'k') { toast('say which one: 1 for the retired one, n for someone new, x to un-retire.'); return; }
+    if (!['s', 'e', 'u', 'd', 'D'].includes(key)) return;
+    triageMode = null;
+  }
   if (triageMode === 'sort') {
     const i = Number(key);
     if (i >= 1 && i <= Math.min(9, sortChoices.length)) { await sortTo(sortChoices[i - 1]); return; }

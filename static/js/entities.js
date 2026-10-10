@@ -806,10 +806,14 @@ function splitBar(r, info) {
   const bar = document.createElement('div');
   bar.className = 'split-bar';
   const head = info.variant_of || info.base || r.name;
-  const first = !info.variant_of;
-  const others = variantsOf(head).filter(q => q !== info.qualifier);
+  // a retired person's later mentions: someone new is a first split, with
+  // the retired one as the rest
+  const first = !info.variant_of || info.closed;
+  const others = info.closed ? [] : variantsOf(head).filter(q => q !== info.qualifier);
   bar.innerHTML = '<p class="lead"></p><div class="ent-actions to"><span class="lbl"></span></div>';
-  bar.querySelector('.lead').textContent = info.unsorted
+  bar.querySelector('.lead').textContent = info.closed
+    ? `${head} is retired, and these later entries didn't say it was them. Pick ones about the retired ${head} to keep with them, or ones about someone new and name both.`
+    : info.unsorted
     ? `These mentions of ${head} didn't say which ${head}. Pick the ones about the same person and say who.`
     : first
       ? `Pick one person's observations ("all from this entry" takes a whole entry), then name both people. Each name is ${head} plus a word that tells them apart, like ${head} · work.`
@@ -835,10 +839,11 @@ function splitBar(r, info) {
     const rest = document.createElement('div');
     rest.className = 'ent-actions';
     rest.innerHTML = '<span class="lbl"></span>';
-    rest.querySelector('.lbl').textContent = `and the rest are ${head} ·`;
+    rest.querySelector('.lbl').textContent = info.closed ? `and the retired one is ${head} ·` : `and the rest are ${head} ·`;
     restIn = document.createElement('input');
     restIn.className = 'input-xs';
     restIn.placeholder = 'e.g. friend';
+    if (info.closed) restIn.value = 'past';
     restIn.setAttribute('aria-label', 'qualifier for the rest');
     rest.append(restIn);
     bar.append(rest);
@@ -864,13 +869,35 @@ function splitBar(r, info) {
   cancel.className = 'text';
   cancel.textContent = info.unsorted ? 'close' : 'cancel';
   cancel.onclick = () => { splitFor = null; splitPicked.clear(); showEntity(r.name); };
+  let keep = null;
+  if (info.closed) {
+    keep = document.createElement('button');
+    keep.className = 'quiet sm';
+    keep.onclick = async () => {
+      const picks = r.observations.filter(o => splitPicked.has(`${o.file}|${o.group}|${o.ent_index}|${o.obs_index}`))
+        .map(o => ({file: o.file, group: o.group, ent_index: o.ent_index, obs_index: o.obs_index}));
+      const res = await api('/api/entities/keep-retired', {name: r.name, picks});
+      if (!res) return;
+      splitFor = null;
+      splitPicked.clear();
+      await loadEntities();
+      const next = state.entities[r.name] ? r.name : res.to;
+      if (state.entities[next]) await showEntity(next); else showNone();
+      notice(`kept with ${res.to}, who stays retired. Undo puts it back.`);
+    };
+    btns.append(keep);
+  }
   btns.append(go, cancel);
   bar.append(btns);
   refreshSplitBar = () => {
     const n = splitPicked.size;
     to.querySelector('.lbl').textContent = `move ${n} picked to`;
-    go.textContent = info.unsorted ? `sort ${n}` : first ? 'split' : `move ${n}`;
+    go.textContent = info.closed ? `someone new (${n})` : info.unsorted ? `sort ${n}` : first ? 'split' : `move ${n}`;
     go.disabled = !n;
+    if (keep) {
+      keep.textContent = `keep ${n} with the retired ${head}`;
+      keep.disabled = !n;
+    }
   };
   refreshSplitBar();
   go.onclick = async () => {
