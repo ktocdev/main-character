@@ -69,58 +69,41 @@
         "children": [
          {
           "type": "frame",
-          "name": "mark",
-          "w": 12.8,
-          "h": 17,
+          "name": "mark (margin)",
+          "mode": "V",
           "fills": [],
           "padding": [
-           0,
+           7,
            0,
            0,
            0
           ],
-          "mode": "V",
           "gap": 0,
-          "justify": "MIN",
-          "align": "MIN",
           "children": [
            {
-            "type": "text",
-            "name": "text",
-            "chars": "›",
-            "runs": [
-             {
-              "len": 1,
-              "style": {
-               "font": "ui",
-               "weight": 400,
-               "italic": false,
-               "size": {
-                "px": 12.8,
-                "token": "font-xs"
-               },
-               "color": {
-                "hex": "#a99f92",
-                "token": "text-muted"
-               }
-              }
-             }
-            ],
-            "lineHeight": null,
-            "w": 0,
-            "h": 0,
-            "lines": 1,
+            "type": "icon",
+            "name": "mark",
+            "rotate": 0,
+            "w": 12,
+            "h": 12,
+            "paint": {
+             "hex": "#a99f92",
+             "token": "text-muted"
+            },
             "sizing": {
-             "h": "HUG",
-             "v": "HUG"
-            }
+             "h": "FIXED",
+             "v": "FIXED"
+            },
+            "icon": "caret-right",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 20 20\">\n\t<path fill=\"currentColor\" d=\"M9.163 4.516c.418.408 4.502 4.695 4.502 4.695a1.095 1.095 0 0 1 0 1.576s-4.084 4.289-4.502 4.695c-.418.408-1.17.436-1.615 0c-.446-.434-.481-1.041 0-1.574L11.295 10L7.548 6.092c-.481-.533-.446-1.141 0-1.576c.445-.436 1.197-.409 1.615 0\" />\n</svg>"
            }
           ],
+          "w": 12,
+          "h": 19,
           "sizing": {
            "h": "HUG",
            "v": "HUG"
-          },
-          "minW": 12.8
+          }
          },
          {
           "type": "text",
@@ -214,58 +197,41 @@
         "children": [
          {
           "type": "frame",
-          "name": "mark",
-          "w": 12.8,
-          "h": 17,
+          "name": "mark (margin)",
+          "mode": "V",
           "fills": [],
           "padding": [
-           0,
+           7,
            0,
            0,
            0
           ],
-          "mode": "V",
           "gap": 0,
-          "justify": "MIN",
-          "align": "MIN",
           "children": [
            {
-            "type": "text",
-            "name": "text",
-            "chars": "⌄",
-            "runs": [
-             {
-              "len": 1,
-              "style": {
-               "font": "ui",
-               "weight": 400,
-               "italic": false,
-               "size": {
-                "px": 12.8,
-                "token": "font-xs"
-               },
-               "color": {
-                "hex": "#a99f92",
-                "token": "text-muted"
-               }
-              }
-             }
-            ],
-            "lineHeight": null,
-            "w": 0,
-            "h": 0,
-            "lines": 1,
+            "type": "icon",
+            "name": "mark",
+            "rotate": 90,
+            "w": 12,
+            "h": 12,
+            "paint": {
+             "hex": "#a99f92",
+             "token": "text-muted"
+            },
             "sizing": {
-             "h": "HUG",
-             "v": "HUG"
-            }
+             "h": "FIXED",
+             "v": "FIXED"
+            },
+            "icon": "caret-right",
+            "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 20 20\"><g transform=\"rotate(90 10 10)\">\n\t<path fill=\"currentColor\" d=\"M9.163 4.516c.418.408 4.502 4.695 4.502 4.695a1.095 1.095 0 0 1 0 1.576s-4.084 4.289-4.502 4.695c-.418.408-1.17.436-1.615 0c-.446-.434-.481-1.041 0-1.574L11.295 10L7.548 6.092c-.481-.533-.446-1.141 0-1.576c.445-.436 1.197-.409 1.615 0\" />\n</g></svg>"
            }
           ],
+          "w": 12,
+          "h": 19,
           "sizing": {
            "h": "HUG",
            "v": "HUG"
-          },
-          "minW": 12.8
+          }
          },
          {
           "type": "text",

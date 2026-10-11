@@ -454,7 +454,8 @@
   .action-menu > .menu { bottom: calc(100% + .5rem); right: 0; }
 
   /* ---- Disclosure: a <details> accordion section, a full-width italic
-     header with a › / ⌄ mark and a hairline under each (help) ---- */
+     header with the caret (below) as its mark, and a hairline under each
+     (help) ---- */
   .disclosure { border-bottom: 1px solid var(--border-default); }
   .disclosure > summary {
     list-style: none; cursor: pointer; user-select: none;
@@ -462,9 +463,6 @@
     font: italic 1.3rem var(--font-body); color: var(--text-accent); text-wrap: pretty;
   }
   .disclosure > summary::-webkit-details-marker { display: none; }
-  .disclosure > summary .mark { font: .8rem var(--font-ui); color: var(--text-muted); min-width: .8rem; }
-  .disclosure > summary .mark::before { content: "›"; display: inline-block; transition: transform .15s ease; }
-  .disclosure[open] > summary .mark::before { content: "⌄"; }
   .disclosure-body { display: flex; flex-direction: column; gap: .8rem; padding: 0 0 1.5rem 1.5rem; }
   .disclosure-body p { text-wrap: pretty; }
 
@@ -472,7 +470,7 @@
      with the control it sits in. It points right and turns down when its
      control is open (a disclosure). With .drop it points down and turns up
      (a menu trigger). The CSS reads aria-expanded, so JS only sets that. ---- */
-  .caret-icon {
+  .caret-icon, .disclosure > summary .mark {
     display: inline-block; flex-shrink: 0; width: .6rem; height: .6rem;
     background: currentColor; color: var(--text-muted);
     -webkit-mask: url("../icons/caret-right.svg") center / contain no-repeat;
@@ -481,10 +479,17 @@
   }
   .caret-icon.drop { transform: rotate(90deg); }
   [aria-expanded="true"] > .caret-icon, .caret-icon[aria-expanded="true"],
-  details[open] > summary > .caret-icon { transform: rotate(90deg); }
+  details[open] > summary > .caret-icon, .disclosure[open] > summary .mark { transform: rotate(90deg); }
   [aria-expanded="true"] > .caret-icon.drop, .caret-icon.drop[aria-expanded="true"] { transform: rotate(-90deg); }
   button:hover > .caret-icon { color: inherit; }
-  @media (prefers-reduced-motion: reduce) { .caret-icon { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .caret-icon, .disclosure > summary .mark { transition: none; } }
+  /* the large disclosure's mark: the caret at its size, centred on the
+     title's first line however the title wraps (1lh is that line, since
+     the mark takes the title's font) */
+  .disclosure > summary .mark {
+    width: .75rem; height: .75rem; align-self: flex-start;
+    font: inherit; margin-top: calc((1lh - .75rem) / 2);
+  }
 
   /* ---- Disclosure, small: a text button with a caret that shows or hides
      the element its aria-controls names. The sidebar's "triage & recycling
