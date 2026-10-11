@@ -34,7 +34,9 @@ if (dupes.length) throw new Error(`a key stands for two things: ${dupes.join(', 
 
 const svgs = {};
 for (const icon of new Set(uses.map(u => u.icon))) {
-  const read = f => fs.readFileSync(path.join(ICONS, f + '.svg'), 'utf8').trim();
+  // LF whatever the checkout: git may hand the SVGs over with CRLF on
+  // Windows, and that must not make the generated file differ by machine
+  const read = f => fs.readFileSync(path.join(ICONS, f + '.svg'), 'utf8').replace(/\r\n/g, '\n').trim();
   const outline = read(icon);
   svgs[icon] = { filled: ONE_VERSION.has(icon) ? outline : read(icon + '-filled'), outline };
 }
@@ -50,7 +52,7 @@ const text = JSON.stringify({
 }, null, 1) + '\n';
 
 if (process.argv.includes('--check')) {
-  const now = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8') : '';
+  const now = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8').replace(/\r\n/g, '\n') : '';
   if (now !== text) { console.log('icons.figma.json is stale: run node figma/icons/icons.mjs'); process.exit(1); }
   console.log(`icons.figma.json is current (${uses.length} uses, ${Object.keys(svgs).length} icons)`);
 } else {

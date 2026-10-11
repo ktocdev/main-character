@@ -52,7 +52,8 @@ const GROUPS = [
 const GROUP_TYPE = [null, 'category', 'dream', 'thing'];
 
 // Where each icon comes from; everything else is TDesign. Shown in the full
-// set, since the licences differ (all MIT, except Entypo+: CC BY-SA 4.0).
+// set, since the licences differ (all MIT, except Entypo+: CC BY-SA 4.0;
+// the notices are in static/icons/LICENSES.md).
 const SOURCE = {
   alien: 'Phosphor', 'peace-bold': 'Phosphor',
   hand: 'Boxicons', rocket: 'Boxicons', category: 'Boxicons', 'bookmark-heart': 'Bootstrap',

@@ -76,7 +76,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     if (set.children.length !== icons.uses.length * 2) fail(`second run: ${set.children.length} variants`);
     if (inst.mainComponent !== variant || variant.parent !== set) fail('second run: the instance lost its variant');
     if (variant.children.length !== 1 || variant.children[0] === before) fail('second run: the variant was not redrawn');
-    if (!figma.logs.some(l => /in place: 60 variants redrawn, 0 added/.test(l.text))) fail('second run: no in-place report');
+    const redrawn = new RegExp(`in place: ${icons.uses.length * 2} variants redrawn, 0 added`);
+    if (!figma.logs.some(l => redrawn.test(l.text))) fail('second run: no in-place report');
     else console.log('second run updated it in place');
   }
   console.log(failed ? 'FAILED' : 'ok');

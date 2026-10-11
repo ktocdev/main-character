@@ -43,6 +43,11 @@
    "icon": "bookmark-heart"
   },
   {
+   "for": "animal",
+   "group": "card type",
+   "icon": "cat"
+  },
+  {
    "for": "work",
    "group": "category",
    "icon": "work"
@@ -187,6 +192,10 @@
    "filled": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\">\n\t<path fill=\"currentColor\" d=\"M2 15.5a.5.5 0 0 0 .74.439L8 13.069l5.26 2.87A.5.5 0 0 0 14 15.5V2a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2zM8 4.41c1.387-1.425 4.854 1.07 0 4.277C3.146 5.48 6.613 2.986 8 4.412z\" />\n</svg>",
    "outline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\">\n\t<g fill=\"currentColor\">\n\t\t<path fill-rule=\"evenodd\" d=\"M8 4.41c1.387-1.425 4.854 1.07 0 4.277C3.146 5.48 6.613 2.986 8 4.412z\" />\n\t\t<path d=\"M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1z\" />\n\t</g>\n</svg>"
   },
+  "cat": {
+   "filled": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n\t<path fill=\"currentColor\" d=\"M7.48 2.58L1 .66v12.053h.007C1.222 18.458 6.091 23 12 23s10.778-4.542 10.993-10.286H23V.661L16.52 2.58A11.2 11.2 0 0 0 12 1.639c-1.609 0-3.14.336-4.52.94M5.137 3.972A11 11 0 0 0 3 6.177V3.34zM21 3.339v2.838a11 11 0 0 0-2.137-2.205zM9 12H7V9h2zm8 0h-2V9h2zm-4.105 2.053c.378.757.856.985 1.188 1.013c.34.028.759-.131 1.085-.62l.555-.833l1.664 1.11l-.555.832c-.674 1.01-1.755 1.6-2.915 1.504c-.713-.06-1.37-.37-1.917-.885c-.546.515-1.204.826-1.917.885c-1.16.097-2.241-.494-2.915-1.504l-.555-.832l1.664-1.11l.555.832c.326.49.745.65 1.085.621c.332-.028.81-.256 1.189-1.013l.894-1.79z\" />\n</svg>",
+   "outline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n\t<g fill=\"none\">\n\t\t<path d=\"M12 22c5.523 0 10-4.334 10-9.68V2l-5.556 1.645A10.2 10.2 0 0 0 12 2.639c-1.597 0-3.106.362-4.444 1.006L2 2v10.32C2 17.665 6.477 22 12 22\" />\n\t\t<path stroke=\"currentColor\" stroke-linecap=\"square\" stroke-width=\"2\" d=\"M22 11.714V2l-4.861 1.44M2 11.713V2l4.861 1.44M22 12.32C22 17.665 17.523 22 12 22S2 17.666 2 12.32c0-5.347 4.477-9.681 10-9.681s10 4.334 10 9.68Z\" />\n\t\t<path stroke=\"currentColor\" stroke-linecap=\"square\" stroke-width=\"2\" d=\"M8 10v1m8-1v1m-8 4c1 1.5 3 1.5 4-.5c1 2 3 2 4 .5\" />\n\t</g>\n</svg>"
+  },
   "work": {
    "filled": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n\t<path fill=\"currentColor\" d=\"M7.5 2.5h9v4H22v15H2v-15h5.5zm2 4h5v-2h-5z\" />\n</svg>",
    "outline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n\t<g fill=\"none\">\n\t\t<path d=\"M3 7.5h18v13H3z\" />\n\t\t<path stroke=\"currentColor\" stroke-linecap=\"square\" stroke-width=\"2\" d=\"M15.5 7.5v-4h-7v4M3 7.5h18v13H3z\" />\n\t</g>\n</svg>"
@@ -210,10 +219,6 @@
   "usergroup": {
    "filled": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n\t<path fill=\"currentColor\" d=\"M7 5a3 3 0 0 0 0 6v2a5 5 0 0 0-5 5v4H0v-4a7 7 0 0 1 3.75-6.2A5 5 0 0 1 7 3h1v2a5 5 0 0 1 4-2a4.99 4.99 0 0 1 4 2V3h1a5 5 0 0 1 3.25 8.8A7 7 0 0 1 24 18v4h-2v-4a5 5 0 0 0-5-5v-2a3 3 0 1 0 0-6h-1a5 5 0 1 1-8 0zM4 19a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v3H4z\" />\n</svg>",
    "outline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n\t<g fill=\"none\">\n\t\t<path d=\"M16 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0M5 19a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2H5z\" />\n\t\t<path stroke=\"currentColor\" stroke-linecap=\"square\" stroke-width=\"2\" d=\"M16 8a4 4 0 1 1-8 0a4 4 0 0 1 8 0ZM5 19a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2H5zM7 4a4 4 0 1 0 0 8a6 6 0 0 0-6 6v3m22 0v-3a6 6 0 0 0-6-6a4 4 0 0 0 0-8\" />\n\t</g>\n</svg>"
-  },
-  "cat": {
-   "filled": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n\t<path fill=\"currentColor\" d=\"M7.48 2.58L1 .66v12.053h.007C1.222 18.458 6.091 23 12 23s10.778-4.542 10.993-10.286H23V.661L16.52 2.58A11.2 11.2 0 0 0 12 1.639c-1.609 0-3.14.336-4.52.94M5.137 3.972A11 11 0 0 0 3 6.177V3.34zM21 3.339v2.838a11 11 0 0 0-2.137-2.205zM9 12H7V9h2zm8 0h-2V9h2zm-4.105 2.053c.378.757.856.985 1.188 1.013c.34.028.759-.131 1.085-.62l.555-.833l1.664 1.11l-.555.832c-.674 1.01-1.755 1.6-2.915 1.504c-.713-.06-1.37-.37-1.917-.885c-.546.515-1.204.826-1.917.885c-1.16.097-2.241-.494-2.915-1.504l-.555-.832l1.664-1.11l.555.832c.326.49.745.65 1.085.621c.332-.028.81-.256 1.189-1.013l.894-1.79z\" />\n</svg>",
-   "outline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n\t<g fill=\"none\">\n\t\t<path d=\"M12 22c5.523 0 10-4.334 10-9.68V2l-5.556 1.645A10.2 10.2 0 0 0 12 2.639c-1.597 0-3.106.362-4.444 1.006L2 2v10.32C2 17.665 6.477 22 12 22\" />\n\t\t<path stroke=\"currentColor\" stroke-linecap=\"square\" stroke-width=\"2\" d=\"M22 11.714V2l-4.861 1.44M2 11.713V2l4.861 1.44M22 12.32C22 17.665 17.523 22 12 22S2 17.666 2 12.32c0-5.347 4.477-9.681 10-9.681s10 4.334 10 9.68Z\" />\n\t\t<path stroke=\"currentColor\" stroke-linecap=\"square\" stroke-width=\"2\" d=\"M8 10v1m8-1v1m-8 4c1 1.5 3 1.5 4-.5c1 2 3 2 4 .5\" />\n\t</g>\n</svg>"
   },
   "emo-emotional": {
    "filled": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n\t<path fill=\"currentColor\" d=\"M12 23C5.925 23 1 18.075 1 12S5.925 1 12 1s11 4.925 11 11s-4.925 11-11 11M9 12V8H7v4zm8 0V8h-2v4zm-1 4v-2H8v2z\" />\n</svg>",

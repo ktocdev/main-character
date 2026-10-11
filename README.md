@@ -168,3 +168,5 @@ See [SECURITY.md](SECURITY.md). In short: local-only with no auth is the design,
 The Affero clause is the reason for this choice. If you run a modified version of this app as a network service that other people use, you have to offer them its source. MIT or plain GPL would allow someone to build a hosted, multi-tenant journal on this code without that obligation. Given what this app holds, that matters more here than in most projects.
 
 Every source file carries an `SPDX-License-Identifier: AGPL-3.0-or-later` header, so a file copied out of this repo still points back at its terms.
+
+The exception is the icons in `static/icons/`, which come from open icon sets and keep their own licenses: MIT for most, and CC BY-SA 4.0 for the caret. The notices are in [static/icons/LICENSES.md](static/icons/LICENSES.md).
