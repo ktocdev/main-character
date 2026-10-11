@@ -61,10 +61,15 @@ const SOURCE = {
 };
 
 // Icons the interface draws outside the cards: one version each, as a CSS
-// mask in components.css, so card.js doesn't know them.
-const UI_ICONS = {
-  'caret-right': 'disclosure (small), menu triggers',
-};
+// mask in components.css, so card.js doesn't know them. Each row shows the
+// real class closed and open; `cls` is what the app puts on the span.
+const UI_GROUP = ['Interface', 'Drawn by components.css, not card.js: one version, as a mask in currentColor, turned by the aria-expanded of the control it sits in. Only the entities sidebar uses it so far.', [
+  {key: 'disclosure caret', icon: 'caret-right', cls: 'caret-icon',
+    note: 'span.caret-icon: points right, turns down when open. The small disclosure (triage & recycling bin), find duplicates in the clean up menu, the parts toggle, a rolled-up group’s peek.'},
+  {key: 'menu caret', icon: 'caret-right', cls: 'caret-icon drop',
+    note: 'span.caret-icon.drop: the same file turned down, and up when open. The clean up button.'},
+]];
+const UI_ICONS = new Set(UI_GROUP[2].map(r => r.icon));
 
 // ---- loading ----
 // Inlined rather than <img>, so currentColor picks up the text colour.
@@ -75,7 +80,7 @@ function load(file) {
     .then(t => new DOMParser().parseFromString(t, 'image/svg+xml').documentElement));
   return cache.get(file);
 }
-const single = name => ONE_VERSION.has(name) || name in UI_ICONS;
+const single = name => ONE_VERSION.has(name) || UI_ICONS.has(name);
 const fileFor = (name, style) => style === 'filled' && !single(name) ? `${name}-filled` : name;
 function icon(name, style = 'outline') {
   const holder = document.createElement('span');
@@ -129,6 +134,45 @@ for (const [gi, [title, blurb, rows]] of GROUPS.entries()) {
   }
   map.appendChild(group);
 }
+{
+  const [title, blurb, rows] = UI_GROUP;
+  const checks = [];
+  const group = el('div', 'map-group');
+  group.append(el('div', 'spec-line'), el('p', 'note', blurb));
+  group.firstChild.append(el('b', null, title));
+  const head = el('div', 'map-row head');
+  for (const h of ['', 'closed', 'open', 'file']) head.appendChild(el('div', null, h));
+  group.appendChild(head);
+  // the caret as the app draws it: a span inside a control whose
+  // aria-expanded turns it
+  const caret = (cls, open) => {
+    const t = el('div', 'tile');
+    t.setAttribute('aria-expanded', String(open));
+    const c = el('span', cls);
+    c.setAttribute('aria-hidden', 'true');
+    t.appendChild(c);
+    return t;
+  };
+  for (const r of rows) {
+    usedBy.set(r.icon, [...usedBy.get(r.icon) ?? [], r.key]);
+    const row = el('div', 'map-row');
+    const name = el('div', 'map-key');
+    name.append(el('span', 'mono', r.key), el('span', 'why', r.note));
+    const shut = caret(r.cls, false);
+    const file = el('div', 'file mono', r.icon);
+    row.append(name, shut, caret(r.cls, true), file);
+    group.appendChild(row);
+    checks.push([r, shut.firstChild, file]);
+  }
+  map.appendChild(group);
+  // components.css is the source of truth; flag a row that has drifted (read
+  // once the rows are in the page, so their styles are computed)
+  for (const [r, span, file] of checks) {
+    const cs = getComputedStyle(span);
+    const drawn = (cs.maskImage || cs.webkitMaskImage || '').match(/([^/"]+)\.svg/)?.[1];
+    if (drawn !== r.icon) file.append(el('span', 'why drift', `components.css draws ${drawn ?? 'nothing'}`));
+  }
+}
 
 // ---- in a card ----
 // Small cards drawn by card.js itself, which picks the icon from the type
@@ -168,9 +212,6 @@ drawCards('filled');
 // ---- the full set ----
 // Every icon in use, alphabetical, with what uses it and where it is from.
 const set = document.getElementById('set-out');
-for (const [name, use] of Object.entries(UI_ICONS)) {
-  usedBy.set(name, [use]);
-}
 for (const name of [...usedBy.keys()].sort()) {
   const cell = el('div', 'set-cell');
   const pair = el('div', 'pair');
