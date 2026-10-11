@@ -126,7 +126,8 @@ export function renderEntityList() {
         const t = document.createElement('button');
         t.className = 'parts-toggle';
         const open = openParts.has(nestInfo.toggle);
-        t.textContent = `${open ? '▾' : '▸'} ${nestInfo.count} part${nestInfo.count === 1 ? '' : 's'}`;
+        t.innerHTML = '<span class="caret-icon"></span><span></span>';
+        t.lastChild.textContent = `${nestInfo.count} part${nestInfo.count === 1 ? '' : 's'}`;
         t.setAttribute('aria-expanded', open);
         t.onclick = () => { if (open) openParts.delete(nestInfo.toggle); else openParts.add(nestInfo.toggle); renderEntityList(); };
         wrap.appendChild(t);
@@ -216,7 +217,6 @@ function updateExtra() {
 function setExtraOpen(open) {
   $('extra-panel').hidden = !open;
   $('extra-toggle').setAttribute('aria-expanded', String(open));
-  $('extra-toggle').querySelector('.caret').textContent = open ? '▾' : '▸';
   updateExtra();
 }
 
@@ -225,13 +225,11 @@ function setCleanupOpen(open) {
   if (open) popover.opened('cleanup');
   $('cleanup-menu').hidden = !open;
   $('cleanup-btn').setAttribute('aria-expanded', String(open));
-  $('cleanup-btn').querySelector('.caret').textContent = open ? '▴' : '▾';
   if (!open) setSuggestKindsOpen(false);
 }
 function setSuggestKindsOpen(open) {
   $('suggest-kinds').hidden = !open;
   $('suggest-toggle').setAttribute('aria-expanded', String(open));
-  $('suggest-toggle').querySelector('.caret').textContent = open ? '▾' : '▸';
 }
 
 // ---- batch add to group ----

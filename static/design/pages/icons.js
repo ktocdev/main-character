@@ -52,10 +52,17 @@ const GROUPS = [
 const GROUP_TYPE = [null, 'category', 'dream', 'thing'];
 
 // Where each icon comes from; everything else is TDesign. Shown in the full
-// set, since the licences differ (all MIT).
+// set, since the licences differ (all MIT, except Entypo+: CC BY-SA 4.0).
 const SOURCE = {
   alien: 'Phosphor', 'peace-bold': 'Phosphor',
   hand: 'Boxicons', rocket: 'Boxicons', category: 'Boxicons', 'bookmark-heart': 'Bootstrap',
+  'caret-right': 'Entypo+ (CC BY-SA 4.0)',
+};
+
+// Icons the interface draws outside the cards: one version each, as a CSS
+// mask in components.css, so card.js doesn't know them.
+const UI_ICONS = {
+  'caret-right': 'disclosure (small), menu triggers',
 };
 
 // ---- loading ----
@@ -67,7 +74,8 @@ function load(file) {
     .then(t => new DOMParser().parseFromString(t, 'image/svg+xml').documentElement));
   return cache.get(file);
 }
-const fileFor = (name, style) => style === 'filled' && !ONE_VERSION.has(name) ? `${name}-filled` : name;
+const single = name => ONE_VERSION.has(name) || name in UI_ICONS;
+const fileFor = (name, style) => style === 'filled' && !single(name) ? `${name}-filled` : name;
 function icon(name, style = 'outline') {
   const holder = document.createElement('span');
   holder.className = 'ico';
@@ -159,11 +167,14 @@ drawCards('filled');
 // ---- the full set ----
 // Every icon in use, alphabetical, with what uses it and where it is from.
 const set = document.getElementById('set-out');
+for (const [name, use] of Object.entries(UI_ICONS)) {
+  usedBy.set(name, [use]);
+}
 for (const name of [...usedBy.keys()].sort()) {
   const cell = el('div', 'set-cell');
   const pair = el('div', 'pair');
   pair.append(icon(name, 'filled'));
-  if (!ONE_VERSION.has(name)) pair.append(icon(name, 'outline'));
+  if (!single(name)) pair.append(icon(name, 'outline'));
   cell.append(pair, el('span', 'mono', name),
     el('span', 'why', `${usedBy.get(name).join(', ')} · ${SOURCE[name] ?? 'TDesign'}`));
   set.appendChild(cell);

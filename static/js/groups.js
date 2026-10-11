@@ -133,10 +133,12 @@ function renderGroupBrowser() {
 
     if (rolled) {
       // the caret is a quick inline peek; the title opens the full page
-      const caret = document.createElement('span');
+      const caret = document.createElement('button');
       caret.className = 'grp-caret';
-      caret.textContent = isOpen ? '▾' : '▸';
+      caret.innerHTML = '<span class="caret-icon"></span>';
+      caret.setAttribute('aria-expanded', String(isOpen));
       caret.title = isOpen ? 'hide members here' : 'peek at members here';
+      caret.setAttribute('aria-label', `${isOpen ? 'hide' : 'peek at'} ${g.name}'s members`);
       caret.onclick = () => {
         openRollup = isOpen ? null : g.name;
         renderGroupBrowser();

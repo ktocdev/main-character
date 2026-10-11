@@ -447,6 +447,43 @@
   .disclosure-body { display: flex; flex-direction: column; gap: .8rem; padding: 0 0 1.5rem 1.5rem; }
   .disclosure-body p { text-wrap: pretty; }
 
+  /* ---- Caret: an icon (static/icons/), a mask in currentColor that turns
+     with the control it sits in. It points right and turns down when its
+     control is open (a disclosure). With .drop it points down and turns up
+     (a menu trigger). The CSS reads aria-expanded, so JS only sets that. ---- */
+  .caret-icon {
+    display: inline-block; flex-shrink: 0; width: .6rem; height: .6rem;
+    background: currentColor; color: var(--text-muted);
+    -webkit-mask: url("../icons/caret-right.svg") center / contain no-repeat;
+    mask: url("../icons/caret-right.svg") center / contain no-repeat;
+    transition: transform .15s ease;
+  }
+  .caret-icon.drop { transform: rotate(90deg); }
+  [aria-expanded="true"] > .caret-icon, .caret-icon[aria-expanded="true"],
+  details[open] > summary > .caret-icon { transform: rotate(90deg); }
+  [aria-expanded="true"] > .caret-icon.drop, .caret-icon.drop[aria-expanded="true"] { transform: rotate(-90deg); }
+  button:hover > .caret-icon { color: inherit; }
+  @media (prefers-reduced-motion: reduce) { .caret-icon { transition: none; } }
+
+  /* ---- Disclosure, small: a text button with a caret that shows or hides
+     the element its aria-controls names. The sidebar's "triage & recycling
+     bin", and "find duplicates" in the clean up menu. Optional: a count
+     badge (.count) for what's on inside while it's closed, and .end, which
+     puts the caret at the far end, as a menu row has it. ---- */
+  button.disclosure-sm {
+    border: 0; background: transparent; color: var(--text-muted); cursor: pointer;
+    font: .78rem var(--font-ui); padding: .2rem 0; min-height: 1.8rem; border-radius: var(--radius-sm);
+    display: inline-flex; align-items: center; gap: .45rem; white-space: nowrap; text-align: left;
+  }
+  button.disclosure-sm:hover, button.disclosure-sm.active { color: var(--text-default); }
+  button.disclosure-sm.end { display: flex; width: 100%; }
+  button.disclosure-sm.end .caret-icon { order: 2; margin-left: auto; }
+  button.disclosure-sm .count {
+    background: var(--toggle-on); color: var(--text-on-accent); border-radius: var(--radius-pill);
+    font: 600 .7rem/1 var(--font-ui); padding: .2rem .45rem;
+  }
+  button.disclosure-sm .count[hidden] { display: none; }
+
   /* ---- Modal: a native <dialog> opened with showModal(), which brings
      the focus trap, Escape and ::backdrop. .modal is the card itself, so
      the design pages can draw it in place, as with .tooltip ---- */
