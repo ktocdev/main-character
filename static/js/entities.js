@@ -146,6 +146,7 @@ export function renderEntityList() {
         cb.onchange = () => {
           if (cb.checked) picked.add(name); else picked.delete(name);
           updateBatchCount();
+          renderFilterBar();
         };
         row.appendChild(cb);
       }
@@ -208,12 +209,14 @@ export function renderEntityList() {
   renderFilterBar();
 }
 
-// Every filter that's on, as a chip with × at the foot of the sidebar. It
-// sticks to the bottom of the scrolling list, so a filter set at the top
-// comes off from anywhere. A chip's × goes through the toggle it stands
-// for, so the toggle, the folded count and the list all follow.
+// The foot of the sidebar: in select mode, a chip for each checked entity,
+// then every filter that's on. It sticks to the bottom of the scrolling
+// list, so a pick or a filter set at the top comes off from anywhere. A
+// filter chip's × goes through the toggle it stands for, so the toggle,
+// the folded count and the list all follow; a pick's × unchecks its box.
 function renderFilterBar() {
   const bar = $('filter-bar');
+  const sel = selectMode ? [...picked] : [];
   const on = [];
   const q = $('search').value.trim();
   if (q) on.push([`“${q.length > 14 ? q.slice(0, 13) + '…' : q}”`, 'clear the filter text',
@@ -225,23 +228,49 @@ function renderFilterBar() {
   if (filters.single) on.push(['1 mention', 'show every mention count', () => $('flt-single').click()]);
   if (filters.mixup) on.push(['maybe two', 'show everyone', () => $('flt-mixup').click()]);
   if (filters.retired) on.push(['retired', 'back to everyday view', () => $('flt-retired').click()]);
-  bar.hidden = !on.length;
+  bar.hidden = !on.length && !sel.length;
   bar.innerHTML = '';
-  if (!on.length) return;
-  const lbl = document.createElement('span');
-  lbl.className = 'side-lbl';
-  lbl.textContent = 'filters on';
-  bar.appendChild(lbl);
-  for (const [text, title, off] of on) {
-    bar.appendChild(tag(text, off, `remove filter: ${text} (${title})`));
+  const section = (label, cls) => {
+    const g = document.createElement('div');
+    g.className = 'foot-group ' + cls;
+    const lbl = document.createElement('span');
+    lbl.className = 'side-lbl';
+    lbl.textContent = label;
+    g.appendChild(lbl);
+    bar.appendChild(g);
+    return g;
+  };
+  const clearBtn = (g, text, run) => {
+    const b = document.createElement('button');
+    b.className = 'text';
+    b.textContent = text;
+    b.onclick = run;
+    g.appendChild(b);
+  };
+  if (sel.length) {
+    const g = section(`${sel.length} selected`, 'picks');
+    if (sel.length > 1) clearBtn(g, 'clear', () => $('batch-clear').click());
+    const chips = document.createElement('div');
+    chips.className = 'foot-chips';
+    sel.forEach((name, i) => chips.appendChild(tag(name, () => unpick(name, i), `unselect ${name}`)));
+    g.appendChild(chips);
   }
-  if (on.length > 1) {
-    const all = document.createElement('button');
-    all.className = 'text';
-    all.textContent = 'clear all';
-    all.onclick = () => { for (const [, , off] of on) off(); };
-    bar.appendChild(all);
+  if (on.length) {
+    const g = section('filters on', 'filters');
+    for (const [text, title, off] of on) {
+      g.appendChild(tag(text, off, `remove filter: ${text} (${title})`));
+    }
+    if (on.length > 1) clearBtn(g, 'clear all', () => { for (const [, , off] of on) off(); });
   }
+}
+// a pick's ×: uncheck it, then keep the keyboard in the chips (the next
+// one along, or the last), not dropped to the top of the page
+function unpick(name, i) {
+  picked.delete(name);
+  updateBatchCount();
+  renderEntityList();
+  const xs = $('filter-bar').querySelectorAll('.picks .x');
+  (xs[Math.min(i, xs.length - 1)] || $('batch-group')).focus();
 }
 
 // "triage & recycling bin" folds its filters away; while folded, a count

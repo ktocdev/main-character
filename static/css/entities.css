@@ -28,18 +28,28 @@
   #suggest-kinds { display: flex; flex-direction: column; }
   #suggest-kinds[hidden] { display: none; }
 
-  /* "filters on": pinned to the foot of the scrolling sidebar (the aside is
-     the scroller), floating over the list it narrows */
+  /* the sidebar's foot, "selected" then "filters on": pinned to the bottom
+     of the scrolling sidebar (the aside is the scroller), floating over the
+     list it narrows */
   #filter-bar {
     position: sticky; bottom: 0; z-index: 2; margin-top: auto;
-    display: flex; flex-wrap: wrap; align-items: center; gap: .35rem;
+    display: flex; flex-direction: column; gap: .6rem;
     padding: .6rem clamp(1rem, 3vw, 1.5rem) .7rem;
     background: var(--bg-raised); border-top: 1px solid var(--border-default);
     box-shadow: 0 -6px 14px -10px rgb(0 0 0 / .35);
   }
   #filter-bar[hidden] { display: none; }
+  #filter-bar .foot-group { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+  #filter-bar .foot-group + .foot-group { border-top: 1px solid var(--border-default); padding-top: .6rem; }
   #filter-bar .side-lbl { flex-basis: 100%; }
+  #filter-bar .picks .side-lbl { flex: 1 0 auto; }  /* "clear" shares its row */
   #filter-bar button.text { min-height: 1.6rem; margin-left: auto; }
+  /* a long pick list scrolls inside the foot rather than covering the list */
+  #filter-bar .foot-chips {
+    display: flex; flex-wrap: wrap; gap: .35rem; flex-basis: 100%;
+    max-height: 7.5rem; overflow-y: auto; overscroll-behavior: contain;
+  }
+  #filter-bar .tag > span:first-child { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.7rem; }
 
   /* labelled rows of toggles: show, sort, groups, and the two in the inset */
   .side-row { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
