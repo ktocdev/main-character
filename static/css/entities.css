@@ -168,6 +168,23 @@
   #suggest-panel .head { display: flex; align-items: baseline; gap: .8rem; }
   #suggest-panel .head .text { margin-left: auto; }
   #suggest-panel .working { font: .85rem var(--font-ui); color: var(--text-muted); }
+  /* a paid call still out: a small turning ring before the line */
+  #suggest-panel .working.waiting { display: flex; align-items: center; gap: .5rem; }
+  #suggest-panel .working.waiting::before {
+    content: ""; flex-shrink: 0; width: .8em; height: .8em; border-radius: 50%;
+    border: 2px solid currentColor; border-right-color: transparent; animation: busy-spin .7s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #suggest-panel .working.waiting::before { animation: lamp-pulse 1.6s ease-in-out infinite; }
+  }
+  /* one paid call at a time (entities.js paid()): the api-call items rest,
+     and the clean up button carries a pulsing dot until it's back */
+  #cleanup-menu.paid-busy .menu-item.paid { opacity: .5; cursor: default; }
+  #cleanup-menu.paid-busy .menu-item.paid:hover { background: transparent; }
+  #cleanup-btn.paid-busy::before {
+    content: ""; width: .4rem; height: .4rem; border-radius: 50%; background: var(--text-accent);
+    animation: lamp-pulse 1.6s ease-in-out infinite;
+  }
   .dup-row, .sg { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; font-size: .95rem; }
   .dup-row .why, .sg .r { font: .78rem var(--font-ui); color: var(--text-muted); flex-basis: 100%; }
   .dup-row .quiet, .sg .quiet { min-height: 1.8rem; padding: .2rem .7rem; }

@@ -270,7 +270,7 @@ async function showSession(key) {
 
 export function init() {
   $('session-close-btn').onclick = async () => {
-    if (await closeSession()) setNotice('your side became an entry; tagging, entities and the week’s arc are updating. A new chapter is open in write.');
+    if (await closeSession(undefined, $('session-close-btn'))) setNotice('your side became an entry; tagging, entities and the week’s arc are updating. A new chapter is open in write.');
   };
   $('session-continue').onclick = () => showTab('write');
   $('session-back').onclick = () => $('history-pane').classList.remove('drilled');

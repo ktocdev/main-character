@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, api, fmtDate } from './core.js';
+import { $, api, busy, fmtDate } from './core.js';
 import { busyLabel } from './categories.js';
 
 // ---- patterns ----
@@ -77,13 +77,13 @@ function card(p) {
   x.className = 'quiet danger dismiss';
   x.textContent = 'dismiss';
   x.title = 'not a real pattern. Hide it, and it stays hidden across re-detections unless new evidence shows up';
-  x.onclick = async () => {
+  x.onclick = () => busy(x, async () => {
     if (await api('/api/patterns/dismiss', {name: p.name})) {
       library.patterns = library.patterns.filter(q => q !== p);
       renderPatterns();
       notice(`dismissed “${p.name}”. It only returns if new evidence shows up.`);
     }
-  };
+  });
   head.append(h, kind, x);
   d.appendChild(head);
   const desc = document.createElement('p');

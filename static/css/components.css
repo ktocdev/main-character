@@ -62,6 +62,27 @@
   .hint { opacity: .7; }
   /* undo / redo: quiet, half strength while the stack is empty */
   button.quiet.empty { opacity: .5; }
+  /* busy: a call is running (core.js busy()). It takes no clicks, and is
+     not dimmed; after .15s the label hides in place, so the width holds,
+     and a ring in the label's colour turns where it was. A call quicker
+     than that shows nothing. Reduced motion: the ring pulses instead. The
+     controls held alongside (.is-held) are just disabled. */
+  .is-busy { pointer-events: none; }
+  button.is-busy:disabled { opacity: 1; }
+  button.is-busy { animation: busy-hide 1ms .15s forwards; }  /* text only: currentColor stays */
+  button.is-busy > * { animation: busy-hide-kid 1ms .15s forwards; }
+  button.is-busy::after {
+    content: ""; position: absolute; inset: 0; margin: auto; width: .9em; height: .9em;
+    border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+    opacity: 0; animation: busy-show 1ms .15s forwards, busy-spin .7s linear infinite;
+  }
+  @keyframes busy-hide { to { -webkit-text-fill-color: transparent; } }
+  @keyframes busy-hide-kid { to { visibility: hidden; } }
+  @keyframes busy-show { to { opacity: 1; } }
+  @keyframes busy-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    button.is-busy::after { animation: busy-show 1ms .15s forwards, lamp-pulse 1.6s ease-in-out infinite; }
+  }
 
   /* ---- Eyebrow + SectionRule ---- */
   .eyebrow {

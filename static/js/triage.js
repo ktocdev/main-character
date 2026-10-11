@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, api, fmtDate } from './core.js';
+import { $, api, busy, fmtDate } from './core.js';
 import { state } from './state.js';
 import { loadEntities, showEntity, mixupText, setName, variantsOf, NO_PARTS, HAS_RELATIONSHIP } from './entities.js';
 import { showTab } from './main.js';
@@ -511,27 +511,50 @@ async function retype(kind, category = '') {
   );
 }
 
+// One action at a time. While one is with the server, every key and button
+// does nothing (a held k can't race ahead of it), and the button it came
+// from, or the one its key mirrors, spins (core.js busy()). Every key and
+// button goes through here, so nothing else needs disabling, and focus
+// stays where it was.
+let working = false;
+async function act(btn, fn) {
+  if (working) return;
+  working = true;
+  try { await busy(btn, fn); }
+  finally { working = false; }
+}
+// the on-screen button a key stands for, in the current mode
+function keyButton(key) {
+  const q = sel => $('tab-triage').querySelector(sel);
+  if (triageMode === 'mixed') return ['k', 'Enter'].includes(key) ? $('triage-mixed-yes') : null;
+  if (triageMode === 'never') return ['D', 'Enter'].includes(key) ? $('triage-never-yes') : null;
+  if (triageMode === 'kind') return q(`#triage-kind-row [data-kind="${{1: 'person', 2: 'project', 3: 'place', 4: 'thing', 5: 'animal'}[key]}"]`);
+  if (triageMode === 'category') return q(`#triage-cat-row [data-cat="${CATEGORIES[Number(key) - 1]}"]`);
+  if (triageMode !== null) return null;
+  return q(`#triage-btns [data-tkey="${key}"]`);
+}
+
 export function init() {
-  $('triage-apply').onclick = () => triageApply();
-  $('triage-as-part').onclick = () => triageApply(true);
+  $('triage-apply').onclick = () => act($('triage-apply'), () => triageApply());
+  $('triage-as-part').onclick = () => act($('triage-as-part'), () => triageApply(true));
   $('triage-cancel').onclick = triageCancel;
   $('triage-kind-cancel').onclick = triageCancel;
   $('triage-cat-cancel').onclick = triageCancel;
-  $('triage-never-yes').onclick = neverTrack;
-  $('triage-mixed-yes').onclick = () => keep(queue[qpos], true);
+  $('triage-never-yes').onclick = () => act($('triage-never-yes'), neverTrack);
+  $('triage-mixed-yes').onclick = () => act($('triage-mixed-yes'), () => keep(queue[qpos], true));
   $('triage-mixed-edit').onclick = () => { triageCancel(); editInEntities(queue[qpos]); };
   $('triage-mixed-cancel').onclick = triageCancel;
   $('triage-never-cancel').onclick = triageCancel;
   $('triage-input').addEventListener('input', suggest);
   $('triage-input').addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.preventDefault(); triageCancel(); }
-    else if (e.key === 'Enter') { e.preventDefault(); triageApply(); }
+    else if (e.key === 'Enter') { e.preventDefault(); act($('triage-apply'), () => triageApply()); }
     e.stopPropagation();
   });
 
   document.querySelectorAll('#triage-kind-row button[data-kind]').forEach(b => b.onclick = () =>
-    b.dataset.kind === 'thing' ? askCategory() : retype(b.dataset.kind));
-  document.querySelectorAll('#triage-cat-row button[data-cat]').forEach(b => b.onclick = () => retype('thing', b.dataset.cat));
+    b.dataset.kind === 'thing' ? askCategory() : act(b, () => retype(b.dataset.kind)));
+  document.querySelectorAll('#triage-cat-row button[data-cat]').forEach(b => b.onclick = () => act(b, () => retype('thing', b.dataset.cat)));
 
   document.addEventListener('keydown', e => {
     if (state.activeTab !== 'triage') return;
@@ -540,14 +563,15 @@ export function init() {
     const keys = ['m', 'c', 'r', 'a', 'p', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', 'n', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     if (triageMode === 'never' || triageMode === 'mixed') keys.push('Enter', 'Escape');
     else if (['Enter', 'Escape'].includes(e.key) && triageMode !== 'kind' && triageMode !== 'category') return;
+    if (!keys.includes(e.key) && !['Enter', 'Escape'].includes(e.key)) return;
     if (keys.includes(e.key)) e.preventDefault();
-    triageKey(e.key);
+    act(keyButton(e.key), () => triageKey(e.key));
   });
 
   document.querySelectorAll('#triage-btns button').forEach(b => {
-    b.onclick = () => triageKey(b.dataset.tkey);
+    b.onclick = () => act(b, () => triageKey(b.dataset.tkey));
   });
   $('triage-skipped').onclick = () => startTriage(skipped.slice());
   $('triage-open-entities').onclick = () => showTab('entities');
-  $('triage-undo-last').onclick = () => triageKey('u');
+  $('triage-undo-last').onclick = () => act($('triage-undo-last'), () => triageKey('u'));
 }
