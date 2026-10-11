@@ -17,6 +17,12 @@ let toastTimer = null;
 let editing = false;     // left for Entities with e; the next start is a return
 let sortChoices = [], sortPicks = [];  // an unsorted card: the qualifiers, this entry's observations
 
+// What triage works on. Retired entities are out of everyday view, so they
+// are out of the queue and out of the count; an unsorted name waits here
+// even under a reviewed mark. The queue and the progress line share this.
+const active = info => !info.retired;
+const waiting = info => active(info) && (!info.reviewed || info.unsorted);
+
 export async function startTriage(only) {
   await loadEntities();
   // Coming back from the edit link keeps the pass going: what was skipped
@@ -26,8 +32,7 @@ export async function startTriage(only) {
   const returning = editing && !only;
   editing = false;
   queue = Object.entries(state.entities)
-    // unsorted mentions wait here even under a reviewed name
-    .filter(([n, i]) => (!i.reviewed || i.unsorted) && !i.retired && (!only || only.includes(n)) && !(returning && skipped.includes(n)))
+    .filter(([n, i]) => waiting(i) && (!only || only.includes(n)) && !(returning && skipped.includes(n)))
     .sort((a, b) => a[1].mentions - b[1].mentions)  // junk (1-mention) first
     .map(([n]) => n);
   qpos = 0;
@@ -69,8 +74,9 @@ async function renderTriage() {
   $('triage-never-row').hidden = true;
   $('triage-sort-row').hidden = true;
   $('triage-suggest').innerHTML = '';
-  const total = Object.keys(state.entities).length;
-  const reviewed = Object.values(state.entities).filter(i => i.reviewed).length;
+  const all = Object.values(state.entities).filter(active);
+  const total = all.length;
+  const reviewed = all.filter(i => !waiting(i)).length;
   if (qpos >= queue.length) {
     progress(reviewed, total, 0);
     $('triage-card').hidden = true;
