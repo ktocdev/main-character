@@ -3,6 +3,7 @@ import { $, api, esc, fmtDate, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
 import { showTab } from './main.js';
 import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection, showGroup as showGroupByName } from './groups.js';
+import * as popover from './popover.js';
 
 // ---- entities ----
 export async function loadEntities() {
@@ -156,9 +157,10 @@ export function renderEntityList() {
       else setName(b.querySelector('.li-title'), name, state.entities[name]);
       b.querySelector('.li-meta').textContent = mentions;
       // a ring for maybe-two-people, then the unreviewed dot
+      // (select mode's checkbox stands in for both)
       const dots = [];
-      if (mixup) dots.push(['flag', 'maybe two people']);
-      if (!reviewed) dots.push(['', 'unreviewed']);
+      if (mixup && !selectMode) dots.push(['flag', 'maybe two people']);
+      if (!reviewed && !selectMode) dots.push(['', 'unreviewed']);
       dots.forEach(([cls, label], i) => {
         const dot = document.createElement('span');
         dot.className = ['dot', cls, i ? '' : 'right'].filter(Boolean).join(' ');
@@ -174,8 +176,10 @@ export function renderEntityList() {
       if (!selectMode) {
         const keep = document.createElement('button');
         keep.className = 'ent-keep' + (reviewed ? ' on' : '');
-        keep.textContent = reviewed ? '✓' : 'keep';
+        keep.textContent = '✓';
         keep.title = reviewed ? 'reviewed (click to unmark)' : 'mark reviewed';
+        keep.setAttribute('aria-label', `${reviewed ? 'unmark' : 'mark'} ${name} reviewed`);
+        keep.dataset.tipPlace = 'above-end';
         keep.onclick = async e => {
           e.stopPropagation();
           const next = !reviewed;
@@ -197,6 +201,37 @@ export function renderEntityList() {
     wrap.appendChild(e);
   }
   if (selectMode) updateBatchCount();
+  updateExtra();
+}
+
+// "triage & recycling bin" folds its filters away; while folded, a count
+// on the trigger says how many of them are on, so none is ever on unseen
+function updateExtra() {
+  const on = document.querySelectorAll('#extra-panel .chip-toggle[aria-pressed="true"]').length;
+  const open = !$('extra-panel').hidden;
+  $('extra-toggle').classList.toggle('active', on > 0);
+  $('extra-count').hidden = open || !on;
+  $('extra-count').textContent = on;
+}
+function setExtraOpen(open) {
+  $('extra-panel').hidden = !open;
+  $('extra-toggle').setAttribute('aria-expanded', String(open));
+  $('extra-toggle').querySelector('.caret').textContent = open ? '▾' : '▸';
+  updateExtra();
+}
+
+// ---- the clean up menu: every run-once tool ----
+function setCleanupOpen(open) {
+  if (open) popover.opened('cleanup');
+  $('cleanup-menu').hidden = !open;
+  $('cleanup-btn').setAttribute('aria-expanded', String(open));
+  $('cleanup-btn').querySelector('.caret').textContent = open ? '▴' : '▾';
+  if (!open) setSuggestKindsOpen(false);
+}
+function setSuggestKindsOpen(open) {
+  $('suggest-kinds').hidden = !open;
+  $('suggest-toggle').setAttribute('aria-expanded', String(open));
+  $('suggest-toggle').querySelector('.caret').textContent = open ? '▾' : '▸';
 }
 
 // ---- batch add to group ----
@@ -225,14 +260,19 @@ function suggestPanel(title) {
   old.replaceWith(panel);
   $('suggest-wrap').hidden = false;
   $('entities-pane').classList.add('drilled');
+  pressed('show-deleted', title === 'deleted');
   panel.innerHTML = '<div class="head"><span class="eyebrow"></span>'
     + '<button class="text">dismiss</button></div>';
   panel.querySelector('.eyebrow').textContent = title;
   panel.querySelector('.text').onclick = closeSuggest;
   return panel;
 }
-function closeSuggest() {
+export function hideSuggest() {
   $('suggest-wrap').hidden = true;
+  pressed('show-deleted', false);
+}
+function closeSuggest() {
+  hideSuggest();
   if (!$('entity-detail-col').hidden) return;
   $('entities-pane').classList.remove('drilled');
 }
@@ -996,6 +1036,8 @@ export async function reloadEntity(name) {
 // that was open (merged, deleted, undone), said once on the list side.
 function showNone() {
   state.selected = null;
+  clearGroupSelection();
+  renderEntityList();
   showDetail('none');
   $('entities-pane').classList.remove('drilled');
 }
@@ -1040,10 +1082,11 @@ async function refreshHistoryButtons() {
   $('redo-btn').classList.toggle('empty', !h.redo);
 }
 
-const pressed = (id, on) => {
+function pressed(id, on) {
   $(id).classList.toggle('on', on);
   $(id).setAttribute('aria-pressed', String(on));
-};
+  updateExtra();
+}
 
 export function init() {
   $('flt-unreviewed').onclick = () => {
@@ -1062,7 +1105,7 @@ export function init() {
     const retire = !state.entities[state.selected]?.retired;
     const r = await api('/api/entities/retire', {name: state.selected, retired: retire});
     if (r) await reloadEntity(r.name);
-    if (r && retire) flash(`${r.name} retired. The retired chip shows them.`);
+    if (r && retire) flash(`${r.name} retired. Triage & recycling bin → retired shows them.`);
   };
   $('flt-mixup').onclick = () => {
     filters.mixup = !filters.mixup;
@@ -1089,18 +1132,41 @@ export function init() {
   };
   $('entity-edit-toggle').onclick = () => setEditOpen(!editOpen);
   $('entity-back').onclick = () => $('entities-pane').classList.remove('drilled');
+  $('entity-close').onclick = showNone;
+  // Esc closes the open entity or group, unless a field has focus or the
+  // clean up menu is open (that Esc is the menu's; captured, so this runs
+  // before popover.js closes it)
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || state.activeTab !== 'entities' || $('entity-detail-col').hidden) return;
+    if (e.target.closest('input, textarea, select, dialog') || !$('cleanup-menu').hidden) return;
+    showNone();
+  }, true);
   $('entity-to-triage').onclick = () => showTab('triage');
   $('suggest-back').onclick = () => $('entities-pane').classList.remove('drilled');
   $('batch-add').onclick = batchAdd;
   $('batch-group').onkeydown = e => { if (e.key === 'Enter') batchAdd(); };
   $('batch-clear').onclick = () => { picked.clear(); updateBatchCount(); renderEntityList(); };
   $('search').oninput = renderEntityList;
-  $('find-dups').onclick = findDups;
-  $('find-generic').onclick = genericCleanup;
-  $('show-deleted').onclick = showDeleted;
-  $('things-review').onclick = thingsReview;
-  $('animals-review').onclick = animalsReview;
-  $('parts-review').onclick = partsReview;
+  $('extra-toggle').onclick = () => setExtraOpen($('extra-panel').hidden);
+  $('show-deleted').onclick = () => {
+    if ($('show-deleted').getAttribute('aria-pressed') === 'true') closeSuggest();
+    else showDeleted();
+  };
+  // the clean up menu: an item runs and closes it; find duplicates (api
+  // call) opens its kinds in place instead
+  $('cleanup-btn').onclick = () => setCleanupOpen($('cleanup-menu').hidden);
+  popover.register('cleanup', () => setCleanupOpen(false),
+    t => $('cleanup-menu').contains(t) || $('cleanup-btn').contains(t));
+  const tools = {
+    'find-dups': findDups, 'find-generic': genericCleanup, 'animals-review': animalsReview,
+    'things-review': thingsReview, 'parts-review': partsReview, 'reextract-open': reextractPanel,
+  };
+  for (const [id, fn] of Object.entries(tools)) $(id).onclick = () => { setCleanupOpen(false); fn(); };
+  $('suggest-toggle').onclick = () => setSuggestKindsOpen($('suggest-kinds').hidden);
+  document.querySelectorAll('#suggest-kinds [data-kind]').forEach(b => b.onclick = () => {
+    setCleanupOpen(false);
+    askSuggest(b.dataset.kind);
+  });
   $('split-btn').onclick = () => {
     splitFor = splitFor === state.selected ? null : state.selected;
     splitPicked.clear();
@@ -1116,7 +1182,6 @@ export function init() {
     const r = await api('/api/entities/hide-path', {name: state.selected, hide: !$('part-path').checked});
     if (r) await reloadEntity(r.name);
   };
-  $('reextract-open').onclick = reextractPanel;
 
   $('merge-btn').onclick = async () => {
     const target = $('merge-target').value.trim();
@@ -1196,15 +1261,9 @@ export function init() {
     b.setAttribute('aria-pressed', String(filters.types.has(kind)));
     renderEntityList();
   });
-
-  // ---- merge suggestions (ask claude, by type) ----
-  $('suggest-kind').onchange = e => {
-    const kind = e.target.value;
-    e.target.value = '';               // reset to the placeholder for next time
-    if (kind) askSuggest(kind);
-  };
 }
 
+// ---- merge suggestions (find duplicates via claude, by type) ----
 async function askSuggest(kind) {
   const panel = suggestPanel(`claude's suggestions · ${PLURAL[kind] || kind}`);
   const w = panelSay(panel, `asking claude for ${kind} merge suggestions…`);
