@@ -2,7 +2,7 @@
 import { $, api, busy, esc, fmtDate, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
 import { showTab } from './main.js';
-import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection, showGroup as showGroupByName } from './groups.js';
+import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection, clearGroupFilter, showGroup as showGroupByName } from './groups.js';
 import * as popover from './popover.js';
 
 // ---- entities ----
@@ -205,6 +205,43 @@ export function renderEntityList() {
   }
   if (selectMode) updateBatchCount();
   updateExtra();
+  renderFilterBar();
+}
+
+// Every filter that's on, as a chip with × at the foot of the sidebar. It
+// sticks to the bottom of the scrolling list, so a filter set at the top
+// comes off from anywhere. A chip's × goes through the toggle it stands
+// for, so the toggle, the folded count and the list all follow.
+function renderFilterBar() {
+  const bar = $('filter-bar');
+  const on = [];
+  const q = $('search').value.trim();
+  if (q) on.push([`“${q.length > 14 ? q.slice(0, 13) + '…' : q}”`, 'clear the filter text',
+    () => { $('search').value = ''; renderEntityList(); }]);
+  for (const kind of filters.types)
+    on.push([PLURAL[kind] || kind, `show all kinds again`, () => $('type-chips').querySelector(`[data-type="${kind}"]`).click()]);
+  if (filters.group) on.push([`in ${groupPathLabel(filters.group)}`, 'stop narrowing the list to this group', () => { clearGroupFilter(); renderEntityList(); }]);
+  if (filters.unreviewed) on.push(['unreviewed', 'show reviewed ones too', () => $('flt-unreviewed').click()]);
+  if (filters.single) on.push(['1 mention', 'show every mention count', () => $('flt-single').click()]);
+  if (filters.mixup) on.push(['maybe two', 'show everyone', () => $('flt-mixup').click()]);
+  if (filters.retired) on.push(['retired', 'back to everyday view', () => $('flt-retired').click()]);
+  bar.hidden = !on.length;
+  bar.innerHTML = '';
+  if (!on.length) return;
+  const lbl = document.createElement('span');
+  lbl.className = 'side-lbl';
+  lbl.textContent = 'filters on';
+  bar.appendChild(lbl);
+  for (const [text, title, off] of on) {
+    bar.appendChild(tag(text, off, `remove filter: ${text} (${title})`));
+  }
+  if (on.length > 1) {
+    const all = document.createElement('button');
+    all.className = 'text';
+    all.textContent = 'clear all';
+    all.onclick = () => { for (const [, , off] of on) off(); };
+    bar.appendChild(all);
+  }
 }
 
 // "triage & recycling bin" folds its filters away; while folded, a count

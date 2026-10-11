@@ -28,6 +28,19 @@
   #suggest-kinds { display: flex; flex-direction: column; }
   #suggest-kinds[hidden] { display: none; }
 
+  /* "filters on": pinned to the foot of the scrolling sidebar (the aside is
+     the scroller), floating over the list it narrows */
+  #filter-bar {
+    position: sticky; bottom: 0; z-index: 2; margin-top: auto;
+    display: flex; flex-wrap: wrap; align-items: center; gap: .35rem;
+    padding: .6rem clamp(1rem, 3vw, 1.5rem) .7rem;
+    background: var(--bg-raised); border-top: 1px solid var(--border-default);
+    box-shadow: 0 -6px 14px -10px rgb(0 0 0 / .35);
+  }
+  #filter-bar[hidden] { display: none; }
+  #filter-bar .side-lbl { flex-basis: 100%; }
+  #filter-bar button.text { min-height: 1.6rem; margin-left: auto; }
+
   /* labelled rows of toggles: show, sort, groups, and the two in the inset */
   .side-row { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
   .side-lbl {

@@ -307,6 +307,14 @@ export function showGroup(name) {
 
 // entities.js calls this when an entity is opened, so the group page's row
 // highlight clears (the right pane now shows the entity, not the group)
+// the "filters on" bar's way to drop the group filter: the row highlight
+// and an open group page's toggle both read it
+export function clearGroupFilter() {
+  filters.group = null;
+  renderGroupBrowser();
+  if (openGroup) showGroup(openGroup);
+}
+
 export function clearGroupSelection() {
   if (openGroup !== null) {
     openGroup = null;
