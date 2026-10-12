@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, storeKey } from './core.js';
+import { $, spin, storeKey } from './core.js';
 
 const LOG = storeKey('rag_lookup');
 import { streamInto } from './conversation.js';
@@ -76,10 +76,12 @@ function setSmart(on) {
   try { localStorage.setItem(SMART_KEY, on ? '1' : ''); } catch { }
 }
 async function sendLookup() {
+  if ($('lookup-send').disabled) return;   // Enter while a reply is still coming
   const text = $('chat-text').value.trim();
   if (!text) return;
   $('chat-text').value = '';
   $('lookup-send').disabled = true;
+  spin($('lookup-send'), true);
   lookupMsg('you', text);
   const el = lookupMsg('companion thinking', '');
   const smart = smartOn() && !$('lookup-smart').hidden;
@@ -87,6 +89,7 @@ async function sendLookup() {
   finally {
     saveLookupLog();
     $('lookup-send').disabled = false;
+    spin($('lookup-send'), false);
     $('chat-text').focus();
     // for the demo journal's script (demo-script.js), as write.js's turnDone
     document.dispatchEvent(new CustomEvent('mc:turn', {detail: {tab: 'ask'}}));

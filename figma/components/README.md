@@ -148,6 +148,12 @@ dependency order) and in `static/design/design.js`.
   `platform-rule` rule; checked, the fill binds to `fill-accent` and the
   tick to `platform-well` (Chrome draws it in the well's colour). The tick
   is drawn approximately, as is the select's chevron.
+- **Icons drawn as a CSS mask** (the disclosure caret). The walker reads
+  the mask's file, box, colour and turn; the extractor inlines the SVG with
+  the turn baked in (Figma turns a layer about its corner, not its centre);
+  the plugin imports it and paints every shape the mask's colour token. It
+  isn't an instance of the `Icon` set (figma/icons), so a new icon file
+  means re-extracting, not swapping the instance.
 - **Shadows.** The four `--shadow-*` tokens are whole box-shadows, not
   colours, so they stay literal effects, in their dark values.
 - **Behaviour.** Tooltip placement, the pulse animation, and the search

@@ -142,7 +142,28 @@ async function walkPage(theme, slug) {
     for (const n of nodes(v.tree)) if (n.type === 'checkbox') Object.assign(n, await sampleCheckbox(page, n));
   for (const s of res.sets) for (const v of s.variants)
     for (const n of nodes(v.tree)) if (n.type === 'checkbox') delete n.cb;
+  for (const s of res.sets) for (const v of s.variants)
+    for (const n of nodes(v.tree)) if (n.type === 'icon') inlineIcon(n);
   return res;
+}
+
+// An icon node arrives as the file the page masks with (/static/icons/…).
+// The plugin can't read the disk, so the SVG goes in the spec, with the turn
+// the page gave it baked in: Figma would turn a layer about its corner, not
+// its centre, inside auto layout. The path goes, so the spec doesn't depend
+// on the server it was read from.
+function inlineIcon(n) {
+  const file = path.join(HERE, '..', '..', decodeURIComponent(n.src).replace(/^\//, ''));
+  let svg = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n').trim();
+  if (n.rotate) {
+    const vb = (/viewBox="([^"]+)"/.exec(svg) || [])[1];
+    const [x, y, w, h] = (vb || '0 0 24 24').split(/[\s,]+/).map(Number);
+    svg = svg.replace(/(<svg\b[^>]*>)([\s\S]*)(<\/svg>)/,
+      (_, open, body, close) => `${open}<g transform="rotate(${n.rotate} ${x + w / 2} ${y + h / 2})">${body}</g>${close}`);
+  }
+  n.icon = path.basename(file, '.svg');
+  n.svg = svg;
+  delete n.src;
 }
 
 // The colour variables: ramps, roles and platform colours, read from the

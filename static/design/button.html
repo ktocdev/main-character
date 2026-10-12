@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/components.css">
 <link rel="stylesheet" href="design.css">
+<link rel="stylesheet" href="pages/button.css">
 <script src="theme.js"></script>
 </head>
 <body>
@@ -32,6 +33,7 @@
     <div class="eyebrow">on this page</div>
     <a href="#kinds">kinds</a>
     <a href="#sizes">sizes</a>
+    <a href="#busy">busy</a>
     <a href="#in-context">in context</a>
     <a href="#anatomy">anatomy</a>
     <a href="#tokens">tokens</a>
@@ -105,6 +107,29 @@
       </div>
     </section>
 
+    <section id="busy">
+      <div class="rule eyebrow strong">Busy</div>
+      <p class="note">A call is running. Any button that sends something to the server goes through <span class="mono">busy(button, work)</span> in core.js: it takes no clicks and is <span class="mono">aria-busy</span>, and after .15s the label hides in place (so the width holds) and a ring in the label's colour turns where it was. A call quicker than that shows nothing. Controls held alongside it, the rest of a form or a row, are just disabled. Under reduced motion the ring pulses instead. Live: click one.</p>
+      <div class="spec-row busy-row" id="busy-live">
+        <button class="send">save entry</button>
+        <button class="filled">apply 3 changes</button>
+        <button class="quiet">merge into</button>
+        <button class="quiet sm">add to group</button>
+        <button class="quiet xs">add</button>
+        <button class="quiet danger">delete</button>
+        <button class="text">undo</button>
+      </div>
+      <div class="spec-row busy-row">
+        <button class="send is-busy" aria-busy="true">save entry</button>
+        <button class="filled is-busy" aria-busy="true">apply 3 changes</button>
+        <button class="quiet is-busy" aria-busy="true">merge into</button>
+        <button class="quiet sm is-busy" aria-busy="true">add to group</button>
+        <button class="quiet xs is-busy" aria-busy="true">add</button>
+        <button class="quiet danger is-busy" aria-busy="true">delete</button>
+        <button class="text is-busy" aria-busy="true">undo</button>
+      </div>
+    </section>
+
     <section id="in-context">
       <div class="rule eyebrow strong">In context</div>
       <p class="note">Write's control row: two sends beside a quiet, then a text button. Undo and redo use <span class="mono">.quiet.empty</span>, half strength while there is nothing to undo.</p>
@@ -145,5 +170,6 @@ button.quiet.danger      quiet, --text-danger on hover</pre>
   </main>
 </div>
 <script type="module" src="design.js"></script>
+<script type="module" src="pages/button.js"></script>
 </body>
 </html>

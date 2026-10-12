@@ -406,6 +406,30 @@ async function buildAll(specs) {
     return v;
   }
 
+  // An icon the page draws as a CSS mask (the disclosure caret): its SVG,
+  // with the page's turn already baked in by extract.mjs, drawn at the box's
+  // size, and every shape that paints given the mask's colour, as the mask
+  // does. Recoloured in place, not flattened: flattening would lift the
+  // shapes out of the group that carries the turn.
+  const SHAPES = ['VECTOR', 'BOOLEAN_OPERATION', 'ELLIPSE', 'RECTANGLE', 'POLYGON', 'STAR', 'LINE'];
+  async function icon(n) {
+    const size = 'width="' + n.w + '" height="' + n.h + '"';
+    // Figma draws currentColor black; any colour will do, since every shape
+    // is repainted below
+    const node = figma.createNodeFromSvg(n.svg.replace(/currentColor/g, '#000000').replace(/<svg[^>]*>/, function (tag) {
+      return tag.replace(/\s(width|height)="[^"]*"/g, '').replace('<svg', '<svg ' + size);
+    }));
+    node.name = n.icon || n.name;
+    node.fills = [];
+    const fill = n.paint ? [await paint(n.paint)] : [];
+    for (const s of node.findAll(function (x) { return SHAPES.indexOf(x.type) >= 0; })) {
+      const painted = function (ps) { return Array.isArray(ps) && ps.some(function (p) { return p.visible !== false; }); };
+      if (painted(s.fills)) s.fills = fill;
+      if (painted(s.strokes)) s.strokes = fill;
+    }
+    return node;
+  }
+
   // ---- sets this run has built, for instances ----
   const built = {};
   function findSet(name) {
@@ -449,6 +473,7 @@ async function buildAll(specs) {
     if (n.type === 'text') node = await makeText(n);
     else if (n.type === 'checkbox') node = await checkbox(n, asComponent);
     else if (n.type === 'chevron') node = await chevron(n);
+    else if (n.type === 'icon') node = await icon(n);
     else if (n.type === 'spacer') { node = figma.createFrame(); node.name = 'spacer'; node.fills = []; node.resize(1, 1); }
     else if (n.type === 'instance') {
       node = await instance(n);

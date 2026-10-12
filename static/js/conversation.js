@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $ } from './core.js';
+import { $, spin } from './core.js';
 
 // ---- conversation helpers ----
 export function addMsg(cls, text) {
@@ -85,8 +85,11 @@ export async function streamInto(el, url, payload) {
   return res;
 }
 
-export function composerBusy(busy) {
-  $('chat-send').disabled = busy;
-  $('entry-send').disabled = busy;
-  $('reflect-btn').disabled = busy;
+// While a turn is out, all three are disabled; `from`, the one it was sent
+// with, spins until the reply is done (core.js spin()).
+export function composerBusy(busy, from) {
+  for (const id of ['chat-send', 'entry-send', 'reflect-btn']) {
+    $(id).disabled = busy;
+    spin($(id), busy && $(id) === from);
+  }
 }

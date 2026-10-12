@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, api, esc, fmtDate } from './core.js';
+import { $, api, busy, esc, fmtDate } from './core.js';
 
 // ---- categories ----
 // A list of categories (built-in and yours) on the left; on the right, the
@@ -133,14 +133,14 @@ function renderProposal(p) {
     b.className = cls;
     b.textContent = text;
     b.title = title;
-    b.onclick = async () => {
+    b.onclick = () => busy(b, async () => {
       if (await api('/api/organic/respond', {id: p.id, action})) {
         propSelected = null;
         if (action === 'confirm') catSelected = p.name.toLowerCase().replace(/\s+/g, '_');
         await loadCategories();
         if (action === 'confirm' && !(catSelected in catIndex.counts)) catSelected = null;
       }
-    };
+    }, ...row.querySelectorAll('button'));
     row.appendChild(b);
   };
   act('confirm', 'confirm', 'filled', 'create this category and tag the entries that mention these members');
@@ -171,10 +171,10 @@ function renderCategory(name) {
     rm.className = 'quiet sm danger';
     rm.textContent = 'remove category';
     rm.title = 'delete this category. Its tags disappear; entries are untouched';
-    rm.onclick = async () => {
+    rm.onclick = () => busy(rm, async () => {
       if (!confirm(`delete category "${customDef.name}"?`)) return;
       if (await api('/api/organic/custom/delete', {name: customDef.name})) { catSelected = null; loadCategories(); }
-    };
+    });
     col.querySelector('.title-row').appendChild(rm);
     col.insertBefore(tagRow('keywords', customDef.keywords, 'add keyword…',
       kw => ({remove_keyword: kw}), kw => ({add_keyword: kw}), customDef.name), $('cat-notice'));
@@ -268,20 +268,23 @@ function tagRow(title, items, placeholder, removePayload, addPayload, catName) {
     t.innerHTML = '<span></span><button class="x" aria-label="remove">×</button>';
     t.firstChild.textContent = it;
     t.querySelector('.x').title = `remove this ${title.slice(0, -1)}`;
-    t.querySelector('.x').onclick = async () => {
+    const x = t.querySelector('.x');
+    x.onclick = () => busy(x, async () => {
       if (await api('/api/organic/custom/edit', {name: catName, ...removePayload(it)})) loadCategories();
-    };
+    });
     row.appendChild(t);
   }
   const inp = document.createElement('input');
   inp.type = 'text';
   inp.className = 'input-2xs';
   inp.placeholder = placeholder;
-  inp.onkeydown = async e => {
+  inp.onkeydown = e => {
     if (e.key !== 'Enter') return;
     const v = inp.value.trim();
     if (!v) return;
-    if (await api('/api/organic/custom/edit', {name: catName, ...addPayload(v)})) loadCategories();
+    busy(inp, async () => {
+      if (await api('/api/organic/custom/edit', {name: catName, ...addPayload(v)})) loadCategories();
+    });
   };
   row.appendChild(inp);
   return row;
@@ -318,10 +321,10 @@ function entryRow(key, c, name) {
     const x = chip.querySelector('.x');
     x.title = 'remove this tag (kept as your correction)';
     x.setAttribute('aria-label', `remove tag ${label(n)} from this entry`);
-    x.onclick = async () => {
+    x.onclick = () => busy(x, async () => {
       const r = await api('/api/categories/tag', {key, name: n, present: false});
       if (r) { catIndex = r; renderCategories(); notice(`removed “${label(n)}” from ${fmtDate(c.date)}. Fixes stick across future tagging passes.`); }
-    };
+    });
     tags.appendChild(chip);
   }
   const add = document.createElement('select');
@@ -331,10 +334,12 @@ function entryRow(key, c, name) {
     Object.keys(catIndex.counts)
       .filter(n => !(n in c.categories))
       .map(n => `<option value="${esc(n)}">${esc(label(n))}</option>`).join('');
-  add.onchange = async () => {
+  add.onchange = () => {
     if (!add.value) return;
-    const r = await api('/api/categories/tag', {key, name: add.value, present: true});
-    if (r) { catIndex = r; renderCategories(); notice(`tagged ${fmtDate(c.date)} with “${label(add.value)}”.`); }
+    busy(add, async () => {
+      const r = await api('/api/categories/tag', {key, name: add.value, present: true});
+      if (r) { catIndex = r; renderCategories(); notice(`tagged ${fmtDate(c.date)} with “${label(add.value)}”.`); }
+    });
   };
   tags.appendChild(add);
   row.appendChild(tags);
@@ -421,7 +426,8 @@ export function init() {
   const create = async () => {
     const name = $('newcat-name').value.trim();
     if (!name) return;
-    const r = await api('/api/organic/custom', {name, keywords: $('newcat-keywords').value});
+    const r = await busy($('newcat-add'), () => api('/api/organic/custom', {name, keywords: $('newcat-keywords').value}),
+      $('newcat-name'), $('newcat-keywords'), $('newcat-cancel'));
     if (r) {
       $('newcat-name').value = '';
       $('newcat-keywords').value = '';

@@ -45,8 +45,9 @@ cd "$(git rev-parse --show-toplevel)" || exit 2
 
 SELF="scripts/check_leaks.sh"
 NAME_LIST="third-party-names.txt"
-# Exempt from the name pass only; both are still searched for secret-shaped
-# strings. Each holds text that cannot be reworded to dodge a collision:
+# Exempt from the name pass only; all three are still searched for
+# secret-shaped strings. Each holds text that cannot be reworded to dodge a
+# collision:
 #
 #   gen_name_list.py -- its docstring has to name the collisions it
 #     deliberately leaves in the list (real people whose names are also
@@ -56,7 +57,11 @@ NAME_LIST="third-party-names.txt"
 #     Component" is one of the license's own defined terms. A canonical
 #     license is not ours to edit, so the alternative to exempting it is a
 #     check that fails on every run until someone deletes the check.
-NAME_EXEMPT='^(scripts/gen_name_list\.py|LICENSE)$'
+#   static/icons/LICENSES.md -- the icon sets' copyright notices. CC BY-SA
+#     4.0 requires naming the caret's author (Daniel Bruce, Entypo+), and
+#     an MIT notice has to be kept as written, so the same reasoning as
+#     LICENSE applies. Keep it to notices: anything else goes elsewhere.
+NAME_EXEMPT='^(scripts/gen_name_list\.py|LICENSE|static/icons/LICENSES\.md)$'
 
 # `sk-ant-` needs the key body, not just the prefix — .env.example ships
 # `# ANTHROPIC_API_KEY=sk-ant-...` as a placeholder, and a check that
@@ -100,7 +105,7 @@ search() {
     if [ -n "$REV" ]; then
         local specs=(":(exclude)$SELF")
         if [ "$exempt" = names ]; then
-            specs+=(":(exclude)scripts/gen_name_list.py" ":(exclude)LICENSE")
+            specs+=(":(exclude)scripts/gen_name_list.py" ":(exclude)LICENSE" ":(exclude)static/icons/LICENSES.md")
         fi
         git grep "$@" "$REV" -- "${specs[@]}" | sed "s|^$REV:||"
     else

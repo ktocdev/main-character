@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, api, esc, fmtDate, refreshStatus } from './core.js';
+import { $, api, busy, esc, fmtDate, refreshStatus } from './core.js';
 import { state, filters } from './state.js';
 import { showTab } from './main.js';
-import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection, showGroup as showGroupByName } from './groups.js';
+import { loadGroups, groupSetDeep, groupPathLabel, rolledUpMemberSet, clearGroupSelection, clearGroupFilter, showGroup as showGroupByName } from './groups.js';
 import * as popover from './popover.js';
 
 // ---- entities ----
@@ -126,7 +126,8 @@ export function renderEntityList() {
         const t = document.createElement('button');
         t.className = 'parts-toggle';
         const open = openParts.has(nestInfo.toggle);
-        t.textContent = `${open ? '▾' : '▸'} ${nestInfo.count} part${nestInfo.count === 1 ? '' : 's'}`;
+        t.innerHTML = '<span class="caret-icon"></span><span></span>';
+        t.lastChild.textContent = `${nestInfo.count} part${nestInfo.count === 1 ? '' : 's'}`;
         t.setAttribute('aria-expanded', open);
         t.onclick = () => { if (open) openParts.delete(nestInfo.toggle); else openParts.add(nestInfo.toggle); renderEntityList(); };
         wrap.appendChild(t);
@@ -145,6 +146,7 @@ export function renderEntityList() {
         cb.onchange = () => {
           if (cb.checked) picked.add(name); else picked.delete(name);
           updateBatchCount();
+          renderFilterBar();
         };
         row.appendChild(cb);
       }
@@ -180,13 +182,15 @@ export function renderEntityList() {
         keep.title = reviewed ? 'reviewed (click to unmark)' : 'mark reviewed';
         keep.setAttribute('aria-label', `${reviewed ? 'unmark' : 'mark'} ${name} reviewed`);
         keep.dataset.tipPlace = 'above-end';
-        keep.onclick = async e => {
+        keep.onclick = e => {
           e.stopPropagation();
           const next = !reviewed;
-          if (await api('/api/entities/reviewed', {name, reviewed: next})) {
-            state.entities[name].reviewed = next;
-            renderEntityList();
-          }
+          busy(keep, async () => {
+            if (await api('/api/entities/reviewed', {name, reviewed: next})) {
+              state.entities[name].reviewed = next;
+              renderEntityList();
+            }
+          });
         };
         row.appendChild(keep);
       }
@@ -202,6 +206,71 @@ export function renderEntityList() {
   }
   if (selectMode) updateBatchCount();
   updateExtra();
+  renderFilterBar();
+}
+
+// The foot of the sidebar: in select mode, a chip for each checked entity,
+// then every filter that's on. It sticks to the bottom of the scrolling
+// list, so a pick or a filter set at the top comes off from anywhere. A
+// filter chip's × goes through the toggle it stands for, so the toggle,
+// the folded count and the list all follow; a pick's × unchecks its box.
+function renderFilterBar() {
+  const bar = $('filter-bar');
+  const sel = selectMode ? [...picked] : [];
+  const on = [];
+  const q = $('search').value.trim();
+  if (q) on.push([`“${q.length > 14 ? q.slice(0, 13) + '…' : q}”`, 'clear the filter text',
+    () => { $('search').value = ''; renderEntityList(); }]);
+  for (const kind of filters.types)
+    on.push([PLURAL[kind] || kind, `show all kinds again`, () => $('type-chips').querySelector(`[data-type="${kind}"]`).click()]);
+  if (filters.group) on.push([`in ${groupPathLabel(filters.group)}`, 'stop narrowing the list to this group', () => { clearGroupFilter(); renderEntityList(); }]);
+  if (filters.unreviewed) on.push(['unreviewed', 'show reviewed ones too', () => $('flt-unreviewed').click()]);
+  if (filters.single) on.push(['1 mention', 'show every mention count', () => $('flt-single').click()]);
+  if (filters.mixup) on.push(['maybe two', 'show everyone', () => $('flt-mixup').click()]);
+  if (filters.retired) on.push(['retired', 'back to everyday view', () => $('flt-retired').click()]);
+  bar.hidden = !on.length && !sel.length;
+  bar.innerHTML = '';
+  const section = (label, cls) => {
+    const g = document.createElement('div');
+    g.className = 'foot-group ' + cls;
+    const lbl = document.createElement('span');
+    lbl.className = 'side-lbl';
+    lbl.textContent = label;
+    g.appendChild(lbl);
+    bar.appendChild(g);
+    return g;
+  };
+  const clearBtn = (g, text, run) => {
+    const b = document.createElement('button');
+    b.className = 'text';
+    b.textContent = text;
+    b.onclick = run;
+    g.appendChild(b);
+  };
+  if (sel.length) {
+    const g = section(`${sel.length} selected`, 'picks');
+    if (sel.length > 1) clearBtn(g, 'clear', () => $('batch-clear').click());
+    const chips = document.createElement('div');
+    chips.className = 'foot-chips';
+    sel.forEach((name, i) => chips.appendChild(tag(name, () => unpick(name, i), `unselect ${name}`)));
+    g.appendChild(chips);
+  }
+  if (on.length) {
+    const g = section('filters on', 'filters');
+    for (const [text, title, off] of on) {
+      g.appendChild(tag(text, off, `remove filter: ${text} (${title})`));
+    }
+    if (on.length > 1) clearBtn(g, 'clear all', () => { for (const [, , off] of on) off(); });
+  }
+}
+// a pick's ×: uncheck it, then keep the keyboard in the chips (the next
+// one along, or the last), not dropped to the top of the page
+function unpick(name, i) {
+  picked.delete(name);
+  updateBatchCount();
+  renderEntityList();
+  const xs = $('filter-bar').querySelectorAll('.picks .x');
+  (xs[Math.min(i, xs.length - 1)] || $('batch-group')).focus();
 }
 
 // "triage & recycling bin" folds its filters away; while folded, a count
@@ -216,7 +285,6 @@ function updateExtra() {
 function setExtraOpen(open) {
   $('extra-panel').hidden = !open;
   $('extra-toggle').setAttribute('aria-expanded', String(open));
-  $('extra-toggle').querySelector('.caret').textContent = open ? '▾' : '▸';
   updateExtra();
 }
 
@@ -225,13 +293,11 @@ function setCleanupOpen(open) {
   if (open) popover.opened('cleanup');
   $('cleanup-menu').hidden = !open;
   $('cleanup-btn').setAttribute('aria-expanded', String(open));
-  $('cleanup-btn').querySelector('.caret').textContent = open ? '▴' : '▾';
   if (!open) setSuggestKindsOpen(false);
 }
 function setSuggestKindsOpen(open) {
   $('suggest-kinds').hidden = !open;
   $('suggest-toggle').setAttribute('aria-expanded', String(open));
-  $('suggest-toggle').querySelector('.caret').textContent = open ? '▾' : '▸';
 }
 
 // ---- batch add to group ----
@@ -239,7 +305,7 @@ async function batchAdd() {
   const group = $('batch-group').value.trim();
   if (!group) { $('batch-group').focus(); return; }
   if (!picked.size) return;
-  const r = await api('/api/groups/members', {group, entities: [...picked]});
+  const r = await busy($('batch-add'), () => api('/api/groups/members', {group, entities: [...picked]}), $('batch-group'), $('batch-clear'));
   if (!r) return;
   picked.clear();
   $('batch-group').value = '';
@@ -283,6 +349,41 @@ function panelSay(panel, text) {
   panel.appendChild(p);
   return p;
 }
+// ---- paid calls (the clean up menu's "api call" half) ----
+// One at a time: while one is out, the api-call items take no clicks and
+// the clean up button carries a pulsing dot, so a second click can't buy
+// the same answer twice (a review reopened mid-call used to keep billing
+// the first). The wait line spins and counts seconds after five, so a
+// long call doesn't read as frozen.
+let paidRunning = null;
+async function paid(what, work) {
+  if (paidRunning) return undefined;
+  paidRunning = what;
+  $('cleanup-btn').classList.add('paid-busy');
+  $('cleanup-menu').classList.add('paid-busy');
+  const tips = [...document.querySelectorAll('#cleanup-menu .paid')].map(b => [b, b.title]);
+  for (const [b] of tips) { b.setAttribute('aria-disabled', 'true'); b.title = `claude is already working on ${what}`; }
+  try { return await work(); }
+  finally {
+    paidRunning = null;
+    $('cleanup-btn').classList.remove('paid-busy');
+    $('cleanup-menu').classList.remove('paid-busy');
+    for (const [b, t] of tips) { b.removeAttribute('aria-disabled'); b.title = t; }
+  }
+}
+function panelWait(panel, text) {
+  const w = panelSay(panel, text);
+  w.classList.add('waiting');
+  const t0 = Date.now();
+  const tick = setInterval(() => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    if (!w.isConnected) clearInterval(tick);
+    else if (s >= 5) w.textContent = `${text} ${s}s`;
+  }, 1000);
+  w.done = () => { clearInterval(tick); w.classList.remove('waiting'); };
+  return w;
+}
+
 async function findDups() {
   const panel = suggestPanel('possible duplicates');
   const w = panelSay(panel, 'scanning for likely duplicates (local, free)…');
@@ -295,7 +396,8 @@ async function findDups() {
     row.innerHTML = `<span><strong>${esc(p.a)}</strong> (${p.a_mentions}) ↔ <strong>${esc(p.b)}</strong> (${p.b_mentions})</span>`;
     const mk = (label, fn, cls = 'quiet') => {
       const b = document.createElement('button');
-      b.className = cls; b.textContent = label; b.onclick = fn;
+      b.className = cls; b.textContent = label;
+      b.onclick = () => busy(b, fn, ...row.querySelectorAll('button'));
       row.appendChild(b);
     };
     mk(`${p.a} → ${p.b}`, async () => {
@@ -338,7 +440,10 @@ function panelApply(panel, rows, label, fn) {
   const b = document.createElement('button');
   b.className = 'filled sm';
   const checked = () => rows.filter(([, row]) => row.isConnected && row.querySelector('input').checked).map(([x]) => x);
-  b.onclick = () => { const xs = checked(); if (xs.length) fn(xs); };
+  b.onclick = async () => {
+    const xs = checked();
+    if (xs.length) { await busy(b, () => fn(xs)); relabel(); }
+  };
   const relabel = () => { const n = checked().length; b.textContent = label(n); b.disabled = !n; };
   panel.addEventListener('change', relabel);
   panel.appendChild(b);
@@ -379,9 +484,11 @@ async function showDeleted() {
     b.className = 'quiet xs';
     b.textContent = 'restore';
     b.title = 'bring back everything this delete hid';
-    b.onclick = async e => {
+    b.onclick = e => {
       e.preventDefault();
-      if (await api('/api/entities/deleted/restore', {key, mode})) { row.remove(); panel.dispatchEvent(new Event('change')); loadEntities(); }
+      busy(b, async () => {
+        if (await api('/api/entities/deleted/restore', {key, mode})) { row.remove(); panel.dispatchEvent(new Event('change')); loadEntities(); }
+      });
     };
     row.appendChild(b);
   };
@@ -420,9 +527,9 @@ async function showDeleted() {
 // pre-checked with its category, editable. One retype change, one undo.
 async function thingsReview() {
   const panel = suggestPanel('things review');
-  const w = panelSay(panel, 'asking claude which projects and places are really things…');
-  const r = await api('/api/entities/suggest-things', {});
-  w.remove();
+  const w = panelWait(panel, 'asking claude which projects and places are really things…');
+  const r = await paid('the things review', () => api('/api/entities/suggest-things', {}));
+  w.done(); w.remove();
   if (!panel.isConnected) return;  // another review opened meanwhile
   if (!r) { closeSuggest(); return; }
   if (!r.things.length) { panelSay(panel, 'nothing looks like a thing. Looks clean.'); return; }
@@ -535,18 +642,20 @@ async function partsReview() {
     b.textContent = `apply ${n} change${n === 1 ? '' : 's'}`;
     b.disabled = !n;
   };
-  b.onclick = async () => {
+  b.onclick = () => busy(b, async () => {
     const res = await api('/api/entities/parts-review', picked());
     if (res) { closeSuggest(); clearDetail(`parts review: ${res.changed} changes. Undo puts them all back.`); }
-  };
+    else relabel();
+  });
   panel.addEventListener('change', relabel);
   panel.appendChild(b);
   relabel();
   // Claude's guesses at parts, filled in when they arrive
   if (!sourceRows.some(x => !x.s.generic)) return;
-  const ask = panelSay(panel, 'asking claude which merged names are really parts…');
+  const ask = panelWait(panel, 'asking claude which merged names are really parts…');
   b.before(ask);
-  const res = await api('/api/entities/suggest-parts', {});
+  const res = await paid('the parts review', () => api('/api/entities/suggest-parts', {}));
+  ask.done();
   if (!res) { ask.textContent = "claude's suggestions didn't come back; choose by hand."; return; }
   for (const p of res.parts) {
     const x = sourceRows.find(x => x.s.key === p.key);
@@ -575,11 +684,12 @@ async function reextractPanel() {
   const out = document.createElement('div');
   panel.appendChild(out);
   const input = form.querySelector('input');
+  const findBtn = form.querySelector('button');
   const terms = () => input.value.split(',').map(t => t.trim()).filter(Boolean);
   const find = async () => {
     if (!terms().length) { input.focus(); return; }
     out.innerHTML = '';
-    const r = await api('/api/entities/reextract/preview', {terms: terms()});
+    const r = await busy(findBtn, () => api('/api/entities/reextract/preview', {terms: terms()}), input);
     if (!r) return;
     if (!r.entries.length) { panelSay(out, 'no entries mention that.'); return; }
     const edited = r.entries.filter(e => e.edited);
@@ -593,10 +703,9 @@ async function reextractPanel() {
     const go = document.createElement('button');
     go.className = 'filled sm';
     go.textContent = `re-extract ${r.entries.length} entr${r.entries.length === 1 ? 'y' : 'ies'} (~$${r.estimate.toFixed(2)})`;
+    // paid: busy until the run is accepted, then the progress line takes over
     go.onclick = async () => {
-      go.disabled = true;
-      if (await api('/api/entities/reextract', {terms: r.terms})) watchReextract(out);
-      else go.disabled = false;
+      if (await busy(go, () => paid('a re-extract', () => api('/api/entities/reextract', {terms: r.terms})), findBtn, input)) watchReextract(out);
     };
     out.appendChild(go);
   };
@@ -681,7 +790,7 @@ function tag(label, onRemove, removeTitle) {
   x.textContent = '×';
   x.setAttribute('aria-label', removeTitle);
   x.title = removeTitle;
-  x.onclick = onRemove;
+  x.onclick = () => busy(x, onRemove);
   c.appendChild(x);
   return c;
 }
@@ -744,14 +853,14 @@ export async function showEntity(name) {
     one.className = 'link';
     one.textContent = "it's one person";
     one.title = 'stop flagging this name';
-    one.onclick = async () => {
+    one.onclick = () => busy(one, async () => {
       if (await api('/api/entities/not-mixed', {name: r.name, not_mixed: true})) {
         delete info.mixup;
         renderEntityList();
         mx.innerHTML = '';
         notice(`${r.name} won't be flagged again. Undo brings the flag back.`);
       }
-    };
+    });
     mx.append(one);
   }
   // part of a parent, or the parent of parts: each opens the other
@@ -842,11 +951,11 @@ export async function showEntity(name) {
         rel.className = 'link rel-edit';
         rel.textContent = o.attr ? 'change' : 'add relationship';
         rel.title = `what this entry calls ${o.extracted_name}`;
-        rel.onclick = async () => {
+        rel.onclick = () => busy(rel, async () => {
           const text = prompt(`What was ${o.extracted_name} in this entry? (e.g. friend, pet cat)\nLeave it empty to clear it.`, o.attr);
           if (text === null || text.trim() === o.attr) return;
           if (await api('/api/observation', {...o, action: 'relationship', text: text.trim()})) await reloadEntity(r.name);
-        };
+        });
         d.append(' ', rel);
       }
       docEl.appendChild(d);
@@ -869,7 +978,8 @@ export async function showEntity(name) {
     ops.className = 'ops';
     const mk = (label, title, fn, cls) => {
       const b = document.createElement('button');
-      b.textContent = label; b.title = title; b.onclick = fn;
+      b.textContent = label; b.title = title;
+      b.onclick = () => busy(b, fn, ...ops.querySelectorAll('button'));
       if (cls) b.className = cls;
       ops.appendChild(b);
     };
@@ -978,7 +1088,7 @@ function splitBar(r, info) {
   if (info.closed) {
     keep = document.createElement('button');
     keep.className = 'quiet sm';
-    keep.onclick = async () => {
+    keep.onclick = () => busy(keep, async () => {
       const picks = r.observations.filter(o => splitPicked.has(`${o.file}|${o.group}|${o.ent_index}|${o.obs_index}`))
         .map(o => ({file: o.file, group: o.group, ent_index: o.ent_index, obs_index: o.obs_index}));
       const res = await api('/api/entities/keep-retired', {name: r.name, picks});
@@ -989,7 +1099,7 @@ function splitBar(r, info) {
       const next = state.entities[r.name] ? r.name : res.to;
       if (state.entities[next]) await showEntity(next); else showNone();
       notice(`kept with ${res.to}, who stays retired. Undo puts it back.`);
-    };
+    }, ...bar.querySelectorAll('button, input, select'));
     btns.append(keep);
   }
   btns.append(go, cancel);
@@ -1005,7 +1115,7 @@ function splitBar(r, info) {
     }
   };
   refreshSplitBar();
-  go.onclick = async () => {
+  go.onclick = () => busy(go, async () => {
     const qualifier = (sel.value && others.length ? sel.value : qIn.value).trim();
     if (!qualifier) { qIn.focus(); return; }
     if (restIn && !restIn.value.trim()) { restIn.focus(); return; }
@@ -1022,8 +1132,15 @@ function splitBar(r, info) {
     const next = state.entities[r.name] ? r.name : (res.rest || res.to);
     if (state.entities[next]) await showEntity(next); else showNone();
     notice(`${res.did}. Undo puts it back.`);
-  };
+  }, ...bar.querySelectorAll('button, input, select'));
   return bar;
+}
+
+// An edit-box action: busy on its own control, with the rest of the box
+// held, so one edit runs at a time (each waits on the server's write lock
+// and an index rebuild).
+export function editBusy(el, work) {
+  return busy(el, work, ...$('entity-edit').querySelectorAll('button, input, select'));
 }
 
 export async function reloadEntity(name) {
@@ -1065,8 +1182,9 @@ function flash(msg) {
 export function showGroupPane() { showDetail('group'); }
 
 async function histStep(url) {
-  const res = await fetch(url, {method: 'POST'});
-  const r = await res.json();
+  const btn = url.endsWith('undo') ? $('undo-btn') : $('redo-btn');
+  const r = await busy(btn, async () => (await fetch(url, {method: 'POST'})).json(), $('undo-btn'), $('redo-btn'));
+  if (!r) return;
   if (r.error) { alert(r.error); return; }
   await loadEntities();
   if (state.selected && state.entities[state.selected]) await showEntity(state.selected);
@@ -1100,13 +1218,13 @@ export function init() {
     loadGroups();  // the group browser shows retired groups only under this chip
     renderEntityList();
   };
-  $('retire-btn').onclick = async () => {
+  $('retire-btn').onclick = () => editBusy($('retire-btn'), async () => {
     if (!state.selected) return;
     const retire = !state.entities[state.selected]?.retired;
     const r = await api('/api/entities/retire', {name: state.selected, retired: retire});
     if (r) await reloadEntity(r.name);
     if (r && retire) flash(`${r.name} retired. Triage & recycling bin → retired shows them.`);
-  };
+  });
   $('flt-mixup').onclick = () => {
     filters.mixup = !filters.mixup;
     pressed('flt-mixup', filters.mixup);
@@ -1161,9 +1279,11 @@ export function init() {
     'find-dups': findDups, 'find-generic': genericCleanup, 'animals-review': animalsReview,
     'things-review': thingsReview, 'parts-review': partsReview, 'reextract-open': reextractPanel,
   };
-  for (const [id, fn] of Object.entries(tools)) $(id).onclick = () => { setCleanupOpen(false); fn(); };
+  const held = b => paidRunning && b.classList.contains('paid');
+  for (const [id, fn] of Object.entries(tools)) $(id).onclick = () => { if (held($(id))) return; setCleanupOpen(false); fn(); };
   $('suggest-toggle').onclick = () => setSuggestKindsOpen($('suggest-kinds').hidden);
   document.querySelectorAll('#suggest-kinds [data-kind]').forEach(b => b.onclick = () => {
+    if (held(b)) return;
     setCleanupOpen(false);
     askSuggest(b.dataset.kind);
   });
@@ -1172,34 +1292,36 @@ export function init() {
     splitPicked.clear();
     showEntity(state.selected);
   };
-  $('part-btn').onclick = async () => {
+  $('part-btn').onclick = () => {
     const parent = $('merge-target').value.trim();
     if (!state.selected || !parent) { $('merge-target').focus(); return; }
-    const r = await api('/api/entities/part-of', {name: state.selected, parent});
-    if (r) await reloadEntity(r.name);
+    editBusy($('part-btn'), async () => {
+      const r = await api('/api/entities/part-of', {name: state.selected, parent});
+      if (r) await reloadEntity(r.name);
+    });
   };
-  $('part-path').onchange = async () => {
+  $('part-path').onchange = () => editBusy($('part-path'), async () => {
     const r = await api('/api/entities/hide-path', {name: state.selected, hide: !$('part-path').checked});
     if (r) await reloadEntity(r.name);
-  };
+  });
 
-  $('merge-btn').onclick = async () => {
+  $('merge-btn').onclick = () => editBusy($('merge-btn'), async () => {
     const target = $('merge-target').value.trim();
     if (!state.selected || !target) return;
     if (!confirm(`Merge "${state.selected}" into "${target}"?\n("${state.selected}" stays as an alias)`)) return;
     const r = await api('/api/entities/merge', {source: state.selected, target});
     if (r) clearDetail(`merged into ${r.into}`);
-  };
+  });
 
-  $('correct-btn').onclick = async () => {
+  $('correct-btn').onclick = () => editBusy($('correct-btn'), async () => {
     const target = $('merge-target').value.trim();
     if (!state.selected || !target) return;
     if (!confirm(`Correct "${state.selected}" to "${target}"?\n(this fixes a typo, so "${state.selected}" is NOT kept as an alias)`)) return;
     const r = await api('/api/entities/correct', {source: state.selected, target});
     if (r) clearDetail(`corrected to ${r.into}`);
-  };
+  });
 
-  $('retype-kind').onchange = async () => {
+  $('retype-kind').onchange = () => editBusy($('retype-kind'), async () => {
     const kind = $('retype-kind').value;
     if (!state.selected || !kind) return;
     const newName = prompt(`Move "${state.selected}" to ${PLURAL[kind]}. Rename it? (leave as-is to keep the name)`, state.selected);
@@ -1208,45 +1330,47 @@ export function init() {
     const r = await api('/api/entities/retype', {name: state.selected, new_type: kind, new_name: newName.trim()});
     if (r && kind === 'thing') await reloadEntity(newName.trim() || state.selected);
     else if (r) clearDetail(`moved to ${PLURAL[kind]}`);
-  };
+  });
 
-  $('thing-category').onchange = async () => {
+  $('thing-category').onchange = () => editBusy($('thing-category'), async () => {
     if (!state.selected) return;
     const r = await api('/api/entities/category', {name: state.selected, category: $('thing-category').value});
     if (r) await reloadEntity(r.name);
-  };
+  });
 
-  $('alias-add-btn').onclick = async () => {
+  $('alias-add-btn').onclick = () => {
     const a = $('alias-new').value.trim();
     if (!state.selected || !a) return;
-    if (await api('/api/entities/alias', {name: state.selected, add: a})) {
-      $('alias-new').value = '';
-      await reloadEntity(state.selected);
-    }
+    editBusy($('alias-add-btn'), async () => {
+      if (await api('/api/entities/alias', {name: state.selected, add: a})) {
+        $('alias-new').value = '';
+        await reloadEntity(state.selected);
+      }
+    });
   };
 
-  $('rename-btn').onclick = async () => {
+  $('rename-btn').onclick = () => editBusy($('rename-btn'), async () => {
     if (!state.selected) return;
     const own = state.entities[state.selected]?.base || state.selected;
     const newName = prompt(`Rename "${state.selected}" to:`, own);
     if (newName === null || !newName.trim() || newName.trim() === own) return;
     const r = await api('/api/entities/rename', {source: state.selected, target: newName.trim()});
     if (r) { state.selected = r.to; await reloadEntity(r.to); }
-  };
+  });
 
-  $('delete-btn').onclick = async () => {
+  $('delete-btn').onclick = () => editBusy($('delete-btn'), async () => {
     if (!state.selected) return;
     if (!confirm(`Delete the mentions of "${state.selected}"?\n(your entries are untouched, and a new entry that mentions "${state.selected}" starts it fresh)`)) return;
     const r = await api('/api/entities/delete', {name: state.selected, mode: 'mentions'});
     if (r) clearDetail('deleted');
-  };
+  });
 
-  $('never-btn').onclick = async () => {
+  $('never-btn').onclick = () => editBusy($('never-btn'), async () => {
     if (!state.selected) return;
     if (!confirm(`Never track "${state.selected}"?\nEvery future "${state.selected}" will be ignored too. Meant for generic terms and junk.`)) return;
     const r = await api('/api/entities/delete', {name: state.selected, mode: 'name'});
     if (r) clearDetail(`no longer tracking ${r.deleted}`);
-  };
+  });
 
   $('undo-btn').onclick = () => histStep('/api/undo');
   $('redo-btn').onclick = () => histStep('/api/redo');
@@ -1266,9 +1390,9 @@ export function init() {
 // ---- merge suggestions (find duplicates via claude, by type) ----
 async function askSuggest(kind) {
   const panel = suggestPanel(`claude's suggestions · ${PLURAL[kind] || kind}`);
-  const w = panelSay(panel, `asking claude for ${kind} merge suggestions…`);
-  const r = await api('/api/entities/suggest', {kind});
-  w.remove();
+  const w = panelWait(panel, `asking claude for ${kind} merge suggestions…`);
+  const r = await paid(`${PLURAL[kind] || kind} duplicates`, () => api('/api/entities/suggest', {kind}));
+  w.done(); w.remove();
   if (!r) { closeSuggest(); return; }
   if (!r.groups.length) { panelSay(panel, 'no confident suggestions. Looks clean.'); return; }
   for (const g of r.groups) {
@@ -1277,11 +1401,11 @@ async function askSuggest(kind) {
     div.innerHTML = `<span><strong>${g.members.map(esc).join(', ')}</strong> → ${esc(g.canonical)}</span>`;
     const ok = document.createElement('button');
     ok.className = 'quiet'; ok.textContent = 'apply';
-    ok.onclick = async () => {
+    ok.onclick = () => busy(ok, async () => {
       for (const m of g.members) await api('/api/entities/merge', {source: m, target: g.canonical});
       div.remove();
       loadEntities();
-    };
+    }, no);
     const no = document.createElement('button');
     no.className = 'quiet danger'; no.textContent = 'dismiss';
     no.onclick = () => div.remove();

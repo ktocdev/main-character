@@ -16,7 +16,7 @@
 <header>
   <div class="masthead">
     <h1><a href="index.html">main character</a></h1>
-    <span class="status">disclosure · open / closed</span>
+    <span class="status">disclosure · large / small</span>
   </div>
   <div class="right">
     <span>source: static/css/components.css</span>
@@ -31,8 +31,9 @@
 <div class="wrap">
   <nav class="side" aria-label="design system">
     <div class="eyebrow">on this page</div>
-    <a href="#states">open and closed</a>
+    <a href="#states">large</a>
     <a href="#accordion">accordion</a>
+    <a href="#small">small</a>
     <a href="#anatomy">anatomy</a>
     <a href="#tokens">tokens</a>
   </nav>
@@ -40,11 +41,12 @@
   <main class="doc wide">
     <section>
       <h2>Disclosure</h2>
-      <p class="lede">A section that opens and closes: a native <span class="mono">&lt;details&gt;</span> whose header is the section's italic accent title, with a small <span class="mono">›</span> that turns to <span class="mono">⌄</span> when open. A run of them, hairline between each, is help's accordion. Native, so it opens from the keyboard and for find-in-page with nothing extra.</p>
+      <p class="lede">Something that opens and closes, in two sizes. <b>Large</b> is a section: a native <span class="mono">&lt;details&gt;</span> whose header is the section's italic accent title, with the caret icon as its mark, turning from right to down when open. A run of them, hairline between each, is help's accordion. Native, so it opens from the keyboard and for find-in-page with nothing extra. <b>Small</b> folds a few controls away inside a sidebar or a menu. Both draw the same caret (<span class="mono">static/icons/caret-right.svg</span>).</p>
     </section>
 
+
     <section id="states">
-      <div class="rule eyebrow strong">Open and closed</div>
+      <div class="rule eyebrow strong">Large · open and closed</div>
       <div class="spec-row top">
         <details class="disclosure" data-figma-set="Disclosure" data-figma-variant="open=false">
           <summary><span class="mark"></span><span data-figma-text="title">ask · look things up</span></summary>
@@ -76,16 +78,34 @@
       </div>
     </section>
 
+
+    <section id="small">
+      <div class="rule eyebrow strong">Small · open and closed</div>
+      <p class="note">A text button in the UI face with a caret, for showing and hiding a few controls inside a sidebar or a menu: the sidebar's "triage &amp; recycling bin", and "find duplicates" in the clean up menu. It is a <span class="mono">&lt;button&gt;</span> with <span class="mono">aria-expanded</span> and <span class="mono">aria-controls</span>, not a <span class="mono">&lt;details&gt;</span>, so it can carry a count and live inside a menu that closes on its own. The caret turns from right to down when it opens; the CSS reads <span class="mono">aria-expanded</span>, so the script only sets that. Not in the Figma set yet.</p>
+      <div class="spec-row top small-row">
+        <button class="disclosure-sm" aria-expanded="false"><span class="caret-icon"></span><span>closed</span></button>
+        <button class="disclosure-sm" aria-expanded="true"><span class="caret-icon"></span><span>open</span></button>
+        <button class="disclosure-sm active" aria-expanded="false"><span class="caret-icon"></span><span>with count</span><span class="count">2</span></button>
+        <div class="small-end"><button class="disclosure-sm end" aria-expanded="false"><span class="caret-icon"></span><span>caret at the end</span></button></div>
+      </div>
+<pre class="tree">button.disclosure-sm[.end][.active][aria-expanded][aria-controls]
+  span.caret-icon      right when closed, turns down when open
+  span                 the label
+  span.count           optional: how many toggles inside are on, while closed
+
+span.caret-icon.drop   the same icon on a menu trigger (clean up): down, turns up when open</pre>
+    </section>
+
     <section id="anatomy">
       <div class="rule eyebrow strong">Anatomy</div>
 <pre class="tree">details.disclosure[open]
   summary
-    span.mark          › closed, ⌄ open (::before)
+    span.mark          the caret: right closed, turned down open
     span               the title
   div.disclosure-body  .8rem gap, indented 1.5rem</pre>
       <div class="parts">
         <div class="part">header</div><div class="rule-text">The body serif, italic, 1.3rem, --text-accent; 1.1rem above and below. The whole line is the target.</div>
-        <div class="part">mark</div><div class="rule-text">UI face .8rem in --text-muted, at least .8rem wide so the title doesn't shift when it changes.</div>
+        <div class="part">mark</div><div class="rule-text">The caret at .75rem in --text-muted, a mask in currentColor (as .caret-icon), centred on the title's first line however the title wraps. It turns in place, so the title never shifts.</div>
         <div class="part">body</div><div class="rule-text">A column, .8rem between blocks, indented 1.5rem so it hangs under the title, with 1.5rem below.</div>
         <div class="part">rule</div><div class="rule-text">A --border-default hairline under every section, open or closed.</div>
       </div>

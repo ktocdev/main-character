@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, api, esc } from './core.js';
+import { $, api, busy, esc } from './core.js';
 import { state, filters } from './state.js';
-import { loadEntities, renderEntityList, showEntity, reloadEntity, showGroupPane, hideSuggest } from './entities.js';
+import { loadEntities, renderEntityList, showEntity, reloadEntity, showGroupPane, hideSuggest, editBusy } from './entities.js';
 
 // ---- entity groups (viewing & associating; nestable via parent) ----
 let groupsData = [];
@@ -133,10 +133,12 @@ function renderGroupBrowser() {
 
     if (rolled) {
       // the caret is a quick inline peek; the title opens the full page
-      const caret = document.createElement('span');
+      const caret = document.createElement('button');
       caret.className = 'grp-caret';
-      caret.textContent = isOpen ? '▾' : '▸';
+      caret.innerHTML = '<span class="caret-icon"></span>';
+      caret.setAttribute('aria-expanded', String(isOpen));
       caret.title = isOpen ? 'hide members here' : 'peek at members here';
+      caret.setAttribute('aria-label', `${isOpen ? 'hide' : 'peek at'} ${g.name}'s members`);
       caret.onclick = () => {
         openRollup = isOpen ? null : g.name;
         renderGroupBrowser();
@@ -230,13 +232,15 @@ export function showGroup(name) {
   ni.value = g.note || '';
   ni.placeholder = 'e.g. people from my first job';
   ni.title = 'Extraction sees this when it reads new entries, and so does the companion with each member\'s profile';
-  const saveNote = async () => {
+  const saveNote = () => {
     if (ni.value.trim() === (g.note || '')) return;
-    if (await api('/api/groups/edit', {name: g.name, note: ni.value})) {
-      g.note = ni.value.trim();
-      note.querySelector('.saved').textContent = 'saved';
-      setTimeout(() => { note.querySelector('.saved').textContent = ''; }, 1600);
-    }
+    busy(ni, async () => {
+      if (await api('/api/groups/edit', {name: g.name, note: ni.value})) {
+        g.note = ni.value.trim();
+        note.querySelector('.saved').textContent = 'saved';
+        setTimeout(() => { note.querySelector('.saved').textContent = ''; }, 1600);
+      }
+    });
   };
   ni.addEventListener('change', saveNote);
   ni.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ni.blur(); } });
@@ -303,6 +307,14 @@ export function showGroup(name) {
 
 // entities.js calls this when an entity is opened, so the group page's row
 // highlight clears (the right pane now shows the entity, not the group)
+// the "filters on" bar's way to drop the group filter: the row highlight
+// and an open group page's toggle both read it
+export function clearGroupFilter() {
+  filters.group = null;
+  renderGroupBrowser();
+  if (openGroup) showGroup(openGroup);
+}
+
 export function clearGroupSelection() {
   if (openGroup !== null) {
     openGroup = null;
@@ -343,6 +355,8 @@ function rolledMembers(g) {
 
 function groupEditor(g) {
   const ed = document.createElement('div');
+  // one change at a time: the busy control spins, the rest of the editor waits
+  const edBusy = (el, work) => busy(el, work, ...ed.querySelectorAll('button, input, select'));
   ed.className = 'grp-editor';
 
   const chips = document.createElement('div');
@@ -363,9 +377,9 @@ function groupEditor(g) {
     x.className = 'x';
     x.textContent = '×';
     x.title = 'remove from group';
-    x.onclick = async () => {
+    x.onclick = () => edBusy(x, async () => {
       if (await api('/api/groups/member', {group: g.name, entity: m, remove: true})) await loadEntities();
-    };
+    });
     c.appendChild(x);
     chips.appendChild(c);
   };
@@ -384,10 +398,12 @@ function groupEditor(g) {
   const addB = document.createElement('button');
   addB.className = 'quiet sm';
   addB.textContent = 'add';
-  const doAdd = async () => {
+  const doAdd = () => {
     const v = inp.value.trim();
     if (!v) return;
-    if (await api('/api/groups/member', {group: g.name, entity: v})) await loadEntities();
+    edBusy(addB, async () => {
+      if (await api('/api/groups/member', {group: g.name, entity: v})) await loadEntities();
+    });
   };
   addB.onclick = doAdd;
   inp.onkeydown = e => { if (e.key === 'Enter') doAdd(); };
@@ -405,13 +421,13 @@ function groupEditor(g) {
   roll.title = g.rollup
     ? 'show this group’s members in the main list again'
     : 'hide this group’s members from the main list; click the group title to reveal them';
-  roll.onclick = async () => {
+  roll.onclick = () => edBusy(roll, async () => {
     if (await api('/api/groups/edit', {name: g.name, rollup: !g.rollup})) {
       if (!g.rollup) openRollup = null;  // will re-collapse; nothing to keep open
       await loadGroups();
       renderEntityList();
     }
-  };
+  });
   ops.appendChild(roll);
 
   // retiring a group retires its members, nested groups included -- but a
@@ -422,18 +438,18 @@ function groupEditor(g) {
   ret.textContent = g.retired ? 'un-retire' : 'retire';
   ret.title = g.retired ? 'bring this group and its members back into everyday view'
     : 'a past chapter: its members leave the list and triage, and the companion only brings them up when you do';
-  ret.onclick = async () => {
+  ret.onclick = () => edBusy(ret, async () => {
     const n = deepMembers(g.name).resolved.length;
     if (!g.retired && !confirm(`Retire "${g.name}"? This covers ${n} member${n === 1 ? '' : 's'}.\n`
       + 'Members who are also in an active group stay in view unless you retire them one by one. Nothing is deleted.')) return;
     if (await api('/api/groups/edit', {name: g.name, retired: !g.retired})) await loadEntities();
-  };
+  });
   ops.appendChild(ret);
 
   const ren = document.createElement('button');
   ren.className = 'quiet sm';
   ren.textContent = 'rename';
-  ren.onclick = async () => {
+  ren.onclick = () => edBusy(ren, async () => {
     const v = prompt('Rename group:', g.name);
     if (!v || v.trim() === g.name) return;
     if (await api('/api/groups/edit', {name: g.name, rename: v.trim()})) {
@@ -441,7 +457,7 @@ function groupEditor(g) {
       if (expandedGroup === g.name) expandedGroup = v.trim();
       await loadEntities();
     }
-  };
+  });
   ops.appendChild(ren);
 
   const sel = document.createElement('select');
@@ -460,44 +476,48 @@ function groupEditor(g) {
     if (g.parent.toLowerCase() === other.name.toLowerCase()) o.selected = true;
     sel.appendChild(o);
   }
-  sel.onchange = async () => {
+  sel.onchange = () => edBusy(sel, async () => {
     if (await api('/api/groups/edit', {name: g.name, parent: sel.value})) await loadEntities();
-  };
+  });
   ops.appendChild(sel);
 
   const del = document.createElement('button');
   del.className = 'quiet sm danger';
   del.textContent = 'delete';
-  del.onclick = async () => {
+  del.onclick = () => edBusy(del, async () => {
     if (!confirm(`Delete group "${g.name}"?\n(entities are not affected; nested groups move up a level)`)) return;
     if (await api('/api/groups/edit', {name: g.name, delete: true})) {
       if (filters.group === g.name) filters.group = null;
       expandedGroup = null;
       await loadEntities();
     }
-  };
+  });
   ops.appendChild(del);
   ed.appendChild(ops);
   return ed;
 }
 
-async function createGroup() {
+function createGroup() {
   const v = $('group-new-name').value.trim();
   if (!v) return;
-  if (await api('/api/groups', {name: v})) {
-    $('group-new-name').value = '';
-    $('group-newform').style.display = 'none';
-    await loadEntities();
-  }
+  busy($('group-new-save'), async () => {
+    if (await api('/api/groups', {name: v})) {
+      $('group-new-name').value = '';
+      $('group-newform').style.display = 'none';
+      await loadEntities();
+    }
+  }, $('group-new-name'));
 }
 
-async function addSelectedToGroup() {
+function addSelectedToGroup() {
   const v = $('group-add-input').value.trim();
   if (!v || !state.selected) return;
-  if (await api('/api/groups/member', {group: v, entity: state.selected})) {
-    $('group-add-input').value = '';
-    await reloadEntity(state.selected);
-  }
+  editBusy($('group-add-btn'), async () => {
+    if (await api('/api/groups/member', {group: v, entity: state.selected})) {
+      $('group-add-input').value = '';
+      await reloadEntity(state.selected);
+    }
+  });
 }
 
 export function init() {

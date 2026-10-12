@@ -187,6 +187,54 @@ export async function download(url, filename) {
   setTimeout(() => URL.revokeObjectURL(href), 1000);
 }
 
+// A control that makes a call. While the work runs it is .is-busy and
+// aria-busy: it takes no clicks, and after a short beat a spinner stands in
+// for its label (components.css). A second click, or an Enter that lands
+// while busy, does nothing. `also` names more controls to hold for the same
+// time (the input whose Enter submits too, the other buttons on the row);
+// those are disabled, or read-only for an input so it keeps focus, with no
+// spinner. Everything comes back even when the call fails or throws.
+//
+// The busy control itself is aria-disabled rather than disabled: a handler
+// often re-renders and sets that button's own disabled state (retire, an
+// apply whose count is now 0), and coming back must not undo that.
+// Returns what work returns, or undefined when it was already busy.
+export async function busy(el, work, ...also) {
+  if (el?.matches('.is-busy, .is-held')) return undefined;
+  const held = [...new Set(also)].filter(x => x && x !== el && !x.disabled && !x.readOnly);
+  if (el) start(el);
+  for (const x of held) hold(x, true);
+  try { return await work(); }
+  finally {
+    if (el) stop(el);
+    for (const x of held) hold(x, false);
+  }
+}
+// busy()'s look without its bracket, for a flow that already holds its own
+// controls (the composer while a reply streams): spin(el, true) ... false.
+export function spin(el, on) {
+  if (!el || el.classList.contains('is-busy') === on) return;
+  if (on) start(el); else stop(el);
+}
+function start(x) {
+  // the ring sits over the label, so a static control becomes its
+  // containing block (a positioned one already is)
+  if (getComputedStyle(x).position === 'static') { x.style.position = 'relative'; x.dataset.busyPos = ''; }
+  x.classList.add('is-busy');
+  x.setAttribute('aria-busy', 'true');
+  x.setAttribute('aria-disabled', 'true');
+}
+function stop(x) {
+  if ('busyPos' in x.dataset) { x.style.removeProperty('position'); delete x.dataset.busyPos; }
+  x.classList.remove('is-busy');
+  x.removeAttribute('aria-busy');
+  x.removeAttribute('aria-disabled');
+}
+function hold(x, on) {
+  if (x.matches('input, textarea')) x.readOnly = on; else x.disabled = on;
+  x.classList.toggle('is-held', on);
+}
+
 export async function api(url, payload) {
   const res = await fetch(url, {
     method: 'POST', headers: {'Content-Type': 'application/json'},

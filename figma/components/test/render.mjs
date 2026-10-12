@@ -140,11 +140,19 @@ function textHtml(n) {
 function draw(n, parent) {
   if (n.visible === false) return '';
   if (n.type === 'TEXT') return `<div style="${css(n, parent)}">${textHtml(n)}</div>`;
+  // a shape from an imported SVG (an icon): drawn in its own grid, over the
+  // frame the import made, with the turns its groups carried
+  if (n.type === 'VECTOR' && n._svg) {
+    const f = (n.fills || [])[0];
+    return `<svg style="position:absolute;left:0;top:0;width:100%;height:100%" viewBox="${n._svg.viewBox}"><g transform="${n._svg.transform}"><path d="${n.vectorPaths[0].data}" fill="${f ? rgb(f) : 'none'}"/></g></svg>`;
+  }
   if (n.type === 'VECTOR') {
     const s = (n.strokes || [])[0];
     return `<svg style="${parent && parent.layoutMode !== 'NONE' ? 'flex:none' : `position:absolute;left:0;top:0`};overflow:visible" width="${n.name === 'chevron' ? 9 : 16}" height="${n.name === 'chevron' ? 5 : 16}"><path d="${n.vectorPaths[0].data}" fill="none" stroke="${s ? rgb(s) : '#000'}" stroke-width="${n.strokeWeight || 1.5}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   }
   const kids = (n.children || []).map(c => draw(c, n)).join('');
+  // an imported SVG's <g>: no box of its own, it spans the icon's frame
+  if (n.type === 'GROUP') return `<div style="position:absolute;inset:0">${kids}</div>`;
   return `<div title="${esc(n.name)}" style="${css(n, parent)}">${kids}</div>`;
 }
 

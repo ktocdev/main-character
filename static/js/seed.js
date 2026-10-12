@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, api } from './core.js';
+import { $, api, busy } from './core.js';
 import { refreshSeedMenu, seedState } from './write.js';
 import { showTab } from './main.js';
 
@@ -147,7 +147,7 @@ async function save() {
     + 'The current one is backed up, and any pending candidate is retired.')) return;
   clearTimeout(draftTimer);   // a debounce still pending from typing must not
   draftTimer = null;          // re-write the draft after this commits
-  const r = await api('/api/seed/upload', { text });
+  const r = await busy($('seed-save'), () => api('/api/seed/upload', { text }), $('seed-editor-text'));
   if (!r) return;                 // api() already alerted on the error
   clearDraft();
   await refreshSeedMenu();        // the candidate is gone; drop the banner

@@ -414,6 +414,8 @@ export function makeFigma({ fonts, variables }) {
         const top = stack[stack.length - 1];
         const inh = { ...top };
         for (const k of ['fill', 'stroke', 'stroke-width']) if (attr(tag, k)) inh[k] = attr(tag, k);
+        // the <g> turns that enclose it, outermost first, for render.mjs
+        if (attr(tag, 'transform')) inh.transform = [top.transform, attr(tag, 'transform')].filter(Boolean).join(' ');
         if (tag.startsWith('<g')) {
           if (tag.endsWith('/>')) continue;
           const g = new Parent('GROUP');
@@ -426,6 +428,8 @@ export function makeFigma({ fonts, variables }) {
         v.fills = inh.fill === 'none' ? [] : [solid];
         v.strokes = inh.stroke && inh.stroke !== 'none' ? [solid] : [];
         v.strokeWeight = Number(inh['stroke-width']) || 1;
+        v.vectorPaths = [{ windingRule: 'NONZERO', data: attr(tag, 'd') || '' }];
+        v._svg = { viewBox: attr(root, 'viewBox'), transform: inh.transform || '' };
         const i = vectors.length;
         v.x = 2 + i; v.y = 3 + i; v.width = 18 - i; v.height = 16 - i;
         top.into.appendChild(v);

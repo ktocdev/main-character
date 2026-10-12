@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $, api, download, esc, refreshStatus, storeKey } from './core.js';
+import { $, api, busy, download, esc, refreshStatus, storeKey } from './core.js';
 import { state } from './state.js';
 import { addMsg, streamInto, composerBusy, anchorTop } from './conversation.js';
 import { renderSessionPart, addSessionBraid, loadHistory } from './history.js';
@@ -85,7 +85,9 @@ export function hasNewMaterial(messages) {
 // `question` opens the one confirm the close asks: the menu's plain one, or
 // askToCloseIfLong's. Returns false when the author says no, so that caller
 // can tell a "not yet" from a close that failed.
-export async function closeSession(question = 'Close this chapter?') {
+// `btn`, when given, spins until the server has the chapter; the progress
+// line takes over from there.
+export async function closeSession(question = 'Close this chapter?', btn = null) {
   // A pending candidate is retired, not carried: generate_candidate folds the
   // new archive into the *live* seed, so an unuploaded candidate's integration
   // is backed up and then skipped in the seed's lineage. Say so before the
@@ -102,7 +104,7 @@ export async function closeSession(question = 'Close this chapter?') {
   // call, embedding its chunks) is the first step and takes seconds itself.
   const watch = trackCloseProgress();
   let r = null;
-  try { r = await api('/api/sessions/close', {}); }
+  try { r = await busy(btn, () => api('/api/sessions/close', {})); }
   finally { if (!r) watch.cancel(); }
   if (!r) return;
   watch.answered();
@@ -354,7 +356,7 @@ export function init() {
     const text = $('entry-text').value.trim();
     if (!text) return;
     clearComposer();
-    composerBusy(true);
+    composerBusy(true, $('chat-send'));
     const you = addMsg('you', text);
     const el = addMsg('companion thinking', '');
     anchorTop(you);   // stay on your own message while the reply streams in
@@ -364,7 +366,7 @@ export function init() {
   };
 
   $('reflect-btn').onclick = async () => {
-    composerBusy(true);
+    composerBusy(true, $('reflect-btn'));
     const el = addMsg('companion thinking', '');
     anchorTop(el);   // no message of your own here — hold on the reply itself
     try { await streamInto(el, '/api/reflect', {}); }
@@ -402,7 +404,7 @@ export function init() {
     const f = $('seed-upload-file').files[0];
     if (!f) return;
     const text = await f.text();
-    const r = await api('/api/seed/upload', {text});
+    const r = await busy($('seed-upload-btn'), () => api('/api/seed/upload', {text}), $('seed-banner-upload'));
     if (r) $('entry-saved').textContent = `life summary updated from ${f.name}. Every new turn opens with it`;
     $('seed-upload-file').value = '';
     refreshSeedMenu();
@@ -437,7 +439,7 @@ export function init() {
 
     if ($('entry-noreply').checked) {
       clearComposer();
-      composerBusy(true);
+      composerBusy(true, $('entry-send'));
       $('entry-saved').textContent = 'saving…';
       const you = addMsg('you', text);
       anchorTop(you);
@@ -468,7 +470,7 @@ export function init() {
     }
 
     clearComposer();            // shrink the box back to default size right away
-    composerBusy(true);
+    composerBusy(true, $('entry-send'));
     $('entry-saved').textContent = 'saving…';
     const you = addMsg('you', text);
     const el = addMsg('companion thinking', '');

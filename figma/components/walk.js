@@ -25,6 +25,10 @@
 //   data-figma-bool="show count"     this layer's visibility is a BOOLEAN one
 //   data-figma-name="..."            a layer name (default: the first class)
 //   data-figma-skip                  leave it out
+//
+// An element drawn as a CSS mask (an icon from static/icons/, such as the
+// disclosure caret) becomes an icon node: the file, its box, its colour and
+// how far it is turned. extract.mjs swaps the file for the SVG itself.
 
 (function () {
   'use strict';
@@ -333,6 +337,8 @@
   }
 
   function draw(el, cs, r, ctx, parent) {
+    const icon = maskIcon(el, cs);
+    if (icon) return icon;
     if (el.matches('input[type=checkbox]')) {
       el.dataset.figmaCb = String(++cbSeq);
       return { type: 'checkbox', name: 'checkbox', cb: cbSeq, checked: el.checked, w: +r.width.toFixed(2), h: +r.height.toFixed(2), radius: 2 };
@@ -340,6 +346,21 @@
     if (el.matches('input, textarea')) return field(el, cs, ctx);
     if (el.matches('select')) return selectBox(el, cs, ctx);
     return frameOrText(el, cs, ctx, parent);
+  }
+
+  function maskIcon(el, cs) {
+    const mask = [cs.maskImage, cs.webkitMaskImage].find(m => m && m !== 'none') || '';
+    const src = (/url\("?([^")]+\.svg)"?\)/.exec(mask) || [])[1];
+    if (!src) return null;
+    // the box before any turn; the turn from the computed matrix
+    const m = /^matrix\(([^,]+),\s*([^,]+)/.exec(cs.transform);
+    const rotate = m ? Math.round(Math.atan2(+m[2], +m[1]) * 180 / Math.PI) : 0;
+    return {
+      type: 'icon', name: layerName(el), src: new URL(src, location.href).pathname, rotate,
+      w: el.offsetWidth, h: el.offsetHeight, paint: paint(cs.backgroundColor, 1, 'text'),
+      // fixed from the start: a margin wrapper hugs a child with no sizing yet
+      sizing: { h: 'FIXED', v: 'FIXED' },
+    };
   }
 
   // an instance's texts in order, with their runs, so the plugin can set
@@ -544,6 +565,7 @@
 
   function childSizing(el, c, parent) {
     if (c.type === 'text' || c.type === 'spacer') return c.sizing;
+    if (c.type === 'icon') return { h: 'FIXED', v: 'FIXED' };
     const cs = getComputedStyle(el);
     const r = el.getBoundingClientRect();
     const cw = parent.content.right - parent.content.left;
@@ -648,7 +670,7 @@
 
   // ---- specimens ----
   function rootSizing(el, n) {
-    if (n.type === 'checkbox') return { h: 'FIXED', v: 'FIXED' };
+    if (n.type === 'checkbox' || n.type === 'icon') return { h: 'FIXED', v: 'FIXED' };
     if (n.type === 'text') return { h: n.lines > 1 || n.truncate ? 'FIXED' : 'HUG', v: 'HUG' };
     return { h: hugs(el, 'h') ? 'HUG' : 'FIXED', v: hugs(el, 'v') ? 'HUG' : 'FIXED' };
   }
