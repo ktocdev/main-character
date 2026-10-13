@@ -37,6 +37,8 @@
   #close-progress[hidden] { display: none; }
   #close-progress .eyebrow { margin-bottom: .3rem; }
   #close-progress .done-line { margin-top: .4rem; font-size: .85rem; color: var(--text-muted); }
+  /* a failed step a catch-up can redo (write.js RETRYABLE) */
+  #close-progress .cp-retry { min-height: 0; padding: 0 .3rem; margin-left: .2rem; font-size: .8rem; }
 
   /* ---- write: the composer ---- */
   .write-composer { gap: .6rem; }
