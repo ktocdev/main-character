@@ -22,10 +22,6 @@ export async function loadCategories() {
 const label = n => n === '__untagged' ? 'untagged' : n.replace('_', ' ');
 
 function renderCategories() {
-  const status = $('cat-status');
-  status.textContent = catIndex.tagged < catIndex.total
-    ? `${catIndex.tagged} of ${catIndex.total} tagged`
-    : `all ${catIndex.total} tagged`;
   renderProposals();
   renderList();
   renderDetail();
