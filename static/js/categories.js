@@ -399,22 +399,6 @@ export function init() {
     }
   };
 
-  $('cat-build').onclick = async () => {
-    const b = $('cat-build');
-    b.disabled = true;
-    $('cat-status').innerHTML = 'tagging <span class="dots">···</span>';
-    busyLabel(b, 'tagging');
-    try {
-      const r = await api('/api/categories/build', {});
-      if (r) {
-        await loadCategories();
-        notice(r.new ? `tagged ${r.new} new entr${r.new === 1 ? 'y' : 'ies'}.` : 'nothing new to tag.');
-      }
-    } finally {
-      b.textContent = 'tag new entries'; b.disabled = false;
-    }
-  };
-
   // + new category: an inline form at the foot of the list; Enter submits
   const form = $('cat-newform'), toggle = $('cat-new-toggle');
   const showForm = on => {

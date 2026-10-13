@@ -179,7 +179,7 @@ function renderCloseProgress(steps, done) {
         + `<span class="mark">${CP_GLYPH[s.status] || '·'}</span>`
         + `<span>${esc(s.label)}</span>`
         + (done && s.status === 'failed' && RETRYABLE.has(s.key)
-          ? '<button class="text cp-retry" title="catch up: tag new entries and rewrite only what is out of date">retry</button>' : '')
+          ? '<button class="text cp-retry" title="catch up: tag untagged entries and rewrite only what is out of date">retry</button>' : '')
         + '</div>').join('')
     + '</div>'
     + (done ? `<div class="done-line">${steps.some(s => s.status === 'failed')

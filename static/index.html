@@ -180,7 +180,6 @@
               <span id="cat-status"></span>
             </div>
             <div class="row">
-              <button class="quiet sm" id="cat-build" title="tag any untagged entries with Claude. Already-tagged entries are skipped, so they cost nothing">tag new entries</button>
               <button class="quiet sm" id="cat-scan" title="cluster places, projects and things by what happened around them and propose new categories. Nothing is created without your confirm">scan for new categories</button>
             </div>
           </div>
@@ -594,9 +593,8 @@
       <summary id="h-categories"><span class="mark"></span><span>categories</span></summary>
       <div class="disclosure-body">
       <p>Every entry gets tagged with categories (work, relationships, health…) automatically when a
-      chapter closes, and <em>tag new entries</em> re-runs it manually for anything untagged (already-tagged
-      entries are cached and free). Pick a category to browse its entries and read its
-      <em>domain document</em>, a living ~500-word summary of that area of life. × a wrong tag or
+      chapter closes (if that step fails, the close's progress list offers a retry). Pick a category
+      to browse its entries and read its <em>domain document</em>, a living ~500-word summary of that area of life. × a wrong tag or
       + a missing one, and your fixes become permanent overrides. <em>scan for new categories</em> clusters
       your places, projects and things and proposes organic categories, but nothing is created without your
       confirm. You can also hand-seed a category with keywords. Entry categories are deliberately
