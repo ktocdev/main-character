@@ -2909,6 +2909,30 @@ def domain_summary(name: str):
     return {"name": name, "doc": doc}
 
 
+ARC_RANGE_DAYS = 366
+
+
+@app.get("/api/summaries/arcs")
+def arc_summaries(start: str, end: str):
+    """The weekly arcs for every ISO week from start to end, oldest first,
+    weeks with no arc left out. File names come from the dates, never the
+    request, and the range is capped so one request can't walk everything."""
+    import summarizer
+    from datetime import date as _date, timedelta
+    try:
+        first, last = _date.fromisoformat(start), _date.fromisoformat(end)
+    except ValueError:
+        return JSONResponse({"error": "start and end must be YYYY-MM-DD"}, status_code=400)
+    if last < first or (last - first).days > ARC_RANGE_DAYS:
+        return JSONResponse({"error": f"range must run forward and span at most {ARC_RANGE_DAYS} days"},
+                            status_code=400)
+    keys, day = [], first - timedelta(days=first.weekday())
+    while day <= last:
+        keys.append(summarizer.week_key(day.isoformat()))
+        day += timedelta(days=7)
+    return {"arcs": [a for a in map(summarizer.load_arc, keys) if a]}
+
+
 @app.get("/api/summaries/entries")
 def entry_list():
     """All entries sorted newest first, for the history tab."""
