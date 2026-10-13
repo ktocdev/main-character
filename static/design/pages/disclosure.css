@@ -6,3 +6,4 @@
 /* the small size */
 .small-row { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; }
 .small-end { width: 14rem; padding: .2rem .6rem; border: 1px dashed var(--border-default); border-radius: var(--radius-sm); }
+.arc-demo { width: 40rem; max-width: 100%; }
