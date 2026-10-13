@@ -10,24 +10,49 @@ import { showTab } from './main.js';
 // Older chapters live in the list, one open at a time. Each chapter reads as
 // one section per day, with a jump-to rail (or a sticky pill row on narrower
 // screens) when it spans more than one day.
+//
+// The switch at the top of the list flips to weeks: the weekly arcs, one
+// ISO week at a time, newest first. Arcs follow the calendar, not chapters,
+// so they get a view of their own rather than a place inside one, and each
+// links to the chapters it touches.
 let sessionIndex = null;
+let weekIndex = null;
 
 export async function loadHistory() {
-  sessionIndex = await (await fetch('/api/sessions')).json();
+  [sessionIndex, weekIndex] = await Promise.all([
+    fetch('/api/sessions').then(r => r.json()),
+    fetch('/api/summaries/arcs').then(r => r.json()).then(r => r.weeks || []).catch(() => []),
+  ]);
   renderSessionList();
-  await showSession(state.sessionSel);
+  if (state.historyMode === 'weeks') await showWeek(currentWeek());
+  else await showSession(state.sessionSel);
+}
+
+// the key History selects a chapter by, from a session-list item or a
+// week's chapter (which carries the same fields)
+function chapterKey(s) {
+  return s.kind === 'archive'
+    ? 'a:' + s.id
+    : 'c:' + JSON.stringify([s.title, s.start, s.end]);
+}
+
+function listHead(el, name) {
+  const h = document.createElement('div');
+  h.className = 'list-head';
+  h.innerHTML = '<span class="eyebrow"></span>';
+  h.firstChild.textContent = name;
+  el.appendChild(h);
 }
 
 function renderSessionList() {
+  for (const b of $('history-mode').querySelectorAll('button')) {
+    b.setAttribute('aria-pressed', String(b.dataset.mode === state.historyMode));
+  }
+  $('session-back').textContent = state.historyMode === 'weeks' ? '‹ all weeks' : '‹ all chapters';
+  if (state.historyMode === 'weeks') return renderWeekList();
   const el = $('session-list-items');
   el.innerHTML = '';
-  const group = name => {
-    const h = document.createElement('div');
-    h.className = 'list-head';
-    h.innerHTML = '<span class="eyebrow"></span>';
-    h.firstChild.textContent = name;
-    el.appendChild(h);
-  };
+  const group = name => listHead(el, name);
   const mk = (key, title, meta, open) => {
     const b = document.createElement('button');
     b.className = 'list-item' + (state.sessionSel === key ? ' sel' : '') + (open ? ' open' : '');
@@ -47,9 +72,7 @@ function renderSessionList() {
      true);
   if (sessionIndex.sessions.length) group('closed');
   for (const s of sessionIndex.sessions) {
-    const key = s.kind === 'archive'
-      ? 'a:' + s.id
-      : 'c:' + JSON.stringify([s.title, s.start, s.end]);
+    const key = chapterKey(s);
     mk(key, s.title || '(untitled)',
        s.start === s.end ? fmtDate(s.start) : `${fmtDate(s.start)} → ${fmtDate(s.end)}`, false);
   }
@@ -198,6 +221,161 @@ function shortDate(iso) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
 }
 
+// ---- weeks: the weekly arcs ----
+
+// 'Aug 10 → 16', Monday to Sunday of iso's week, with the month again when
+// the week crosses one
+function weekSpan(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const mon = new Date(y, m - 1, d - (new Date(y, m - 1, d).getDay() + 6) % 7);
+  const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+  const md = dt => dt.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+  return `${md(mon)} → ${sun.getMonth() === mon.getMonth() ? sun.getDate() : md(sun)}`;
+}
+const weekName = w => (w.start ? weekSpan(w.start) : w.week);
+const daysWritten = n => `${n} day${n === 1 ? '' : 's'} written`;
+const dateRange = (a, b) => (a === b ? fmtDate(a) : `${fmtDate(a)} → ${fmtDate(b)}`);
+
+// the selected week, or the newest when none is (or it's gone)
+function currentWeek() {
+  if (!weekIndex.length) return null;
+  if (!weekIndex.some(w => w.week === state.weekSel)) state.weekSel = weekIndex[0].week;
+  return state.weekSel;
+}
+
+function renderWeekList() {
+  const el = $('session-list-items');
+  el.innerHTML = '';
+  if (!weekIndex.length) {
+    const p = document.createElement('p');
+    p.className = 'list-empty';
+    p.textContent = 'no weekly arcs yet: each one is written when a chapter closes.';
+    el.appendChild(p);
+    return;
+  }
+  const sel = currentWeek();
+  let year = null;
+  for (const w of weekIndex) {
+    const y = w.week.slice(0, 4);
+    if (y !== year) { listHead(el, y); year = y; }
+    const b = document.createElement('button');
+    b.className = 'list-item' + (w.week === sel ? ' sel' : '');
+    b.innerHTML = '<span class="li-title"></span><span class="li-meta"></span>';
+    b.querySelector('.li-title').textContent = weekName(w);
+    b.querySelector('.li-meta').textContent = w.days ? daysWritten(w.days) : w.week;
+    b.onclick = () => { state.weekSel = w.week; renderWeekList(); showWeek(w.week); drill(); };
+    el.appendChild(b);
+  }
+}
+
+function clearDetail() {
+  $('session-body').innerHTML = '';
+  $('session-loading').hidden = true;
+  $('session-empty').hidden = true;
+  $('session-toc').innerHTML = '';
+  $('session-jumps').innerHTML = '';
+  $('session-close-btn').hidden = true;
+  $('session-continue').hidden = true;
+  setNotice('');
+}
+
+async function showWeek(week) {
+  clearDetail();
+  const body = $('session-body');
+  if (!week) {
+    $('session-title').textContent = 'weekly arcs';
+    $('session-dates').textContent = '';
+    const card = document.createElement('div');
+    card.className = 'notice-card';
+    card.innerHTML = '<div class="eyebrow">nothing yet</div><p></p>';
+    card.querySelector('p').textContent =
+      'Each week gets its arc, the story of that week, when a chapter that covers it closes.';
+    body.appendChild(card);
+    return;
+  }
+  const i = weekIndex.findIndex(w => w.week === week);
+  const w = weekIndex[i];
+  $('session-title').textContent = 'week of ' + weekName(w);
+  $('session-dates').textContent = w.start
+    ? dateRange(w.start, w.end) + (w.days ? ` · ${daysWritten(w.days)}` : '')
+    : '';
+  $('session-loading').hidden = false;
+  let arc = null;
+  try {
+    const r = await fetch('/api/summaries/arc?week=' + encodeURIComponent(week));
+    if (r.ok) arc = await r.json();
+  } catch {}
+  if (state.historyMode !== 'weeks' || state.weekSel !== week) return;
+  $('session-loading').hidden = true;
+  if (!arc) { body.textContent = 'This week’s arc could not be read.'; return; }
+
+  const text = document.createElement('div');
+  text.className = 'arc-text';
+  for (const para of arc.text.split(/\n\s*\n/)) {
+    if (!para.trim()) continue;
+    const p = document.createElement('p');
+    p.textContent = para.trim();
+    text.appendChild(p);
+  }
+  body.appendChild(text);
+
+  if (w.chapters.length) {
+    const box = document.createElement('div');
+    box.className = 'arc-chapters';
+    const h = document.createElement('div');
+    h.className = 'rule eyebrow';
+    h.textContent = w.chapters.length === 1 ? 'in the chapter' : 'across the chapters';
+    box.appendChild(h);
+    for (const c of w.chapters) {
+      const b = document.createElement('button');
+      b.className = 'list-item arc-chapter';
+      b.innerHTML = '<span class="li-title"></span><span class="li-meta"></span>';
+      b.querySelector('.li-title').textContent = c.title || '(untitled)';
+      b.querySelector('.li-meta').textContent = dateRange(c.start, c.end);
+      b.onclick = () => openChapter(chapterKey(c));
+      box.appendChild(b);
+    }
+    body.appendChild(box);
+  }
+
+  // earlier / later: the list is newest first
+  const nav = document.createElement('div');
+  nav.className = 'arc-nav';
+  const step = (label, to) => {
+    const b = document.createElement('button');
+    b.className = 'quiet';
+    b.textContent = label;
+    if (!to) b.disabled = true;
+    else b.onclick = () => {
+      state.weekSel = to.week;
+      renderWeekList();
+      showWeek(to.week);
+      $('session-view').scrollTop = 0;
+    };
+    nav.appendChild(b);
+  };
+  step('‹ earlier', weekIndex[i + 1]);
+  step('later ›', weekIndex[i - 1]);
+  body.appendChild(nav);
+}
+
+function openChapter(key) {
+  state.historyMode = 'chapters';
+  state.sessionSel = key;
+  renderSessionList();
+  showSession(key);
+  $('session-view').scrollTop = 0;
+}
+
+function setMode(mode) {
+  if (mode === state.historyMode) return;
+  state.historyMode = mode;
+  $('history-pane').classList.remove('drilled');
+  renderSessionList();
+  if (mode === 'weeks') showWeek(currentWeek());
+  else showSession(state.sessionSel);
+}
+
 function setNotice(text) { $('session-notice').textContent = text || ''; }
 
 async function showSession(key) {
@@ -213,7 +391,7 @@ async function showSession(key) {
 
   if (key === 'current') {
     const r = await (await fetch('/api/sessions/current')).json();
-    if (state.sessionSel !== 'current') return;
+    if (state.historyMode !== 'chapters' || state.sessionSel !== 'current') return;
     $('session-title').textContent = r.parts.length ? r.parts[0].title : 'current chapter';
     $('session-dates').textContent = 'open since ' + fmtDate(r.started);
     $('session-loading').hidden = true;
@@ -230,7 +408,7 @@ async function showSession(key) {
 
   } else if (key.startsWith('a:')) {
     const r = await (await fetch('/api/sessions/archive?id=' + encodeURIComponent(key.slice(2)))).json();
-    if (state.sessionSel !== key) return;
+    if (state.historyMode !== 'chapters' || state.sessionSel !== key) return;
     $('session-loading').hidden = true;
     if (r.error) { body.textContent = r.error; return; }
     $('session-title').textContent = r.title;
@@ -257,7 +435,7 @@ async function showSession(key) {
       `/api/sessions/conversation?title=${encodeURIComponent(title)}` +
       `&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
     )).json();
-    if (state.sessionSel !== key) return;
+    if (state.historyMode !== 'chapters' || state.sessionSel !== key) return;
     $('session-loading').hidden = true;
     if (r.error) { body.textContent = r.error; return; }
     $('session-title').textContent = r.title || '(untitled)';
@@ -274,4 +452,5 @@ export function init() {
   };
   $('session-continue').onclick = () => showTab('write');
   $('session-back').onclick = () => $('history-pane').classList.remove('drilled');
+  for (const b of $('history-mode').querySelectorAll('button')) b.onclick = () => setMode(b.dataset.mode);
 }

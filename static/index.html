@@ -246,6 +246,10 @@
   <section class="tab" id="tab-history">
     <div id="history-pane" class="split">
       <aside id="session-list">
+        <div id="history-mode" class="segmented" role="group" aria-label="history view">
+          <button type="button" data-mode="chapters" aria-pressed="true" title="every chapter, one at a time">chapters</button>
+          <button type="button" data-mode="weeks" aria-pressed="false" title="every week's arc: the story of that week, written when a chapter closes">weeks</button>
+        </div>
         <div id="session-list-items"></div>
       </aside>
       <section id="session-view" class="detail">
@@ -486,6 +490,9 @@
       backfilled from your export), your entries, and the live thread. Every closed chapter sits in
       the list, and you can pick one to read it in full. Closed chapters keep both sides for reading, but
       only your side is journal memory.</p>
+      <p><b>weeks</b>, at the top of the list, switches to the weekly arcs: the story of each week,
+      written when a chapter closes. Arcs follow the calendar, not chapters, so a week can span two
+      chapters, and its arc links to both.</p>
       </div>
       </details>
 
