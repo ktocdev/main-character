@@ -106,25 +106,6 @@ def canonical(path: str, params: dict) -> str:
     return path + "?" + "&".join(f"{k}={params[k]}" for k in sorted(params))
 
 
-def arc_range(chapter: dict) -> dict | None:
-    """The arcs query History sends for a chapter (history.js arcRange):
-    Monday of its first day's week to Sunday of its last, the days taken
-    from its parts and the messages in its braids. The demo replays reads by
-    exact query, so the two have to agree."""
-    from datetime import date, timedelta
-    days = []
-    for p in chapter.get("parts") or []:
-        if p.get("date"):
-            days.append(p["date"])
-        days += [m["ts"][:10] for m in p.get("messages") or [] if m.get("ts")]
-    days += [m["ts"][:10] for m in chapter.get("messages") or [] if m.get("ts")]
-    if not days:
-        return None
-    first, last = date.fromisoformat(min(days)), date.fromisoformat(max(days))
-    return {"start": (first - timedelta(days=first.weekday())).isoformat(),
-            "end": (last + timedelta(days=6 - last.weekday())).isoformat()}
-
-
 def snapshot(client, server) -> dict:
     reads = {}
 
@@ -154,14 +135,10 @@ def snapshot(client, server) -> dict:
 
     for item in reads["/api/sessions"]["json"]["sessions"]:
         if item["kind"] == "archive":
-            chapter = get("/api/sessions/archive", id=item["id"])
+            get("/api/sessions/archive", id=item["id"])
         else:
-            chapter = get("/api/sessions/conversation", title=item["title"],
-                          start=item["start"], end=item["end"])
-        # each closed chapter's weekly arcs, as History asks for them
-        span = arc_range(chapter) if chapter and "error" not in chapter else None
-        if span:
-            get("/api/summaries/arcs", **span)
+            get("/api/sessions/conversation", title=item["title"],
+                start=item["start"], end=item["end"])
 
     cats = reads["/api/categories"]["json"]
     domains = set(cats.get("counts", {})) | set(cats.get("custom") or [])

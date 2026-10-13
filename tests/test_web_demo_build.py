@@ -27,15 +27,6 @@ def test_web_demo_build(tmp_path):
     assert before["replies"] and before["close"]["response"]["ok"]
     assert before["script"]["write"] and before["script"]["lookup"]
     assert len(after["search"]) == len(before["search"]) + 3
-    # every closed chapter's weekly arcs, under the query History sends, and
-    # the seed corpus has some to show
-    arc_reads = [r for k, r in before["reads"].items() if k.startswith("/api/summaries/arcs?")]
-    chapters = [s for s in before["reads"]["/api/sessions"]["json"]["sessions"]]
-    assert len(arc_reads) == len(chapters)
-    assert any(r["json"]["arcs"] for r in arc_reads)
-    for r in arc_reads:
-        for arc in r["json"]["arcs"]:
-            assert arc["text"] and not arc["text"].startswith(("#", "<!--")), arc["week"]
 
     html = (out / "index.html").read_text(encoding="utf-8")
     # the fake backend has to be in place before the first module asks anything

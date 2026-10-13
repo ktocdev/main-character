@@ -2909,28 +2909,48 @@ def domain_summary(name: str):
     return {"name": name, "doc": doc}
 
 
-ARC_RANGE_DAYS = 366
-
-
 @app.get("/api/summaries/arcs")
-def arc_summaries(start: str, end: str):
-    """The weekly arcs for every ISO week from start to end, oldest first,
-    weeks with no arc left out. File names come from the dates, never the
-    request, and the range is capped so one request can't walk everything."""
+def arc_list():
+    """History's weeks view: every week with an arc, newest first, without
+    the text. `days` counts the dates written that week; `chapters` are the
+    closed chapters with a day in it, oldest first, carrying what History
+    builds its chapter key from."""
     import summarizer
-    from datetime import date as _date, timedelta
-    try:
-        first, last = _date.fromisoformat(start), _date.fromisoformat(end)
-    except ValueError:
-        return JSONResponse({"error": "start and end must be YYYY-MM-DD"}, status_code=400)
-    if last < first or (last - first).days > ARC_RANGE_DAYS:
-        return JSONResponse({"error": f"range must run forward and span at most {ARC_RANGE_DAYS} days"},
-                            status_code=400)
-    keys, day = [], first - timedelta(days=first.weekday())
-    while day <= last:
-        keys.append(summarizer.week_key(day.isoformat()))
-        day += timedelta(days=7)
-    return {"arcs": [a for a in map(summarizer.load_arc, keys) if a]}
+    if not summarizer.ARC_DIR.exists():
+        return {"weeks": []}
+    written: dict[str, set] = {}
+    for m in STATE["collection"].get(include=["metadatas"])["metadatas"]:
+        try:
+            written.setdefault(summarizer.week_key(m.get("date", "")), set()).add(m["date"])
+        except ValueError:
+            continue
+    touching: dict[str, list] = {}
+    for item, days in sessions.closed_chapter_days(STATE["collection"]):
+        for key in sorted({summarizer.week_key(d) for d in days if d}):
+            touching.setdefault(key, []).append((min(days), item))
+    weeks = []
+    for path in sorted(summarizer.ARC_DIR.glob("*.md"), reverse=True):
+        arc = summarizer.load_arc(path.stem)
+        if not arc:
+            continue
+        weeks.append({
+            "week": arc["week"], "start": arc["start"], "end": arc["end"],
+            "days": len(written.get(arc["week"], ())),
+            "chapters": [item for _, item in sorted(touching.get(arc["week"], []),
+                                                    key=lambda p: p[0])],
+        })
+    return {"weeks": weeks}
+
+
+@app.get("/api/summaries/arc")
+def arc_one(week: str):
+    """One week's arc. load_arc only takes a week key's shape, so `week`
+    never reaches the filesystem as anything else."""
+    import summarizer
+    arc = summarizer.load_arc(week)
+    if arc is None:
+        return JSONResponse({"error": "no arc for this week"}, status_code=404)
+    return arc
 
 
 @app.get("/api/summaries/entries")

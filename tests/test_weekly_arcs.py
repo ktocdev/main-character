@@ -1,27 +1,37 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Weekly arcs for a date range (GET /api/summaries/arcs, History's arc blocks).
+"""History's weeks view (GET /api/summaries/arcs, GET /api/summaries/arc).
 
-  * every ISO week the range touches is read, oldest first, and weeks with
-    no arc file are left out, not returned empty;
-  * the hash comment and the heading are stripped, and the heading's dates
-    (first and last days with entries) come back as start/end;
-  * bad dates, a backwards range and one over a year are refused;
-  * the week key turns over with the ISO year (2025-12-29 is 2026-W01),
-    and history.js's weekKey agrees with summarizer.week_key;
-  * History's arcs query (arcRange) matches the one the web demo build
-    records (build_web_demo.arc_range), since the demo replays it exactly.
+  * the list has every week with an arc file, newest first, without text;
+  * `days` counts the dates written that week, from the entries, not the
+    arc heading's first and last;
+  * `chapters` are the closed chapters with a day in the week, oldest
+    first: a chapter whose only day there is its last still counts (one
+    closed on a Monday touches that whole week), one with none doesn't;
+  * one arc comes back with its hash comment and heading stripped and the
+    heading's dates as start/end; a missing week is a 404, and anything not
+    shaped like a week key never reaches the filesystem;
+  * the week key turns over with the ISO year (2025-12-29 is 2026-W01).
 """
 
-import re
-from pathlib import Path
+import json
 
 import pytest
 from starlette.testclient import TestClient
 
+import sessions
 import summarizer
 
 BASE = "http://127.0.0.1:8144"
-HISTORY_JS = Path(__file__).resolve().parent.parent / "static" / "js" / "history.js"
+
+
+class FakeCollection:
+    """What the arcs list and session_list read of the chroma collection."""
+
+    def __init__(self, metas=()):
+        self.metas = list(metas)
+
+    def get(self, include=None, where=None, limit=None):
+        return {"ids": [str(i) for i in range(len(self.metas))], "metadatas": self.metas}
 
 
 @pytest.fixture(scope="module")
@@ -32,133 +42,111 @@ def client():
 
 
 @pytest.fixture(autouse=True)
-def arc_dir():
+def journal(client, tmp_path, monkeypatch):
+    """No arcs, no archives, an empty open chapter and an empty index."""
+    import server
     summarizer.ARC_DIR.mkdir(parents=True, exist_ok=True)
     for f in summarizer.ARC_DIR.glob("*.md"):
         f.unlink()
-    yield summarizer.ARC_DIR
+    monkeypatch.setattr(sessions, "SESSION_DIR", tmp_path / "sessions")
+    monkeypatch.setattr(sessions, "CURRENT_FILE", tmp_path / "sessions" / "current.json")
+    monkeypatch.setattr(sessions, "ARCHIVE_DIR", tmp_path / "sessions" / "archive")
+    sessions.save_current(sessions._fresh())
+    col = FakeCollection()
+    monkeypatch.setitem(server.STATE, "collection", col)
+    yield col
     for f in summarizer.ARC_DIR.glob("*.md"):
         f.unlink()
 
 
-def write_arc(key, start, end, text):
+def write_arc(key, start, end, text="An arc."):
     (summarizer.ARC_DIR / f"{key}.md").write_text(
         f"<!-- hash: abc123 -->\n# Week {key} ({start} to {end})\n\n{text}\n",
         encoding="utf-8")
 
 
-def arcs(client, start, end):
-    r = client.get("/api/summaries/arcs", params={"start": start, "end": end})
+def write_archive(aid, title, dates, message_days=()):
+    sessions.ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+    (sessions.ARCHIVE_DIR / f"{aid}.json").write_text(json.dumps({
+        "id": aid, "title": title, "started": f"{dates[0]} 09:00",
+        "closed": f"{dates[-1]} 18:00",
+        "parts": [{"date": d, "title": title} for d in dates],
+        "messages": [{"role": "you", "text": "x", "ts": f"{d} 10:00"} for d in message_days],
+    }), encoding="utf-8")
+
+
+def weeks(client):
+    r = client.get("/api/summaries/arcs")
     assert r.status_code == 200
-    return r.json()["arcs"]
+    return r.json()["weeks"]
 
 
-def test_a_range_across_two_weeks_returns_both(client):
-    write_arc("2026-W28", "2026-07-07", "2026-07-11", "First week.")
-    write_arc("2026-W29", "2026-07-13", "2026-07-13", "Second week.")
-    got = arcs(client, "2026-07-09", "2026-07-14")
-    assert [a["week"] for a in got] == ["2026-W28", "2026-W29"]
+def test_newest_first_without_text(client):
+    write_arc("2026-W28", "2026-07-07", "2026-07-11")
+    write_arc("2026-W30", "2026-07-20", "2026-07-21")
+    got = weeks(client)
+    assert [w["week"] for w in got] == ["2026-W30", "2026-W28"]
+    assert got[1] == {"week": "2026-W28", "start": "2026-07-07", "end": "2026-07-11",
+                      "days": 0, "chapters": []}
 
 
-def test_heading_and_hash_comment_are_stripped(client):
+def test_no_arcs_is_an_empty_list(client):
+    assert weeks(client) == []
+
+
+def test_days_counts_dates_written(client, journal):
+    write_arc("2026-W28", "2026-07-07", "2026-07-11")
+    journal.metas += [{"date": d, "title": "t"} for d in
+                      ("2026-07-07", "2026-07-07", "2026-07-09", "2026-07-11", "2026-07-13")]
+    [w] = weeks(client)
+    assert w["days"] == 3
+
+
+def test_chapters_touching_a_week(client):
+    """The Sun → Mon chapter: Aug 9 (W32), Aug 10-15 (W33), closed Aug 17 (W34)."""
+    for key, a, b in (("2026-W32", "2026-08-03", "2026-08-09"),
+                      ("2026-W33", "2026-08-10", "2026-08-15"),
+                      ("2026-W34", "2026-08-17", "2026-08-20")):
+        write_arc(key, a, b)
+    write_archive("before", "Before", ["2026-08-03", "2026-08-06", "2026-08-08"])
+    write_archive("middle", "Middle", ["2026-08-09", "2026-08-12"], message_days=["2026-08-17"])
+    write_archive("after", "After", ["2026-08-18", "2026-08-20"])
+    by_week = {w["week"]: [c["title"] for c in w["chapters"]] for w in weeks(client)}
+    assert by_week == {"2026-W32": ["Before", "Middle"],
+                       "2026-W33": ["Middle"],
+                       "2026-W34": ["Middle", "After"]}
+
+
+def test_chapters_carry_what_history_keys_them_by(client, journal):
+    write_arc("2026-W33", "2026-08-10", "2026-08-15")
+    write_archive("a1", "Archived", ["2026-08-10"])
+    journal.metas.append({"date": "2026-08-12", "title": "Imported"})
+    [w] = weeks(client)
+    assert w["chapters"] == [
+        {"kind": "archive", "id": "a1", "title": "Archived",
+         "start": "2026-08-10", "end": "2026-08-10"},
+        {"kind": "import", "title": "Imported", "start": "2026-08-12", "end": "2026-08-12"},
+    ]
+
+
+def test_one_arc_stripped(client):
     write_arc("2026-W28", "2026-07-07", "2026-07-11", "One.\n\nTwo.")
-    [arc] = arcs(client, "2026-07-06", "2026-07-06")
-    assert arc == {"week": "2026-W28", "start": "2026-07-07",
-                   "end": "2026-07-11", "text": "One.\n\nTwo."}
+    r = client.get("/api/summaries/arc", params={"week": "2026-W28"})
+    assert r.json() == {"week": "2026-W28", "start": "2026-07-07",
+                        "end": "2026-07-11", "text": "One.\n\nTwo."}
 
 
-def test_a_week_with_no_arc_is_left_out(client):
-    write_arc("2026-W27", "2026-06-29", "2026-07-05", "Before.")
-    write_arc("2026-W29", "2026-07-13", "2026-07-19", "After.")
-    got = arcs(client, "2026-06-29", "2026-07-19")
-    assert [a["week"] for a in got] == ["2026-W27", "2026-W29"]
+@pytest.mark.parametrize("week", ["2026-W29", "../2026-W28", "2026-W1", "2026-W28.md", ""])
+def test_missing_or_malformed_week_is_404(client, week):
+    write_arc("2026-W28", "2026-07-07", "2026-07-11")
+    r = client.get("/api/summaries/arc", params={"week": week})
+    assert r.status_code == 404
 
 
-def test_no_arcs_at_all_is_an_empty_list(client):
-    assert arcs(client, "2026-07-06", "2026-07-12") == []
-
-
-def test_iso_year_turn(client):
+def test_iso_year_turn(client, journal):
     assert summarizer.week_key("2025-12-29") == "2026-W01"
-    write_arc("2026-W01", "2025-12-29", "2026-01-02", "New year.")
-    write_arc("2025-W52", "2025-12-23", "2025-12-28", "Old year.")
-    got = arcs(client, "2025-12-27", "2026-01-01")
-    assert [a["week"] for a in got] == ["2025-W52", "2026-W01"]
-
-
-@pytest.mark.parametrize("start,end", [
-    ("2026-07-06", "nope"),
-    ("../secrets", "2026-07-06"),
-    ("2026-07-12", "2026-07-06"),       # backwards
-    ("2024-01-01", "2026-07-06"),       # more than a year
-])
-def test_bad_ranges_are_refused(client, start, end):
-    r = client.get("/api/summaries/arcs", params={"start": start, "end": end})
-    assert r.status_code == 400
-
-
-def test_load_arc_only_takes_week_keys():
-    assert summarizer.load_arc("../2026-W28") is None
-
-
-def _js_week_key(iso):
-    """Run history.js's weekKey under node, if it's there."""
-    import shutil
-    import subprocess
-    node = shutil.which("node")
-    if not node:
-        pytest.skip("node not installed")
-    src = HISTORY_JS.read_text(encoding="utf-8")
-    m = re.search(r"^function weekKey\(iso\) \{.*?^\}", src, re.S | re.M)
-    assert m, "history.js has no top-level weekKey(iso)"
-    out = subprocess.run([node, "-e", f"{m.group(0)}\nprocess.stdout.write(weekKey({iso!r}))"],
-                         capture_output=True, text=True, check=True)
-    return out.stdout
-
-
-@pytest.mark.parametrize("iso", [
-    "2025-12-29", "2026-01-01", "2026-01-04", "2026-01-05", "2026-07-06",
-    "2026-07-12", "2020-12-31", "2021-01-03", "2027-01-01", "2026-12-31",
-])
-def test_js_week_key_matches_python(iso):
-    assert _js_week_key(iso) == summarizer.week_key(iso)
-
-
-def _js_arc_range(chapter):
-    """history.js's arcRange (with weekEdge and isoDay) under node."""
-    import json
-    import shutil
-    import subprocess
-    node = shutil.which("node")
-    if not node:
-        pytest.skip("node not installed")
-    src = HISTORY_JS.read_text(encoding="utf-8")
-    parts = [re.search(pat, src, re.S | re.M) for pat in (
-        r"^function weekEdge\(iso, offset\) \{.*?^\}",
-        r"^const isoDay = .*?;$",
-        r"^function arcRange\(r\) \{.*?^\}",
-    )]
-    assert all(parts), "history.js is missing weekEdge, isoDay or arcRange"
-    code = "\n".join(m.group(0) for m in parts)
-    out = subprocess.run(
-        [node, "-e", f"{code}\nprocess.stdout.write(JSON.stringify(arcRange({json.dumps(chapter)})))"],
-        capture_output=True, text=True, check=True)
-    return json.loads(out.stdout)
-
-
-@pytest.mark.parametrize("chapter", [
-    {"parts": [{"date": "2026-07-09"}], "messages": [{"ts": "2026-07-14 09:00"}]},
-    {"parts": [{"date": "2025-12-31", "messages": [{"ts": "2026-01-05 22:10"}]}]},
-    {"parts": [{"date": "2026-07-06"}, {"date": "2026-07-12"}]},
-    {"parts": [], "messages": []},
-])
-def test_js_arc_range_matches_the_demo_build(chapter):
-    """The web demo replays the arcs read by its exact query, which
-    scripts/build_web_demo.py builds the way History does."""
-    import importlib.util
-    spec = importlib.util.spec_from_file_location(
-        "build_web_demo", HISTORY_JS.parent.parent.parent / "scripts" / "build_web_demo.py")
-    build = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(build)
-    want = build.arc_range(chapter)
-    assert _js_arc_range(chapter) == (None if want is None else [want["start"], want["end"]])
+    write_arc("2026-W01", "2025-12-29", "2026-01-02")
+    write_arc("2025-W52", "2025-12-23", "2025-12-28")
+    journal.metas += [{"date": "2025-12-29", "title": "t"}, {"date": "2025-12-28", "title": "t"}]
+    got = weeks(client)
+    assert [(w["week"], w["days"]) for w in got] == [("2026-W01", 1), ("2025-W52", 1)]

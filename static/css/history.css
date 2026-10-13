@@ -32,14 +32,6 @@
   .day-rule .meta { letter-spacing: 0; text-transform: none; }
   .session-part-label { margin-top: 1.6rem; }
   /* a day's summary, italic and dim, above its messages */
-  /* a week's arc, above the first day of the week: the large disclosure,
-     collapsed, at the day rule's quiet size. Hairlines above and below so
-     it reads as a band across the days, not one of them. */
-  .arc-block { margin-top: 1.6rem; border-top: 1px solid var(--border-default); }
-  .arc-block > summary { padding: .55rem 0; font-size: .95rem; color: var(--text-muted); }
-  .arc-block > summary:hover, .arc-block[open] > summary { color: var(--text-accent); }
-  .arc-block .disclosure-body { padding: 0 0 1rem 1.4rem; color: var(--text-muted); font-size: .95rem; }
-  .arc-block + .day-rule { margin-top: 1.1rem; }
   .part-summary { margin: .9rem 0 0; color: var(--text-muted); font-style: italic; font-size: .95rem; text-wrap: pretty; }
   .session-part { white-space: pre-wrap; color: var(--text-you); margin: 1.1rem 0 1.3rem; text-wrap: pretty; }
   #session-body .msg { margin-top: 1.1rem; margin-bottom: 1.3rem; }

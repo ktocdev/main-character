@@ -177,10 +177,10 @@ function buildToc() {
   ihead.textContent = 'jump to';
   inline.appendChild(ihead);
   for (const d of days) {
-    const target = d.arc || d.entry || d.summary;
+    const target = d.entry || d.summary;
     const b = document.createElement('button');
     b.className = 'toc-date';
-    const sub = [d.arc && 'arc', d.summary && 'summary', d.entry && 'entry'].filter(Boolean).join(' · ');
+    const sub = [d.summary && 'summary', d.entry && 'entry'].filter(Boolean).join(' · ');
     b.innerHTML = '<span></span><span class="sub"></span>';
     b.firstChild.textContent = fmtDate(d.date);
     b.lastChild.textContent = sub;
@@ -198,92 +198,6 @@ function shortDate(iso) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
 }
 
-// 'YYYY-MM-DD' -> 'YYYY-Www', the ISO week, as summarizer.week_key has it.
-// The week belongs to the year its Thursday falls in, so Dec 29 can be W01
-// of the next year and Jan 1 can be W53 of the last (tests/test_weekly_arcs.py
-// runs this against the Python one).
-function weekKey(iso) {
-  const [y, m, d] = iso.split('-').map(Number);
-  const thu = new Date(Date.UTC(y, m - 1, d));
-  thu.setUTCDate(thu.getUTCDate() + 3 - (thu.getUTCDay() + 6) % 7);
-  const year = thu.getUTCFullYear();
-  const week = 1 + Math.floor((thu - Date.UTC(year, 0, 1)) / 864e5 / 7);
-  return `${year}-W${String(week).padStart(2, '0')}`;
-}
-
-// 'week of Jul 6 → 12' (Monday to Sunday), with the month again when the
-// week crosses one
-function weekLabel(iso) {
-  const mon = weekEdge(iso, 0), sun = weekEdge(iso, 6);
-  const md = dt => dt.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
-  return `week of ${md(mon)} → ${sun.getMonth() === mon.getMonth() ? sun.getDate() : md(sun)}`;
-}
-// the Monday (0) or Sunday (6) of iso's week, as a local Date
-function weekEdge(iso, offset) {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d - (new Date(y, m - 1, d).getDay() + 6) % 7 + offset);
-}
-const isoDay = dt => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-
-// The arcs request for a chapter: Monday of its first day's week to Sunday
-// of its last, the days taken from the chapter itself (its parts, and the
-// messages in its braids). The web demo replays this exact query, so
-// scripts/build_web_demo.py (arc_range) builds it the same way.
-function arcRange(r) {
-  const days = [];
-  for (const p of r.parts || []) {
-    if (p.date) days.push(p.date);
-    for (const m of p.messages || []) if (m.ts) days.push(m.ts.slice(0, 10));
-  }
-  for (const m of r.messages || []) if (m.ts) days.push(m.ts.slice(0, 10));
-  if (!days.length) return null;
-  days.sort();
-  return [isoDay(weekEdge(days[0], 0)), isoDay(weekEdge(days[days.length - 1], 6))];
-}
-
-// A closed chapter's weekly arcs: one collapsed block above the first day
-// of each ISO week the chapter touches. Arcs follow the calendar, not
-// chapters, so the label names the week. A week with no arc yet (its close
-// still running, or failed) gets nothing; so does a failed fetch.
-async function addArcs(body, key, chapter) {
-  const range = arcRange(chapter);
-  const firsts = new Map();
-  for (const el of body.querySelectorAll('[data-toc-date]')) {
-    const wk = weekKey(el.dataset.tocDate);
-    if (!firsts.has(wk)) firsts.set(wk, el);
-  }
-  if (!range || !firsts.size) return;
-  let arcs;
-  try {
-    const r = await fetch(`/api/summaries/arcs?start=${range[0]}&end=${range[1]}`);
-    if (!r.ok) return;
-    arcs = (await r.json()).arcs || [];
-  } catch { return; }
-  if (state.sessionSel !== key) return;
-  for (const a of arcs) {
-    const before = firsts.get(a.week);
-    if (!before || !a.text) continue;
-    const det = document.createElement('details');
-    det.className = 'disclosure arc-block';
-    det.dataset.tocDate = before.dataset.tocDate;
-    det.dataset.tocKind = 'arc';
-    const sum = document.createElement('summary');
-    sum.innerHTML = '<span class="mark"></span><span></span>';
-    sum.lastChild.textContent = `${weekLabel(before.dataset.tocDate)} · arc`;
-    det.appendChild(sum);
-    const box = document.createElement('div');
-    box.className = 'disclosure-body';
-    for (const para of a.text.split(/\n\s*\n/)) {
-      if (!para.trim()) continue;
-      const p = document.createElement('p');
-      p.textContent = para.trim();
-      box.appendChild(p);
-    }
-    det.appendChild(box);
-    before.before(det);
-  }
-}
-
 function setNotice(text) { $('session-notice').textContent = text || ''; }
 
 async function showSession(key) {
@@ -296,7 +210,6 @@ async function showSession(key) {
   $('session-close-btn').hidden = true;
   $('session-continue').hidden = true;
   setNotice('');
-  let chapter = null;  // a closed one, for its arcs
 
   if (key === 'current') {
     const r = await (await fetch('/api/sessions/current')).json();
@@ -320,7 +233,6 @@ async function showSession(key) {
     if (state.sessionSel !== key) return;
     $('session-loading').hidden = true;
     if (r.error) { body.textContent = r.error; return; }
-    chapter = r;
     $('session-title').textContent = r.title;
     $('session-dates').textContent = `${fmtDate(r.started)} → closed ${fmtDate(r.closed)}`;
     for (const p of r.parts) {
@@ -348,15 +260,10 @@ async function showSession(key) {
     if (state.sessionSel !== key) return;
     $('session-loading').hidden = true;
     if (r.error) { body.textContent = r.error; return; }
-    chapter = r;
     $('session-title').textContent = r.title || '(untitled)';
     $('session-dates').textContent = r.start === r.end
       ? fmtDate(r.start) : `${fmtDate(r.start)} → ${fmtDate(r.end)}`;
     for (const p of r.parts) renderSessionPart(body, p);
-  }
-  if (chapter) {
-    await addArcs(body, key, chapter);
-    if (state.sessionSel !== key) return;
   }
   buildToc();
 }
