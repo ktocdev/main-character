@@ -9,8 +9,9 @@
   #session-list .li-title { font: 600 .9rem/1.3 var(--font-ui); white-space: normal; text-wrap: pretty; }
   #session-list .li-meta { display: flex; align-items: center; gap: .4rem; font: .74rem/1.3 var(--font-ui); }
   #session-list .list-item.open .li-meta { color: var(--text-accent); }
-  /* chapters | weeks, above the list */
-  #history-mode { display: flex; margin: 0 .3rem .6rem; }
+  /* chapters | weeks, above the list. flex: none, since the aside is a
+     flex column and a long list would squash it (overflow: hidden lets it) */
+  #history-mode { display: flex; flex: none; margin: 0 .3rem .6rem; }
   #history-mode button { flex: 1; }
   #session-list .list-empty { margin: .6rem .9rem; font: .85rem/1.4 var(--font-ui); color: var(--text-muted); }
 
