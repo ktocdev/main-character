@@ -78,7 +78,7 @@ const UNREACHED = 'could not reach the journal. Your draft is back, and '
 // server (sessions.close_session: "nothing new in this chat yet"). A
 // carried-forward base part is context, not new material — only messages
 // count, and dreams are excluded here exactly as close_session excludes them.
-export function hasNewMaterial(messages) {
+function hasNewMaterial(messages) {
   return (messages || []).some(m => m.role === 'you' && !m.dream);
 }
 

@@ -25,11 +25,9 @@
   .arc-chapters .li-title { font: 600 .9rem/1.3 var(--font-ui); white-space: normal; text-wrap: pretty; }
   .arc-nav { display: flex; justify-content: space-between; gap: .6rem; margin: 2rem 0 1rem; }
 
-  /* the head: title, dates, actions, notice */
+  /* the head: title and dates. History only reads; closing a chapter
+     and writing live on the write screen. */
   #session-dates { font: .8rem var(--font-ui); color: var(--text-muted); }
-  .session-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
-  #session-notice { margin-top: .7rem; }
-  #session-notice:empty { display: none; }
 
   /* inline jump-to: sticky under the actions at < 1100px */
   #session-jumps {

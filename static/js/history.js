@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, fmtDate } from './core.js';
 import { state } from './state.js';
-import { closeSession, hasNewMaterial } from './write.js';
-import { showTab } from './main.js';
 
 // ---- history (chapters) ----
 // The landing view is the open chapter: the conversation it continues, the
@@ -274,9 +272,6 @@ function clearDetail() {
   $('session-empty').hidden = true;
   $('session-toc').innerHTML = '';
   $('session-jumps').innerHTML = '';
-  $('session-close-btn').hidden = true;
-  $('session-continue').hidden = true;
-  setNotice('');
 }
 
 async function showWeek(week) {
@@ -376,8 +371,6 @@ function setMode(mode) {
   else showSession(state.sessionSel);
 }
 
-function setNotice(text) { $('session-notice').textContent = text || ''; }
-
 async function showSession(key) {
   const body = $('session-body');
   body.innerHTML = '';
@@ -385,9 +378,6 @@ async function showSession(key) {
   $('session-empty').hidden = true;
   $('session-toc').innerHTML = '';
   $('session-jumps').innerHTML = '';
-  $('session-close-btn').hidden = true;
-  $('session-continue').hidden = true;
-  setNotice('');
 
   if (key === 'current') {
     const r = await (await fetch('/api/sessions/current')).json();
@@ -395,16 +385,9 @@ async function showSession(key) {
     $('session-title').textContent = r.parts.length ? r.parts[0].title : 'current chapter';
     $('session-dates').textContent = 'open since ' + fmtDate(r.started);
     $('session-loading').hidden = true;
-    $('session-continue').hidden = false;
     for (const p of r.parts) renderSessionPart(body, p, true);
     addSessionBraid(body, r.messages);
-    if (!r.parts.length && !r.messages.length) {
-      $('session-empty').hidden = false;
-    } else if (hasNewMaterial(r.messages)) {
-      // the server refuses a close with nothing new in it, so only offer one
-      // when there is; a carried-forward part is not new material
-      $('session-close-btn').hidden = false;
-    }
+    if (!r.parts.length && !r.messages.length) $('session-empty').hidden = false;
 
   } else if (key.startsWith('a:')) {
     const r = await (await fetch('/api/sessions/archive?id=' + encodeURIComponent(key.slice(2)))).json();
@@ -447,10 +430,6 @@ async function showSession(key) {
 }
 
 export function init() {
-  $('session-close-btn').onclick = async () => {
-    if (await closeSession(undefined, $('session-close-btn'))) setNotice('your side became an entry; tagging, entities and the week’s arc are updating. A new chapter is open in write.');
-  };
-  $('session-continue').onclick = () => showTab('write');
   $('session-back').onclick = () => $('history-pane').classList.remove('drilled');
   for (const b of $('history-mode').querySelectorAll('button')) b.onclick = () => setMode(b.dataset.mode);
 }
