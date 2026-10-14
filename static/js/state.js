@@ -6,6 +6,11 @@
 export const state = {
   entities: {},          // entity index (entities.js owns; triage reads)
   selected: null,        // selected entity name (entities.js owns; groups reads)
+  thingKinds: [],        // every kind a thing can be, [{name, description, icon,
+                         // custom}], built-ins first and other last (entities.js
+                         // loads it with the index; triage reads)
+  thingKindIcons: [],    // the icons a kind of the author's own can take
+  thingKindMax: 6,       // how many of the author's own there can be
   activeTab: 'write',    // main.js owns; write + triage read
   triageReturn: false,   // an entity opened from triage (e): its detail
                          // pane shows the way back. Triage sets, main clears.

@@ -30,7 +30,8 @@ const SUBTYPE_ICONS = {
     nightmare: 'thunderstorm-night', anxiety: 'no-expression', processing: 'component-steps',
     peaceful: 'peace-bold', surreal: 'alien', lucid: 'hand', nostalgic: 'ice-cream', joyful: 'cake',
   },
-  thing: {music: 'music', game: 'gamepad', show: 'tv', book: 'book-open', event: 'ticket'},
+  thing: {music: 'music', podcast: 'microphone', game: 'gamepad', show: 'tv', movie: 'movie-clapper',
+    book: 'book-open', event: 'ticket'},
 };
 // read by figma/icons/icons.mjs, which bundles the icons for Figma
 export { TYPE_ICONS, SUBTYPE_ICONS };

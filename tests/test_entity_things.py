@@ -45,6 +45,10 @@ def test_the_kinds_share_one_table():
     things = entities.EXTRACTION_SCHEMA["properties"]["things"]["items"]
     assert things["properties"]["category"]["enum"] == list(entities.THING_CATEGORIES)
     assert "things" in entities.EXTRACTION_SCHEMA["required"]
+    # every built-in but other says what it covers, for the prompt
+    assert set(entities.THING_CATEGORY_NOTES) == set(entities.THING_CATEGORIES) - {"other"}
+    assert {"movie", "podcast"} <= set(entities.THING_CATEGORIES)
+    assert entities.THING_CATEGORIES[-1] == "other"
 
 
 def test_extracted_things_build_their_own_docs(tmp_path, monkeypatch):

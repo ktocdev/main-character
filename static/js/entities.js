@@ -7,7 +7,8 @@ import * as popover from './popover.js';
 
 // ---- entities ----
 export async function loadEntities() {
-  state.entities = await (await fetch('/api/entities')).json();
+  const [ents] = await Promise.all([fetch('/api/entities').then(r => r.json()), loadThingKinds()]);
+  state.entities = ents;
   const dl = $('entity-names');
   dl.innerHTML = '';
   for (const name of Object.keys(state.entities).sort()) {
@@ -26,7 +27,24 @@ const PLURAL = {person: 'people', project: 'projects', place: 'places', thing: '
 export const NO_PARTS = new Set(['person', 'animal']);
 // kinds whose attribute is a relationship, shown as "as pet cat"
 export const HAS_RELATIONSHIP = new Set(['person', 'animal']);
-const CATEGORIES = ['music', 'game', 'show', 'book', 'event', 'other'];
+// The kinds a thing can be: the built-ins, the author's own, then other.
+// Kept to the built-ins when the list can't be had, so pickers never empty.
+const BUILTIN_KINDS = ['music', 'podcast', 'game', 'show', 'movie', 'book', 'event', 'other'];
+async function loadThingKinds() {
+  try {
+    const r = await (await fetch('/api/entities/thing-kinds')).json();
+    if (!Array.isArray(r.kinds)) throw new Error(r.error);
+    state.thingKinds = r.kinds;
+    state.thingKindIcons = r.icons;
+    state.thingKindMax = r.max_custom;
+  } catch {
+    if (!state.thingKinds.length) state.thingKinds = BUILTIN_KINDS.map(name => ({name, description: '', icon: '', custom: false}));
+  }
+  // a pick on a kind that's gone would hide every thing
+  const have = new Set(state.thingKinds.map(k => k.name));
+  for (const c of [...filters.thingCats]) if (!have.has(c)) filters.thingCats.delete(c);
+}
+export const thingKindNames = () => state.thingKinds.map(k => k.name);
 
 // "Dev · work": the name reads first, the qualifier muted. Plain names
 // stay plain text.
@@ -217,12 +235,13 @@ export function renderEntityList() {
 function renderThingCats() {
   const row = $('thing-cats');
   row.hidden = !filters.types.has('thing');
+  if (row.hidden) setKindsOpen(false);
   if (row.hidden) return;
   const have = new Set(Object.values(state.entities)
     .filter(i => i.type === 'thing' && !!i.retired === filters.retired)
     .map(i => i.category || 'other'));
   row.innerHTML = '';
-  for (const c of CATEGORIES) {
+  for (const c of thingKindNames()) {
     if (!have.has(c) && !filters.thingCats.has(c)) continue;
     const b = document.createElement('button');
     const on = filters.thingCats.has(c);
@@ -237,6 +256,132 @@ function renderThingCats() {
     };
     row.appendChild(b);
   }
+  const add = document.createElement('button');
+  add.className = 'chip-toggle';
+  add.id = 'thing-kinds-btn';
+  add.textContent = '+ kind';
+  add.title = 'kinds of thing of your own, like songs or food';
+  add.setAttribute('aria-haspopup', 'true');
+  add.setAttribute('aria-controls', 'thing-kinds-menu');
+  add.setAttribute('aria-expanded', String(!$('thing-kinds-menu').hidden));
+  add.onclick = () => setKindsOpen($('thing-kinds-menu').hidden);
+  row.appendChild(add);
+}
+
+// a <select> of every kind of thing, built-ins first and other last
+function fillKindSelect(sel) {
+  const was = sel.value;
+  sel.innerHTML = '';
+  for (const k of state.thingKinds) {
+    const o = document.createElement('option');
+    o.value = k.name; o.textContent = k.name;
+    sel.appendChild(o);
+  }
+  sel.value = was;
+}
+
+// ---- kinds of thing of the author's own ----
+// Opened from "+ kind" at the end of the kind chips. Lists the ones added
+// (each editable, each removable), then a form to add one: a name, what it
+// covers (Claude reads it when sorting new entries) and an icon.
+let editingKind = null;  // the name of the kind the form is editing, or null
+
+function iconSpan(name) {
+  const s = document.createElement('span');
+  s.className = 'kind-icon';
+  s.style.setProperty('--icon', `url("${new URL(`../icons/${name}-filled.svg`, import.meta.url).href}")`);
+  return s;
+}
+
+function setKindsOpen(open) {
+  if (open) popover.opened('thing-kinds');
+  $('thing-kinds-menu').hidden = !open;
+  $('thing-kinds-btn')?.setAttribute('aria-expanded', String(open));
+  if (open) { kindForm(null); renderKinds(); }
+}
+
+function renderKinds() {
+  const list = $('thing-kinds-list');
+  list.innerHTML = '';
+  const mine = state.thingKinds.filter(k => k.custom);
+  $('thing-kinds-none').hidden = mine.length > 0;
+  for (const k of mine) {
+    const row = document.createElement('div');
+    row.className = 'kind-row';
+    row.appendChild(iconSpan(k.icon || 'bookmark-heart'));
+    const text = document.createElement('span');
+    text.className = 'kind-text';
+    text.innerHTML = '<strong></strong><span class="note"></span>';
+    text.firstChild.textContent = k.name;
+    text.lastChild.textContent = k.description;
+    row.appendChild(text);
+    const edit = document.createElement('button');
+    edit.className = 'text';
+    edit.textContent = 'edit';
+    edit.setAttribute('aria-label', `edit ${k.name}`);
+    edit.onclick = () => kindForm(k);
+    const x = document.createElement('button');
+    x.className = 'x';
+    x.textContent = '×';
+    x.title = `remove ${k.name}: its things show as other until it's back (undo brings it back)`;
+    x.setAttribute('aria-label', `remove ${k.name}`);
+    x.onclick = () => busy(x, async () => {
+      if (await api('/api/entities/thing-kinds/delete', {name: k.name})) {
+        notice(`removed ${k.name}. Its things show as other; undo puts it back.`);
+        await loadEntities();
+        renderKinds();
+      }
+    });
+    row.append(edit, x);
+    list.appendChild(row);
+  }
+  const full = mine.length >= state.thingKindMax;
+  $('thing-kind-form').hidden = full && !editingKind;
+  $('thing-kinds-full').hidden = !(full && !editingKind);
+}
+
+// the form: empty to add, or filled to edit one (its name then fixed)
+function kindForm(k) {
+  editingKind = k ? k.name : null;
+  $('thing-kind-head').textContent = k ? `edit ${k.name}` : 'add a kind';
+  $('thing-kind-name').value = k ? k.name : '';
+  $('thing-kind-name').disabled = !!k;
+  $('thing-kind-desc').value = k ? k.description : '';
+  $('thing-kind-save').textContent = k ? 'save' : 'add';
+  $('thing-kind-cancel').hidden = !k;
+  $('thing-kind-form').hidden = false;
+  $('thing-kinds-full').hidden = true;
+  const icons = $('thing-kind-icons');
+  icons.innerHTML = '';
+  const chosen = k?.icon || 'bookmark-heart';
+  for (const name of state.thingKindIcons) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'icon-pick';
+    b.dataset.icon = name;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(name === chosen));
+    b.setAttribute('aria-label', name.replace(/-/g, ' '));
+    b.title = name.replace(/-/g, ' ');
+    b.appendChild(iconSpan(name));
+    b.onclick = () => icons.querySelectorAll('.icon-pick').forEach(p => p.setAttribute('aria-checked', String(p === b)));
+    icons.appendChild(b);
+  }
+}
+
+async function saveKind() {
+  const name = $('thing-kind-name').value.trim().toLowerCase();
+  if (!name) { $('thing-kind-name').focus(); return; }
+  const icon = $('thing-kind-icons').querySelector('[aria-checked="true"]')?.dataset.icon || '';
+  const r = await api('/api/entities/thing-kinds', {
+    name, description: $('thing-kind-desc').value.trim(), icon: icon === 'bookmark-heart' ? '' : icon,
+  });
+  if (!r) return;
+  notice(editingKind ? `saved ${r.name}.`
+    : `added ${r.name}. New entries are sorted into it from now on; to sort past ones, re-extract the entries that mention it (clean up → re-extract…).`);
+  await loadEntities();
+  kindForm(null);
+  renderKinds();
 }
 
 // The foot of the sidebar: in select mode, a chip for each checked entity,
@@ -574,11 +719,7 @@ async function thingsReview() {
     const sel = document.createElement('select');
     sel.className = 'quiet-select sm';
     sel.setAttribute('aria-label', `category for ${t.name}`);
-    for (const c of CATEGORIES) {
-      const o = document.createElement('option');
-      o.value = c; o.textContent = c;
-      sel.appendChild(o);
-    }
+    fillKindSelect(sel);
     sel.value = t.category;
     row.querySelector('.note').after(' ', sel);
     return [{name: t.name, sel}, row];
@@ -845,6 +986,7 @@ export async function showEntity(name) {
   $('retype-kind').value = '';
   // a thing's category, changeable in place
   $('thing-category').hidden = r.type !== 'thing';
+  fillKindSelect($('thing-category'));
   $('thing-category').value = info.category || 'other';
 
   // aka / in chips under the meta, and the editable rows in the edit box
@@ -1419,6 +1561,14 @@ export function init() {
     b.setAttribute('aria-pressed', String(filters.types.has(kind)));
     renderEntityList();
   });
+
+  // ---- kinds of thing of your own ----
+  popover.register('thing-kinds', () => setKindsOpen(false),
+    t => $('thing-kinds-menu').contains(t) || !!$('thing-kinds-btn')?.contains(t));
+  $('thing-kind-save').onclick = () => busy($('thing-kind-save'), saveKind);
+  $('thing-kind-cancel').onclick = () => { kindForm(null); renderKinds(); };
+  for (const id of ['thing-kind-name', 'thing-kind-desc'])
+    $(id).onkeydown = e => { if (e.key === 'Enter') $('thing-kind-save').click(); };
 }
 
 // ---- merge suggestions (find duplicates via claude, by type) ----
