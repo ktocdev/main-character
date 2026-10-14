@@ -73,3 +73,7 @@ seed_corpus/install/
 # Recording scratch: a fixture pinned to one reply for a screen capture
 # keeps its backup next to it. Working state, never a deliverable.
 mock_fixtures/*.bak
+
+# Review scratch: diffs a code review writes to the repo root. They copy
+# whole hunks, names in exempt files included, so they'd trip the leak check.
+.diff_*.txt
