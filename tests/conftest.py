@@ -51,3 +51,23 @@ def pytest_sessionfinish(session, exitstatus):
     never turns a green run red.
     """
     shutil.rmtree(_TMP, ignore_errors=True)
+
+
+import pytest  # noqa: E402  (the environment above has to be set first)
+
+
+@pytest.fixture(scope="session")
+def installed(tmp_path_factory):
+    """The demo corpus, really installed, once per run. Read it freely; to
+    write into one, take a copy with demo_install.copy_install."""
+    from types import SimpleNamespace
+    from demo_install import run_installer
+
+    root = tmp_path_factory.mktemp("demo-install")
+    done = run_installer(root)
+    assert done.returncode == 0, done.stderr or done.stdout
+    assert (root / "chroma_data" / ".install-complete").is_file()
+
+    import chromadb
+    client = chromadb.PersistentClient(path=str(root / "chroma_data"))
+    return SimpleNamespace(root=root, client=client)

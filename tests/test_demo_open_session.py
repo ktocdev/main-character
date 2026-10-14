@@ -16,7 +16,6 @@ seed_corpus/install/ or the real journal.
 """
 
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -34,6 +33,7 @@ import server
 import sessions
 import seed
 from seed_corpus import reset_demo_state
+from demo_install import copy_install, install_env, run_installer
 
 BASE = "http://127.0.0.1:8144"
 SHIPPED = ROOT / "seed_corpus" / "sessions" / "current.json"
@@ -99,37 +99,6 @@ def test_close_session_accepts_the_shipped_session(monkeypatch, tmp_path):
 # ---- the import boundary ----
 
 
-def run_installer(root: Path) -> subprocess.CompletedProcess:
-    """A real import into a throwaway install. A subprocess because the
-    installer freezes its data dirs at import time -- the same reason
-    /api/setup/install-demo spawns it."""
-    env = {k: v for k, v in os.environ.items() if not k.startswith("MC_")}
-    env.update({
-        "MC_MOCK": "1",
-        "MC_AUTHOR_NAME": "Jordan",
-        **{f"MC_{name.upper()}_DIR": str(root / d) for name, d in [
-            ("journal", "journal_entries"), ("chroma", "chroma_data"),
-            ("entity", "entity_graph"), ("summary", "summaries"),
-            ("category", "categories"), ("pattern", "patterns"),
-            ("dream", "dreams"), ("session", "sessions")]},
-    })
-    return subprocess.run(
-        [sys.executable, str(ROOT / "seed_corpus" / "import_seed_corpus.py")],
-        cwd=str(ROOT), env=env, capture_output=True, text=True, timeout=900)
-
-
-@pytest.fixture(scope="module")
-def installed(tmp_path_factory):
-    root = tmp_path_factory.mktemp("demo-install")
-    done = run_installer(root)
-    assert done.returncode == 0, done.stderr or done.stdout
-    assert (root / "chroma_data" / ".install-complete").is_file()
-
-    import chromadb
-    client = chromadb.PersistentClient(path=str(root / "chroma_data"))
-    return SimpleNamespace(root=root, client=client)
-
-
 def open_entry_files() -> list[Path]:
     return sorted(p for p in CORPUS.glob("*.md") if p.name[:10] >= OPEN_FROM)
 
@@ -164,16 +133,8 @@ def test_a_rebuild_of_the_demo_indexes_nothing_new(installed, tmp_path):
     """"Rebuild index" in the demo must land where the install did: the open
     week's backups are the open session's, so they stay out, and a close
     later can't put those days in twice."""
-    import shutil
-    root = tmp_path / "copy"
-    shutil.copytree(installed.root, root)
-    env = {k: v for k, v in os.environ.items() if not k.startswith("MC_")}
-    env.update({"MC_MOCK": "1", "MC_AUTHOR_NAME": "Jordan",
-                **{f"MC_{name.upper()}_DIR": str(root / d) for name, d in [
-                    ("journal", "journal_entries"), ("chroma", "chroma_data"),
-                    ("entity", "entity_graph"), ("summary", "summaries"),
-                    ("category", "categories"), ("pattern", "patterns"),
-                    ("dream", "dreams"), ("session", "sessions")]}})
+    root = copy_install(installed.root, tmp_path / "copy")
+    env = install_env(root)
     done = subprocess.run(
         [sys.executable, "-c",
          "import json, rebuild_index; "
@@ -214,8 +175,11 @@ def test_open_week_has_the_latest_seed_loaded_and_no_pending_candidate(installed
 def test_reinstalling_over_an_untouched_demo_is_not_refused(installed):
     """The shipped current.json has turns now, and turns are what the
     installer's real-journal guard protects. Its own untouched copy must not
-    trip that guard -- while a copy a visitor has written into still does."""
-    done = run_installer(installed.root)
+    trip that guard -- while a copy a visitor has written into still does.
+
+    --dry-run is enough for the first half: the guard runs before the
+    installer looks at the flag, and a real reinstall costs most of a minute."""
+    done = run_installer(installed.root, "--dry-run")
     assert done.returncode == 0, done.stderr or done.stdout
 
     session = installed.root / "sessions" / "current.json"
@@ -244,10 +208,8 @@ def _fake_install(root: Path):
         encoding="utf-8")
 
 
-def test_restore_removes_all_visitor_data(tmp_path, monkeypatch):
-    install = tmp_path / "install"
-    built = run_installer(install)
-    assert built.returncode == 0, built.stderr
+def test_restore_removes_all_visitor_data(installed, tmp_path, monkeypatch):
+    install = copy_install(installed.root, tmp_path / "install")
     monkeypatch.setattr(reset_demo_state, "INSTALL", install)
     # Open and close Chroma in a child so Windows releases its file handles.
     add = subprocess.run([sys.executable, "-c",
