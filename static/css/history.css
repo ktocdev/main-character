@@ -9,12 +9,25 @@
   #session-list .li-title { font: 600 .9rem/1.3 var(--font-ui); white-space: normal; text-wrap: pretty; }
   #session-list .li-meta { display: flex; align-items: center; gap: .4rem; font: .74rem/1.3 var(--font-ui); }
   #session-list .list-item.open .li-meta { color: var(--text-accent); }
+  /* chapters | weeks, above the list. flex: none, since the aside is a
+     flex column and a long list would squash it (overflow: hidden lets it) */
+  #history-mode { display: flex; flex: none; margin: 0 .3rem .6rem; }
+  #history-mode button { flex: 1; }
+  #session-list .list-empty { margin: .6rem .9rem; font: .85rem/1.4 var(--font-ui); color: var(--text-muted); }
 
-  /* the head: title, dates, actions, notice */
+  /* weeks: one arc, read in full, then the chapters it touches and the
+     way to the weeks either side */
+  .arc-text { margin-top: 1.4rem; display: flex; flex-direction: column; gap: 1rem; }
+  .arc-text p { color: var(--text-you); text-wrap: pretty; }
+  .arc-chapters { margin-top: 2rem; display: flex; flex-direction: column; gap: .2rem; }
+  .arc-chapters .rule { margin-bottom: .4rem; }
+  .arc-chapters .list-item { padding: .5rem .6rem; flex-direction: column; align-items: flex-start; gap: .15rem; line-height: 1.3; }
+  .arc-chapters .li-title { font: 600 .9rem/1.3 var(--font-ui); white-space: normal; text-wrap: pretty; }
+  .arc-nav { display: flex; justify-content: space-between; gap: .6rem; margin: 2rem 0 1rem; }
+
+  /* the head: title and dates. History only reads; closing a chapter
+     and writing live on the write screen. */
   #session-dates { font: .8rem var(--font-ui); color: var(--text-muted); }
-  .session-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
-  #session-notice { margin-top: .7rem; }
-  #session-notice:empty { display: none; }
 
   /* inline jump-to: sticky under the actions at < 1100px */
   #session-jumps {

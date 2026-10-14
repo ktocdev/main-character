@@ -2909,6 +2909,50 @@ def domain_summary(name: str):
     return {"name": name, "doc": doc}
 
 
+@app.get("/api/summaries/arcs")
+def arc_list():
+    """History's weeks view: every week with an arc, newest first, without
+    the text. `days` counts the dates written that week; `chapters` are the
+    closed chapters with a day in it, oldest first, carrying what History
+    builds its chapter key from."""
+    import summarizer
+    if not summarizer.ARC_DIR.exists():
+        return {"weeks": []}
+    written: dict[str, set] = {}
+    for m in STATE["collection"].get(include=["metadatas"])["metadatas"]:
+        try:
+            written.setdefault(summarizer.week_key(m.get("date", "")), set()).add(m["date"])
+        except ValueError:
+            continue
+    touching: dict[str, list] = {}
+    for item, days in sessions.closed_chapter_days(STATE["collection"]):
+        for key in sorted({summarizer.week_key(d) for d in days if d}):
+            touching.setdefault(key, []).append((min(days), item))
+    weeks = []
+    for path in sorted(summarizer.ARC_DIR.glob("*.md"), reverse=True):
+        arc = summarizer.load_arc(path.stem)
+        if not arc:
+            continue
+        weeks.append({
+            "week": arc["week"], "start": arc["start"], "end": arc["end"],
+            "days": len(written.get(arc["week"], ())),
+            "chapters": [item for _, item in sorted(touching.get(arc["week"], []),
+                                                    key=lambda p: p[0])],
+        })
+    return {"weeks": weeks}
+
+
+@app.get("/api/summaries/arc")
+def arc_one(week: str):
+    """One week's arc. load_arc only takes a week key's shape, so `week`
+    never reaches the filesystem as anything else."""
+    import summarizer
+    arc = summarizer.load_arc(week)
+    if arc is None:
+        return JSONResponse({"error": "no arc for this week"}, status_code=404)
+    return arc
+
+
 @app.get("/api/summaries/entries")
 def entry_list():
     """All entries sorted newest first, for the history tab."""

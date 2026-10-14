@@ -51,7 +51,7 @@ DATA_DIRS = {
 FIXED_READS = [
     "status", "sessions/current", "sessions", "seed", "entities",
     "entities/duplicates", "entities/deleted", "entities/generic", "groups",
-    "history", "categories", "organic",
+    "history", "categories", "organic", "summaries/arcs",
     "patterns", "dreams", "cost", "settings",
 ]
 
@@ -139,6 +139,10 @@ def snapshot(client, server) -> dict:
         else:
             get("/api/sessions/conversation", title=item["title"],
                 start=item["start"], end=item["end"])
+
+    # History's weeks view: each listed week's arc
+    for week in reads["/api/summaries/arcs"]["json"]["weeks"]:
+        get("/api/summaries/arc", week=week["week"])
 
     cats = reads["/api/categories"]["json"]
     domains = set(cats.get("counts", {})) | set(cats.get("custom") or [])

@@ -10,6 +10,8 @@ export const state = {
   triageReturn: false,   // an entity opened from triage (e): its detail
                          // pane shows the way back. Triage sets, main clears.
   sessionSel: 'current', // history selection; write's closeSession resets it
+  historyMode: 'chapters', // history's list: 'chapters' or 'weeks' (the weekly arcs)
+  weekSel: null,         // the week open in history's weeks mode ('2026-W33')
   dateStyle: 'long',     // MC_DATE_FORMAT, via /api/status; write renders stamps with it
   clockSkewMs: 0,        // server clock − browser clock, via /api/status; write stamps against it
   tz: '',                // the server's zone name; shown on the entry stamp

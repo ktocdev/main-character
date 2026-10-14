@@ -30,6 +30,7 @@ Usage:
 
 import hashlib
 import json
+import re
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -406,6 +407,29 @@ def load_domain_doc(name: str) -> str | None:
     if path.exists():
         return path.read_text(encoding="utf-8")
     return None
+
+
+_ARC_HEADING = re.compile(
+    r"^# Week (\d{4}-W\d{2}) \((\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})\)\s*$")
+
+
+def load_arc(key: str) -> dict | None:
+    """One week's arc as {week, start, end, text}, or None if there's no
+    file. start/end are the first and last days with entries, not Monday
+    and Sunday. `key` must be a week key (week_key); callers build it,
+    never take it from a request."""
+    if not re.fullmatch(r"\d{4}-W\d{2}", key):
+        return None
+    path = ARC_DIR / f"{key}.md"
+    if not path.exists():
+        return None
+    lines = _strip_hash_comment(path.read_text(encoding="utf-8")).splitlines()
+    start = end = None
+    if lines and (m := _ARC_HEADING.match(lines[0])):
+        start, end = m.group(2), m.group(3)
+        lines = lines[1:]
+    return {"week": key, "start": start, "end": end,
+            "text": "\n".join(lines).strip()}
 
 
 def build_snapshot(quiet: bool = False):

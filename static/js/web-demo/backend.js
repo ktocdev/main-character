@@ -39,6 +39,8 @@
   let closes = 0;
   let firstArchive = null;     // the messages the recorded close archived
   const extraArchives = [];    // closes after the first, newest first
+                               // (History's weeks list is the captured one, so its
+                               // chapter links never name these; left as is)
   let closing = null;          // {running, done: Set, finished}
   let seed = null;             // {current, updated, candidate, candidateUpdated}
 

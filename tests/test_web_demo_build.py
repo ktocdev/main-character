@@ -27,6 +27,14 @@ def test_web_demo_build(tmp_path):
     assert before["replies"] and before["close"]["response"]["ok"]
     assert before["script"]["write"] and before["script"]["lookup"]
     assert len(after["search"]) == len(before["search"]) + 3
+    # History's weeks view: the list, and every listed week's arc, in both
+    # snapshots (after.json holds only what the close changed)
+    for snap in (before["reads"], {**before["reads"], **after["reads"]}):
+        listed = snap["/api/summaries/arcs"]["json"]["weeks"]
+        assert listed and any(w["chapters"] for w in listed)
+        for w in listed:
+            arc = snap[f"/api/summaries/arc?week={w['week']}"]["json"]
+            assert arc["text"] and not arc["text"].startswith(("#", "<!--")), w["week"]
 
     html = (out / "index.html").read_text(encoding="utf-8")
     # the fake backend has to be in place before the first module asks anything

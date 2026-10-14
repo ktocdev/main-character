@@ -78,7 +78,7 @@ const UNREACHED = 'could not reach the journal. Your draft is back, and '
 // server (sessions.close_session: "nothing new in this chat yet"). A
 // carried-forward base part is context, not new material — only messages
 // count, and dreams are excluded here exactly as close_session excludes them.
-export function hasNewMaterial(messages) {
+function hasNewMaterial(messages) {
   return (messages || []).some(m => m.role === 'you' && !m.dream);
 }
 
@@ -165,16 +165,52 @@ function clearFinishedClose() {
   if (b) b.hidden = true;
 }
 const CP_GLYPH = {done: '·', running: '…', failed: '✕', pending: '·'};
+// Steps a failed close can catch up on from here: /api/summaries/refresh
+// tags untagged entries and rewrites only what's out of date (arcs and
+// domain documents whose entries changed, missing entry summaries), so a
+// retry never re-rolls anything that's already current.
+const RETRYABLE = new Set(['categories', 'summaries']);
 function renderCloseProgress(steps, done) {
   const box = $('close-progress');
   if (!box) return;
   box.hidden = false;
   box.innerHTML = '<div class="eyebrow strong">updating memory</div><div class="checklist">'
-    + steps.map(s => `<div class="step ${s.status}">`
+    + steps.map(s => `<div class="step ${s.status}" data-step="${esc(s.key || '')}">`
         + `<span class="mark">${CP_GLYPH[s.status] || '·'}</span>`
-        + `<span>${esc(s.label)}</span></div>`).join('')
+        + `<span>${esc(s.label)}</span>`
+        + (done && s.status === 'failed' && RETRYABLE.has(s.key)
+          ? '<button class="text cp-retry" title="catch up: tag untagged entries and rewrite only what is out of date">retry</button>' : '')
+        + '</div>').join('')
     + '</div>'
-    + (done ? '<div class="done-line">memory updated, and the next chapter is open</div>' : '');
+    + (done ? `<div class="done-line">${steps.some(s => s.status === 'failed')
+      ? 'memory partly updated (✕ didn’t finish), and the next chapter is open'
+      : 'memory updated, and the next chapter is open'}</div>` : '');
+}
+
+// What a catch-up actually did, from /api/summaries/refresh's counts.
+function memoryReport(r) {
+  const n = (k, one, many) => (k ? `${k} ${k === 1 ? one : many}` : null);
+  const did = [
+    n(r.categories_tagged, 'entry tagged', 'entries tagged'),
+    n(r.regenerated, 'weekly arc rewritten', 'weekly arcs rewritten'),
+    n(r.domains_regenerated, 'domain document rewritten', 'domain documents rewritten'),
+    n(r.entry_summaries_regenerated, 'entry summary written', 'entry summaries written'),
+  ].filter(Boolean);
+  return did.length ? did.join(', ') + '.' : 'nothing was out of date.';
+}
+
+async function retryCatchUp(btn) {
+  const r = await busy(btn, () => api('/api/summaries/refresh', {}));
+  if (!r) return;  // api() has already said why (the spending limit, say)
+  for (const key of RETRYABLE) {
+    const row = $('close-progress').querySelector(`.step.failed[data-step="${key}"]`);
+    if (!row) continue;
+    row.className = 'step done';
+    row.querySelector('.mark').textContent = CP_GLYPH.done;
+    row.querySelector('.cp-retry')?.remove();
+  }
+  const line = $('close-progress').querySelector('.done-line');
+  if (line) line.textContent = 'caught up: ' + memoryReport(r);
 }
 function trackCloseProgress() {
   clearInterval(closePoll);
@@ -411,20 +447,10 @@ export function init() {
   };
   refreshSeedMenu();
 
-  $('refresh-summaries').onclick = async () => {
-    const b = $('refresh-summaries');
-    b.disabled = true;
-    b.innerHTML = 'refreshing <span class="dots">···</span>';
-    try {
-      const r = await api('/api/summaries/refresh', {});
-      if (r) {
-        const n = $('session-notice');
-        if (n) n.textContent = `weekly arcs and domain documents regenerated (${r.arcs} weeks).`;
-      }
-    } finally {
-      b.textContent = 'refresh memory'; b.disabled = false;
-    }
-  };
+  $('close-progress').addEventListener('click', e => {
+    const b = e.target.closest('.cp-retry');
+    if (b) retryCatchUp(b);
+  });
 
   $('entry-send').onclick = async () => {
     const text = $('entry-text').value.trim();

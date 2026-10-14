@@ -177,10 +177,6 @@
         <aside id="cat-list">
           <div class="side-tools" id="cat-tools">
             <div class="row">
-              <span id="cat-status"></span>
-            </div>
-            <div class="row">
-              <button class="quiet sm" id="cat-build" title="tag any untagged entries with Claude. Already-tagged entries are skipped, so they cost nothing">tag new entries</button>
               <button class="quiet sm" id="cat-scan" title="cluster places, projects and things by what happened around them and propose new categories. Nothing is created without your confirm">scan for new categories</button>
             </div>
           </div>
@@ -246,6 +242,10 @@
   <section class="tab" id="tab-history">
     <div id="history-pane" class="split">
       <aside id="session-list">
+        <div id="history-mode" class="segmented" role="group" aria-label="history view">
+          <button type="button" data-mode="chapters" aria-pressed="true" title="every chapter, one at a time">chapters</button>
+          <button type="button" data-mode="weeks" aria-pressed="false" title="every week's arc: the story of that week, written when a chapter closes">weeks</button>
+        </div>
         <div id="session-list-items"></div>
       </aside>
       <section id="session-view" class="detail">
@@ -255,14 +255,6 @@
             <h2 class="title" id="session-title"></h2>
             <span id="session-dates"></span>
           </div>
-          <div class="session-actions">
-            <button class="filled" id="session-close-btn" hidden
-              title="this is the summarize point. Your side of this chapter becomes a journal entry and the next chapter opens">close chapter &amp; start the next</button>
-            <button class="quiet" id="refresh-summaries"
-              title="regenerate the weekly arcs + domain docs by hand. Closing a chapter already does this automatically">refresh memory</button>
-            <button class="quiet" id="session-continue" hidden>continue in write ›</button>
-          </div>
-          <div id="session-notice" class="notice-line"></div>
           <div id="session-jumps"></div>
           <div id="session-loading" hidden>reading <span class="dots">···</span></div>
           <div id="session-body"></div>
@@ -432,7 +424,7 @@
       join the same chapter and both become journal memory at close. Your draft autosaves as you type
       and survives a refresh or closed tab. Enter just makes a new line, and only the buttons send.</p>
       <p>When the chapter feels finished, open the <b>⋯</b> menu next to the composer and hit
-      <b>close chapter</b> (also available on the history tab). That's the
+      <b>close chapter</b>. That's the
       <em>summarize point</em>. Your side of the chapter becomes a journal entry, the same shape as
       your imported conversations, and tagging, entity extraction, summaries, and dream scanning
       all run in the background. A new, empty chapter opens. Until then, new entries live in the
@@ -486,6 +478,9 @@
       backfilled from your export), your entries, and the live thread. Every closed chapter sits in
       the list, and you can pick one to read it in full. Closed chapters keep both sides for reading, but
       only your side is journal memory.</p>
+      <p><b>weeks</b>, at the top of the list, switches to the weekly arcs: the story of each week,
+      written when a chapter closes. Arcs follow the calendar, not chapters, so a week can span two
+      chapters, and its arc links to both.</p>
       </div>
       </details>
 
@@ -595,9 +590,8 @@
       <summary id="h-categories"><span class="mark"></span><span>categories</span></summary>
       <div class="disclosure-body">
       <p>Every entry gets tagged with categories (work, relationships, health…) automatically when a
-      chapter closes, and <em>tag new entries</em> re-runs it manually for anything untagged (already-tagged
-      entries are cached and free). Pick a category to browse its entries and read its
-      <em>domain document</em>, a living ~500-word summary of that area of life. × a wrong tag or
+      chapter closes (if that step fails, the close's progress list offers a retry). Pick a category
+      to browse its entries and read its <em>domain document</em>, a living ~500-word summary of that area of life. × a wrong tag or
       + a missing one, and your fixes become permanent overrides. <em>scan for new categories</em> clusters
       your places, projects and things and proposes organic categories, but nothing is created without your
       confirm. You can also hand-seed a category with keywords. Entry categories are deliberately

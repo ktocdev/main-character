@@ -22,10 +22,6 @@ export async function loadCategories() {
 const label = n => n === '__untagged' ? 'untagged' : n.replace('_', ' ');
 
 function renderCategories() {
-  const status = $('cat-status');
-  status.textContent = catIndex.tagged < catIndex.total
-    ? `${catIndex.tagged} of ${catIndex.total} tagged`
-    : `all ${catIndex.total} tagged`;
   renderProposals();
   renderList();
   renderDetail();
@@ -396,22 +392,6 @@ export function init() {
       }
     } finally {
       b.textContent = 'scan for new categories'; b.disabled = false;
-    }
-  };
-
-  $('cat-build').onclick = async () => {
-    const b = $('cat-build');
-    b.disabled = true;
-    $('cat-status').innerHTML = 'tagging <span class="dots">···</span>';
-    busyLabel(b, 'tagging');
-    try {
-      const r = await api('/api/categories/build', {});
-      if (r) {
-        await loadCategories();
-        notice(r.new ? `tagged ${r.new} new entr${r.new === 1 ? 'y' : 'ies'}.` : 'nothing new to tag.');
-      }
-    } finally {
-      b.textContent = 'tag new entries'; b.disabled = false;
     }
   };
 

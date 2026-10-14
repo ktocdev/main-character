@@ -457,6 +457,32 @@ def load_archive(archive_id: str) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def closed_chapter_days(collection) -> list[tuple[dict, set[str]]]:
+    """Every closed chapter in the history list, with the days History
+    renders for it: an archive's part dates and the days of every message in
+    its braids; an imported conversation's entry dates inside its range (as
+    the conversation view bounds them). For the weekly arcs list, which says
+    which chapters a week touches."""
+    archives = {a["id"]: a for a in load_archives()}
+    metas = collection.get(include=["metadatas"])["metadatas"]
+    out = []
+    for item in session_list(collection)["sessions"]:
+        days = set()
+        if item["kind"] == "archive":
+            a = archives.get(item["id"]) or {}
+            for p in a.get("parts") or []:
+                if p.get("date"):
+                    days.add(p["date"])
+                days |= {m["ts"][:10] for m in p.get("messages") or [] if m.get("ts")}
+            days |= {m["ts"][:10] for m in a.get("messages") or [] if m.get("ts")}
+        else:
+            days = {m.get("date", "") for m in metas
+                    if m.get("title", "") == item["title"]
+                    and item["start"] <= m.get("date", "") <= item["end"]}
+        out.append((item, days))
+    return out
+
+
 def session_list(collection) -> dict:
     """Everything for the history sidebar: the open session plus all
     closed ones, newest first. Conversations stitched into an archive

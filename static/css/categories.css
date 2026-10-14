@@ -10,8 +10,6 @@
 
   /* ---- sidebar ---- */
   #cat-tools .row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
-  #cat-status { margin-left: auto; font: .78rem var(--font-ui); color: var(--text-muted); }
-  #cat-status .dots { margin-left: .1rem; }
   #cat-proposed .list-item .li-title { font-weight: 600; }
   #cat-newform-wrap { padding: .8rem .9rem 0; }
   #cat-newform {
