@@ -646,7 +646,7 @@
       <details class="disclosure">
       <summary id="h-safety"><span class="mark"></span><span>safety notes</span></summary>
       <div class="disclosure-body">
-      <p>Everything is undoable, since ↺/↻ on the entities screen cover every curation and observation change, 50 steps back.
+      <p>Everything is undoable, since undo and redo on the entities screen cover every curation and observation change, 50 steps back.
       All your decisions live in <code>entity_graph/curation.json</code> and re-apply on every rebuild, so
       nothing you do here is ever lost by the system regenerating docs. The one exception
       is a <code>--force</code> re-extraction (a from-scratch API re-read of all entries, only ever run deliberately),
@@ -667,8 +667,8 @@
       <aside id="entity-list">
         <div class="side-tools">
           <div class="row" id="curation-tools">
-            <button class="quiet sm" id="undo-btn" data-tip-place="below" title="undo the last change">↺ undo</button>
-            <button class="quiet sm" id="redo-btn" data-tip-place="below" title="redo what you just undid">↻ redo</button>
+            <button class="quiet sm" id="undo-btn" data-tip-place="below" title="undo the last change"><span class="ui-icon undo" aria-hidden="true"></span>undo</button>
+            <button class="quiet sm" id="redo-btn" data-tip-place="below" title="redo what you just undid"><span class="ui-icon redo" aria-hidden="true"></span>redo</button>
             <button class="quiet sm" id="cleanup-btn" aria-haspopup="true" aria-expanded="false" aria-controls="cleanup-menu" data-tip-place="below-end" title="duplicates, reviews and re-extract">clean up <span class="caret-icon drop"></span></button>
             <!-- every run-once tool, grouped by what it costs -->
             <div class="popover" id="cleanup-menu" hidden>
@@ -730,7 +730,7 @@
           </div>
           <div id="group-browser">
             <div id="group-header"><span class="side-lbl">groups</span>
-              <button class="chip-toggle" id="group-new-btn" title="make a new group">+ new</button>
+              <button class="chip-toggle" id="group-new-btn" title="make a new group"><span class="ui-icon plus" aria-hidden="true"></span>new</button>
               <button class="chip-toggle" id="flt-select" aria-pressed="false" title="check entities to add several to a group at once">select</button>
             </div>
             <div id="batch-bar" hidden>
