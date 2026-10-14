@@ -419,9 +419,9 @@
       and survives a refresh or closed tab. Enter just makes a new line, and only the buttons send.</p>
       <p>When the chapter feels finished, open the <b>⋯</b> menu next to the composer and hit
       <b>close chapter</b>. That's the
-      <em>summarize point</em>. Your side of the chapter becomes a journal entry, the same shape as
-      your imported conversations, and tagging, entity extraction, summaries, and dream scanning
-      all run in the background. A new, empty chapter opens. Until then, new entries live in the
+      <em>summarize point</em>. Your side of the chapter becomes journal entries, one for each day
+      you wrote, and tagging, entity extraction, summaries, dream scanning, and a life summary
+      candidate all run in the background. A new, empty chapter opens. Until then, new entries live in the
       conversation (and their markdown backups), not yet in long-term memory.
       Once your own writing in a chapter passes about 30,000 characters (Settings changes the
       figure), the write screen asks whether you're ready to close. Say not yet, and it asks again
@@ -458,10 +458,8 @@
       result to read the full entry in place. This is the exhaustive counterpart to the ask
       screen. Ask retrieves a handful of excerpts and reasons about them, while search shows you
       <em>everything</em>. Dreams never appear here because they live in their own realm (dreams tab).</p>
-      <p>There are two honest limits. Highlighting is literal (a typo'd word won't light up even though
-      meaning-search still finds the right passages), and dates are the <em>conversation's</em>
-      date, so a passage written mid-week inside a week-long chapter shows that chapter's date until
-      the per-day split lands.</p>
+      <p>One honest limit: highlighting is literal, so a typo'd word won't light up even though
+      meaning-search still finds the right passages.</p>
       </div>
       </details>
 
@@ -514,7 +512,7 @@
           <span class="k">a</span><span class="d"><span class="n">alias</span> <span class="t">— add another name this entity goes by (matchable by both)</span></span>
           <span class="k">1–9, n</span><span class="d"><span class="n">sort</span> <span class="t">— once a name is split (Dev · work, Dev · friend), a new mention that doesn't say which waits in "Dev · ?". Its card shows one entry at a time: a number says which Dev, n names someone new.</span></span>
           <span class="k">p</span><span class="d"><span class="n">part of</span> <span class="t">— a piece of something bigger (Tabs of a project, a beach in a town). It stays its own entity, shown as Parent / Name, so an unrelated Tabs isn't folded in the way a merge would. The merge field offers it too.</span></span>
-          <span class="k">t then 1–5</span><span class="d"><span class="n">retype</span> <span class="t">— to person / project / place / thing / animal. A thing then asks which kind: 1 music, 2 game, 3 show, 4 book, 5 event, 6 other</span></span>
+          <span class="k">t then 1–5</span><span class="d"><span class="n">retype</span> <span class="t">— to person / project / place / thing / animal. A thing then asks which kind: 1–9 down the list (music, podcast, game, show, movie, book, event, then kinds of your own), 0 other</span></span>
           <span class="k">x</span><span class="d"><span class="n">retire</span> <span class="t">— someone from a chapter that's over. Out of the list and triage; the companion still knows them when you name them, but won't bring them up. Nothing is deleted; u undoes. A later entry that names them without saying it's them waits in "Name · ?": 1 keeps it with the retired one, n is someone new, x un-retires.</span></span>
           <span class="k">s</span><span class="d"><span class="n">skip</span> <span class="t">— decide later, stays in queue for next time</span></span>
           <span class="k">e</span><span class="d"><span class="n">edit in entities</span> <span class="t">— open it on the entities screen for a deeper fix; "back to triage" there returns you to the same spot</span></span>
@@ -572,9 +570,11 @@
         <div class="row"><span class="when">Right entity, wrong spelling or capitalization</span><span class="fix"><b>rename</b></span></div>
         <div class="row"><span class="when">Right entity, wrong kind (person vs place)</span><span class="fix"><b>retype</b></span></div>
         <div class="row"><span class="when">A game, show or band filed as a project or place</span><span class="fix"><b>retype to thing</b> <span class="t">or the <em>things review</em> on the entities screen, for all of them at once</span></span></div>
+        <div class="row"><span class="when">A kind of thing the built-in kinds don't cover (songs you're learning, food you love)</span><span class="fix"><b>add a kind</b> <span class="t">things filter → + kind, with a description Claude reads when it sorts new entries</span></span></div>
         <div class="row"><span class="when">A pet filed as a person</span><span class="fix"><b>retype to animal</b> <span class="t">or the <em>animals review</em> on the entities screen, for all of them at once</span></span></div>
         <div class="row"><span class="when">Entries from before a prompt change missed something</span><span class="fix"><b>re-extract</b> <span class="t">entities → clean up → re-extract: only the entries that mention it, with a cost estimate first</span></span></div>
         <div class="row"><span class="when">One wrong memory inside a right entity</span><span class="fix"><b>observation edit / move / ×</b></span></div>
+        <div class="row"><span class="when">Someone from a chapter of life that's over</span><span class="fix"><b>retire</b> <span class="t">the companion still knows them when you name them, but won't bring them up</span></span></div>
         <div class="row"><span class="when">Shouldn't exist at all</span><span class="fix"><b>delete</b></span></div>
       </div>
       </div>
@@ -598,8 +598,9 @@
       <div class="disclosure-body">
       <p><em>detect patterns</em> re-reads the weekly arcs + domain documents and names recurring
       shapes (emotional cycles, behavioral pipelines, relationship dynamics), each with dated
-      instances and a confidence level. Patterns are injected into the companion's context only
-      when the conversation genuinely rhymes with one. <em>dismiss</em> hides a pattern
+      instances and a confidence level. It runs only when you ask. The companion sees the whole
+      library, one line per pattern, on every turn, and is told to bring one up only when the
+      conversation genuinely rhymes with it. <em>dismiss</em> hides a pattern
       until new evidence shows up.</p>
       </div>
       </details>
@@ -626,8 +627,10 @@
       which rebuilds the raw memory files and would discard <em>observation-level</em> edits. Merges, renames and
       the rest survive even that. Removed aliases keep their historical "as ‘name’" data, because removal only
       stops name-matching.</p>
-      <p>Your journal is just the local folders <code>chroma_data</code>,
-      <code>journal_entries</code>, <code>entity_graph</code> and <code>summaries</code>, so back them up.</p>
+      <p>Your journal is just local folders (<code>journal_entries</code>, <code>entity_graph</code>,
+      <code>summaries</code>, <code>categories</code>, <code>patterns</code>, <code>dreams</code>,
+      <code>sessions</code>, and the rebuildable <code>chroma_data</code> index), so back them up.
+      Settings → data has <em>export to a folder</em> and <em>save a dated zip</em>; both work without a key.</p>
       </div>
       </details>
     </div>

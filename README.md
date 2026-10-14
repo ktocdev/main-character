@@ -94,7 +94,7 @@ All of these directories are gitignored. Nothing leaves your machine except the 
 
 The server binds to `127.0.0.1` and refuses requests from anywhere else. There are no accounts, no login and no permission model, because there is exactly one user: you.
 
-This will not change in a later version. The server keeps its open conversation, its loaded entity index and its Chroma handle in one process-global dict (`STATE`, [`server.py:80`](server.py#L80)). A second person on the same instance would not get their own journal. They would get *yours*, mid-sentence. So:
+This will not change in a later version. The server keeps its open conversation, its loaded entity index and its Chroma handle in one process-global dict (`STATE` in [`server.py`](server.py)). A second person on the same instance would not get their own journal. They would get *yours*, mid-sentence. So:
 
 - Do not expose the port to the internet.
 - Do not put it behind a reverse proxy and share the URL.
@@ -109,34 +109,34 @@ If you want a journal several people can use, start from a different codebase.
 
 ### Memory
 - **Semantic retrieval.** Context is assembled in layers: recent entries and the life summary first, then passages matched by meaning and by keyword from anywhere in an entry, matching summaries, entity docs, then the pattern library. A whole new entry is searched piece by piece, so its ending finds connections as well as its opening.
-- **Sessions.** One chat stays open for days. Entries, replies and follow-ups braid into it and survive restarts. Closing the session triggers summarization: your side becomes a journal entry, the braid is archived, and the memory pipeline runs in the background.
+- **Chapters.** One chapter stays open for about a week. Entries, replies and follow-ups braid into it and survive restarts. Closing the chapter turns your side into journal entries, one per day you wrote, archives the braid, and runs the memory pipeline in the background. Once a chapter gets long, the write screen asks whether you're ready to close it.
 - **Reflection.** The companion opens a conversation by connecting threads across your history instead of waiting to be asked.
 
 ### Entity graph
-- **Extraction.** People, projects, places and events, pulled from every entry.
+- **Extraction.** People, projects, places, things (bands, podcasts, games, shows, movies, books, recurring events, and kinds you add yourself) and animals, pulled from every entry.
 - **Profiles.** A one to three paragraph doc per entity, regenerated as context accumulates.
 - **Observations.** Timestamped and tagged, browseable per entity by date.
-- **Groups.** Nestable hand-made groupings. A group can roll up so its members collapse out of the flat list.
-- **Triage.** A keyboard-driven review queue for extracted entities (keep, merge, correct, rename, alias, retype, delete) with 50 levels of undo.
+- **Groups.** Nestable hand-made groupings. A group can roll up so its members collapse out of the flat list, and its "what ties them together" note is read with new entries and passed to the companion with each member's profile.
+- **Identity.** A piece of something bigger can be a *part* of it (`Coda / Tabs`) instead of merged in. Two people with one name can be split (`Dev · work`, `Dev · friend`), and new entries that don't say which wait in triage. People from a chapter of life that's over can be retired: the companion still knows them when you name them, but won't bring them up.
+- **Triage.** A keyboard-driven review queue for extracted entities (keep, merge, correct, rename, alias, part of, retype, retire, delete, never track, skip) with 50 levels of undo.
 
 ### Summaries
 - **Entry summaries.** Two or three sentences per entry, cached incrementally.
-- **Weekly arcs.** A short narrative per week, stitched from entry summaries.
+- **Weekly arcs.** A short narrative per week, stitched from entry summaries, and readable in History under *weeks*.
 - **Domain summaries.** A roughly 500-word doc per category, updated over time.
 - **Life summary.** A rolling summary you co-edit, which opens every chapter. Each close drafts an update for you to review. It never replaces yours on its own.
 
 ### Categories
 - **Automatic tagging** against ten built-in categories. Each can be turned off.
-- **Organic categories.** Place and project entities clustered by embedding, named by Claude, and confirmed or dismissed by you.
+- **Organic categories.** Place, project and thing entities clustered by embedding, named by Claude, and confirmed or dismissed by you.
 - **Custom categories,** hand-seeded with trigger keywords.
-- **Parent rollup.** Categories can nest.
 
 ### Patterns
-Recurring emotional cycles, behavioural pipelines and relationship dynamics, each tracked with dated instances and a confidence score. Dismissed patterns resurface only with new evidence. The companion sees the pattern library on every turn, one line per pattern, and is told to bring one up only when the conversation genuinely echoes it.
+Recurring emotional cycles, behavioural pipelines and relationship dynamics, each tracked with dated instances and a confidence level. Detection runs when you ask for it, from the weekly arcs and domain docs. Dismissed patterns resurface only with new evidence. The companion sees the pattern library on every turn, one line per pattern, and is told to bring one up only when the conversation genuinely echoes it.
 
 ### Dreams
 - **Realm isolation.** Dreams live in their own vector collection, so a waking query can never surface one by accident. A long dream is split into passages, so it can be found by any part of it.
-- **Extraction and flagging.** Dreams are found in the journal automatically, or you can mark one with a checkbox as you write.
+- **Extraction.** Dreams are found in your entries automatically when a chapter closes, with no flag needed, or across your whole history on request. The entry itself stays in waking memory.
 - **Cast.** Dream people and places are spelled to match the waking entity graph.
 - **Dream weather.** A one-line tone signal from recent dreams, included in the companion's context.
 - **Interpretations.** Your own interpretations are recorded. The app does not invent any.

@@ -81,7 +81,7 @@ Profiles are matched by name (`companion.match_entities`), most-mentioned first.
 
 The life summary and the open chapter are always there. Everything older arrives through twelve passages and three summaries. When a summary matches but the passage it summarizes does not, the companion has the outline and the date, not your words. It can tell you when you wrote something, and you can read it in full in History.
 
-The passage index is what narrows this gap. Before it, search by meaning read only the opening of each chunk, so a detail on page two of an entry could not be found at all. Keyword search narrows it further: a question about a film title or a medication by name finds the passage that names it, where search by meaning found a dozen passages about the same person. And a question that names a month or a holiday searches that time's entries too, since a passage never says when it was written. `LOOKUP-UPGRADE-HANDOFF.md` has the measurements and the rest of the plan.
+The passage index is what narrows this gap. Before it, search by meaning read only the opening of each chunk, so a detail on page two of an entry could not be found at all. Keyword search narrows it further: a question about a film title or a medication by name finds the passage that names it, where search by meaning found a dozen passages about the same person. And a question that names a month or a holiday searches that time's entries too, since a passage never says when it was written.
 
 ## When you close a chapter
 
