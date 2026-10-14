@@ -2092,13 +2092,14 @@ def _not_a_kind():
 def thing_kinds():
     """Every kind a thing can be, in picker order, and the icons a kind of
     the author's own can take."""
-    custom = {k["name"]: k for k in entities.custom_thing_kinds()}
+    curation = entities.load_curation()
+    custom = {k["name"]: k for k in entities.custom_thing_kinds(curation)}
     return {
         "kinds": [{"name": c, "custom": c in custom,
                    "description": custom[c]["description"] if c in custom
                    else entities.THING_CATEGORY_NOTES.get(c, ""),
                    "icon": custom[c]["icon"] if c in custom else ""}
-                  for c in entities.thing_categories()],
+                  for c in entities.thing_categories(curation)],
         "icons": list(entities.THING_KIND_ICONS),
         "max_custom": entities.MAX_THING_KINDS,
     }
@@ -2990,15 +2991,24 @@ def arc_list():
     import summarizer
     if not summarizer.ARC_DIR.exists():
         return {"weeks": []}
+    metas = STATE["collection"].get(include=["metadatas"])["metadatas"]
     written: dict[str, set] = {}
-    for m in STATE["collection"].get(include=["metadatas"])["metadatas"]:
+    for m in metas:
         try:
             written.setdefault(summarizer.week_key(m.get("date", "")), set()).add(m["date"])
         except ValueError:
             continue
     touching: dict[str, list] = {}
-    for item, days in sessions.closed_chapter_days(STATE["collection"]):
-        for key in sorted({summarizer.week_key(d) for d in days if d}):
+    for item, days in sessions.closed_chapter_days(STATE["collection"], metas):
+        keys = set()
+        for d in days:
+            if not d:
+                continue
+            try:
+                keys.add(summarizer.week_key(d))
+            except ValueError:
+                continue
+        for key in sorted(keys):
             touching.setdefault(key, []).append((min(days), item))
     weeks = []
     for path in sorted(summarizer.ARC_DIR.glob("*.md"), reverse=True):
