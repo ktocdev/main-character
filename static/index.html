@@ -32,6 +32,8 @@
   try {
     var _t = localStorage.getItem('rag_theme');
     if (_t === 'light' || _t === 'dark') document.documentElement.dataset.theme = _t;
+    var _a = localStorage.getItem('rag_accent');
+    if (_a === 'slate' || _a === 'sage' || _a === 'rose') document.documentElement.dataset.accent = _a;
   } catch {}
 </script>
 </head>
@@ -54,7 +56,18 @@
 <div id="app-banner"></div>
 <header>
   <div class="masthead">
-    <h1><img src="/static/favicon.svg" class="masthead-mark dark" alt=""><img src="/static/favicon-light.svg" class="masthead-mark light" alt="">main character</h1>
+    <h1><svg class="masthead-mark" viewBox="0 0 64 64" aria-hidden="true">
+      <defs>
+        <linearGradient id="mark-beam" x1="57" y1="7" x2="9.37" y2="54.63" gradientUnits="userSpaceOnUse">
+          <stop offset="0"></stop><stop offset=".45" stop-opacity=".75"></stop><stop offset="1" stop-opacity=".06"></stop>
+        </linearGradient>
+        <clipPath id="mark-clip"><circle cx="32" cy="32" r="32"></circle></clipPath>
+      </defs>
+      <g clip-path="url(#mark-clip)">
+        <circle class="ground" cx="32" cy="32" r="32"></circle>
+        <path d="M57.00,7.00 L0.49,37.56 A32,32 0 0 0 26.44,63.51 Z" fill="url(#mark-beam)" transform="rotate(-10 32 32)"></path>
+      </g>
+    </svg>main character</h1>
     <span class="status" id="status"></span>
   </div>
   <nav aria-label="screens">
@@ -373,6 +386,16 @@
               <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
             </div>
             <p class="set-help">Saved in this browser and applied instantly. It is not part of your <code>.env</code> and is not shared with other devices. Auto follows the device.</p>
+          </div>
+          <div class="set-row">
+            <span class="set-label" id="set-accent-label">Accent</span>
+            <div id="accent-toggle" class="segmented" role="group" aria-labelledby="set-accent-label">
+              <button type="button" data-accent-choice="gold" aria-pressed="false"><span class="accent-swatch" aria-hidden="true"></span>Gold</button>
+              <button type="button" data-accent-choice="slate" aria-pressed="false"><span class="accent-swatch" aria-hidden="true"></span>Slate</button>
+              <button type="button" data-accent-choice="sage" aria-pressed="false"><span class="accent-swatch" aria-hidden="true"></span>Sage</button>
+              <button type="button" data-accent-choice="rose" aria-pressed="false"><span class="accent-swatch" aria-hidden="true"></span>Rose</button>
+            </div>
+            <p class="set-help">The colour of headings, buttons, highlights and the lamp in the masthead. Saved in this browser the same way as the theme.</p>
           </div>
         </section>
         <p id="settings-intro">Everything below lives in your <code>.env</code> file.

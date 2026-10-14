@@ -12,8 +12,8 @@
  "fallback": {
   "bg-raised": "#2a2521",
   "border-default": "#3d362f",
-  "fill-accent": "#d99e5b",
-  "text-accent": "#d99e5b",
+  "fill-accent": "#b4895a",
+  "text-accent": "#b4895a",
   "text-accent-muted": "#8a6a44",
   "text-default": "#e8e0d5",
   "text-muted": "#a99f92",
@@ -152,7 +152,7 @@
            "italic": true,
            "size": 20.8,
            "color": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "text-accent"
            }
           }
@@ -259,7 +259,7 @@
            "h": 35.19,
            "fills": [
             {
-             "hex": "#d99e5b",
+             "hex": "#b4895a",
              "token": "fill-accent"
             }
            ],
@@ -483,7 +483,7 @@
            "italic": true,
            "size": 20.8,
            "color": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "text-accent"
            }
           }
@@ -711,7 +711,7 @@
            "h": 35.19,
            "fills": [
             {
-             "hex": "#d99e5b",
+             "hex": "#b4895a",
              "token": "fill-accent"
             }
            ],

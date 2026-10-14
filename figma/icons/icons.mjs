@@ -46,7 +46,7 @@ const text = JSON.stringify({
   name: 'Icon',
   size: 24,
   // the paint, by token name; the fallback is --text-accent's dark value
-  color: { token: 'text-accent', fallback: '#d99e5b' },
+  color: { token: 'text-accent', fallback: '#b4895a' },
   uses,
   svgs,
 }, null, 1) + '\n';

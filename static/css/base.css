@@ -65,19 +65,14 @@
     color: var(--text-accent); white-space: nowrap;
   }
   /* the app's circle mark beside the title, as on the portfolio splash.
-     Two copies, swapped on the same theme selectors as tokens.css: the
-     light one's circle is umber-700 instead of umber-900. */
+     Inline SVG so it can take the theme: the ground lifts in light, the
+     beam is the accent's lamp step (--mark-ground, --mark-beam). */
   .masthead-mark {
     display: inline-block; width: 1.1em; height: 1.1em;
     margin-right: .35em; vertical-align: -.2em;
   }
-  .masthead-mark.light { display: none; }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) .masthead-mark.dark { display: none; }
-    :root:not([data-theme="dark"]) .masthead-mark.light { display: inline-block; }
-  }
-  :root[data-theme="light"] .masthead-mark.dark { display: none; }
-  :root[data-theme="light"] .masthead-mark.light { display: inline-block; }
+  .masthead-mark .ground { fill: var(--mark-ground); }
+  .masthead-mark stop { stop-color: var(--mark-beam); }
   header .status { font: .8rem var(--font-ui); color: var(--text-muted); white-space: nowrap; }
 
   nav {

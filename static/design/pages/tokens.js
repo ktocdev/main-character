@@ -4,7 +4,7 @@
 // ---- ramps, read live from tokens.css ----
 const rootCs = getComputedStyle(document.documentElement);
 const stepHex = name => rootCs.getPropertyValue('--' + name).trim();
-const RAMPS = { umber: [0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950], amber: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950], rust: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] };
+const RAMPS = { umber: [0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 850, 900, 950], amber: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950], rust: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950], slate: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950], sage: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950], rose: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] };
 const rampEl = document.getElementById('ramp-list');
 for (const [hue, steps] of Object.entries(RAMPS)) {
   const r = document.createElement('div');

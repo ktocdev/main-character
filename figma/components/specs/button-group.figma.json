@@ -16,7 +16,7 @@
   "border-accent": "#8a6a44",
   "border-default": "#3d362f",
   "border-strong": "#a99f92",
-  "text-accent": "#d99e5b",
+  "text-accent": "#b4895a",
   "text-default": "#e8e0d5",
   "text-muted": "#a99f92"
  },
@@ -295,7 +295,7 @@
             "token": "font-sm"
            },
            "color": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "text-accent"
            }
           }
@@ -395,7 +395,7 @@
             "token": "font-sm"
            },
            "color": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "text-accent"
            }
           }
@@ -771,7 +771,7 @@
            "italic": false,
            "size": 12.48,
            "color": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "text-accent"
            }
           }
@@ -818,7 +818,7 @@
              "italic": false,
              "size": 12.48,
              "color": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "text-accent"
              },
              "tabular": true
@@ -916,7 +916,7 @@
            "italic": false,
            "size": 12.48,
            "color": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "text-accent"
            }
           }
@@ -963,7 +963,7 @@
              "italic": false,
              "size": 12.48,
              "color": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "text-accent"
              },
              "tabular": true
@@ -1141,7 +1141,7 @@
            "italic": false,
            "size": 12.48,
            "color": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "text-accent"
            }
           }
@@ -1231,7 +1231,7 @@
            "italic": false,
            "size": 12.48,
            "color": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "text-accent"
            }
           }
@@ -1321,7 +1321,7 @@
            "italic": false,
            "size": 12.48,
            "color": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "text-accent"
            }
           }
@@ -1386,7 +1386,7 @@
              "italic": false,
              "size": 12.48,
              "color": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "text-accent"
              }
             }
@@ -1404,7 +1404,7 @@
              "italic": false,
              "size": 12.48,
              "color": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "text-accent"
              },
              "tabular": true
@@ -1478,7 +1478,7 @@
               "italic": false,
               "size": 12.48,
               "color": {
-               "hex": "#d99e5b",
+               "hex": "#b4895a",
                "token": "text-accent"
               }
              }
@@ -1524,7 +1524,7 @@
                 "italic": false,
                 "size": 12.48,
                 "color": {
-                 "hex": "#d99e5b",
+                 "hex": "#b4895a",
                  "token": "text-accent"
                 },
                 "tabular": true
@@ -2329,7 +2329,7 @@
              "italic": false,
              "size": 12.48,
              "color": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "text-accent"
              }
             }
@@ -2347,7 +2347,7 @@
              "italic": false,
              "size": 12.48,
              "color": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "text-accent"
              },
              "tabular": true
@@ -2421,7 +2421,7 @@
               "italic": false,
               "size": 12.48,
               "color": {
-               "hex": "#d99e5b",
+               "hex": "#b4895a",
                "token": "text-accent"
               }
              }
@@ -2467,7 +2467,7 @@
                 "italic": false,
                 "size": 12.48,
                 "color": {
-                 "hex": "#d99e5b",
+                 "hex": "#b4895a",
                  "token": "text-accent"
                 },
                 "tabular": true
@@ -3168,7 +3168,7 @@
                "italic": false,
                "size": 12.48,
                "color": {
-                "hex": "#d99e5b",
+                "hex": "#b4895a",
                 "token": "text-accent"
                }
               }
@@ -3241,7 +3241,7 @@
                 "italic": false,
                 "size": 12.48,
                 "color": {
-                 "hex": "#d99e5b",
+                 "hex": "#b4895a",
                  "token": "text-accent"
                 }
                }
@@ -3702,7 +3702,7 @@
               "token": "font-xs"
              },
              "color": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "text-accent"
              }
             }
@@ -4032,7 +4032,7 @@
               "token": "font-xs"
              },
              "color": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "text-accent"
              }
             }
@@ -4362,7 +4362,7 @@
               "token": "font-xs"
              },
              "color": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "text-accent"
              }
             }

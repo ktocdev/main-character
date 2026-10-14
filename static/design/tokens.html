@@ -16,7 +16,7 @@
 <header>
   <div class="masthead">
     <h1><a href="index.html">main character</a></h1>
-    <span class="status">design tokens · 3 ramps · 19 color roles · 2 families · 8 type steps · 8 space steps · 5 radii · 2 motion</span>
+    <span class="status">design tokens · 6 ramps · 4 accents · 19 color roles · 2 families · 8 type steps · 8 space steps · 5 radii · 2 motion</span>
   </div>
   <div class="right">
     <span>source: static/css/tokens.css</span>
@@ -76,7 +76,7 @@
 
     <section id="ramps">
       <div class="rule eyebrow strong">Ramps</div>
-      <p class="note">Three hues, built in OKLCH so the steps look evenly spaced: <b>umber</b> for every background, text and rule, <b>amber</b> for the lamp, <b>rust</b> for danger. These are the only hex values in the palette. Each dark value is a step exactly as it was before the ramps (2026-10), so dark looks the same; the steps between them are interpolated. Light takes the light end of the same ramps. Its neutrals sit on steps or within a just-noticeable difference of one (text and hairlines moved by less than that), and its accents were re-picked from amber, which retired the olive #827020: <span class="mono">--text-accent</span> is amber-700 (6.0:1, was #9c6021 at 4.8:1) and <span class="mono">--text-accent-muted</span> amber-600, the same step in both themes (4.7:1 in light, was 4.6:1). amber-600 is duller than its neighbours because dark's muted accent, #8a6a44, is anchored there. A new hue gets its own hue-named ramp beside these. In Figma they are the Primitives collection, hidden from the pickers.</p>
+      <p class="note">Six hues, built in OKLCH so the steps look evenly spaced: <b>umber</b> for every background, text and rule, <b>amber</b> for the lamp, <b>rust</b> for danger, and <b>slate</b>, <b>sage</b> and <b>rose</b>, the accent themes. Accent roles read through <span class="mono">--accent-*</span>, which points at amber (gold) unless Settings → Appearance → Accent pins <span class="mono">data-accent</span> on <span class="mono">&lt;html&gt;</span>; the roles below show whichever accent is on. The three theme ramps take amber's lightness and chroma step for step at another hue, so each role keeps amber's contrast (sage-600 sits one notch darker to hold 4.5:1 as light's muted text). Rose leans cool, kept about 35° of hue from rust so danger still reads as its own colour. These are the only hex values in the palette. Each dark value is a step exactly as it was before the ramps (2026-10), except amber 200–500, dark's lamp end: those were later dimmed (lightness −0.08, chroma ×0.75; amber-400 was #d99e5b) so the lamp reads as smoke rather than glare, with dark's accent text still above 4.5:1 on page and cards. The steps between them are interpolated. Light takes the light end of the same ramps. Its neutrals sit on steps or within a just-noticeable difference of one (text and hairlines moved by less than that), and its accents were re-picked from amber, which retired the olive #827020: <span class="mono">--text-accent</span> is amber-700 (6.0:1, was #9c6021 at 4.8:1) and <span class="mono">--text-accent-muted</span> amber-600, the same step in both themes (4.7:1 in light, was 4.6:1). amber-600 is duller than its neighbours because dark's muted accent, #8a6a44, is anchored there. A new hue gets its own hue-named ramp beside these. In Figma they are the Primitives collection, hidden from the pickers.</p>
       <div id="ramp-list" class="stack"></div>
     </section>
 

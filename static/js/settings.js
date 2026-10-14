@@ -960,6 +960,40 @@ function themeInit() {
   });
 }
 
+// The accent theme works the same way: a per-browser pin, applied before
+// first paint by the head script. Gold is the default and clears the pin.
+const ACCENT_KEY = 'rag_accent';
+const ACCENTS = ['slate', 'sage', 'rose'];
+function applyAccent(choice) {
+  const root = document.documentElement;
+  if (ACCENTS.includes(choice)) root.dataset.accent = choice;
+  else delete root.dataset.accent;
+}
+function markAccent(choice) {
+  document.querySelectorAll('#accent-toggle button').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.accentChoice === choice)));
+}
+function accentInit() {
+  const group = $('accent-toggle');
+  if (!group) return;
+  let stored;
+  try { stored = localStorage.getItem(ACCENT_KEY); } catch {}
+  const current = ACCENTS.includes(stored) ? stored : 'gold';
+  applyAccent(current);
+  markAccent(current);
+  group.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-accent-choice]');
+    if (!btn) return;
+    const choice = btn.dataset.accentChoice;
+    try {
+      if (choice === 'gold') localStorage.removeItem(ACCENT_KEY);
+      else localStorage.setItem(ACCENT_KEY, choice);
+    } catch {}
+    applyAccent(choice);
+    markAccent(choice);
+  });
+}
+
 const JUMPS = ['appearance', 'journal', 'categories', 'models', 'api key', 'data', 'design'];
 function jumpTo(id) {
   const pane = $('settings');
@@ -984,6 +1018,7 @@ export function init() {
   $('settings-restart').onclick = restartNow;
   $('settings-seed').onclick = loadSeed;
   themeInit();
+  accentInit();
   syncSeedButton();
   // `toggle` fires after the popover is in the layer, so it has a width to
   // measure by then; `beforetoggle` would measure zero.

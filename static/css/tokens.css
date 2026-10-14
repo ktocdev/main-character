@@ -35,20 +35,45 @@
   :root {
     color-scheme: light dark;  /* native controls (select popups, checkboxes, scrollbars) follow the theme */
 
-    /* ramps: the only hex values in the palette. Three hues, built in OKLCH
-       so the steps look evenly spaced. Every dark value is a step as it was;
-       the steps between them are interpolated. Never used directly: the
-       roles below point at them, and only the roles are used. */
+    /* ramps: the only hex values in the palette. Six hues, built in OKLCH
+       so the steps look evenly spaced. Every dark value is a step as it was,
+       except amber 200-500 (below); the steps between them are
+       interpolated. Never used directly: the roles below point at them,
+       and only the roles are used. */
     --umber-0: #ffffff;   --umber-50: #faf7f2;  --umber-100: #f1ece4; --umber-200: #e8e0d5;
     --umber-300: #c9b99f; --umber-400: #a99f92; --umber-500: #898075; --umber-600: #6b6258;
     --umber-700: #534c43; --umber-800: #3d362f; --umber-850: #322c27; --umber-900: #2a2521;
     --umber-950: #211d19;
-    --amber-50: #fef5ea;  --amber-100: #fee9d0; --amber-200: #f8d2a5; --amber-300: #e8b377;
-    --amber-400: #d99e5b; --amber-500: #b58248; --amber-600: #8a6a44; --amber-700: #86531e;
+    --amber-50: #fef5ea;  --amber-100: #fee9d0; --amber-200: #d6ba9a; --amber-300: #c49d72;
+    --amber-400: #b4895a; --amber-500: #936e45; --amber-600: #8a6a44; --amber-700: #86531e;
     --amber-800: #6a4a2a; --amber-900: #4f3722; --amber-950: #352517;
     --rust-50: #fff4f2;   --rust-100: #fee7e2;  --rust-200: #fdccc2;  --rust-300: #f4aa9c;
     --rust-400: #e28979;  --rust-500: #c96a5a;  --rust-600: #a8493a;  --rust-700: #883a2d;
     --rust-800: #6a2d23;  --rust-900: #4d211a;  --rust-950: #351813;
+    /* amber 200-500, dark's lamp end, were dimmed (OKLCH lightness -.08,
+       chroma x.75; 400 was #d99e5b) so the lamp reads as smoke, not
+       glare. Dark's accent text still clears 4.5:1 on the page and on
+       cards; 600 and up, where light's accents live, are as they were.
+
+       The accent themes' ramps: amber's lightness and chroma step for
+       step, turned to another hue, so every role keeps amber's contrast
+       (sage-600 one notch darker, to hold 4.5:1 as light's muted text). */
+    --slate-50: #f1f7fe; --slate-100: #e0eefe; --slate-200: #a6c3e2; --slate-300: #82a9d2;
+    --slate-400: #6c97c4; --slate-500: #5479a0; --slate-600: #5a738e; --slate-700: #406388;
+    --slate-800: #3d546b; --slate-900: #2e3e4f; --slate-950: #1f2a35;
+    --sage-50: #f1f9f2; --sage-100: #e0f2e3; --sage-200: #a7caad; --sage-300: #84b38d;
+    --sage-400: #6ea178; --sage-500: #56825f; --sage-600: #5c7761; --sage-700: #446b4c;
+    --sage-800: #405945; --sage-900: #304234; --sage-950: #212c23;
+    --rose-50: #fef3f7; --rose-100: #fee5ee; --rose-200: #ddb1c1; --rose-300: #cb92a7;
+    --rose-400: #bb7e95; --rose-500: #996478; --rose-600: #8c6372; --rose-700: #844c63;
+    --rose-800: #6a4553; --rose-900: #4e343e; --rose-950: #342329;
+
+    /* the accent: the ramp every accent role reads through, gold by
+       default. An accent theme (data-accent, at the end of this file)
+       points these at its own ramp, and the roles follow in light and
+       dark alike. Only the steps a role uses. */
+    --accent-300: var(--amber-300); --accent-400: var(--amber-400); --accent-600: var(--amber-600);
+    --accent-700: var(--amber-700); --accent-800: var(--amber-800);
 
     /* roles: what a colour is for. Dark is the default; the light blocks
        below point the same roles at the light end of the ramps. */
@@ -58,19 +83,19 @@
     --text-default: var(--umber-200);
     --text-muted: var(--umber-400);       /* meta, labels, help copy */
     --text-you: var(--umber-300);         /* your own words in a transcript */
-    --text-accent: var(--amber-400);      /* lamp amber: italic headings, active labels */
-    --text-accent-muted: var(--amber-600); /* eyebrows, date labels */
+    --text-accent: var(--accent-400);      /* lamp amber: italic headings, active labels */
+    --text-accent-muted: var(--accent-600); /* eyebrows, date labels */
     --text-danger: var(--rust-500);       /* the app's one danger/error color */
-    --text-on-accent: var(--umber-950);   /* the label on an amber fill */
-    --fill-accent: var(--amber-400);      /* the send button */
-    --fill-accent-hover: var(--amber-300); /* its hover: a step brighter */
-    --fill-accent-muted: var(--amber-600); /* the filled button */
+    --text-on-accent: var(--umber-950);   /* the label on an accent fill */
+    --fill-accent: var(--accent-400);      /* the send button */
+    --fill-accent-hover: var(--accent-300); /* its hover: a step brighter */
+    --fill-accent-muted: var(--accent-600); /* the filled button */
     --fill-danger: var(--rust-500);
     --border-default: var(--umber-800);   /* every hairline */
     --border-strong: var(--umber-400);    /* a hairline lifted on hover */
-    --border-accent: var(--amber-600);    /* the dashed borders */
+    --border-accent: var(--accent-600);    /* the dashed borders */
     --border-danger: var(--rust-500);     /* a danger outline */
-    --focus-ring: var(--amber-600);
+    --focus-ring: var(--accent-600);
     --shadow-sm: 0 6px 18px rgba(0,0,0,.25);   /* tooltip, settings popover */
     --shadow-md: 0 8px 24px rgba(0,0,0,.25);   /* cost panel */
     --shadow-lg: 0 10px 30px rgba(0,0,0,.35);  /* popover menu */
@@ -78,11 +103,15 @@
 
     /* components: only where one needs a value its role doesn't give */
     --toggle-on: var(--fill-accent);      /* a pressed solid toggle */
-    /* the item card visual's hover fill: a small warm shift (~#3a3029) */
+    /* the item card visual's hover fill: a small warm shift (~#3d352c) */
     --card-thumb-hover: color-mix(in oklch, var(--bg-muted) 90%, var(--fill-accent));
     /* what a modal dims the page with: the page colour, mostly opaque, so
        it follows the theme (a dark veil in dark, a pale one in light) */
     --modal-scrim: color-mix(in oklch, var(--bg-page) 75%, transparent);
+    /* the circle mark beside the masthead title: its ground lifts to
+       umber-700 in light, its beam is the accent's lamp step in both */
+    --mark-ground: var(--umber-900);
+    --mark-beam: var(--accent-400);
 
     /* fonts */
     --font-ui: 'CMU Sans Demi Condensed', system-ui, sans-serif;
@@ -121,26 +150,49 @@
   @media (prefers-color-scheme: light) {
     :root:not([data-theme="dark"]) {
       --bg-page: var(--umber-50); --bg-raised: var(--umber-0); --bg-muted: var(--umber-100);
-      --text-default: var(--umber-800); --text-muted: var(--umber-600); --text-you: var(--amber-800);
-      --text-accent: var(--amber-700); --text-accent-muted: var(--amber-600); --text-danger: var(--rust-600);
+      --text-default: var(--umber-800); --text-muted: var(--umber-600); --text-you: var(--accent-800);
+      --text-accent: var(--accent-700); --text-accent-muted: var(--accent-600); --text-danger: var(--rust-600);
       --text-on-accent: var(--umber-50);
-      --fill-accent: var(--amber-700); --fill-accent-hover: var(--amber-800);
-      --fill-accent-muted: var(--amber-600); --fill-danger: var(--rust-600);
+      --fill-accent: var(--accent-700); --fill-accent-hover: var(--accent-800);
+      --fill-accent-muted: var(--accent-600); --fill-danger: var(--rust-600);
       --border-default: var(--umber-200); --border-strong: var(--umber-600);
-      --border-accent: var(--amber-600); --border-danger: var(--rust-600); --focus-ring: var(--amber-600);
+      --border-accent: var(--accent-600); --border-danger: var(--rust-600); --focus-ring: var(--accent-600);
       --card-thumb-hover: var(--bg-page);
+      --mark-ground: var(--umber-700);
     }
   }
   :root[data-theme="light"] {
     color-scheme: light;
     --bg-page: var(--umber-50); --bg-raised: var(--umber-0); --bg-muted: var(--umber-100);
-    --text-default: var(--umber-800); --text-muted: var(--umber-600); --text-you: var(--amber-800);
-    --text-accent: var(--amber-700); --text-accent-muted: var(--amber-600); --text-danger: var(--rust-600);
+    --text-default: var(--umber-800); --text-muted: var(--umber-600); --text-you: var(--accent-800);
+    --text-accent: var(--accent-700); --text-accent-muted: var(--accent-600); --text-danger: var(--rust-600);
     --text-on-accent: var(--umber-50);
-    --fill-accent: var(--amber-700); --fill-accent-hover: var(--amber-800);
-    --fill-accent-muted: var(--amber-600); --fill-danger: var(--rust-600);
+    --fill-accent: var(--accent-700); --fill-accent-hover: var(--accent-800);
+    --fill-accent-muted: var(--accent-600); --fill-danger: var(--rust-600);
     --border-default: var(--umber-200); --border-strong: var(--umber-600);
-    --border-accent: var(--amber-600); --border-danger: var(--rust-600); --focus-ring: var(--amber-600);
+    --border-accent: var(--accent-600); --border-danger: var(--rust-600); --focus-ring: var(--accent-600);
     --card-thumb-hover: var(--bg-page);
+    --mark-ground: var(--umber-700);
   }
   :root[data-theme="dark"] { color-scheme: dark; }
+
+  /* Accent themes: Settings → Appearance → Accent pins one as data-accent
+     on <html> (per browser, like the theme, and applied before first paint
+     the same way). Gold is the default and has no block. Each theme points
+     the accent at its own ramp; every accent role follows, in light and
+     dark alike, because the roles read through --accent-* rather than a
+     ramp. A new theme is a ramp above and one block here, plus its button
+     in index.html and its name in ACCENTS (settings.js, design/theme.js,
+     the head script). */
+  :root[data-accent="slate"] {
+    --accent-300: var(--slate-300); --accent-400: var(--slate-400); --accent-600: var(--slate-600);
+    --accent-700: var(--slate-700); --accent-800: var(--slate-800);
+  }
+  :root[data-accent="sage"] {
+    --accent-300: var(--sage-300); --accent-400: var(--sage-400); --accent-600: var(--sage-600);
+    --accent-700: var(--sage-700); --accent-800: var(--sage-800);
+  }
+  :root[data-accent="rose"] {
+    --accent-300: var(--rose-300); --accent-400: var(--rose-400); --accent-600: var(--rose-600);
+    --accent-700: var(--rose-700); --accent-800: var(--rose-800);
+  }
