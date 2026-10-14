@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Dev\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Jordan went to Dev's place after work on 9/16 and listened to Dev run the gig setlist front to back twice\",\"Dev is three days out from a gig on the 19th\",\"Dev played the transition marked worst on the 3rd cleanly without flinching\",\"Dev said 'obviously' when Jordan said they'd attend the gig on the 19th\",\"Dev held one of Dad's tortoiseshell picks up to the light, said 'these are the real thing', and put it in their case\",\"Dev tried a pick on the low B string, said it makes the attack warmer, and used it for the rest of practice\"]},{\"name\":\"Mika\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Mika texted while Jordan was on the train home with a listing for an open mic at the Fern on the 27th, sent with just a question mark\"]},{\"name\":\"Mom\",\"relationship\":\"mother\",\"qualifier\":\"\",\"observations\":[\"Mom left Dad's old guitar picks, the heavy tortoiseshell set, for Jordan\"]},{\"name\":\"Dad\",\"relationship\":\"father\",\"qualifier\":\"\",\"observations\":[\"Dad's old heavy tortoiseshell guitar picks were passed down to Jordan\",\"Jordan thinks Dad would have liked Dev using his pick\"]}],\"projects\":[{\"name\":\"guitar\",\"domain\":\"creative\",\"status\":\"active\",\"observations\":[\"Jordan brought Dad's old tortoiseshell picks to Dev\",\"Jordan signed up for an open mic at the Fern on September 27th, 8pm slot, despite the urge to say they weren't ready\"]}],\"places\":[{\"name\":\"Dev's place\",\"kind\":\"home\",\"observations\":[\"Jordan went there after work on 9/16 to hear Dev run the setlist\",\"Dev rehearses standing in the kitchen because the acoustics are better than the bedroom\",\"Jordan sat on the counter and listened to the whole setlist twice\"]},{\"name\":\"the Fern\",\"kind\":\"venue\",\"observations\":[\"Hosts an open mic on September 27th\",\"Jordan signed up for the 8pm slot\"]},{\"name\":\"Northlight\",\"kind\":\"workplace\",\"observations\":[\"Jordan once felt they didn't have enough experience for Northlight, which wasn't true\"]}],\"things\":[],\"animals\":[{\"name\":\"Pepper\",\"relationship\":\"pet\",\"observations\":[\"Met Jordan at the door when Jordan got home, which she only does when hungry\"]}]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 2750,
+    "output_tokens": 822,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

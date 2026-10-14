@@ -1,0 +1,21 @@
+{
+  "key": "organic.scan",
+  "text": "{\"clusters\":[{\"index\":0,\"keep\":true,\"name\":\"Reorg Fallout\",\"reason\":\"All of these are about the company reorganization and the team moves it forced on Jordan.\"},{\"index\":1,\"keep\":true,\"name\":\"Dashboard Work\",\"reason\":\"Every member is the same dashboard project and the design feedback, rebuilds, and docs around it.\"},{\"index\":2,\"keep\":true,\"name\":\"Job Search\",\"reason\":\"These are the Northlight application and interview steps, plus the Meridian portfolio work Jordan used to support it.\"}]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 1498,
+    "output_tokens": 185,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}
