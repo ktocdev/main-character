@@ -43,6 +43,8 @@ async function loadThingKinds() {
   // a pick on a kind that's gone would hide every thing
   const have = new Set(state.thingKinds.map(k => k.name));
   for (const c of [...filters.thingCats]) if (!have.has(c)) filters.thingCats.delete(c);
+  // an open thing's picker follows a kind added or removed meanwhile
+  fillKindSelect($('thing-category'));
 }
 export const thingKindNames = () => state.thingKinds.map(k => k.name);
 
@@ -240,6 +242,8 @@ function renderThingCats() {
   const have = new Set(Object.values(state.entities)
     .filter(i => i.type === 'thing' && !!i.retired === filters.retired)
     .map(i => i.category || 'other'));
+  // a kind of your own shows even before anything's in it
+  for (const k of state.thingKinds) if (k.custom) have.add(k.name);
   row.innerHTML = '';
   for (const c of thingKindNames()) {
     if (!have.has(c) && !filters.thingCats.has(c)) continue;
@@ -320,19 +324,29 @@ function renderKinds() {
     edit.textContent = 'edit';
     edit.setAttribute('aria-label', `edit ${k.name}`);
     edit.onclick = () => kindForm(k);
-    const x = document.createElement('button');
-    x.className = 'x';
-    x.textContent = '×';
-    x.title = `remove ${k.name}: its things show as other until it's back (undo brings it back)`;
-    x.setAttribute('aria-label', `remove ${k.name}`);
-    x.onclick = () => busy(x, async () => {
-      if (await api('/api/entities/thing-kinds/delete', {name: k.name})) {
-        notice(`removed ${k.name}. Its things show as other; undo puts it back.`);
-        await loadEntities();
-        renderKinds();
+    // two clicks: "remove", then "remove songs?" (a few seconds to decide)
+    const rm = document.createElement('button');
+    rm.className = 'text kind-remove';
+    rm.textContent = 'remove';
+    rm.title = `remove ${k.name}: its things show as other until it's back (undo brings it back)`;
+    let armed = null;
+    rm.onclick = () => {
+      if (!armed) {
+        rm.textContent = `remove ${k.name}?`;
+        rm.classList.add('armed');
+        armed = setTimeout(() => { armed = null; rm.textContent = 'remove'; rm.classList.remove('armed'); }, 4000);
+        return;
       }
-    });
-    row.append(edit, x);
+      clearTimeout(armed);
+      busy(rm, async () => {
+        if (await api('/api/entities/thing-kinds/delete', {name: k.name})) {
+          notice(`removed ${k.name}. Its things show as other; undo puts it back.`);
+          await loadEntities();
+          renderKinds();
+        }
+      });
+    };
+    row.append(edit, rm);
     list.appendChild(row);
   }
   const full = mine.length >= state.thingKindMax;
@@ -1565,6 +1579,7 @@ export function init() {
   // ---- kinds of thing of your own ----
   popover.register('thing-kinds', () => setKindsOpen(false),
     t => $('thing-kinds-menu').contains(t) || !!$('thing-kinds-btn')?.contains(t));
+  $('thing-kinds-close').onclick = () => setKindsOpen(false);
   $('thing-kind-save').onclick = () => busy($('thing-kind-save'), saveKind);
   $('thing-kind-cancel').onclick = () => { kindForm(null); renderKinds(); };
   for (const id of ['thing-kind-name', 'thing-kind-desc'])
