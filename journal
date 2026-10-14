@@ -27,7 +27,7 @@ case "$1" in
     "$VENV_PY" -m pip install -r requirements.lock
     if [ ! -f .env ]; then
       cp .env.example .env
-      echo "created .env -- uncomment ANTHROPIC_API_KEY in it and paste your key"
+      echo "created .env -- the journal asks for your API key the first time it starts"
     fi
     echo
     echo "installed. Run: ./journal start"
