@@ -77,7 +77,7 @@ THING_CATEGORY_NOTES = {
 MAX_THING_KINDS = 6  # custom ones; past a dozen or so, kinds blur and get mis-filed
 # icons a custom kind can pick (static/icons/; card.js draws them)
 THING_KIND_ICONS = ("bookmark-heart", "music", "guitar", "microphone", "gamepad", "tv",
-                    "movie-clapper", "book-open", "ticket", "noodle", "ice-cream", "cake",
+                    "movie-clapper", "book-open", "ticket", "pizza", "ice-cream", "cake",
                     "robot", "palette", "rocket", "star", "heart")
 _THING_KIND_NAME = re.compile(r"[a-z0-9][a-z0-9 &'-]{0,23}")
 

@@ -51,7 +51,7 @@ const GROUPS = [
   ]],
   ['Your own kinds of thing', 'Icons only the “+ kind” picker offers, for a kind of thing the author adds (entities.THING_KIND_ICONS, which also offers the thing icons above and a few others). The author picks; card.js has no fixed row for these.', [
     {key: 'guitar', icon: 'guitar', pick: true, note: 'Songs you’re learning.'},
-    {key: 'noodle', icon: 'noodle', pick: true, note: 'Food.'},
+    {key: 'pizza', icon: 'pizza', pick: true, note: 'Food. Boxicons pizza-alt.'},
     {key: 'robot', icon: 'robot', pick: true, note: 'AI tools.'},
   ]],
 ];
@@ -63,7 +63,7 @@ const GROUP_TYPE = [null, 'category', 'dream', 'thing'];
 // the notices are in static/icons/LICENSES.md).
 const SOURCE = {
   alien: 'Phosphor', 'peace-bold': 'Phosphor',
-  hand: 'Boxicons', rocket: 'Boxicons', category: 'Boxicons', 'bookmark-heart': 'Bootstrap',
+  hand: 'Boxicons', rocket: 'Boxicons', pizza: 'Boxicons', category: 'Boxicons', 'bookmark-heart': 'Bootstrap',
   'caret-right': 'Entypo+ (CC BY-SA 4.0)',
 };
 
