@@ -182,7 +182,13 @@ async function variables() {
     };
     const dark = decls(':root'), light = decls(':root[data-theme="light"]');
     const primitives = {}, semantic = {}, platform = {};
-    const step = v => (/^var\(--([a-z]+)-(\d+)\)$/.exec(v) || []).slice(1).join('/');
+    // a role's ramp step, followed through the --accent-* alias (amber
+    // unless an accent theme is pinned) to the ramp it names
+    const step = v => {
+      let m = /^var\(--([a-z]+)-(\d+)\)$/.exec(v);
+      while (m && m[1] === 'accent') m = /^var\(--([a-z]+)-(\d+)\)$/.exec(dark[`accent-${m[2]}`] || '');
+      return (m || []).slice(1).join('/');
+    };
     for (const [k, v] of Object.entries(dark)) {
       const m = /^([a-z]+)-(\d+)$/.exec(k);
       if (m && /^#[0-9a-f]{6}$/i.test(v)) primitives[`${m[1]}/${m[2]}`] = v.toLowerCase();

@@ -76,3 +76,13 @@
   }
   .set-popover p + p { margin-top: .5rem; }
   .set-popover::backdrop { background: none; }
+
+  /* the accent picker: each choice shows a dot of its own ramp, whatever
+     accent is on (the 500 step, between dark's lamp and light's ink, so
+     one dot reads in both themes) */
+  #accent-toggle button { display: inline-flex; align-items: center; gap: .45rem; }
+  .accent-swatch { width: .7rem; height: .7rem; border-radius: var(--radius-circle); flex-shrink: 0; }
+  [data-accent-choice="gold"] .accent-swatch { background: var(--amber-500); }
+  [data-accent-choice="slate"] .accent-swatch { background: var(--slate-500); }
+  [data-accent-choice="sage"] .accent-swatch { background: var(--sage-500); }
+  [data-accent-choice="rose"] .accent-swatch { background: var(--rose-500); }
