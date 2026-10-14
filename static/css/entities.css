@@ -57,6 +57,9 @@
     font: .7rem var(--font-ui); letter-spacing: .1em; text-transform: uppercase;
     color: var(--text-accent-muted); margin-right: .2rem; min-width: 3.2rem;
   }
+  /* kinds of thing: indented past the labels, every line of it */
+  #thing-cats { padding-left: 3.7rem; }
+  #thing-cats[hidden] { display: none; }
   /* the sidebar's toggles are squared off, not pills */
   #entity-list .chip-toggle { border-radius: var(--radius-base); }
   #entity-list .chip-toggle:hover { border-color: var(--border-accent); }

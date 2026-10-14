@@ -79,6 +79,7 @@ export function renderEntityList() {
   const mixupCount = Object.values(state.entities).filter(i => i.mixup && !i.retired).length;
   $('flt-mixup').hidden = !mixupCount && !filters.mixup;
   $('flt-mixup').textContent = `maybe two (${mixupCount})`;
+  renderThingCats();
   for (const [name, info] of Object.entries(state.entities)) {
     if (!!info.retired !== filters.retired) continue;
     const hay = (name + ' ' + (info.aliases || []).join(' ')).toLowerCase();
@@ -86,6 +87,7 @@ export function renderEntityList() {
     if (filters.unreviewed && info.reviewed) continue;
     if (filters.single && info.mentions !== 1) continue;
     if (filters.mixup && !info.mixup) continue;
+    if (info.type === 'thing' && filters.thingCats.size && !filters.thingCats.has(info.category || 'other')) continue;
     if (activeGroupSet && !(info.groups || []).some(g => activeGroupSet.has(g.toLowerCase()))) continue;
     if (hideSet && hideSet.has(name.toLowerCase())) continue;
     groups[info.type].push([name, info.mentions, info.reviewed, !!info.mixup]);
@@ -209,6 +211,34 @@ export function renderEntityList() {
   renderFilterBar();
 }
 
+// Under "show", while things is on: a chip per kind of thing the journal
+// has (a picked kind stays even once it empties, so it can come off).
+// Picks combine; none picked shows every thing.
+function renderThingCats() {
+  const row = $('thing-cats');
+  row.hidden = !filters.types.has('thing');
+  if (row.hidden) return;
+  const have = new Set(Object.values(state.entities)
+    .filter(i => i.type === 'thing' && !!i.retired === filters.retired)
+    .map(i => i.category || 'other'));
+  row.innerHTML = '';
+  for (const c of CATEGORIES) {
+    if (!have.has(c) && !filters.thingCats.has(c)) continue;
+    const b = document.createElement('button');
+    const on = filters.thingCats.has(c);
+    b.className = 'chip-toggle' + (on ? ' on' : '');
+    b.dataset.cat = c;
+    b.textContent = c;
+    b.title = `only ${c} things; pick several to combine`;
+    b.setAttribute('aria-pressed', String(on));
+    b.onclick = () => {
+      if (filters.thingCats.has(c)) filters.thingCats.delete(c); else filters.thingCats.add(c);
+      renderEntityList();
+    };
+    row.appendChild(b);
+  }
+}
+
 // The foot of the sidebar: in select mode, a chip for each checked entity,
 // then every filter that's on. It sticks to the bottom of the scrolling
 // list, so a pick or a filter set at the top comes off from anywhere. A
@@ -223,6 +253,8 @@ function renderFilterBar() {
     () => { $('search').value = ''; renderEntityList(); }]);
   for (const kind of filters.types)
     on.push([PLURAL[kind] || kind, `show all kinds again`, () => $('type-chips').querySelector(`[data-type="${kind}"]`).click()]);
+  for (const c of filters.thingCats)
+    on.push([`things · ${c}`, 'show every kind of thing', () => $('thing-cats').querySelector(`[data-cat="${c}"]`).click()]);
   if (filters.group) on.push([`in ${groupPathLabel(filters.group)}`, 'stop narrowing the list to this group', () => { clearGroupFilter(); renderEntityList(); }]);
   if (filters.unreviewed) on.push(['unreviewed', 'show reviewed ones too', () => $('flt-unreviewed').click()]);
   if (filters.single) on.push(['1 mention', 'show every mention count', () => $('flt-single').click()]);
@@ -1381,6 +1413,8 @@ export function init() {
   document.querySelectorAll('#type-chips [data-type]').forEach(b => b.onclick = () => {
     const kind = b.dataset.type;
     if (filters.types.has(kind)) filters.types.delete(kind); else filters.types.add(kind);
+    // the kinds of thing go with things
+    if (!filters.types.has('thing')) filters.thingCats.clear();
     b.classList.toggle('on', filters.types.has(kind));
     b.setAttribute('aria-pressed', String(filters.types.has(kind)));
     renderEntityList();

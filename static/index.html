@@ -673,9 +673,11 @@
             <button class="chip-toggle" data-type="person" aria-pressed="false" title="show only people; pick several to combine">people</button>
             <button class="chip-toggle" data-type="project" aria-pressed="false" title="show only projects; pick several to combine">projects</button>
             <button class="chip-toggle" data-type="place" aria-pressed="false" title="show only places; pick several to combine">places</button>
-            <button class="chip-toggle" data-type="thing" aria-pressed="false" title="show only things: bands, games, shows, books, events; pick several to combine">things</button>
+            <button class="chip-toggle" data-type="thing" aria-pressed="false" title="show only things: bands, games, shows, books, events; pick several to combine, then a kind below to narrow">things</button>
             <button class="chip-toggle" data-type="animal" aria-pressed="false" title="show only animals: pets, and other people's; pick several to combine">animals</button>
           </div>
+          <!-- with things on, narrow them to some kinds; none picked is all of them -->
+          <div id="thing-cats" class="side-row" hidden></div>
           <div class="side-row">
             <span class="side-lbl">sort</span>
             <button class="chip-toggle" id="sort-az" aria-pressed="false" title="sort each group A–Z instead of by most mentions">A–Z</button>
