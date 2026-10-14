@@ -26,17 +26,26 @@ cd main-character
 
 This creates `.venv`, installs from the lock file and copies `.env.example` to `.env`. It is safe to run again. Python 3.12 or newer. The install is large and slow because it pulls in ChromaDB's full dependency tree, including onnxruntime and tokenizers, plus fastembed, so that embeddings run on your machine instead of over the network. Install from the lock file. `requirements.txt` lists the same dependencies unpinned, for reference only.
 
-### 2. Add a key
+Python is installed once per machine, not once per copy of the journal. Each copy gets its own `.venv`, built from that one install. If you do not have Python 3.12 or newer, get it from [python.org](https://www.python.org/downloads/) and tick *Add python.exe to PATH* in the installer.
 
-Uncomment `ANTHROPIC_API_KEY` in `.env` and paste a key from the [Anthropic Console](https://console.anthropic.com/). Everything else in that file has a working default.
+On Windows, if install says *Python was not found* even though Python is installed, the `python` command is reaching a Microsoft Store placeholder instead of your Python. This happens when Python came from uv, or from an installer that did not add it to PATH. Either turn off the placeholder under Settings → Apps → Advanced app settings → App execution aliases (switch off `python.exe` and `python3.exe`), or create the venv yourself and run install again, which then skips the Python check:
 
-### 3. Run it
+```powershell
+uv venv --seed --python 3.12 .venv           # or: <path to python.exe> -m venv .venv
+.\journal install
+```
+
+You do not need to activate the venv, whatever uv suggests. `journal` runs the Python inside `.venv` directly.
+
+### 2. Run it
 
 ```bash
 ./journal start                              # Windows: .\journal start
 ```
 
-The journal opens at **http://127.0.0.1:8144**. Write something in the box and press *save entry*.
+The journal opens at **http://127.0.0.1:8144**. The first time, a setup screen asks for a key from the [Anthropic Console](https://console.anthropic.com/) and saves it to `.env` for you. Everything else in that file has a working default. Then write something in the box and press *save entry*.
+
+You can still put the key in `.env` yourself before starting (uncomment `ANTHROPIC_API_KEY` and paste it), and change it later under Settings.
 
 Stop it with `Ctrl+C`. After pulling a new version, run `./journal restart` (Windows: `.\journal restart`) so the running journal picks it up.
 

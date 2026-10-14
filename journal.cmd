@@ -34,7 +34,7 @@ echo installing dependencies -- large and slow the first time
 "%VENV_PY%" -m pip install -r requirements.lock || exit /b 1
 if not exist .env (
   copy /y .env.example .env >nul
-  echo created .env -- uncomment ANTHROPIC_API_KEY in it and paste your key
+  echo created .env -- the journal asks for your API key the first time it starts
 )
 echo.
 echo installed. Run: .\journal start
