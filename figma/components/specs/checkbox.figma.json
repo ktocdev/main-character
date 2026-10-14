@@ -11,7 +11,7 @@
  },
  "fallback": {
   "bg-raised": "#2a2521",
-  "fill-accent": "#d99e5b",
+  "fill-accent": "#b4895a",
   "platform-rule": "#858585",
   "platform-well": "#3b3b3b",
   "text-default": "#e8e0d5",
@@ -58,7 +58,7 @@
        "v": "FIXED"
       },
       "fill": {
-       "hex": "#d99e5b",
+       "hex": "#b4895a",
        "token": "fill-accent"
       },
       "rule": null,
@@ -199,7 +199,7 @@
          "h": 16,
          "radius": 2,
          "fill": {
-          "hex": "#d99e5b",
+          "hex": "#b4895a",
           "token": "fill-accent"
          },
          "rule": null,
@@ -327,7 +327,7 @@
            "h": 16,
            "radius": 2,
            "fill": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "fill-accent"
            },
            "rule": null,
@@ -475,7 +475,7 @@
            "h": 16,
            "radius": 2,
            "fill": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "fill-accent"
            },
            "rule": null,
@@ -882,7 +882,7 @@
          "h": 16,
          "radius": 2,
          "fill": {
-          "hex": "#d99e5b",
+          "hex": "#b4895a",
           "token": "fill-accent"
          },
          "rule": null,
@@ -1193,7 +1193,7 @@
               "v": "HUG"
              },
              "fill": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "fill-accent"
              },
              "rule": null,
@@ -1368,7 +1368,7 @@
               "v": "HUG"
              },
              "fill": {
-              "hex": "#d99e5b",
+              "hex": "#b4895a",
               "token": "fill-accent"
              },
              "rule": null,
@@ -1721,7 +1721,7 @@
             "v": "FIXED"
            },
            "fill": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "fill-accent"
            },
            "rule": null,
@@ -1869,7 +1869,7 @@
             "v": "FIXED"
            },
            "fill": {
-            "hex": "#d99e5b",
+            "hex": "#b4895a",
             "token": "fill-accent"
            },
            "rule": null,

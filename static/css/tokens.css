@@ -36,26 +36,28 @@
     color-scheme: light dark;  /* native controls (select popups, checkboxes, scrollbars) follow the theme */
 
     /* ramps: the only hex values in the palette. Six hues, built in OKLCH
-       so the steps look evenly spaced. Every dark value is a step as it was;
-       the steps between them are interpolated. Never used directly: the
-       roles below point at them, and only the roles are used. */
+       so the steps look evenly spaced. Every dark value is a step as it was,
+       except amber 200-500 (below); the steps between them are
+       interpolated. Never used directly: the roles below point at them,
+       and only the roles are used. */
     --umber-0: #ffffff;   --umber-50: #faf7f2;  --umber-100: #f1ece4; --umber-200: #e8e0d5;
     --umber-300: #c9b99f; --umber-400: #a99f92; --umber-500: #898075; --umber-600: #6b6258;
     --umber-700: #534c43; --umber-800: #3d362f; --umber-850: #322c27; --umber-900: #2a2521;
     --umber-950: #211d19;
-    --amber-50: #fef5ea;  --amber-100: #fee9d0; --amber-200: #f8d2a5; --amber-300: #e8b377;
-    --amber-400: #d99e5b; --amber-500: #b58248; --amber-600: #8a6a44; --amber-700: #86531e;
+    --amber-50: #fef5ea;  --amber-100: #fee9d0; --amber-200: #d6ba9a; --amber-300: #c49d72;
+    --amber-400: #b4895a; --amber-500: #936e45; --amber-600: #8a6a44; --amber-700: #86531e;
     --amber-800: #6a4a2a; --amber-900: #4f3722; --amber-950: #352517;
     --rust-50: #fff4f2;   --rust-100: #fee7e2;  --rust-200: #fdccc2;  --rust-300: #f4aa9c;
     --rust-400: #e28979;  --rust-500: #c96a5a;  --rust-600: #a8493a;  --rust-700: #883a2d;
     --rust-800: #6a2d23;  --rust-900: #4d211a;  --rust-950: #351813;
-    /* the accent themes' ramps: amber's lightness and chroma step for
+    /* amber 200-500, dark's lamp end, were dimmed (OKLCH lightness -.08,
+       chroma x.75; 400 was #d99e5b) so the lamp reads as smoke, not
+       glare. Dark's accent text still clears 4.5:1 on the page and on
+       cards; 600 and up, where light's accents live, are as they were.
+
+       The accent themes' ramps: amber's lightness and chroma step for
        step, turned to another hue, so every role keeps amber's contrast
-       (sage-600 one notch darker, to hold 4.5:1 as light's muted text).
-       Steps 200-500, dark's lamp end, sit lower and greyer than amber's
-       (L -.08, chroma x.75): smoke rather than a lamp, and never pastel.
-       The label on the send button still clears 5:1. 600 and below,
-       where light's accents live, follow amber exactly. */
+       (sage-600 one notch darker, to hold 4.5:1 as light's muted text). */
     --slate-50: #f1f7fe; --slate-100: #e0eefe; --slate-200: #a6c3e2; --slate-300: #82a9d2;
     --slate-400: #6c97c4; --slate-500: #5479a0; --slate-600: #5a738e; --slate-700: #406388;
     --slate-800: #3d546b; --slate-900: #2e3e4f; --slate-950: #1f2a35;
@@ -101,7 +103,7 @@
 
     /* components: only where one needs a value its role doesn't give */
     --toggle-on: var(--fill-accent);      /* a pressed solid toggle */
-    /* the item card visual's hover fill: a small warm shift (~#3a3029) */
+    /* the item card visual's hover fill: a small warm shift (~#3d352c) */
     --card-thumb-hover: color-mix(in oklch, var(--bg-muted) 90%, var(--fill-accent));
     /* what a modal dims the page with: the page colour, mostly opaque, so
        it follows the theme (a dark veil in dark, a pale one in light) */
