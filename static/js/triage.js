@@ -6,11 +6,12 @@ import { showTab } from './main.js';
 
 // ---- triage mode ----
 // Entities come one at a time, junk first (1-mention entities lead). The
-// keyboard does the work: k m c r a p t d D x s u e, then 1-4 in retype mode
+// keyboard does the work: k m c r a p t d D x s u e, then 1-5 in retype mode
 // (and 1-9, 0 for a thing's category), Enter and Esc in a field. The buttons
 // mirror the keys. On a card flagged as maybe two people, k asks once.
 // Unsorted mentions of a split name ("Dev · ?") come one entry at a time:
 // 1-9 say which Dev, n names someone new.
+const KIND_BY_KEY = {1: 'person', 2: 'project', 3: 'place', 4: 'thing', 5: 'animal'};
 let queue = [], qpos = 0, triageMode = null;
 let skipped = [];        // names skipped in this pass, for the queue-empty offer
 let toastTimer = null;
@@ -428,7 +429,7 @@ async function triageKey(key) {
   }
   if (triageMode === 'kind') {
     if (key === 'Escape') { triageCancel(); return; }
-    const k = {1: 'person', 2: 'project', 3: 'place', 4: 'thing', 5: 'animal'}[key];
+    const k = KIND_BY_KEY[key];
     if (k === 'thing') askCategory();
     else if (k) retype(k);
     return;
@@ -553,7 +554,7 @@ function keyButton(key) {
   const q = sel => $('tab-triage').querySelector(sel);
   if (triageMode === 'mixed') return ['k', 'Enter'].includes(key) ? $('triage-mixed-yes') : null;
   if (triageMode === 'never') return ['D', 'Enter'].includes(key) ? $('triage-never-yes') : null;
-  if (triageMode === 'kind') return q(`#triage-kind-row [data-kind="${{1: 'person', 2: 'project', 3: 'place', 4: 'thing', 5: 'animal'}[key]}"]`);
+  if (triageMode === 'kind') return q(`#triage-kind-row [data-kind="${KIND_BY_KEY[key]}"]`);
   if (triageMode === 'category') return q(`#triage-cat-row [data-cat="${catForKey(key)}"]`);
   if (triageMode !== null) return null;
   return q(`#triage-btns [data-tkey="${key}"]`);

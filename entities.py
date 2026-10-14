@@ -381,7 +381,7 @@ def known_animals_hint() -> list[str]:
     """Animal names from the current index, most mentioned first. Without
     them, a pet the author writes about daily drifts back into people."""
     animals = sorted(((i["mentions"], n) for n, i in load_index().items()
-                      if i["type"] == "animal"), reverse=True)
+                      if i["type"] == "animal" and not i.get("retired")), reverse=True)
     return [n for _, n in animals[:40]]
 
 
@@ -778,7 +778,7 @@ def mixup_flag(kind: str, attrs: dict) -> list:
     """[[label, count], ...] for the relationship groups that clash, each
     under its most-used label with the group's count, biggest first.
     Empty when nothing clashes."""
-    if kind != "person":
+    if ATTR_FIELD.get(kind) != "relationship":
         return []
     groups: dict[str, Counter] = defaultdict(Counter)
     for label, count in attrs.items():
@@ -819,7 +819,7 @@ def mark_mixups(index: dict) -> dict:
             continue
         attr = (ent.get(ATTR_FIELD[kind]) or "").strip()
         if attr and attr != "unknown":
-            attrs[(kind, resolved[1].lower())][attr.lower()] += 1
+            attrs[(resolved[0], resolved[1].lower())][attr.lower()] += 1
     not_mixed = {k.lower() for k in curation["not_mixed"]}
     for name, info in index.items():
         base = info.get("base", name)
@@ -2251,9 +2251,10 @@ ANIMAL_WORDS = {
 
 
 def is_animal_label(label: str) -> bool:
-    """"pet", "pet cat", "mom's dog", "guinea pig" -- not "dog walker"."""
+    """"pet", "pet cat", "mom's dog", "guinea pig" -- not "dog walker" or
+    "pet sitter"."""
     words = re.sub(r"[^\w\s]", " ", label.lower()).split()
-    return bool(words) and (words[-1] in ANIMAL_WORDS or words[0] == "pet")
+    return bool(words) and words[-1] in ANIMAL_WORDS
 
 
 def animals_review(index: dict) -> list[dict]:

@@ -457,16 +457,20 @@ def load_archive(archive_id: str) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def closed_chapter_days(collection) -> list[tuple[dict, set[str]]]:
+def closed_chapter_days(collection, metas: list[dict] | None = None) -> list[tuple[dict, set[str]]]:
     """Every closed chapter in the history list, with the days History
     renders for it: an archive's part dates and the days of every message in
     its braids; an imported conversation's entry dates inside its range (as
     the conversation view bounds them). For the weekly arcs list, which says
-    which chapters a week touches."""
+    which chapters a week touches.
+
+    `metas` lets a caller that already scanned the collection's metadatas
+    pass them in rather than have this (and session_list) scan it again."""
     archives = {a["id"]: a for a in load_archives()}
-    metas = collection.get(include=["metadatas"])["metadatas"]
+    if metas is None:
+        metas = collection.get(include=["metadatas"])["metadatas"]
     out = []
-    for item in session_list(collection)["sessions"]:
+    for item in session_list(collection, metas)["sessions"]:
         days = set()
         if item["kind"] == "archive":
             a = archives.get(item["id"]) or {}
@@ -483,10 +487,13 @@ def closed_chapter_days(collection) -> list[tuple[dict, set[str]]]:
     return out
 
 
-def session_list(collection) -> dict:
+def session_list(collection, metas: list[dict] | None = None) -> dict:
     """Everything for the history sidebar: the open session plus all
     closed ones, newest first. Conversations stitched into an archive
-    (or being continued by the open session) don't double-list."""
+    (or being continued by the open session) don't double-list.
+
+    `metas` lets a caller that already scanned the collection's metadatas
+    pass them in rather than have this scan it again."""
     cur = load_current(collection)
     archives = load_archives()
 
@@ -497,9 +504,10 @@ def session_list(collection) -> dict:
     for part in cur.get("base") or []:
         covered.add((part["date"], part["title"]))
 
-    data = collection.get(include=["metadatas"])
+    if metas is None:
+        metas = collection.get(include=["metadatas"])["metadatas"]
     conv_keys = set()
-    for meta in data["metadatas"]:
+    for meta in metas:
         key = (meta.get("date", ""), meta.get("title", ""))
         if key not in covered:
             conv_keys.add(key)

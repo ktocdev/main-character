@@ -363,7 +363,7 @@ function openChapter(key) {
 }
 
 function setMode(mode) {
-  if (mode === state.historyMode) return;
+  if (mode === state.historyMode || !sessionIndex) return;
   state.historyMode = mode;
   $('history-pane').classList.remove('drilled');
   renderSessionList();
