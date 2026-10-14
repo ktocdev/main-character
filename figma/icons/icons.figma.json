@@ -4,7 +4,7 @@
  "size": 24,
  "color": {
   "token": "text-accent",
-  "fallback": "#b4895a"
+  "fallback": "#b98e5e"
  },
  "uses": [
   {

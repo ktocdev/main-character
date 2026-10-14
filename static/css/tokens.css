@@ -45,34 +45,39 @@
     --umber-700: #534c43; --umber-800: #3d362f; --umber-850: #322c27; --umber-900: #2a2521;
     --umber-950: #211d19;
     --amber-50: #fef5ea;  --amber-100: #fee9d0; --amber-200: #d6ba9a; --amber-300: #c49d72;
-    --amber-400: #b4895a; --amber-500: #936e45; --amber-600: #8a6a44; --amber-700: #86531e;
+    --amber-400: #b98e5e; --amber-450: #b08657; --amber-500: #936e45; --amber-600: #8a6a44; --amber-700: #86531e;
     --amber-800: #6a4a2a; --amber-900: #4f3722; --amber-950: #352517;
     --rust-50: #fff4f2;   --rust-100: #fee7e2;  --rust-200: #fdccc2;  --rust-300: #f4aa9c;
     --rust-400: #e28979;  --rust-500: #c96a5a;  --rust-600: #a8493a;  --rust-700: #883a2d;
     --rust-800: #6a2d23;  --rust-900: #4d211a;  --rust-950: #351813;
     /* amber 200-500, dark's lamp end, were dimmed (OKLCH lightness -.08,
        chroma x.75; 400 was #d99e5b) so the lamp reads as smoke, not
-       glare. Dark's accent text still clears 4.5:1 on the page and on
-       cards; 600 and up, where light's accents live, are as they were.
+       glare. 400 was then lifted back a hair (amber +.015 lightness,
+       slate +.005, rose +.019, sage as it was) so dark's accent text
+       holds 4.6:1 on bg-muted too: selected chips, the pressed segment.
+       600 and up, where light's accents live, are as they were.
+       450 is dark's muted accent: the darkest step at 400's hue that
+       holds 4.6:1 on cards, as text and under the filled button's label
+       (600, its old step, was 3.0:1 there).
 
        The accent themes' ramps: amber's lightness and chroma step for
        step, turned to another hue, so every role keeps amber's contrast
        (sage-600 one notch darker, to hold 4.5:1 as light's muted text). */
     --slate-50: #f1f7fe; --slate-100: #e0eefe; --slate-200: #a6c3e2; --slate-300: #82a9d2;
-    --slate-400: #6c97c4; --slate-500: #5479a0; --slate-600: #5a738e; --slate-700: #406388;
+    --slate-400: #6d99c6; --slate-450: #6892bd; --slate-500: #5479a0; --slate-600: #5a738e; --slate-700: #406388;
     --slate-800: #3d546b; --slate-900: #2e3e4f; --slate-950: #1f2a35;
     --sage-50: #f1f9f2; --sage-100: #e0f2e3; --sage-200: #a7caad; --sage-300: #84b38d;
-    --sage-400: #6ea178; --sage-500: #56825f; --sage-600: #5c7761; --sage-700: #446b4c;
+    --sage-400: #6ea178; --sage-450: #679971; --sage-500: #56825f; --sage-600: #5c7761; --sage-700: #446b4c;
     --sage-800: #405945; --sage-900: #304234; --sage-950: #212c23;
     --rose-50: #fef3f7; --rose-100: #fee5ee; --rose-200: #ddb1c1; --rose-300: #cb92a7;
-    --rose-400: #bb7e95; --rose-500: #996478; --rose-600: #8c6372; --rose-700: #844c63;
+    --rose-400: #c1849b; --rose-450: #b97d93; --rose-500: #996478; --rose-600: #8c6372; --rose-700: #844c63;
     --rose-800: #6a4553; --rose-900: #4e343e; --rose-950: #342329;
 
     /* the accent: the ramp every accent role reads through, gold by
        default. An accent theme (data-accent, at the end of this file)
        points these at its own ramp, and the roles follow in light and
        dark alike. Only the steps a role uses. */
-    --accent-300: var(--amber-300); --accent-400: var(--amber-400); --accent-600: var(--amber-600);
+    --accent-300: var(--amber-300); --accent-400: var(--amber-400); --accent-450: var(--amber-450); --accent-600: var(--amber-600);
     --accent-700: var(--amber-700); --accent-800: var(--amber-800);
 
     /* roles: what a colour is for. Dark is the default; the light blocks
@@ -84,12 +89,12 @@
     --text-muted: var(--umber-400);       /* meta, labels, help copy */
     --text-you: var(--umber-300);         /* your own words in a transcript */
     --text-accent: var(--accent-400);      /* lamp amber: italic headings, active labels */
-    --text-accent-muted: var(--accent-600); /* eyebrows, date labels */
+    --text-accent-muted: var(--accent-450); /* eyebrows, date labels */
     --text-danger: var(--rust-500);       /* the app's one danger/error color */
     --text-on-accent: var(--umber-950);   /* the label on an accent fill */
     --fill-accent: var(--accent-400);      /* the send button */
     --fill-accent-hover: var(--accent-300); /* its hover: a step brighter */
-    --fill-accent-muted: var(--accent-600); /* the filled button */
+    --fill-accent-muted: var(--accent-450); /* the filled button */
     --fill-danger: var(--rust-500);
     --border-default: var(--umber-800);   /* every hairline */
     --border-strong: var(--umber-400);    /* a hairline lifted on hover */
@@ -185,14 +190,14 @@
      in index.html and its name in ACCENTS (settings.js, design/theme.js,
      the head script). */
   :root[data-accent="slate"] {
-    --accent-300: var(--slate-300); --accent-400: var(--slate-400); --accent-600: var(--slate-600);
+    --accent-300: var(--slate-300); --accent-400: var(--slate-400); --accent-450: var(--slate-450); --accent-600: var(--slate-600);
     --accent-700: var(--slate-700); --accent-800: var(--slate-800);
   }
   :root[data-accent="sage"] {
-    --accent-300: var(--sage-300); --accent-400: var(--sage-400); --accent-600: var(--sage-600);
+    --accent-300: var(--sage-300); --accent-400: var(--sage-400); --accent-450: var(--sage-450); --accent-600: var(--sage-600);
     --accent-700: var(--sage-700); --accent-800: var(--sage-800);
   }
   :root[data-accent="rose"] {
-    --accent-300: var(--rose-300); --accent-400: var(--rose-400); --accent-600: var(--rose-600);
+    --accent-300: var(--rose-300); --accent-400: var(--rose-400); --accent-450: var(--rose-450); --accent-600: var(--rose-600);
     --accent-700: var(--rose-700); --accent-800: var(--rose-800);
   }

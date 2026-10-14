@@ -11,7 +11,7 @@
  },
  "fallback": {
   "border-default": "#3d362f",
-  "text-accent": "#b4895a",
+  "text-accent": "#b98e5e",
   "text-default": "#e8e0d5",
   "text-muted": "#a99f92"
  },
@@ -118,7 +118,7 @@
              "italic": true,
              "size": 20.8,
              "color": {
-              "hex": "#b4895a",
+              "hex": "#b98e5e",
               "token": "text-accent"
              }
             }
@@ -246,7 +246,7 @@
              "italic": true,
              "size": 20.8,
              "color": {
-              "hex": "#b4895a",
+              "hex": "#b98e5e",
               "token": "text-accent"
              }
             }

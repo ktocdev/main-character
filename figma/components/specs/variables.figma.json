@@ -19,7 +19,8 @@
   "amber/100": "#fee9d0",
   "amber/200": "#d6ba9a",
   "amber/300": "#c49d72",
-  "amber/400": "#b4895a",
+  "amber/400": "#b98e5e",
+  "amber/450": "#b08657",
   "amber/500": "#936e45",
   "amber/600": "#8a6a44",
   "amber/700": "#86531e",
@@ -41,7 +42,8 @@
   "slate/100": "#e0eefe",
   "slate/200": "#a6c3e2",
   "slate/300": "#82a9d2",
-  "slate/400": "#6c97c4",
+  "slate/400": "#6d99c6",
+  "slate/450": "#6892bd",
   "slate/500": "#5479a0",
   "slate/600": "#5a738e",
   "slate/700": "#406388",
@@ -53,6 +55,7 @@
   "sage/200": "#a7caad",
   "sage/300": "#84b38d",
   "sage/400": "#6ea178",
+  "sage/450": "#679971",
   "sage/500": "#56825f",
   "sage/600": "#5c7761",
   "sage/700": "#446b4c",
@@ -63,7 +66,8 @@
   "rose/100": "#fee5ee",
   "rose/200": "#ddb1c1",
   "rose/300": "#cb92a7",
-  "rose/400": "#bb7e95",
+  "rose/400": "#c1849b",
+  "rose/450": "#b97d93",
   "rose/500": "#996478",
   "rose/600": "#8c6372",
   "rose/700": "#844c63",
@@ -101,7 +105,7 @@
    "light": "amber/700"
   },
   "text/accent-muted": {
-   "dark": "amber/600",
+   "dark": "amber/450",
    "light": "amber/600"
   },
   "text/danger": {
@@ -121,7 +125,7 @@
    "light": "amber/800"
   },
   "fill/accent-muted": {
-   "dark": "amber/600",
+   "dark": "amber/450",
    "light": "amber/600"
   },
   "fill/danger": {

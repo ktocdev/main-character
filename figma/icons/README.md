@@ -49,7 +49,7 @@ names its group and file. A thing category without its own icon (other)
 uses `thing`.
 
 Each icon is one flattened vector named `icon`, 24 × 24, painted with the
-file's `text-accent` variable (found by name; `#b4895a` if there is none)
+file's `text-accent` variable (found by name; `#b98e5e` if there is none)
 and set to scale with its instance. The outline icons' strokes are outlined
 first, so a larger icon gets thicker lines, as the web's CSS mask does. A
 path an SVG doesn't paint (a `fill="none"` helper) is dropped.

@@ -12,9 +12,9 @@
  "fallback": {
   "bg-raised": "#2a2521",
   "border-default": "#3d362f",
-  "fill-accent": "#b4895a",
-  "text-accent": "#b4895a",
-  "text-accent-muted": "#8a6a44",
+  "fill-accent": "#b98e5e",
+  "text-accent": "#b98e5e",
+  "text-accent-muted": "#b08657",
   "text-default": "#e8e0d5",
   "text-muted": "#a99f92",
   "text-on-accent": "#211d19"
@@ -121,7 +121,7 @@
             "token": "font-2xs"
            },
            "color": {
-            "hex": "#8a6a44",
+            "hex": "#b08657",
             "token": "text-accent-muted"
            },
            "letterSpacing": 1.2,
@@ -152,7 +152,7 @@
            "italic": true,
            "size": 20.8,
            "color": {
-            "hex": "#b4895a",
+            "hex": "#b98e5e",
             "token": "text-accent"
            }
           }
@@ -259,7 +259,7 @@
            "h": 35.19,
            "fills": [
             {
-             "hex": "#b4895a",
+             "hex": "#b98e5e",
              "token": "fill-accent"
             }
            ],
@@ -452,7 +452,7 @@
             "token": "font-2xs"
            },
            "color": {
-            "hex": "#8a6a44",
+            "hex": "#b08657",
             "token": "text-accent-muted"
            },
            "letterSpacing": 1.2,
@@ -483,7 +483,7 @@
            "italic": true,
            "size": 20.8,
            "color": {
-            "hex": "#b4895a",
+            "hex": "#b98e5e",
             "token": "text-accent"
            }
           }
@@ -711,7 +711,7 @@
            "h": 35.19,
            "fills": [
             {
-             "hex": "#b4895a",
+             "hex": "#b98e5e",
              "token": "fill-accent"
             }
            ],
