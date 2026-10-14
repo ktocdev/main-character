@@ -414,6 +414,41 @@ def test_restart_waits_for_the_memory_pipeline(env, client, monkeypatch):
     assert not server.RESTART["requested"]
 
 
+# ---- shutdown ----
+
+def test_shutdown_refuses_when_it_cannot_actually_stop(env, client):
+    """Under TestClient there is no uvicorn Server to stop. `journal stop`
+    waits for the port to free, so a false yes would leave it waiting."""
+    r = client.post("/api/shutdown")
+    assert r.status_code == 501
+
+
+def test_shutdown_waits_for_the_memory_pipeline(env, client, monkeypatch):
+    """The same guard as restart: stopping mid-reply or mid-pipeline throws
+    away work already paid for, which is what `journal stop` exists to avoid."""
+    srv = SimpleNamespace(should_exit=False)
+    monkeypatch.setitem(server.SERVER, "instance", srv)
+    monkeypatch.setitem(server._BUSY, "count", 1)
+
+    r = client.post("/api/shutdown")
+    assert r.status_code == 409
+    assert "Stopping now" in r.json()["error"]
+    assert not srv.should_exit
+
+
+def test_shutdown_stops_without_asking_for_a_restart(env, client, monkeypatch):
+    """__main__ restarts whenever RESTART["requested"] is set once run()
+    returns, so a stop that set it would come straight back."""
+    srv = SimpleNamespace(should_exit=False)
+    monkeypatch.setitem(server.SERVER, "instance", srv)
+    monkeypatch.setitem(server.RESTART, "requested", False)
+
+    r = client.post("/api/shutdown")
+    assert r.status_code == 200 and r.json()["stopping"]
+    assert srv.should_exit
+    assert not server.RESTART["requested"]
+
+
 def test_a_streaming_reply_holds_the_restart_off(env, client, monkeypatch):
     """The tokens are spent while the text is still arriving, so a stream has
     to count as busy. Only the dream path did before, which left the common

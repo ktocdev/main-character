@@ -16,6 +16,8 @@ Clone it, give it an API key, and start writing. The journal builds itself from 
 
 If you have a Claude conversation export, you can import it as a starting corpus. See [Importing a Claude export](#importing-a-claude-export). Most people will not have one, and the journal works fine without it.
 
+**Tested on Windows only.** The full setup has been run from a clean Windows 11 account: install, first entry, closing a chapter, and stopping. The macOS and Linux commands below should work, but nobody has run them yet. If something breaks there, please [open an issue](https://github.com/ktocdev/main-character/issues).
+
 ### 1. Install
 
 ```bash
@@ -24,18 +26,28 @@ cd main-character
 ./journal install                            # Windows: .\journal install
 ```
 
-This creates `.venv`, installs from the lock file and copies `.env.example` to `.env`. It is safe to run again. Python 3.12 or newer. The install is large and slow because it pulls in ChromaDB's full dependency tree, including onnxruntime and tokenizers, plus fastembed, so that embeddings run on your machine instead of over the network. Install from the lock file. `requirements.txt` lists the same dependencies unpinned, for reference only.
+This creates `.venv`, installs from the lock file and copies `.env.example` to `.env`. It is safe to run again. The install is large and slow because it pulls in ChromaDB's full dependency tree, including onnxruntime and tokenizers, plus fastembed, so that embeddings run on your machine instead of over the network. Install from the lock file. `requirements.txt` lists the same dependencies unpinned, for reference only.
 
-Python is installed once per machine, not once per copy of the journal. Each copy gets its own `.venv`, built from that one install. If you do not have Python 3.12 or newer, get it from [python.org](https://www.python.org/downloads/) and tick *Add python.exe to PATH* in the installer.
+**Python 3.12, 3.13 or 3.14.** Python 3.15 is not supported yet: onnxruntime, which runs the local embedding models, has not published a build for it, so the install fails. Python is installed once per machine, not once per copy of the journal. Each copy gets its own `.venv`, built from that one install, and install picks the newest supported Python it finds.
 
-On Windows, if install says *Python was not found* even though Python is installed, the `python` command is reaching a Microsoft Store placeholder instead of your Python. This happens when Python came from uv, or from an installer that did not add it to PATH. Either turn off the placeholder under Settings → Apps → Advanced app settings → App execution aliases (switch off `python.exe` and `python3.exe`), or create the venv yourself and run install again, which then skips the Python check:
+On Windows, install Python with:
 
 ```powershell
-uv venv --seed --python 3.12 .venv           # or: <path to python.exe> -m venv .venv
+py install 3.14
+```
+
+If `py` is not recognized, install the *Python Install Manager* from the Microsoft Store or [python.org](https://www.python.org/downloads/) first. A newer Python you already have can stay. Install picks 3.14 over it.
+
+On macOS or Linux, install `python3.14` from your package manager, or choose a 3.14 release under *Looking for a specific release?* on [python.org](https://www.python.org/downloads/).
+
+If install says it cannot find a supported Python even though you have one, for example one installed with uv, create the venv yourself and run install again:
+
+```powershell
+uv venv --seed --python 3.14 .venv           # or: <path to python.exe> -m venv .venv
 .\journal install
 ```
 
-You do not need to activate the venv, whatever uv suggests. `journal` runs the Python inside `.venv` directly.
+If `.venv` was made with an unsupported Python, install says so. Delete the `.venv` folder and run it again. You do not need to activate the venv, whatever uv suggests. `journal` runs the Python inside `.venv` directly.
 
 ### 2. Run it
 
@@ -47,9 +59,9 @@ The journal opens at **http://127.0.0.1:8144**. The first time, a setup screen a
 
 You can still put the key in `.env` yourself before starting (uncomment `ANTHROPIC_API_KEY` and paste it), and change it later under Settings.
 
-Stop it with `Ctrl+C`. After pulling a new version, run `./journal restart` (Windows: `.\journal restart`) so the running journal picks it up.
+Stop it with `./journal stop` (Windows: `.\journal stop`), from any terminal. After pulling a new version, run `./journal restart` (Windows: `.\journal restart`) so the running journal picks it up.
 
-To restart, use `journal restart` instead of `Ctrl+C` and starting again. `Ctrl+C` stops the journal at once, even while a companion reply or the background work that follows an entry is still running, and that work is lost after you have already paid for it. `journal restart` refuses until nothing is running, so you can try again a moment later without losing it.
+Use these instead of `Ctrl+C`. `Ctrl+C` stops the journal at once, even while a companion reply or the background work that follows an entry is still running, and that work is lost after you have already paid for it. `journal stop` and `journal restart` refuse until nothing is running, so you can try again a moment later without losing it. `journal stop` also stops a journal that kept running after its terminal was closed. If `journal start` says its port is already in use, that is usually the cause.
 
 ## Try it without a key
 
@@ -108,6 +120,8 @@ This will not change in a later version. The server keeps its open conversation,
 - Do not expose the port to the internet.
 - Do not put it behind a reverse proxy and share the URL.
 - Do not run it for more than one person. A multi-user deployment is unsafe.
+
+**On a computer you share, other people can read it.** `127.0.0.1` means *this computer*, not *this user*. While the journal is running, anyone signed in to another account on the same machine can open it in their browser and read and write in it, as you. They can also open the files directly if the folder you cloned into is readable by other accounts. On Windows, a folder made directly on `C:\`, such as `C:\apps`, is readable by every account. Your own user folder, the one named after your account, is not. If you share a computer, clone the journal inside your user folder, and stop it with `journal stop` when you are not using it.
 
 If you want a journal several people can use, start from a different codebase.
 

@@ -6,6 +6,7 @@
 #   ./journal install   create .venv, install the lock file, make .env
 #   ./journal start     run the journal on http://127.0.0.1:8144
 #   ./journal restart   restart the running journal, as Settings' button does
+#   ./journal stop      stop the running journal and free its port
 #
 # The 8145 sandbox (sandbox-reset, sandbox) is PowerShell and Windows-only;
 # see journal.cmd.
@@ -16,13 +17,24 @@ VENV_PY=.venv/bin/python
 case "$1" in
   install)
     if [ ! -x "$VENV_PY" ]; then
-      PY=$(command -v python3 || command -v python) \
-        || { echo "python not found -- install Python 3.12 or newer first"; exit 1; }
-      "$PY" -c "import sys; sys.exit(sys.version_info < (3, 12))" \
-        || { echo "Python 3.12 or newer is required"; exit 1; }
-      echo "creating .venv"
+      # Newest supported version first. check_python.py says which those are.
+      PY=
+      for c in python3.14 python3.13 python3.12 python3 python; do
+        if command -v "$c" >/dev/null 2>&1 \
+            && "$c" scripts/check_python.py >/dev/null 2>&1; then
+          PY=$c
+          break
+        fi
+      done
+      if [ -z "$PY" ]; then
+        echo "no Python 3.12 to 3.14 found. Python 3.15 is not supported yet."
+        echo "Install Python 3.14 from https://www.python.org/downloads/ -- see the README."
+        exit 1
+      fi
+      echo "creating .venv with $PY"
       "$PY" -m venv .venv
     fi
+    "$VENV_PY" scripts/check_python.py --venv
     echo "installing dependencies -- large and slow the first time"
     "$VENV_PY" -m pip install -r requirements.lock
     if [ ! -f .env ]; then
@@ -40,6 +52,10 @@ case "$1" in
     [ -x "$VENV_PY" ] || { echo "not installed yet -- run: ./journal install"; exit 1; }
     exec "$VENV_PY" scripts/restart_journal.py
     ;;
+  stop)
+    [ -x "$VENV_PY" ] || { echo "not installed yet -- run: ./journal install"; exit 1; }
+    exec "$VENV_PY" scripts/stop_journal.py
+    ;;
   sandbox-reset|sandbox)
     echo "the 8145 sandbox is Windows-only (PowerShell) -- use journal.cmd"
     exit 1
@@ -50,6 +66,7 @@ case "$1" in
     echo "  install   create .venv, install dependencies, make .env"
     echo "  start     run the journal on http://127.0.0.1:8144"
     echo "  restart   restart the running journal, as Settings' button does"
+    echo "  stop      stop the running journal and free its port"
     exit 1
     ;;
 esac
