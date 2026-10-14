@@ -207,7 +207,6 @@
   .dot { width: .4rem; height: .4rem; border-radius: 50%; background: var(--fill-accent-muted); flex-shrink: 0; }
   .dot.open { background: var(--fill-accent); }
   .dot.right { margin-left: auto; }
-  .dot.dashed { background: transparent; border: 1px dashed var(--border-accent); }
   /* maybe two people: a ring, beside the unreviewed dot */
   .dot.flag { background: transparent; border: 1.5px solid var(--fill-accent); }
   .dot + .dot { margin-left: var(--space-1); }
@@ -483,6 +482,31 @@
   [aria-expanded="true"] > .caret-icon.drop, .caret-icon.drop[aria-expanded="true"] { transform: rotate(-90deg); }
   button:hover > .caret-icon { color: inherit; }
   @media (prefers-reduced-motion: reduce) { .caret-icon, .disclosure > summary .mark { transition: none; } }
+
+  /* ---- Interface icons: one file each in static/icons/, drawn as a mask
+     in currentColor at .9em, so they take the button's text colour and
+     size. Always aria-hidden: the button's word or aria-label says what it
+     does. The caret and the dash mark, below and above, are the two with
+     behaviour of their own. ---- */
+  .ui-icon {
+    display: inline-block; flex-shrink: 0; width: .9em; height: .9em;
+    background: currentColor; vertical-align: -.1em;
+    -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat;
+  }
+  .ui-icon.plus { -webkit-mask-image: url("../icons/plus.svg"); mask-image: url("../icons/plus.svg"); }
+  .ui-icon.undo { -webkit-mask-image: url("../icons/undo.svg"); mask-image: url("../icons/undo.svg"); }
+  .ui-icon.redo { -webkit-mask-image: url("../icons/redo.svg"); mask-image: url("../icons/redo.svg"); }
+  .ui-icon.pencil { -webkit-mask-image: url("../icons/pencil.svg"); mask-image: url("../icons/pencil.svg"); }
+
+  /* ---- Dash mark: an icon (static/icons/), a dashed ring in the accent
+     border colour beside a proposed, not-yet-real item (the categories
+     list's proposed rows). It stands where a .dot would. ---- */
+  .dash-icon {
+    display: inline-block; flex-shrink: 0; width: .7rem; height: .7rem;
+    background: var(--border-accent);
+    -webkit-mask: url("../icons/circle-dash.svg") center / contain no-repeat;
+    mask: url("../icons/circle-dash.svg") center / contain no-repeat;
+  }
   /* the large disclosure's mark: the caret at its size, centred on the
      title's first line however the title wraps (1lh is that line, since
      the mark takes the title's font) */

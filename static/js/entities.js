@@ -263,7 +263,7 @@ function renderThingCats() {
   const add = document.createElement('button');
   add.className = 'chip-toggle';
   add.id = 'thing-kinds-btn';
-  add.textContent = '+ kind';
+  add.innerHTML = '<span class="ui-icon plus" aria-hidden="true"></span>kind';
   add.title = 'kinds of thing of your own, like songs or food';
   add.setAttribute('aria-haspopup', 'true');
   add.setAttribute('aria-controls', 'thing-kinds-menu');

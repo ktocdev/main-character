@@ -156,7 +156,7 @@ function renderGroupBrowser() {
 
     const edit = document.createElement('button');
     edit.className = 'grp-edit' + (expandedGroup === g.name ? ' on' : '');
-    edit.textContent = '✎';
+    edit.innerHTML = '<span class="ui-icon pencil" aria-hidden="true"></span>';
     edit.title = 'rename or delete this group';
     edit.dataset.tipPlace = 'above-end';
     edit.setAttribute('aria-label', `edit group ${g.name}`);

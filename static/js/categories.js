@@ -69,7 +69,7 @@ function renderProposals() {
   for (const p of props) {
     const b = document.createElement('button');
     b.className = 'list-item' + (propSelected === p.id ? ' sel' : '');
-    b.innerHTML = '<span class="dot dashed"></span><span class="li-title"></span><span class="li-meta right"></span>';
+    b.innerHTML = '<span class="dash-icon" aria-hidden="true"></span><span class="li-title"></span><span class="li-meta right"></span>';
     b.querySelector('.li-title').textContent = p.name;
     b.querySelector('.li-meta').textContent = `${p.confidence} · ${p.weeks}w`;
     b.onclick = () => { propSelected = p.id; notice(''); renderCategories(); drill(); };

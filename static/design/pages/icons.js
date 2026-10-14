@@ -64,17 +64,29 @@ const GROUP_TYPE = [null, 'category', 'dream', 'thing'];
 const SOURCE = {
   alien: 'Phosphor', 'peace-bold': 'Phosphor',
   hand: 'Boxicons', rocket: 'Boxicons', pizza: 'Boxicons', category: 'Boxicons', 'bookmark-heart': 'Bootstrap',
-  'caret-right': 'Entypo+ (CC BY-SA 4.0)',
+  plus: 'Boxicons', undo: 'Mynaui', redo: 'Mynaui',
+  'caret-right': 'Entypo+ (CC BY-SA 4.0)', 'circle-dash': 'MingCute (Apache 2.0)',
 };
 
 // Icons the interface draws outside the cards: one version each, as a CSS
 // mask in components.css, so card.js doesn't know them. Each row shows the
-// real class closed and open; `cls` is what the app puts on the span.
-const UI_GROUP = ['Interface', 'Drawn by components.css, not card.js: one version, as a mask in currentColor, turned by the aria-expanded of the control it sits in. Only the entities sidebar uses it so far.', [
+// real class closed and open (a row that doesn't turn shows it once); `cls`
+// is what the app puts on the span.
+const UI_GROUP = ['Interface', 'Drawn by components.css, not card.js: one version each, as a mask. The carets turn with the aria-expanded of the control they sit in; the rest stand still. span.ui-icon draws in the button’s text colour at .9em, beside its word.', [
   {key: 'disclosure caret', icon: 'caret-right', cls: 'caret-icon',
     note: 'span.caret-icon: points right, turns down when open. The small disclosure (triage & recycling bin), find duplicates in the clean up menu, the parts toggle, a rolled-up group’s peek.'},
   {key: 'menu caret', icon: 'caret-right', cls: 'caret-icon drop',
     note: 'span.caret-icon.drop: the same file turned down, and up when open. The clean up button.'},
+  {key: 'dash mark', icon: 'circle-dash', cls: 'dash-icon', still: true,
+    note: 'span.dash-icon: a dashed ring in --border-accent beside a proposed category, where a .dot would stand.'},
+  {key: 'undo', icon: 'undo', cls: 'ui-icon undo', still: true,
+    note: 'span.ui-icon.undo: the undo button atop the entities sidebar.'},
+  {key: 'redo', icon: 'redo', cls: 'ui-icon redo', still: true,
+    note: 'span.ui-icon.redo: the redo button beside it.'},
+  {key: 'add', icon: 'plus', cls: 'ui-icon plus', still: true,
+    note: 'span.ui-icon.plus: “kind” at the end of the thing kinds, “new” in the groups header.'},
+  {key: 'edit', icon: 'pencil', cls: 'ui-icon pencil', still: true,
+    note: 'span.ui-icon.pencil: a group row’s edit button (rename or delete), icon only, named by its aria-label.'},
 ]];
 const UI_ICONS = new Set(UI_GROUP[2].map(r => r.icon));
 
@@ -167,7 +179,7 @@ for (const [gi, [title, blurb, rows]] of GROUPS.entries()) {
     name.append(el('span', 'mono', r.key), el('span', 'why', r.note));
     const shut = caret(r.cls, false);
     const file = el('div', 'file mono', r.icon);
-    row.append(name, shut, caret(r.cls, true), file);
+    row.append(name, shut, r.still ? el('div', 'why', 'doesn’t turn') : caret(r.cls, true), file);
     group.appendChild(row);
     checks.push([r, shut.firstChild, file]);
   }

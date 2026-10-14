@@ -11,12 +11,11 @@
  },
  "fallback": {
   "bg-raised": "#2a2521",
-  "border-accent": "#8a6a44",
   "border-danger": "#c96a5a",
   "border-default": "#3d362f",
-  "fill-accent": "#b4895a",
+  "fill-accent": "#b98e5e",
   "fill-accent-hover": "#c49d72",
-  "fill-accent-muted": "#8a6a44",
+  "fill-accent-muted": "#b08657",
   "focus-ring": "#8a6a44",
   "text-danger": "#c96a5a",
   "text-default": "#e8e0d5",
@@ -36,7 +35,7 @@
       "h": 35.19,
       "fills": [
        {
-        "hex": "#b4895a",
+        "hex": "#b98e5e",
         "token": "fill-accent"
        }
       ],
@@ -212,7 +211,7 @@
       "h": 35.19,
       "fills": [
        {
-        "hex": "#b4895a",
+        "hex": "#b98e5e",
         "token": "fill-accent"
        }
       ],
@@ -308,7 +307,7 @@
       "h": 35.19,
       "fills": [
        {
-        "hex": "#b4895a",
+        "hex": "#b98e5e",
         "token": "fill-accent"
        }
       ],
@@ -397,14 +396,14 @@
       "h": 35.19,
       "fills": [
        {
-        "hex": "#8a6a44",
+        "hex": "#b08657",
         "token": "fill-accent-muted"
        }
       ],
       "stroke": {
        "paint": {
-        "hex": "#8a6a44",
-        "token": "border-accent"
+        "hex": "#b08657",
+        "token": "fill-accent-muted"
        },
        "weights": [
         1,
@@ -495,13 +494,13 @@
       "h": 35.19,
       "fills": [
        {
-        "hex": "#b4895a",
+        "hex": "#b98e5e",
         "token": "fill-accent"
        }
       ],
       "stroke": {
        "paint": {
-        "hex": "#b4895a",
+        "hex": "#b98e5e",
         "token": "fill-accent"
        },
        "weights": [
@@ -593,14 +592,14 @@
       "h": 35.19,
       "fills": [
        {
-        "hex": "#8a6a44",
+        "hex": "#b08657",
         "token": "fill-accent-muted"
        }
       ],
       "stroke": {
        "paint": {
-        "hex": "#8a6a44",
-        "token": "border-accent"
+        "hex": "#b08657",
+        "token": "fill-accent-muted"
        },
        "weights": [
         1,
@@ -699,14 +698,14 @@
       "h": 35.19,
       "fills": [
        {
-        "hex": "#8a6a44",
+        "hex": "#b08657",
         "token": "fill-accent-muted"
        }
       ],
       "stroke": {
        "paint": {
-        "hex": "#8a6a44",
-        "token": "border-accent"
+        "hex": "#b08657",
+        "token": "fill-accent-muted"
        },
        "weights": [
         1,
@@ -1909,7 +1908,7 @@
       "h": 28.8,
       "fills": [
        {
-        "hex": "#b4895a",
+        "hex": "#b98e5e",
         "token": "fill-accent"
        }
       ],
@@ -2133,7 +2132,7 @@
       "h": 28.8,
       "fills": [
        {
-        "hex": "#b4895a",
+        "hex": "#b98e5e",
         "token": "fill-accent"
        }
       ],
@@ -2253,7 +2252,7 @@
       "h": 28.8,
       "fills": [
        {
-        "hex": "#b4895a",
+        "hex": "#b98e5e",
         "token": "fill-accent"
        }
       ],

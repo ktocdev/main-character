@@ -42,12 +42,12 @@
   <main class="doc wide">
     <section>
       <h2>Icons</h2>
-      <p class="lede">One icon for each card type, and for each built-in category, dream tone and thing category. Cards draw the filled set by default; people show their initials instead. The interface has one icon of its own so far: the caret on things that open and close.</p>
+      <p class="lede">One icon for each card type, and for each built-in category, dream tone and thing category. Cards draw the filled set by default; people show their initials instead. The interface has icons of its own too: the caret on things that open and close, the dashed ring beside a proposed category, and undo, redo, add and edit in the entities sidebar.</p>
     </section>
 
     <section id="map">
       <div class="rule eyebrow strong">Assignments</div>
-      <p class="note">Each row: filled, outline and the file. The mapping lives in <span class="mono">static/js/card.js</span> (<span class="mono">TYPE_ICONS</span>, <span class="mono">SUBTYPE_ICONS</span>); this page mirrors it, and a row that disagrees is flagged in red. The interface rows mirror <span class="mono">.caret-icon</span> in <span class="mono">static/css/components.css</span> the same way.</p>
+      <p class="note">Each row: filled, outline and the file. The mapping lives in <span class="mono">static/js/card.js</span> (<span class="mono">TYPE_ICONS</span>, <span class="mono">SUBTYPE_ICONS</span>); this page mirrors it, and a row that disagrees is flagged in red. The interface rows mirror <span class="mono">.caret-icon</span>, <span class="mono">.dash-icon</span> and <span class="mono">.ui-icon</span> in <span class="mono">static/css/components.css</span> the same way.</p>
       <div class="stack" id="map-out"></div>
     </section>
 
@@ -63,15 +63,17 @@
 
     <section id="set">
       <div class="rule eyebrow strong">The full set</div>
-      <p class="note">Every icon in <span class="mono">static/icons/</span>, filled then outline, with what uses it and the set it comes from. <span class="mono">peace-bold</span> and <span class="mono">caret-right</span> have one version each. Licenses: <span class="mono">static/icons/LICENSES.md</span>.</p>
+      <p class="note">Every icon in <span class="mono">static/icons/</span>, filled then outline, with what uses it and the set it comes from. <span class="mono">peace-bold</span> and the interface icons have one version each. Licenses: <span class="mono">static/icons/LICENSES.md</span>.</p>
       <div class="icon-grid" id="set-out"></div>
     </section>
 
     <section id="usage">
       <div class="rule eyebrow strong">Usage</div>
       <p class="note">The icons are square SVGs drawn in <span class="mono">currentColor</span>. On a card, <span class="mono">span.card-icon</span> draws the file as a CSS mask filled with <span class="mono">currentColor</span>, so it takes the visual's accent and hover colours (an <span class="mono">&lt;img&gt;</span> would not), sized at .9em of the visual's glyph size. They are always <span class="mono">aria-hidden</span>: the card's eyebrow and title already say what the item is.</p>
+      <p class="note">In the interface, <span class="mono">span.ui-icon</span> with the icon's name (<span class="mono">plus</span>, <span class="mono">undo</span>, <span class="mono">redo</span>, <span class="mono">pencil</span>) draws one file the same way, in the button's text colour at .9em, so it follows hover and the accent. It sits before the button's word (<span class="mono">undo</span>, <span class="mono">kind</span>, <span class="mono">new</span>), and is <span class="mono">aria-hidden</span> there too. An icon-only button, like a group's edit, carries an <span class="mono">aria-label</span> and a <span class="mono">title</span> instead of the word. The caret (<span class="mono">.caret-icon</span>) and the dash mark (<span class="mono">.dash-icon</span>) are drawn the same way, with their own sizes and colours.</p>
       <p class="note">To change or add one: put <span class="mono">name.svg</span> and <span class="mono">name-filled.svg</span> in <span class="mono">static/icons/</span>, point the entry in <span class="mono">card.js</span> at it, and update its row in <span class="mono">pages/icons.js</span>. A single-version icon goes in <span class="mono">ONE_VERSION</span>. Then run <span class="mono">node figma/icons/icons.mjs</span>, which bundles them for the Figma Icons plugin (<span class="mono">figma/icons/</span>).</p>
-      <p class="note">Sources, all MIT: TDesign Icons by Tencent (most), Phosphor Icons (<span class="mono">alien</span>, <span class="mono">peace-bold</span>), Boxicons (<span class="mono">category</span>, <span class="mono">hand</span>, <span class="mono">rocket</span>) and Bootstrap Icons (<span class="mono">bookmark-heart</span>). The originals are in <span class="mono">mc-icons/</span>.</p>
+      <p class="note">An interface icon is one file, <span class="mono">name.svg</span>, with a <span class="mono">.ui-icon.name</span> rule in <span class="mono">components.css</span> and a row in the interface group of <span class="mono">pages/icons.js</span>. It isn't in the Figma Icon set.</p>
+      <p class="note">Sources: TDesign Icons by Tencent (most, including <span class="mono">pencil</span>), Phosphor Icons (<span class="mono">alien</span>, <span class="mono">peace-bold</span>), Boxicons (<span class="mono">category</span>, <span class="mono">hand</span>, <span class="mono">rocket</span>, <span class="mono">pizza</span>, <span class="mono">plus</span>), Bootstrap Icons (<span class="mono">bookmark-heart</span>) and Mynaui (<span class="mono">undo</span>, <span class="mono">redo</span>), all MIT; Entypo+ (<span class="mono">caret-right</span>, CC BY-SA 4.0) and MingCute (<span class="mono">circle-dash</span>, Apache 2.0). The originals are in <span class="mono">mc-icons/</span>.</p>
     </section>
   </main>
 </div>
