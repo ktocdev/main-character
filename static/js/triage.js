@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { $, api, busy, fmtDate } from './core.js';
 import { state } from './state.js';
-import { loadEntities, showEntity, mixupText, setName, variantsOf, NO_PARTS, HAS_RELATIONSHIP } from './entities.js';
+import { loadEntities, thingKindNames, showEntity, mixupText, setName, variantsOf, NO_PARTS, HAS_RELATIONSHIP } from './entities.js';
 import { showTab } from './main.js';
 
 // ---- triage mode ----
 // Entities come one at a time, junk first (1-mention entities lead). The
 // keyboard does the work: k m c r a p t d D x s u e, then 1-4 in retype mode
-// (and 1-6 for a thing's category), Enter and Esc in a field. The buttons
+// (and 1-9, 0 for a thing's category), Enter and Esc in a field. The buttons
 // mirror the keys. On a card flagged as maybe two people, k asks once.
 // Unsorted mentions of a split name ("Dev · ?") come one entry at a time:
 // 1-9 say which Dev, n names someone new.
@@ -435,7 +435,7 @@ async function triageKey(key) {
   }
   if (triageMode === 'category') {
     if (key === 'Escape') { triageCancel(); return; }
-    const c = CATEGORIES[Number(key) - 1];
+    const c = catForKey(key);
     if (c) retype('thing', c);
     return;
   }
@@ -494,9 +494,34 @@ async function triageKey(key) {
 }
 
 // a thing asks which kind of thing it is, one more key
-const CATEGORIES = ['music', 'game', 'show', 'book', 'event', 'other'];
+// (1–9 down the journal's kinds, other is always 0; a tenth kind or later
+// is a click)
+function catForKey(key) {
+  if (key === '0') return 'other';
+  return /^[1-9]$/.test(key) ? thingKindNames().filter(c => c !== 'other')[Number(key) - 1] : undefined;
+}
 function askCategory() {
   triageMode = 'category';
+  const btns = $('triage-cat-row').querySelector('.btns');
+  btns.innerHTML = '';
+  const kinds = state.thingKinds.filter(k => k.name !== 'other');
+  kinds.push(state.thingKinds.find(k => k.name === 'other') || {name: 'other', description: ''});
+  kinds.forEach((k, i) => {
+    const key = k.name === 'other' ? '0' : i < 9 ? String(i + 1) : '';
+    const b = document.createElement('button');
+    b.className = 'quiet';
+    b.dataset.cat = k.name;
+    b.title = [k.description, key && `(${key})`].filter(Boolean).join(' ');
+    if (key) {
+      const s = document.createElement('span');
+      s.className = 'key';
+      s.textContent = key;
+      b.appendChild(s);
+    }
+    b.append(k.name);
+    b.onclick = () => act(b, () => retype('thing', k.name));
+    btns.appendChild(b);
+  });
   $('triage-kind-row').hidden = true;
   $('triage-cat-row').hidden = false;
 }
@@ -529,7 +554,7 @@ function keyButton(key) {
   if (triageMode === 'mixed') return ['k', 'Enter'].includes(key) ? $('triage-mixed-yes') : null;
   if (triageMode === 'never') return ['D', 'Enter'].includes(key) ? $('triage-never-yes') : null;
   if (triageMode === 'kind') return q(`#triage-kind-row [data-kind="${{1: 'person', 2: 'project', 3: 'place', 4: 'thing', 5: 'animal'}[key]}"]`);
-  if (triageMode === 'category') return q(`#triage-cat-row [data-cat="${CATEGORIES[Number(key) - 1]}"]`);
+  if (triageMode === 'category') return q(`#triage-cat-row [data-cat="${catForKey(key)}"]`);
   if (triageMode !== null) return null;
   return q(`#triage-btns [data-tkey="${key}"]`);
 }
@@ -554,13 +579,13 @@ export function init() {
 
   document.querySelectorAll('#triage-kind-row button[data-kind]').forEach(b => b.onclick = () =>
     b.dataset.kind === 'thing' ? askCategory() : act(b, () => retype(b.dataset.kind)));
-  document.querySelectorAll('#triage-cat-row button[data-cat]').forEach(b => b.onclick = () => act(b, () => retype('thing', b.dataset.cat)));
 
   document.addEventListener('keydown', e => {
     if (state.activeTab !== 'triage') return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const keys = ['m', 'c', 'r', 'a', 'p', 'k', 'd', 'D', 'x', 's', 't', 'u', 'e', 'n', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    if (triageMode === 'category') keys.push('0');  // other
     if (triageMode === 'never' || triageMode === 'mixed') keys.push('Enter', 'Escape');
     else if (['Enter', 'Escape'].includes(e.key) && triageMode !== 'kind' && triageMode !== 'category') return;
     if (!keys.includes(e.key) && !['Enter', 'Escape'].includes(e.key)) return;

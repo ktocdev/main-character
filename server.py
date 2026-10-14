@@ -195,7 +195,7 @@ class RetypeIn(BaseModel):
     name: str
     new_type: str
     new_name: str = ""
-    category: str = ""  # into a thing: music, game, show, book, event, other
+    category: str = ""  # into a thing: one of entities.thing_categories()
 
 
 class CategoryIn(BaseModel):
@@ -205,6 +205,12 @@ class CategoryIn(BaseModel):
 
 class ThingsIn(BaseModel):
     items: list[CategoryIn]
+
+
+class ThingKindIn(BaseModel):
+    name: str
+    description: str = ""
+    icon: str = ""
 
 
 class TermsIn(BaseModel):
@@ -2038,9 +2044,8 @@ def retype_entity(body: RetypeIn):
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
     if body.new_type not in entities.KINDS:
         return JSONResponse({"error": f"kind must be one of {entities.KINDS}"}, status_code=400)
-    if body.category and body.category not in entities.THING_CATEGORIES:
-        return JSONResponse({"error": f"category must be one of {entities.THING_CATEGORIES}"},
-                            status_code=400)
+    if body.category and body.category not in entities.thing_categories():
+        return _not_a_kind()
 
     before = _snapshot()
     curation = entities.load_curation()
@@ -2058,16 +2063,15 @@ def retype_entity(body: RetypeIn):
 @app.post("/api/entities/category")
 @_entity_write
 def set_category(body: CategoryIn):
-    """A thing's category (music, game, show, book, event, other)."""
+    """A thing's category: a built-in kind, one of the author's, or other."""
     index = STATE["entity_index"]
     name = companion.resolve_entity(index, body.name)
     if not name:
         return JSONResponse({"error": f"'{body.name}' not found"}, status_code=404)
     if index[name]["type"] != "thing":
         return JSONResponse({"error": "only things have a category"}, status_code=400)
-    if body.category not in entities.THING_CATEGORIES:
-        return JSONResponse({"error": f"category must be one of {entities.THING_CATEGORIES}"},
-                            status_code=400)
+    if body.category not in entities.thing_categories():
+        return _not_a_kind()
     before = _snapshot()
     curation = entities.load_curation()
     curation["category"][entities.index_key(index, name)] = body.category
@@ -2077,6 +2081,74 @@ def set_category(body: CategoryIn):
     _record_curation(f"{name} is a {body.category}", before)
     _rebuild()
     return {"ok": True, "name": name, "category": body.category}
+
+
+def _not_a_kind():
+    return JSONResponse({"error": "category must be one of "
+                         + ", ".join(entities.thing_categories())}, status_code=400)
+
+
+@app.get("/api/entities/thing-kinds")
+def thing_kinds():
+    """Every kind a thing can be, in picker order, and the icons a kind of
+    the author's own can take."""
+    custom = {k["name"]: k for k in entities.custom_thing_kinds()}
+    return {
+        "kinds": [{"name": c, "custom": c in custom,
+                   "description": custom[c]["description"] if c in custom
+                   else entities.THING_CATEGORY_NOTES.get(c, ""),
+                   "icon": custom[c]["icon"] if c in custom else ""}
+                  for c in entities.thing_categories()],
+        "icons": list(entities.THING_KIND_ICONS),
+        "max_custom": entities.MAX_THING_KINDS,
+    }
+
+
+@app.post("/api/entities/thing-kinds")
+@_entity_write
+def save_thing_kind(body: ThingKindIn):
+    """Add a kind of thing of the author's own, or change one's description
+    or icon. Extraction offers it from the next entry on; the things
+    already filed under it (if it was removed and is back) return."""
+    name = " ".join(body.name.lower().split())
+    description = " ".join(body.description.split())
+    before = _snapshot()
+    curation = entities.load_curation()
+    problem = entities.check_thing_kind(curation, name, description, body.icon)
+    if problem:
+        return JSONResponse({"error": problem}, status_code=400)
+    kind = {"name": name, "description": description, "icon": body.icon}
+    kinds = curation["thing_kinds"]
+    at = next((i for i, k in enumerate(kinds) if k["name"] == name), None)
+    if at is None:
+        kinds.append(kind)
+    else:
+        kinds[at] = kind
+    if curation == before:
+        return {"ok": True, "name": name}
+    entities.save_curation(curation)
+    _record_curation(f"{'add' if at is None else 'edit'} the kind of thing {name}", before)
+    if at is None:
+        _rebuild()  # a kind back after a removal takes its things back
+    return {"ok": True, "name": name}
+
+
+@app.post("/api/entities/thing-kinds/delete")
+@_entity_write
+def delete_thing_kind(body: NameIn):
+    """Remove a kind of the author's own. Its things show as other; each
+    one's category stays on file, so adding the kind back (or undo)
+    restores them."""
+    before = _snapshot()
+    curation = entities.load_curation()
+    kinds = [k for k in curation["thing_kinds"] if k["name"] != body.name]
+    if len(kinds) == len(curation["thing_kinds"]):
+        return JSONResponse({"error": f"'{body.name}' isn't a kind of your own"}, status_code=404)
+    curation["thing_kinds"] = kinds
+    entities.save_curation(curation)
+    _record_curation(f"remove the kind of thing {body.name}", before)
+    _rebuild()
+    return {"ok": True, "name": body.name}
 
 
 @app.post("/api/entities/suggest-things")
@@ -2094,10 +2166,10 @@ def retype_things(body: ThingsIn):
     """The things review: retype every accepted name, each with its
     category. One curation change, so one undo puts them all back."""
     index = STATE["entity_index"]
+    kinds = entities.thing_categories()
     for item in body.items:
-        if item.category not in entities.THING_CATEGORIES:
-            return JSONResponse({"error": f"category must be one of {entities.THING_CATEGORIES}"},
-                                status_code=400)
+        if item.category not in kinds:
+            return _not_a_kind()
     found = []
     for item in body.items:
         name = companion.resolve_entity(index, item.name)

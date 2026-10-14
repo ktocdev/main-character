@@ -57,6 +57,49 @@
     font: .7rem var(--font-ui); letter-spacing: .1em; text-transform: uppercase;
     color: var(--text-accent-muted); margin-right: .2rem; min-width: 3.2rem;
   }
+  /* kinds of thing: indented past the labels, every line of it */
+  #thing-kinds-wrap { position: relative; }
+  #thing-cats { padding-left: 3.7rem; }
+  #thing-cats[hidden] { display: none; }
+  #thing-kinds-btn { border-style: dashed; color: var(--text-muted); }
+  #thing-kinds-btn[aria-expanded="true"] { background: var(--bg-muted); border-color: var(--border-accent); }
+  /* your own kinds: spans the sidebar, like the clean up menu */
+  #thing-kinds-menu { top: calc(100% + .4rem); left: 0; right: 0; width: auto; padding: .4rem .6rem .6rem; }
+  #thing-kinds-menu .menu-head {
+    font: .68rem var(--font-ui); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-accent-muted); padding: .4rem 0 .1rem;
+  }
+  #thing-kinds-menu .menu-head.ruled { border-top: 1px solid var(--border-default); margin-top: .3rem; padding-top: .6rem; }
+  #thing-kinds-menu .note { margin: 0; font-size: .8rem; color: var(--text-muted); }
+  #thing-kinds-menu .note[hidden], #thing-kind-form[hidden] { display: none; }
+  #thing-kind-form { display: flex; flex-direction: column; gap: .4rem; }
+  #thing-kind-form .row { display: flex; align-items: center; gap: .6rem; }
+  #thing-kind-form button.quiet { min-height: 2rem; padding: .3rem .9rem; }
+  .kind-row { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; }
+  .kind-text { flex: 1; display: flex; flex-direction: column; min-width: 0; font-size: .88rem; }
+  .kind-text .note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* the panel's own close, top right; removing a kind is a word, not an × */
+  #thing-kinds-menu .menu-top { display: flex; align-items: center; justify-content: space-between; }
+  #thing-kinds-close {
+    border: 0; background: transparent; color: var(--text-muted); cursor: pointer;
+    font-size: 1.1rem; line-height: 1; padding: .2rem .35rem; border-radius: var(--radius-sm);
+  }
+  #thing-kinds-close:hover { color: var(--text-default); background: var(--bg-muted); }
+  .kind-row .kind-remove { color: var(--text-muted); }
+  .kind-row .kind-remove:hover, .kind-row .kind-remove.armed { color: var(--text-danger); }
+  .kind-row .kind-remove.armed { font-weight: 600; }
+  .kind-icon {
+    flex: none; width: 1rem; height: 1rem; background: currentColor;
+    mask: var(--icon) center / contain no-repeat;
+  }
+  #thing-kind-icons { display: flex; flex-wrap: wrap; gap: .25rem; }
+  .icon-pick {
+    display: grid; place-items: center; width: 1.9rem; height: 1.9rem; padding: 0;
+    border: 1px solid var(--border-default); border-radius: var(--radius-base);
+    background: transparent; color: var(--text-muted); cursor: pointer;
+  }
+  .icon-pick:hover { border-color: var(--border-accent); color: var(--text-default); }
+  .icon-pick[aria-checked="true"] { border-color: var(--border-accent); background: var(--bg-muted); color: var(--text-accent); }
   /* the sidebar's toggles are squared off, not pills */
   #entity-list .chip-toggle { border-radius: var(--radius-base); }
   #entity-list .chip-toggle:hover { border-color: var(--border-accent); }

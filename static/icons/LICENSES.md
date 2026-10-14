@@ -11,7 +11,7 @@ in the text colour. The design system's icons page
 |---|---|---|---|
 | [TDesign Icons](https://github.com/Tencent/tdesign-icons) | everything not listed below | MIT | Copyright (c) 2021-present TDesign |
 | [Phosphor](https://github.com/phosphor-icons/core) | `alien`, `peace-bold` | MIT | Copyright (c) 2023 Phosphor Icons |
-| [Boxicons](https://github.com/box-icons/boxicons) | `category` (v2), `hand`, `rocket` (current) | MIT | Copyright (c) 2026 Boxicons |
+| [Boxicons](https://github.com/box-icons/boxicons) | `category` (v2), `hand`, `rocket`, `pizza` (current) | MIT | Copyright (c) 2026 Boxicons |
 | [Bootstrap Icons](https://github.com/twbs/icons) | `bookmark-heart` | MIT | Copyright (c) 2019-2024 The Bootstrap Authors |
 | [Entypo+](https://github.com/chancancode/entypo-plus) | `caret-right` | CC BY-SA 4.0 | Copyright (c) Daniel Bruce |
 

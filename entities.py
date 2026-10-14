@@ -64,8 +64,67 @@ ATTR_FIELD = {kind: field for _, kind, field in KIND_FIELDS}
 # never a part or a parent: a cat isn't part of a home, and grouping people
 # or animals is what groups are for
 NO_PARTS = {"person", "animal"}
-# a thing's subgrouping, as a place has a type and a project a status
-THING_CATEGORIES = ("music", "game", "show", "book", "event", "other")
+# a thing's subgrouping, as a place has a type and a project a status.
+# These are built in; the author can add kinds of their own (curation's
+# "thing_kinds"), which sit between these and "other".
+THING_CATEGORIES = ("music", "podcast", "game", "show", "movie", "book", "event", "other")
+# what each built-in covers, as the extraction prompt and things review say it
+THING_CATEGORY_NOTES = {
+    "music": "bands, artists and albums", "podcast": "podcasts", "game": "games",
+    "show": "TV shows and series", "movie": "films", "book": "books",
+    "event": "recurring events like a yearly festival",
+}
+MAX_THING_KINDS = 6  # custom ones; past a dozen or so, kinds blur and get mis-filed
+# icons a custom kind can pick (static/icons/; card.js draws them)
+THING_KIND_ICONS = ("bookmark-heart", "music", "guitar", "microphone", "gamepad", "tv",
+                    "movie-clapper", "book-open", "ticket", "pizza", "ice-cream", "cake",
+                    "robot", "palette", "rocket", "star", "heart")
+_THING_KIND_NAME = re.compile(r"[a-z0-9][a-z0-9 &'-]{0,23}")
+
+
+def custom_thing_kinds(curation: dict | None = None) -> list[dict]:
+    """The author's own kinds of thing: [{name, description, icon}]."""
+    return (curation or load_curation())["thing_kinds"]
+
+
+def thing_categories(curation: dict | None = None) -> tuple:
+    """Every kind a thing can be: the built-ins, the author's own, then
+    "other" last, as extraction's enum and every picker list them."""
+    return (THING_CATEGORIES[:-1] + tuple(k["name"] for k in custom_thing_kinds(curation))
+            + ("other",))
+
+
+def check_thing_kind(curation: dict, name: str, description: str, icon: str) -> str:
+    """Why this custom kind can't be added as it stands, or "" when it can.
+    Editing one already there (same name) is allowed."""
+    if not _THING_KIND_NAME.fullmatch(name):
+        return "a kind's name is 1 to 24 lowercase letters, digits, spaces, & ' or -"
+    if name in THING_CATEGORIES:
+        return f"{name} is already built in"
+    existing = {k["name"] for k in curation["thing_kinds"]}
+    if name not in existing and len(existing) >= MAX_THING_KINDS:
+        return f"at most {MAX_THING_KINDS} kinds of your own; remove one first"
+    if len(description) > 200:
+        return "keep the description under 200 characters"
+    if icon and icon not in THING_KIND_ICONS:
+        return f"unknown icon: {icon}"
+    return ""
+
+
+def thing_kinds_text(curation: dict | None = None) -> str:
+    """'music (bands, artists and albums), ...': every kind with what it
+    covers, for the extraction prompt and things review."""
+    parts = [f"{c} ({THING_CATEGORY_NOTES[c]})" for c in THING_CATEGORIES[:-1]]
+    parts += [f"{k['name']} ({k['description']})" if k["description"] else k["name"]
+              for k in custom_thing_kinds(curation)]
+    return ", ".join(parts)
+
+
+def with_thing_enum(schema: dict, group: str, categories: tuple) -> dict:
+    """A copy of a json schema whose `group` items take these categories."""
+    out = json.loads(json.dumps(schema))
+    out["properties"][group]["items"]["properties"]["category"]["enum"] = list(categories)
+    return out
 
 EXTRACTION_SCHEMA = {
     "type": "object",
@@ -190,13 +249,12 @@ project, an app, a class, a creative piece, a hobby they practice like \
 guitar or karaoke). One-off tasks don't count. Skip generic labels like \
 "work project" or "the design system" unless the author means one \
 particular project.
-- Things are what the author enjoys or follows: bands, artists and albums \
-(music), games (game), TV shows and films (show), books (book), and \
-recurring events like a yearly festival (event); anything else is other. \
-Track a thing the author plays, watches, reads, listens to or attends, \
-even once. A one-off event is not a thing: seeing a band play belongs to \
-the entry, the band is the thing, and a specific venue is a place.
-- Animals are pets and other animals the author knows (their cat, a \
+- Things are what the author enjoys or follows. Give each a category: \
+{thing_kinds}; anything else is other. Track a thing the author plays, \
+watches, reads, listens to or attends, even once. A one-off event is not \
+a thing: seeing a band play belongs to the entry, the band is the thing, \
+and a specific venue is a place.
+{custom_kinds_block}- Animals are pets and other animals the author knows (their cat, a \
 friend's dog), never people. Use the animal's name when it has one, \
 otherwise whose it is ("Mom's dog"). Skip an animal that only passes by \
 ("a dog barked").
@@ -213,6 +271,14 @@ gym") unless the author clearly treats it as one particular recurring place.
 KNOWN_BLOCK = """\
 - These people are already known from earlier entries — when a mention \
 matches one of them, use exactly this spelling: {names}.
+"""
+
+# Only when the author has added kinds of thing of their own ("songs").
+CUSTOM_KINDS_BLOCK = """\
+- The author added these categories themselves: {names}. File what fits \
+one of them as a thing under it, as that category's description says, \
+even when it isn't something they enjoy or follow (a song they're \
+learning, a tool they use).
 """
 
 KNOWN_ANIMALS_BLOCK = """\
@@ -363,17 +429,23 @@ def extract_conversation(client, conv: dict, known_people: list[str] | None = No
       + (GROUPS_BLOCK.format(groups=groups) if groups else "") \
       + (VARIANTS_BLOCK.format(variants=variants) if variants else "") \
       + (RETIRED_BLOCK.format(retired=retired) if retired else "")
+    curation = load_curation()
+    custom = custom_thing_kinds(curation)
+    schema = with_thing_enum(EXTRACTION_SCHEMA, "things", thing_categories(curation))
     combined = {group: [] for group, _, _ in KIND_FIELDS}
     for segment in _segments(conv["text"]):
         prompt = EXTRACTION_PROMPT.format(
             author=AUTHOR, date=conv["date"], title=conv["title"],
             text=segment, known_block=known_block,
+            thing_kinds=thing_kinds_text(curation),
+            custom_kinds_block=CUSTOM_KINDS_BLOCK.format(
+                names=", ".join(k["name"] for k in custom)) if custom else "",
         )
         response = client.messages.create(
             model=MODEL,
             max_tokens=16000,
             **processing_thinking_kwargs(),
-            output_config={"format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}},
+            output_config={"format": {"type": "json_schema", "schema": schema}},
             messages=[{"role": "user", "content": prompt}],
         )
         if response.stop_reason == "refusal":
@@ -451,6 +523,11 @@ def run_extraction(force: bool = False, quiet: bool = False) -> list[dict]:
 #                   retired person after all
 #   "category":     {key: category}  a thing's category (music, game, ...),
 #                   overriding extraction's; set when retyping into a thing
+#   "thing_kinds":  [{name, description, icon}]  kinds of thing the author
+#                   added ("songs"). Extraction and every picker offer them;
+#                   removing one sends its things to "other" at the next
+#                   build, and adding it back brings them home (nothing
+#                   above is rewritten)
 #   "not_mixed":    [keys]   checked and found to be one person: the mix-up
 #                   flag stays off for good
 #   "part_of":      {key: "kind:Parent"}  its own entity, shown as
@@ -484,6 +561,7 @@ _CURATION_DEFAULTS = {
     "part_of": {},         # part key -> "kind:Parent" (Tabs -> Coda)
     "hide_path": [],       # part keys shown by their own name, not Parent / Name
     "variants": {},        # person key -> qualifiers, for a name split in two
+    "thing_kinds": [],     # the author's own kinds of thing: {name, description, icon}
 }
 
 
@@ -1219,11 +1297,15 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
     attr_labels = {"person": "relationship", "project": "status", "place": "type",
                    "thing": "category", "animal": "relationship"}
     # a thing's category: the curated one, else what extraction said, else
-    # "other" (one retyped in from another kind has none of its own)
+    # "other" (one retyped in from another kind has none of its own). Either
+    # counts only while it's a kind the journal has: a removed custom kind
+    # falls through, and comes back if the kind is added again.
     categories = {k.lower(): v for k, v in curation["category"].items()}
+    known = set(thing_categories(curation))
     for (kind, lname), ent in merged.items():
         if kind == "thing":
-            ent["attr"] = categories.get(f"thing:{lname}") or ent["attr"] or "other"
+            ent["attr"] = next((c for c in (categories.get(f"thing:{lname}"), ent["attr"])
+                                if c in known), "other")
     index = {}
     closed = {}  # retired, unsplit people -> the date their profile closes after
     retired_keys = {r.lower() for r in curation["retired"]}
@@ -2076,9 +2158,8 @@ about each. They were filed before the journal had a fourth kind, "thing".
 
 A project is something the author makes or works on (an app, a class, a \
 creative piece, a hobby they practice, like guitar or karaoke). A thing is \
-something the author enjoys or follows: music (bands, artists, albums), \
-game, show (TV, film), book, event (recurring only, like a yearly \
-festival), or other. A place is a physical location.
+something the author enjoys or follows, in one of these categories: \
+{thing_kinds}, or other. A place is a physical location.
 
 List the entries that are really things, with a category and one short \
 reason. Leave out anything the author makes, practices or works on, and \
@@ -2106,14 +2187,17 @@ def suggest_things() -> list[dict]:
         listing.append({"name": name, "kind": info["type"], "mentions": info["mentions"],
                         "said": said[:160]})
 
+    curation = load_curation()
     client = get_client()
     response = client.messages.create(
         model=MODEL,
         max_tokens=8000,
         **processing_thinking_kwargs(),
-        output_config={"format": {"type": "json_schema", "schema": THINGS_SCHEMA}},
+        output_config={"format": {"type": "json_schema", "schema": with_thing_enum(
+            THINGS_SCHEMA, "things", thing_categories(curation))}},
         messages=[{"role": "user", "content": THINGS_PROMPT.format(
-            listing=json.dumps(listing, ensure_ascii=False))}],
+            listing=json.dumps(listing, ensure_ascii=False),
+            thing_kinds=thing_kinds_text(curation))}],
     )
     out, seen = [], set()
     for s in _json_reply(response).get("things", []):

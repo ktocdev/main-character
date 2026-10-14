@@ -1,0 +1,21 @@
+{
+  "key": "entities.extract_conversation",
+  "text": "{\"people\":[{\"name\":\"Marcus\",\"relationship\":\"coworker\",\"qualifier\":\"\",\"observations\":[\"The stakeholder management section of the Meridian deck is really about designing around him without saying so\"]},{\"name\":\"Ana\",\"relationship\":\"coworker\",\"qualifier\":\"\",\"observations\":[\"Already knows the honest version of the Meridian story from the screen\"]},{\"name\":\"Dev\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Jordan and Dev were at the Thai place with a napkin, a moment Jordan revisited while reviewing entries for the Coda case study\"]},{\"name\":\"Lena\",\"relationship\":\"friend\",\"qualifier\":\"\",\"observations\":[\"Texted asking if Jordan needs anything for the 24th\",\"Replied to Jordan's 'I'm good' with a single thumbs up and no follow-up questions\"]},{\"name\":\"Priya\",\"relationship\":\"coworker\",\"qualifier\":\"\",\"observations\":[\"Sent a calendar invite for an 'intro chat' on Monday 9/21, 30 minutes\",\"Jordan worries about getting an offer before having a real conversation with her\"]}],\"projects\":[{\"name\":\"Coda\",\"domain\":\"creative\",\"status\":\"active\",\"observations\":[\"Jordan spent two hours going back through journal entries to find the narrative thread for the deck\",\"Entries revisited: July 28th first night at Groundwork, August 4th building the timer after the crash, the nine days of missing the blind spot\",\"Features include practice log, metronome, and free play\",\"Rewrote the Coda case study for the deck: the 9th version was defensive, the deck version is 'I missed this and here's what I learned'\",\"Story shifted from features to the blind spot: using something every day and having someone else see it clearly in forty minutes\"]},{\"name\":\"Meridian\",\"domain\":\"work\",\"status\":\"unknown\",\"observations\":[\"The Meridian section of the portfolio deck wrote itself\",\"Includes dashboard metrics, before and after user flow, and a stakeholder management section\"]},{\"name\":\"Portfolio presentation\",\"domain\":\"work\",\"status\":\"active\",\"observations\":[\"Started building it on 9/17 for the 24th\",\"Includes four interviews plus a presentation to the full design team, one week out\"]},{\"name\":\"Journal\",\"domain\":\"personal\",\"status\":\"active\",\"observations\":[\"Re-reading entries changed Jordan's understanding of the story behind their work\",\"Jordan realizes the journal has been functioning as an accidental design log, holding the thread of their process\",\"Jordan wouldn't say 'I keep a reflective journal' in a job interview but finds it true\"]}],\"places\":[{\"name\":\"Groundwork\",\"kind\":\"venue\",\"observations\":[\"July 28th was Jordan's first night there, revisited while tracing the Coda story\"]},{\"name\":\"Thai place\",\"kind\":\"restaurant\",\"observations\":[\"Site of the napkin moment with Dev, revisited while building the Coda deck\"]},{\"name\":\"Northlight\",\"kind\":\"workplace\",\"observations\":[\"Onsite interview is three days after the Monday 9/21 intro chat with Priya\"]}],\"things\":[],\"animals\":[{\"name\":\"Pepper\",\"relationship\":\"pet\",\"observations\":[\"Asleep on the green rug again, same spot, same curl\"]}]}",
+  "model": "claude-sonnet-5-5",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "inference_geo": "global",
+    "input_tokens": 3103,
+    "output_tokens": 1046,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": null,
+    "service_tier": "standard"
+  }
+}

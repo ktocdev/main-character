@@ -41,11 +41,18 @@ const GROUPS = [
   ]],
   ['Thing categories', 'Things you enjoy or follow, as opposed to projects you make (the thing kind in the entity plan).', [
     {key: 'music', icon: 'music', note: 'Bands, artists, albums.'},
+    {key: 'podcast', icon: 'microphone'},
     {key: 'game', icon: 'gamepad', note: 'Cities Skylines, Tomb Raider.'},
-    {key: 'show', icon: 'tv', note: 'TV and film: 90 Day Fiance.'},
+    {key: 'show', icon: 'tv', note: 'TV shows and series: 90 Day Fiance.'},
+    {key: 'movie', icon: 'movie-clapper', note: 'Films.'},
     {key: 'book', icon: 'book-open'},
     {key: 'event', icon: 'ticket', note: 'Recurring: Rib Fest, Squared Off Fest.'},
     {key: 'other', icon: 'bookmark-heart', note: 'Shares the thing icon.'},
+  ]],
+  ['Your own kinds of thing', 'Icons only the “+ kind” picker offers, for a kind of thing the author adds (entities.THING_KIND_ICONS, which also offers the thing icons above and a few others). The author picks; card.js has no fixed row for these.', [
+    {key: 'guitar', icon: 'guitar', pick: true, note: 'Songs you’re learning.'},
+    {key: 'pizza', icon: 'pizza', pick: true, note: 'Food. Boxicons pizza-alt.'},
+    {key: 'robot', icon: 'robot', pick: true, note: 'AI tools.'},
   ]],
 ];
 // the card type each group's rows feed: the type itself, or its subtypes
@@ -56,7 +63,7 @@ const GROUP_TYPE = [null, 'category', 'dream', 'thing'];
 // the notices are in static/icons/LICENSES.md).
 const SOURCE = {
   alien: 'Phosphor', 'peace-bold': 'Phosphor',
-  hand: 'Boxicons', rocket: 'Boxicons', category: 'Boxicons', 'bookmark-heart': 'Bootstrap',
+  hand: 'Boxicons', rocket: 'Boxicons', pizza: 'Boxicons', category: 'Boxicons', 'bookmark-heart': 'Bootstrap',
   'caret-right': 'Entypo+ (CC BY-SA 4.0)',
 };
 
@@ -127,7 +134,7 @@ for (const [gi, [title, blurb, rows]] of GROUPS.entries()) {
     if (r.note) name.append(el('span', 'why', r.note));
     const file = el('div', 'file mono', r.initials ? 'text' : r.icon);
     // card.js is the source of truth; flag a row that has drifted from it
-    const drawn = r.initials ? null : iconFile(GROUP_TYPE[gi] ?? r.key, r.key, 'outline')?.split('/').pop().replace(/\.svg$/, '');
+    const drawn = r.initials || r.pick ? r.icon : iconFile(GROUP_TYPE[gi] ?? r.key, r.key, 'outline')?.split('/').pop().replace(/\.svg$/, '');
     if (!r.initials && drawn !== r.icon) file.append(el('span', 'why drift', `card.js draws ${drawn ?? 'nothing'}`));
     row.append(name, tile(r.icon, 'filled', r.initials), tile(r.icon, 'outline', r.initials), file);
     group.appendChild(row);

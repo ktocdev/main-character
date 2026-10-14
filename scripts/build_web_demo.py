@@ -50,7 +50,8 @@ DATA_DIRS = {
 # Reads with no parameters. The parameterized ones are found by walking these.
 FIXED_READS = [
     "status", "sessions/current", "sessions", "seed", "entities",
-    "entities/duplicates", "entities/deleted", "entities/generic", "groups",
+    "entities/duplicates", "entities/deleted", "entities/generic",
+    "entities/thing-kinds", "groups",
     "history", "categories", "organic", "summaries/arcs",
     "patterns", "dreams", "cost", "settings",
 ]

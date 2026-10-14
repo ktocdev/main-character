@@ -303,14 +303,8 @@
         </div>
         <div id="triage-cat-row" hidden>
           <span class="lbl">which kind of thing</span>
-          <span class="btns">
-            <button class="quiet" data-cat="music" title="bands, artists, albums (1)"><span class="key">1</span>music</button>
-            <button class="quiet" data-cat="game" title="(2)"><span class="key">2</span>game</button>
-            <button class="quiet" data-cat="show" title="TV and film (3)"><span class="key">3</span>show</button>
-            <button class="quiet" data-cat="book" title="(4)"><span class="key">4</span>book</button>
-            <button class="quiet" data-cat="event" title="a recurring event, like a yearly festival (5)"><span class="key">5</span>event</button>
-            <button class="quiet" data-cat="other" title="(6)"><span class="key">6</span>other</button>
-          </span>
+          <!-- one button per kind of thing, built when asked (triage.js askCategory) -->
+          <span class="btns"></span>
           <button class="text" id="triage-cat-cancel">cancel <span class="hint">esc</span></button>
         </div>
         <div id="triage-mixed-row" hidden>
@@ -673,8 +667,33 @@
             <button class="chip-toggle" data-type="person" aria-pressed="false" title="show only people; pick several to combine">people</button>
             <button class="chip-toggle" data-type="project" aria-pressed="false" title="show only projects; pick several to combine">projects</button>
             <button class="chip-toggle" data-type="place" aria-pressed="false" title="show only places; pick several to combine">places</button>
-            <button class="chip-toggle" data-type="thing" aria-pressed="false" title="show only things: bands, games, shows, books, events; pick several to combine">things</button>
+            <button class="chip-toggle" data-type="thing" aria-pressed="false" title="show only things: bands, games, shows, books, events; pick several to combine, then a kind below to narrow">things</button>
             <button class="chip-toggle" data-type="animal" aria-pressed="false" title="show only animals: pets, and other people's; pick several to combine">animals</button>
+          </div>
+          <!-- with things on, narrow them to some kinds; none picked is all of them.
+               "+ kind" at its end opens the kinds of your own -->
+          <div id="thing-kinds-wrap">
+            <div id="thing-cats" class="side-row" hidden></div>
+            <div class="popover" id="thing-kinds-menu" hidden>
+              <div class="menu-top">
+                <div class="menu-head">your kinds of thing</div>
+                <button class="x" id="thing-kinds-close" aria-label="close" title="close">×</button>
+              </div>
+              <p class="note" id="thing-kinds-none">None yet. Add one for what the built-in kinds don't cover, like songs you're learning or food you love.</p>
+              <div id="thing-kinds-list"></div>
+              <p class="note" id="thing-kinds-full" hidden>That's the most you can have. Remove one to add another.</p>
+              <div id="thing-kind-form">
+                <div class="menu-head ruled" id="thing-kind-head">add a kind</div>
+                <input type="text" id="thing-kind-name" class="input-2xs" maxlength="24" placeholder="name, like songs" autocomplete="off" aria-label="name of the kind">
+                <input type="text" id="thing-kind-desc" class="input-2xs" maxlength="200" placeholder="what it covers, like songs I'm learning to play" autocomplete="off" aria-label="what the kind covers">
+                <div id="thing-kind-icons" role="radiogroup" aria-label="icon"></div>
+                <div class="row">
+                  <button class="quiet sm" id="thing-kind-save">add</button>
+                  <button class="text" id="thing-kind-cancel" hidden>cancel</button>
+                </div>
+                <p class="note">Claude reads the description when it sorts new entries, so say what belongs.</p>
+              </div>
+            </div>
           </div>
           <div class="side-row">
             <span class="side-lbl">sort</span>
@@ -755,14 +774,8 @@
                 <option value="thing">thing</option>
                 <option value="animal">animal</option>
               </select>
-              <select id="thing-category" class="quiet-select" title="which kind of thing" hidden>
-                <option value="music">music</option>
-                <option value="game">game</option>
-                <option value="show">show</option>
-                <option value="book">book</option>
-                <option value="event">event</option>
-                <option value="other">other</option>
-              </select>
+              <!-- filled from the journal's kinds of thing (entities.js fillKindSelect) -->
+              <select id="thing-category" class="quiet-select" title="which kind of thing" hidden></select>
               <button class="quiet danger" id="delete-btn" title="delete the mentions it has now. The name stays free, so a new entry can bring it back. Undo restores them">delete</button>
               <button class="quiet" id="retire-btn" title="a past chapter: out of the list and triage, and the companion only brings them up when you do. Nothing is deleted">retire</button>
               <button class="quiet danger" id="never-btn" title="for generic terms and junk: ignore this name in every entry, now and future">never track</button>
