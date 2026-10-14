@@ -6,6 +6,7 @@ rem
 rem   journal install         create .venv, install the lock file, make .env
 rem   journal start           run the journal on http://127.0.0.1:8144
 rem   journal restart         restart the running journal, as Settings' button does
+rem   journal stop            stop the running journal and free its port
 rem   journal sandbox-reset   stop the 8145 sandbox and relaunch it from a clean first run
 rem   journal sandbox         relaunch the 8145 sandbox, keeping what the last run left
 rem
@@ -19,6 +20,7 @@ set "SANDBOX=.claude\skills\sandbox-reset"
 if /i "%~1"=="install"       goto install
 if /i "%~1"=="start"         goto start
 if /i "%~1"=="restart"       goto restart
+if /i "%~1"=="stop"          goto stop
 if /i "%~1"=="sandbox-reset" goto sandbox_reset
 if /i "%~1"=="sandbox"       goto sandbox
 goto usage
@@ -69,6 +71,11 @@ if not exist "%VENV_PY%" (echo not installed yet -- run: .\journal install & exi
 "%VENV_PY%" scripts\restart_journal.py
 exit /b %errorlevel%
 
+:stop
+if not exist "%VENV_PY%" (echo not installed yet -- run: .\journal install & exit /b 1)
+"%VENV_PY%" scripts\stop_journal.py
+exit /b %errorlevel%
+
 :sandbox_reset
 powershell -NoProfile -File "%SANDBOX%\stop-sandbox.ps1" || exit /b 1
 powershell -NoProfile -File "%SANDBOX%\run-sandbox.ps1"
@@ -84,6 +91,7 @@ echo.
 echo   install         create .venv, install dependencies, make .env
 echo   start           run the journal on http://127.0.0.1:8144
 echo   restart         restart the running journal, as Settings' button does
+echo   stop            stop the running journal and free its port
 echo   sandbox-reset   stop the 8145 sandbox and relaunch it from a clean first run
 echo   sandbox         relaunch the 8145 sandbox, keeping the last run's state
 exit /b 1

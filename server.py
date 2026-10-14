@@ -1700,15 +1700,9 @@ def restart_server(body: RestartIn | None = None):
                       "build it (no API key needed), then try again."},
             status_code=409)
 
-    with _BUSY_LOCK:
-        busy = _BUSY["count"]
-    if busy:
-        return JSONResponse(
-            {"error": "something is still running -- a companion reply "
-                      "still arriving, or the memory pipeline's tagging, "
-                      "summaries and seed work. Restarting now would throw "
-                      "away work already paid for. Try again in a moment."},
-            status_code=409)
+    refused = _refuse_while_busy("Restarting")
+    if refused:
+        return refused
 
     srv = SERVER["instance"]
     if srv is None:
@@ -1743,6 +1737,42 @@ def restart_server(body: RestartIn | None = None):
     RESTART["into"] = into
     srv.should_exit = True      # uvicorn drains, run() returns, __main__ execs
     return {"ok": True, "restarting": True, "into": into}
+
+
+def _refuse_while_busy(doing: str):
+    """The 409 for /api/restart and /api/shutdown while paid-for work runs,
+    or None when nothing is running. `doing` starts the sentence."""
+    with _BUSY_LOCK:
+        busy = _BUSY["count"]
+    if not busy:
+        return None
+    return JSONResponse(
+        {"error": "something is still running -- a companion reply "
+                  "still arriving, or the memory pipeline's tagging, "
+                  f"summaries and seed work. {doing} now would throw "
+                  "away work already paid for. Try again in a moment."},
+        status_code=409)
+
+
+@app.post("/api/shutdown")
+def shutdown_server():
+    """Stop the journal and free its port, for `journal stop`. The same guard
+    as /api/restart, for the same reason: Ctrl+C or killing the process
+    throws away a reply or a pipeline run already paid for."""
+    refused = _refuse_while_busy("Stopping")
+    if refused:
+        return refused
+
+    srv = SERVER["instance"]
+    if srv is None:
+        return JSONResponse(
+            {"error": "this server cannot stop itself -- stop it the way you "
+                      "started it"},
+            status_code=501)
+
+    # RESTART["requested"] stays False, so __main__ exits once run() returns.
+    srv.should_exit = True
+    return {"ok": True, "stopping": True}
 
 # Where a journal keeps its data, when something other than the defaults put
 # it there -- the sandbox launcher sets all eight. These are the author's own
@@ -3428,7 +3458,37 @@ def free_names(body: KeysIn):
     return {"ok": True, "freed": keys}
 
 
+def _port_free() -> bool:
+    """Whether this server's own bind would succeed right now."""
+    probe = socket.socket()
+    # Exactly the options the real bind will use, or this probe answers a
+    # different question than the one asked. uvicorn sets SO_REUSEADDR on
+    # POSIX (so a socket in TIME_WAIT is no obstacle) and not on Windows --
+    # where SO_REUSEADDR means "bind even though someone is still listening",
+    # which would make the probe succeed with the port taken.
+    if os.name != "nt":
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        probe.bind((HOST, PORT))
+        return True
+    except OSError:
+        return False
+    finally:
+        probe.close()
+
+
 if __name__ == "__main__":
+    if not _port_free():
+        # uvicorn's own message for this is a WinError number. The usual cause
+        # is a journal still running from a terminal that was closed, and
+        # the author needs the way to stop it, not the errno.
+        stop = r".\journal stop" if os.name == "nt" else "./journal stop"
+        print(f"\n  port {PORT} is already in use, so this journal cannot start.\n"
+              f"  It is probably another journal, perhaps one whose terminal was closed.\n"
+              f"  To use that one, open http://{HOST}:{PORT}\n"
+              f"  To stop it, run:  {stop}\n"
+              f"  then start this one again.\n")
+        sys.exit(1)
     print(f"\n  RAG Journal -> http://{HOST}:{PORT}\n")
     # uvicorn.run() builds this itself and keeps it private; building it
     # here is what gives /api/restart something to set should_exit on.
@@ -3445,22 +3505,9 @@ if __name__ == "__main__":
         # by the time the replacement tries to bind. Wait for it rather than
         # hand the author a dead port and a stack trace.
         for _ in range(50):
-            probe = socket.socket()
-            # Exactly the options the replacement's own bind will use, or
-            # this probe answers a different question than the one asked.
-            # uvicorn sets SO_REUSEADDR on POSIX (so a socket in TIME_WAIT is
-            # no obstacle) and not on Windows -- where SO_REUSEADDR means
-            # "bind even though someone is still listening", which would make
-            # this loop succeed on the first try and wait for nothing.
-            if os.name != "nt":
-                probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            try:
-                probe.bind((HOST, PORT))
-                probe.close()
+            if _port_free():
                 break
-            except OSError:
-                probe.close()
-                time.sleep(0.1)
+            time.sleep(0.1)
 
         # NOT os.execve: Windows has no real exec, and the emulation segfaults
         # coming out of uvicorn's asyncio shutdown. Spawning a fresh process

@@ -28,14 +28,15 @@ This creates `.venv`, installs from the lock file and copies `.env.example` to `
 
 **Python 3.12, 3.13 or 3.14.** Python 3.15 is not supported yet: onnxruntime, which runs the local embedding models, has not published a build for it, so the install fails. Python is installed once per machine, not once per copy of the journal. Each copy gets its own `.venv`, built from that one install, and install picks the newest supported Python it finds.
 
-If you need to install Python, the download on [python.org](https://www.python.org/downloads/) may give you 3.15. On Windows, python.org's download is the Python install manager, and it installs the newest Python by default. Add 3.14 next to it, then run install:
+On Windows, install Python with:
 
 ```powershell
 py install 3.14
-.\journal install
 ```
 
-On macOS or Linux, choose a 3.14 release from the list under *Looking for a specific release?* on python.org, or install `python3.14` from your package manager.
+If `py` is not recognized, install the *Python Install Manager* from the Microsoft Store or [python.org](https://www.python.org/downloads/) first. A newer Python you already have can stay. Install picks 3.14 over it.
+
+On macOS or Linux, install `python3.14` from your package manager, or choose a 3.14 release under *Looking for a specific release?* on [python.org](https://www.python.org/downloads/).
 
 If install says it cannot find a supported Python even though you have one, for example one installed with uv, create the venv yourself and run install again:
 
@@ -56,9 +57,9 @@ The journal opens at **http://127.0.0.1:8144**. The first time, a setup screen a
 
 You can still put the key in `.env` yourself before starting (uncomment `ANTHROPIC_API_KEY` and paste it), and change it later under Settings.
 
-Stop it with `Ctrl+C`. After pulling a new version, run `./journal restart` (Windows: `.\journal restart`) so the running journal picks it up.
+Stop it with `./journal stop` (Windows: `.\journal stop`), from any terminal. After pulling a new version, run `./journal restart` (Windows: `.\journal restart`) so the running journal picks it up.
 
-To restart, use `journal restart` instead of `Ctrl+C` and starting again. `Ctrl+C` stops the journal at once, even while a companion reply or the background work that follows an entry is still running, and that work is lost after you have already paid for it. `journal restart` refuses until nothing is running, so you can try again a moment later without losing it.
+Use these instead of `Ctrl+C`. `Ctrl+C` stops the journal at once, even while a companion reply or the background work that follows an entry is still running, and that work is lost after you have already paid for it. `journal stop` and `journal restart` refuse until nothing is running, so you can try again a moment later without losing it. `journal stop` also stops a journal that kept running after its terminal was closed. If `journal start` says its port is already in use, that is usually the cause.
 
 ## Try it without a key
 
