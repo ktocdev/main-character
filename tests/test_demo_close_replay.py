@@ -3,12 +3,19 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
 import mock_client
 
 ROOT = Path(__file__).resolve().parent.parent
+DATA_DIRS = {
+    "JOURNAL": "journal_entries", "CHROMA": "chroma_data",
+    "ENTITY": "entity_graph", "SUMMARY": "summaries",
+    "CATEGORY": "categories", "PATTERN": "patterns",
+    "DREAM": "dreams", "SESSION": "sessions",
+}
 
 
 def test_recording_identity_ignores_only_domain_wall_clock():
@@ -22,22 +29,15 @@ def test_recording_identity_ignores_only_domain_wall_clock():
     assert fingerprint("summarizer.build_domains", first) != fingerprint("summarizer.build_domains", changed)
 
 
-def test_demo_close_matches_real_capture_without_api_calls(tmp_path):
+def test_demo_close_matches_real_capture_without_api_calls(installed, tmp_path):
     env = os.environ.copy()
     env.update(MC_MOCK="1", MC_AUTHOR_NAME="Jordan", ANTHROPIC_API_KEY="",
                MC_DISABLED_CATEGORIES="",
                MC_SPEND_FILE=str(tmp_path / "spend.json"))
-    for key, directory in {
-        "JOURNAL": "journal_entries", "CHROMA": "chroma_data",
-        "ENTITY": "entity_graph", "SUMMARY": "summaries",
-        "CATEGORY": "categories", "PATTERN": "patterns",
-        "DREAM": "dreams", "SESSION": "sessions",
-    }.items():
+    for key, directory in DATA_DIRS.items():
         env[f"MC_{key}_DIR"] = str(tmp_path / directory)
-    install = subprocess.run(
-        [sys.executable, str(ROOT / "seed_corpus/import_seed_corpus.py")],
-        cwd=ROOT, env=env, capture_output=True, text=True, timeout=180)
-    assert install.returncode == 0, install.stdout + install.stderr
+    # the suite's one install, copied: the close writes into it
+    shutil.copytree(installed.root, tmp_path, dirs_exist_ok=True)
     verify = subprocess.run([sys.executable, str(ROOT / "tests/verify_demo_close.py"), str(tmp_path)],
                             cwd=ROOT, env=env, capture_output=True, text=True, timeout=180)
     assert verify.returncode == 0, verify.stdout + verify.stderr
