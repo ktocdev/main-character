@@ -78,8 +78,10 @@ elif [ -n "$TARGET" ]; then
     mapfile -d '' -t FILES < <(find "$TARGET" -type f -print0)
     echo "leak check: ${#FILES[@]} file(s) under $TARGET"
     # build output publishes static/icons/ as icons/, under DIR: the same
-    # notices, so the same exemption
-    NAME_EXEMPT="$NAME_EXEMPT|^${TARGET%/}/icons/LICENSES\.md\$"
+    # notices, so the same exemption. The path is escaped: a `.` or `+` in
+    # it would otherwise widen what the exemption matches
+    target_re="$(printf '%s' "${TARGET%/}" | sed 's/[][\\.*^$()+?{}|]/\\&/g')"
+    NAME_EXEMPT="$NAME_EXEMPT|^${target_re}/icons/LICENSES\.md\$"
 else
     mapfile -d '' -t FILES < <(git ls-files -z | grep -zv "^${SELF}\$")
     echo "leak check: ${#FILES[@]} tracked file(s)"
