@@ -24,18 +24,27 @@ cd main-character
 ./journal install                            # Windows: .\journal install
 ```
 
-This creates `.venv`, installs from the lock file and copies `.env.example` to `.env`. It is safe to run again. Python 3.12 or newer. The install is large and slow because it pulls in ChromaDB's full dependency tree, including onnxruntime and tokenizers, plus fastembed, so that embeddings run on your machine instead of over the network. Install from the lock file. `requirements.txt` lists the same dependencies unpinned, for reference only.
+This creates `.venv`, installs from the lock file and copies `.env.example` to `.env`. It is safe to run again. The install is large and slow because it pulls in ChromaDB's full dependency tree, including onnxruntime and tokenizers, plus fastembed, so that embeddings run on your machine instead of over the network. Install from the lock file. `requirements.txt` lists the same dependencies unpinned, for reference only.
 
-Python is installed once per machine, not once per copy of the journal. Each copy gets its own `.venv`, built from that one install. If you do not have Python 3.12 or newer, get it from [python.org](https://www.python.org/downloads/) and tick *Add python.exe to PATH* in the installer.
+**Python 3.12, 3.13 or 3.14.** Python 3.15 is not supported yet: onnxruntime, which runs the local embedding models, has not published a build for it, so the install fails. Python is installed once per machine, not once per copy of the journal. Each copy gets its own `.venv`, built from that one install, and install picks the newest supported Python it finds.
 
-On Windows, if install says *Python was not found* even though Python is installed, the `python` command is reaching a Microsoft Store placeholder instead of your Python. This happens when Python came from uv, or from an installer that did not add it to PATH. Either turn off the placeholder under Settings → Apps → Advanced app settings → App execution aliases (switch off `python.exe` and `python3.exe`), or create the venv yourself and run install again, which then skips the Python check:
+If you need to install Python, the download on [python.org](https://www.python.org/downloads/) may give you 3.15. On Windows, python.org's download is the Python install manager, and it installs the newest Python by default. Add 3.14 next to it, then run install:
 
 ```powershell
-uv venv --seed --python 3.12 .venv           # or: <path to python.exe> -m venv .venv
+py install 3.14
 .\journal install
 ```
 
-You do not need to activate the venv, whatever uv suggests. `journal` runs the Python inside `.venv` directly.
+On macOS or Linux, choose a 3.14 release from the list under *Looking for a specific release?* on python.org, or install `python3.14` from your package manager.
+
+If install says it cannot find a supported Python even though you have one, for example one installed with uv, create the venv yourself and run install again:
+
+```powershell
+uv venv --seed --python 3.14 .venv           # or: <path to python.exe> -m venv .venv
+.\journal install
+```
+
+If `.venv` was made with an unsupported Python, install says so. Delete the `.venv` folder and run it again. You do not need to activate the venv, whatever uv suggests. `journal` runs the Python inside `.venv` directly.
 
 ### 2. Run it
 
