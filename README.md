@@ -121,7 +121,7 @@ This will not change in a later version. The server keeps its open conversation,
 - Do not put it behind a reverse proxy and share the URL.
 - Do not run it for more than one person. A multi-user deployment is unsafe.
 
-**On a computer you share, other people can read it.** `127.0.0.1` means *this computer*, not *this user*. While the journal is running, anyone signed in to another account on the same machine can open it in their browser and read and write in it, as you. They can also open the files directly if the folder you cloned into is readable by other accounts. On Windows, a folder made directly on `C:\`, such as `C:\apps`, is readable by every account. Your user folder (`C:\Users\<you>`) is not. If you share a computer, clone the journal inside your user folder, and stop it with `journal stop` when you are not using it.
+**On a computer you share, other people can read it.** `127.0.0.1` means *this computer*, not *this user*. While the journal is running, anyone signed in to another account on the same machine can open it in their browser and read and write in it, as you. They can also open the files directly if the folder you cloned into is readable by other accounts. On Windows, a folder made directly on `C:\`, such as `C:\apps`, is readable by every account. Your own user folder, the one named after your account, is not. If you share a computer, clone the journal inside your user folder, and stop it with `journal stop` when you are not using it.
 
 If you want a journal several people can use, start from a different codebase.
 
