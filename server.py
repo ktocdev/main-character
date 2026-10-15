@@ -3495,7 +3495,7 @@ if __name__ == "__main__":
         # uvicorn's own message for this is a WinError number. The usual cause
         # is a journal still running from a terminal that was closed, and
         # the author needs the way to stop it, not the errno.
-        stop = r".\journal stop" if os.name == "nt" else "./journal stop"
+        stop = "./journal stop"
         print(f"\n  port {PORT} is already in use, so this journal cannot start.\n"
               f"  It is probably another journal, perhaps one whose terminal was closed.\n"
               f"  To use that one, open http://{HOST}:{PORT}\n"

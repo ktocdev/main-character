@@ -10,8 +10,9 @@ rem   journal stop            stop the running journal and free its port
 rem   journal sandbox-reset   stop the 8145 sandbox and relaunch it from a clean first run
 rem   journal sandbox         relaunch the 8145 sandbox, keeping what the last run left
 rem
-rem In PowerShell, type .\journal -- PowerShell does not run commands from the
-rem current directory by bare name.
+rem In PowerShell, type ./journal (or .\journal) -- PowerShell does not run
+rem commands from the current directory by bare name. In Command Prompt, type
+rem journal with no prefix.
 setlocal
 cd /d "%~dp0"
 set "VENV_PY=.venv\Scripts\python.exe"
@@ -52,7 +53,7 @@ if not exist .env (
   echo created .env -- the journal asks for your API key the first time it starts
 )
 echo.
-echo installed. Run: .\journal start
+echo installed. Run: ./journal start
 exit /b 0
 
 :no_python
@@ -62,17 +63,17 @@ echo Otherwise install Python 3.14 from https://www.python.org/downloads/ -- see
 exit /b 1
 
 :start
-if not exist "%VENV_PY%" (echo not installed yet -- run: .\journal install & exit /b 1)
+if not exist "%VENV_PY%" (echo not installed yet -- run: ./journal install & exit /b 1)
 "%VENV_PY%" server.py
 exit /b %errorlevel%
 
 :restart
-if not exist "%VENV_PY%" (echo not installed yet -- run: .\journal install & exit /b 1)
+if not exist "%VENV_PY%" (echo not installed yet -- run: ./journal install & exit /b 1)
 "%VENV_PY%" scripts\restart_journal.py
 exit /b %errorlevel%
 
 :stop
-if not exist "%VENV_PY%" (echo not installed yet -- run: .\journal install & exit /b 1)
+if not exist "%VENV_PY%" (echo not installed yet -- run: ./journal install & exit /b 1)
 "%VENV_PY%" scripts\stop_journal.py
 exit /b %errorlevel%
 
