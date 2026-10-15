@@ -339,8 +339,13 @@ def main():
         refuse_if_unsandboxed()
 
     marker = CHROMA_DIR / ".install-complete"
+    # Set beside the completion marker, cleared by the demo when it starts:
+    # a build nobody has visited yet is already the opening state, so the
+    # restart into it can skip the per-visit reset (server.restart).
+    unvisited = CHROMA_DIR / ".unvisited"
     if not args.dry_run:
         marker.unlink(missing_ok=True)
+        unvisited.unlink(missing_ok=True)
 
     if args.wipe and not args.dry_run:
         wipe()
@@ -390,6 +395,7 @@ def main():
         summarizer.sync_summary_embeddings(quiet=True)
         dream_store.build_index()
         marker.touch()
+        unvisited.touch()
 
     print(f"\ndone. {'(dry run, nothing written)' if args.dry_run else ''}")
     if not args.dry_run and args.wipe:

@@ -851,7 +851,7 @@ async function loadSeed() {
     + demoBuildWait() + '. Each visit rebuilds the demo to clear previous writing.';
   if (!confirm('Restart on the demo journal?\n\nIt has its own entries, '
       + 'entities and summaries \u2014 nothing you do there touches yours. '
-      + 'Any restart brings you back. All demo data is reset on each visit; rebuilding may take around twenty seconds.' + build)) return;
+      + 'Any restart brings you back. All demo data is reset on each visit; rebuilding takes about a minute.' + build)) return;
   btn.disabled = true;
   // Built on demand when it is missing. Until this, the button's whole
   // failure mode was a 409 naming a command to go and run -- a fine thing

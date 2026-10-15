@@ -129,6 +129,9 @@ def startup():
     # was a stack trace in a terminal. Everything else still loads: the data
     # dirs are empty on a first run, which is a state the app already handles.
     STATE["client"] = get_client() if config.is_configured() else None
+    # Opened now, so the next trip in resets whatever is written here.
+    if SEED_INSTANCE:
+        (SEED_ROOT / "chroma_data" / ".unvisited").unlink(missing_ok=True)
     STATE["collection"] = get_collection()
     STATE["entity_index"] = _load_entity_index()
     # the open session survives restarts — rebuild the conversation from it
@@ -1174,9 +1177,9 @@ def _embedder_cached():
     ever asked for -- not at startup, not when a collection is opened -- and
     the passage index's model (`passages.py`, about 130 MB) is fetched the
     same way. Both are cached under the *user's* home rather than the
-    project, so each is paid once per machine, by whatever embeds first. For
+    project, so each is paid once per user account, by whatever embeds first. For
     someone who clones the repo and looks at the demo before writing
-    anything, that is the demo build, which turns twenty seconds into a few
+    anything, that is the demo build, which turns about a minute into two or three
     minutes. Reported only so the two doors into the demo can name the wait
     they are about to impose instead of listing both possibilities and
     leaving the reader to guess which one they are in.
@@ -1212,6 +1215,12 @@ def _demo_built() -> bool:
     """
     return ((SEED_ROOT / "chroma_data" / "chroma.sqlite3").is_file()
             and (SEED_ROOT / "chroma_data" / ".install-complete").is_file())
+
+
+def _demo_unvisited() -> bool:
+    """Whether the demo was built and has not been opened since. Set by the
+    installer, cleared by the demo instance at startup."""
+    return (SEED_ROOT / "chroma_data" / ".unvisited").is_file()
 
 
 @app.post("/api/setup/install-demo")
@@ -1723,8 +1732,12 @@ def restart_server(body: RestartIn | None = None):
         if not _DEMO_LOCK.acquire(blocking=False):
             return JSONResponse({"error": "the demo is already being rebuilt"}, status_code=409)
         try:
-            with _busy():
-                reset_demo_state.restore(SEED_ROOT)
+            # A build no one has visited yet is already the opening state.
+            # Rebuilding it again doubled the wait on the first trip in
+            # from the wizard, which builds and then restarts.
+            if not _demo_unvisited():
+                with _busy():
+                    reset_demo_state.restore(SEED_ROOT)
         except (OSError, subprocess.TimeoutExpired) as e:
             return JSONResponse(
                 {"error": f"could not reset the demo to its opening state: "

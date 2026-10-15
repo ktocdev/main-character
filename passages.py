@@ -136,7 +136,7 @@ def _download() -> str:
 
     One file at a time, with retries: on some connections Hugging Face resets
     the parallel downloader every time, and a retried file resumes where it
-    stopped. About 130 MB, once per machine.
+    stopped. About 130 MB, once per user account.
     """
     global _download_failed
     from huggingface_hub import snapshot_download
@@ -147,7 +147,7 @@ def _download() -> str:
         raise ModelUnavailable(_download_failed[1])
     repo, files = _model_files()
     print(f"Downloading the search model {EMBED_MODEL} (about 130 MB, once "
-          f"per machine) to {MODEL_CACHE}", file=sys.stderr, flush=True)
+          f"per user account) to {MODEL_CACHE}", file=sys.stderr, flush=True)
     for attempt in range(1, _DOWNLOAD_TRIES + 1):
         try:
             with warnings.catch_warnings():

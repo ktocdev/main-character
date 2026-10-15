@@ -10,7 +10,7 @@ it is derived, it is binary, and it is large. This is what makes leaving it
 behind safe -- everything in it can be recomputed from `journal_entries/`
 and the derived stores, on local embedding models: the MiniLM ChromaDB
 ships with, and the passage index's model (`passages.py`), which is
-downloaded once per machine the first time it is needed. **No API key, no
+downloaded once per user account the first time it is needed. **No API key, no
 cost.** Run it after restoring an export, after a corrupted index, after
 changing `MC_EMBED_MODEL`, or to find out whether the round trip really
 works.

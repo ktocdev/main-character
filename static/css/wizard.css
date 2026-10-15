@@ -99,6 +99,17 @@ body.setting-up { overflow: hidden; }
   border-top: 1px solid var(--border-default);
 }
 
+/* The key step: the check button sits on the field's row, and the demo door
+   is a button rather than an inline link so it can be found at a glance. */
+.wiz-key-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+.wiz-key-row input { flex: 1; min-width: 0; }
+.wiz-key-row button.send { height: auto; }
+.wiz-aside p { margin: var(--space-3) 0 0; }
+
 .wiz-warn {
   font-family: var(--font-ui);
   font-size: var(--font-xs);
