@@ -24,7 +24,7 @@
     written into a collection that isn't built brings every dream back;
   * the search tab lists each entry once, with the passage that matched.
 
-These run the real model (downloaded once per machine, like chroma's own).
+These run the real model (downloaded once per user account, like chroma's own).
 Everything writes to tmp_path.
 """
 

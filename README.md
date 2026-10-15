@@ -28,7 +28,7 @@ cd main-character
 
 This creates `.venv`, installs from the lock file and copies `.env.example` to `.env`. It is safe to run again. The install is large and slow because it pulls in ChromaDB's full dependency tree, including onnxruntime and tokenizers, plus fastembed, so that embeddings run on your machine instead of over the network. Install from the lock file. `requirements.txt` lists the same dependencies unpinned, for reference only.
 
-**Python 3.12, 3.13 or 3.14.** Python 3.15 is not supported yet: onnxruntime, which runs the local embedding models, has not published a build for it, so the install fails. Python is installed once per machine, not once per copy of the journal. Each copy gets its own `.venv`, built from that one install, and install picks the newest supported Python it finds.
+**Python 3.12, 3.13 or 3.14.** Python 3.15 is not supported yet: onnxruntime, which runs the local embedding models, has not published a build for it, so the install fails. Python is installed once, not once per copy of the journal. Each copy gets its own `.venv`, built from that one install, and install picks the newest supported Python it finds.
 
 On Windows, install Python with:
 
@@ -73,7 +73,7 @@ It opens mid-week, three days after the author last closed a chapter. You can re
 ./journal start                              # Windows: .\journal start
 ```
 
-Then open **Settings → load demo journal**, or choose the demo on the first-run screen if you have not added a key yet. The first visit builds the demo's search index, which takes about twenty seconds, or a few minutes if the embedding models still have to download.
+Then open **Settings → load demo journal**, or choose the demo on the first-run screen if you have not added a key yet. The first visit builds the demo's search index, which takes about a minute, or two or three if the embedding models still have to download.
 
 The demo costs nothing because embeddings are computed locally and the replies are real Claude output, captured once and committed to this repo. Nothing calls the API. In demo mode the Anthropic SDK is never constructed, and the test suite checks this.
 
@@ -95,7 +95,7 @@ Everything lives in files on your disk. Three commands, also available under Set
 
 - `python export.py` writes the whole journal to a folder: every entry as markdown, one `entries.json` containing all of them, and everything the pipeline inferred. You do not need this app to read any of it.
 - `python backup.py` writes the same export as a single dated zip. The zip lands next to the journal on the same disk, so copy it somewhere that will outlive the machine.
-- `python rebuild_index.py` rebuilds the search index from the markdown, for free. The first time, it downloads the search model (about 130 MB, once per machine, to `~/.cache/main-character`). After that it works offline. For a journal of a few hundred entries it takes a few minutes. The export leaves the index out because the index can be rebuilt from what the export already contains.
+- `python rebuild_index.py` rebuilds the search index from the markdown, for free. The first time, it downloads the search model (about 130 MB, once per user account, to `~/.cache/main-character`). After that it works offline. For a journal of a few hundred entries it takes a few minutes. The export leaves the index out because the index can be rebuilt from what the export already contains.
 
 Where it all sits:
 

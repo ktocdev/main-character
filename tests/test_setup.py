@@ -90,7 +90,7 @@ def test_status_reports_whether_setup_is_needed(client, monkeypatch):
 def test_status_reports_whether_the_demo_has_been_built(
         client, monkeypatch, tmp_path):
     """What lets the UI mention the build wait exactly once. Both doors into
-    the demo -- the wizard's and Settings' -- warn about the twenty seconds
+    the demo -- the wizard's and Settings' -- warn about the minute
     only while there is something to warn about; a warning that fired every
     time would train the reader to ignore it.
 
@@ -111,7 +111,7 @@ EF_MODULE = "chromadb.utils.embedding_functions.onnx_mini_lm_l6_v2"
 
 def test_status_says_whether_the_embedding_model_is_already_here(
         client, monkeypatch, tmp_path):
-    """The difference between "twenty seconds" and "a few minutes", and the
+    """The difference between "about a minute" and "two or three minutes", and the
     reason the wait wording is not one fixed string.
 
     Chroma fetches all-MiniLM-L6-v2 at the first embed on the machine and
@@ -137,7 +137,7 @@ def test_status_says_whether_the_embedding_model_is_already_here(
 def test_the_passage_model_counts_too(client, monkeypatch, tmp_path):
     """The demo build also embeds its search passages with the passage
     index's own model (passages.py), a download of its own. MiniLM on disk
-    is not "twenty seconds" while that one is missing."""
+    is not "about a minute" while that one is missing."""
     (tmp_path / "onnx").mkdir()
     (tmp_path / "onnx" / "model.onnx").touch()
     fake = SimpleNamespace(ONNXMiniLM_L6_V2=SimpleNamespace(

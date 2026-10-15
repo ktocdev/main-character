@@ -26,7 +26,7 @@ The companion never reads the whole journal. It reads what the search picked, pl
 
 Embeddings are computed locally, so building and searching the indexes never calls an API. Two small models do it:
 
-- **snowflake-arctic-embed-s** (`passages.py`) embeds everything that is searched by meaning: the passage index, the summaries and dreams. It is trained to match a question to the passage that answers it, and reads 512 tokens. Entries are split into passages of about 120 tokens so that every part of a long entry can be found, not only its opening; a long dream is split the same way. It is downloaded once per machine (about 130 MB) to `~/.cache/main-character`.
+- **snowflake-arctic-embed-s** (`passages.py`) embeds everything that is searched by meaning: the passage index, the summaries and dreams. It is trained to match a question to the passage that answers it, and reads 512 tokens. Entries are split into passages of about 120 tokens so that every part of a long entry can be found, not only its opening; a long dream is split the same way. It is downloaded once per user account (about 130 MB) to `~/.cache/main-character`.
 - **all-MiniLM-L6-v2**, Chroma's built-in model, embeds the journal chunks. It reads only the first 256 tokens (about 1,000 characters) of what it is given, which is why search by meaning moved off them. Search uses them only until the passage index is built.
 
 Keyword search needs no model: its index is built in memory from the passage index's text on the first search, in under a second, and again whenever the passage index changes.

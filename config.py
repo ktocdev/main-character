@@ -231,7 +231,7 @@ PASSAGE_NEIGHBORS = int(os.getenv("MC_PASSAGE_NEIGHBORS", "1"))
 # three; until then, search falls back to the journal chunks rather than mix
 # two models.
 EMBED_MODEL = os.getenv("MC_EMBED_MODEL", "snowflake/snowflake-arctic-embed-s").strip()
-# Where that model is downloaded to: once per machine, like chroma's own
+# Where that model is downloaded to: once per user account, like chroma's own
 # model under ~/.cache/chroma. Kept short -- Hugging Face's cache layout
 # nests deep enough to pass Windows' 260-character path limit.
 MODEL_CACHE = Path(os.getenv("MC_MODEL_CACHE", Path.home() / ".cache" / "main-character"))

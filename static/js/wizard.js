@@ -81,30 +81,28 @@ function renderKey() {
     '  computer, against your own Anthropic',
     '  API key.</p>',
     '<label class="wiz-label" for="wiz-key">Anthropic API key</label>',
-    '<input type="password" id="wiz-key" autocomplete="off" spellcheck="false"',
-    '       placeholder="sk-ant-...">',
-    '<p class="wiz-help">Get one from the',
-    '  <a href="https://console.anthropic.com/settings/keys" target="_blank"',
-    '     rel="noopener">Anthropic Console</a>. It is written to a',
-    '  <code>.env</code> file on this computer and goes nowhere except to',
-    '  Anthropic when you write. Checking it here makes one very small real',
-    '  call, costing a fraction of a cent, because that is the only way',
-    '  to find out whether a key actually works.</p>',
-    '<div class="wiz-actions">',
+    '<div class="wiz-key-row">',
+    '  <input type="password" id="wiz-key" autocomplete="off" spellcheck="false"',
+    '         placeholder="sk-ant-...">',
     '  <button class="send" id="wiz-key-go">check this key</button>',
     '</div>',
-    '<p class="wiz-aside">No key yet?',
-    '  <a href="#" id="wiz-skip">look around the demo journal first</a>',
-    '  (32 entries and 1 dream entry). The newest 3 are still in the open chapter,',
-    '  so close it to add them to journal memory. The life is fictional and the replies are recorded.',
-    '  Nothing is spent. Demo writing is stored locally until the next demo visit, when all demo data is reset.' + buildNote() + '</p>',
+    '<p class="wiz-help">Get one from the',
+    '  <a href="https://console.anthropic.com/settings/keys" target="_blank"',
+    '     rel="noopener">Anthropic Console</a>. It is saved on this computer',
+    '  and sent only to Anthropic. Checking it costs a fraction of a cent.</p>',
+    '<div class="wiz-aside">',
+    '  <button class="quiet" id="wiz-skip">try demo</button>',
+    '  <p>A fictional journal of 32 entries and 1 dream, with recorded replies,',
+    '  so no API calls. The newest 3 are still in the open chapter: close it to',
+    '  add them to journal memory.' + buildNote() + '</p>',
+    '</div>',
   ].join('\n');
 
   const input = $('wiz-key');
   input.focus();
   input.onkeydown = e => { if (e.key === 'Enter') checkKey(); };
   $('wiz-key-go').onclick = checkKey;
-  $('wiz-skip').onclick = e => { e.preventDefault(); lookAround(); };
+  $('wiz-skip').onclick = lookAround;
 }
 
 async function checkKey() {
@@ -440,14 +438,14 @@ async function finish(into) {
 async function lookAround() {
   const go = $('wiz-key-go'), skip = $('wiz-skip');
   if (go) go.disabled = true;
-  if (skip) skip.style.pointerEvents = 'none';
+  if (skip) skip.disabled = true;
   if (await installDemo(say)) {
     // `saved: false` -- there is genuinely nothing saved to reassure anyone
     // about, and a refusal that claimed otherwise would be inventing one.
     await restartServer(note(), false, 'seed');
   }
   if (go) go.disabled = false;
-  if (skip) skip.style.pointerEvents = '';
+  if (skip) skip.disabled = false;
 }
 
 // ---- opening ----

@@ -116,18 +116,19 @@ export async function refreshStatus() {
 // to disagree, and because the estimate is the part most likely to change.
 //
 // The reason there is more than one answer: the two local embedding models
-// (about 220MB together; see passages.py) are fetched at the first embed on
-// the machine, not at install and not per journal. From the wizard that is almost always this build, since a
-// fresh clone has embedded nothing yet. From Settings it usually is not,
+// (about 220MB together; see passages.py) are fetched the first time this
+// user account embeds anything, not at install and not per journal. From the
+// wizard that is almost always this build, since a fresh clone has embedded
+// nothing yet. From Settings it usually is not,
 // because writing a single entry already paid for it. Saying which one the
 // reader is in beats listing both and leaving them to work it out.
 export function demoBuildWait() {
   if (state.embedderCached === false) {
-    return 'a few minutes, while the embedding models (about 220MB) download '
-      + '(once per machine, not once per journal)';
+    return 'two or three minutes, since the embedding models (about 220MB) '
+      + 'download first. After that they are reused';
   }
-  if (state.embedderCached === true) return 'around twenty seconds';
-  return 'around twenty seconds, or a few minutes if the embedding models '
+  if (state.embedderCached === true) return 'about a minute';
+  return 'about a minute, or two or three if the embedding models '
     + 'still have to download';
 }
 

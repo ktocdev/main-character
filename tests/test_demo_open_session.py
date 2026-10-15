@@ -275,6 +275,45 @@ def test_restarting_into_the_demo_restores_its_opening_state(
     assert calls == [install]
 
 
+def test_a_fresh_build_is_marked_unvisited(installed):
+    assert (installed.root / "chroma_data" / ".unvisited").is_file()
+
+
+def test_restarting_into_an_unvisited_demo_skips_the_rebuild(
+        tmp_path, monkeypatch):
+    """The wizard builds the demo and then restarts into it. Resetting a
+    build no one has opened only ran the importer a second time."""
+    monkeypatch.setattr(env_file, "ENV_PATH", tmp_path / ".env")
+    install = tmp_path / "install"
+    _fake_install(install)
+    (install / "chroma_data" / ".unvisited").touch()
+    monkeypatch.setattr(server, "SEED_ROOT", install)
+    calls = []
+    monkeypatch.setattr(reset_demo_state, "restore", lambda path: calls.append(path))
+    monkeypatch.setitem(server.SERVER, "instance", SimpleNamespace())
+    monkeypatch.setitem(server.RESTART, "requested", False)
+    monkeypatch.setitem(server.RESTART, "into", "journal")
+
+    with TestClient(server.app, base_url=BASE) as client:
+        r = client.post("/api/restart", json={"into": "seed"})
+    assert r.status_code == 200
+    assert calls == []
+
+
+def test_the_demo_clears_unvisited_when_it_starts(tmp_path, monkeypatch):
+    monkeypatch.setattr(env_file, "ENV_PATH", tmp_path / ".env")
+    install = tmp_path / "install"
+    _fake_install(install)
+    marker = install / "chroma_data" / ".unvisited"
+    marker.touch()
+    monkeypatch.setattr(server, "SEED_ROOT", install)
+    monkeypatch.setattr(server, "SEED_INSTANCE", True)
+
+    with TestClient(server.app, base_url=BASE):
+        pass
+    assert not marker.exists()
+
+
 def test_a_plain_restart_leaves_the_demo_alone(tmp_path, monkeypatch):
     monkeypatch.setattr(env_file, "ENV_PATH", tmp_path / ".env")
     install = tmp_path / "install"

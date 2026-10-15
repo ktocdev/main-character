@@ -72,5 +72,5 @@ Both exist because of real incidents; don't work around them.
 The embedding model caches live in the user's home (`~/.cache/chroma` for
 MiniLM, `~/.cache/main-character` for the passage index's model), not the
 sandbox, so a reset doesn't clear them. On a machine that has ever embedded
-anything, the demo build shows the "around twenty seconds" wording, never the
+anything, the demo build shows the "about a minute" wording, never the
 first-download one.
