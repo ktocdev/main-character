@@ -5,11 +5,15 @@
      4px radius literal. */
   #settings { display: flex; flex-direction: column; padding-bottom: 0; }
   #settings-scroll { display: flex; flex-direction: column; gap: 2.4rem; padding: 1.4rem 0 2rem; }
+  /* the groups loadSettings() renders sit one level down, so they need the same gap */
+  #settings-body { display: flex; flex-direction: column; gap: 2.4rem; }
   #settings-intro { font-size: .95rem; color: var(--text-muted); text-wrap: pretty; }
 
   .set-group { display: flex; flex-direction: column; gap: 1.4rem; }
   .set-group > .rule { padding-bottom: .4rem; }
   .set-group > .set-help { margin: -.4rem 0 0; }
+  /* the data result slot is empty until an action runs; empty, it would still take a gap */
+  #set-data-note:empty { display: none; }
   .set-row label:not(.check-row), .set-row .set-label { display: block; font-size: 1rem; color: var(--text-default); margin-bottom: .35rem; }
   .set-control select, .set-control input[type=text], .set-control input[type=password] {
     width: min(100%, 22rem); background: var(--bg-muted); color: var(--text-default);
