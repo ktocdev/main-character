@@ -20,6 +20,7 @@ Layout (all gitignored — this is personal data):
     entity_graph/things/    one markdown doc per thing (bands, games, shows...)
     entity_graph/animals/   one markdown doc per animal (pets, a friend's dog...)
     entity_graph/index.json name -> doc path, used by the companion
+    entity_graph/summaries.json  profiles of the well-known ones (entity_summaries.py)
 """
 
 import json
@@ -40,6 +41,7 @@ from rag_journal import get_collection
 RAW_DIR = ENTITY_DIR / "raw"
 CURATION_FILE = ENTITY_DIR / "curation.json"
 GROUPS_FILE = ENTITY_DIR / "groups.json"
+SUMMARY_FILE = ENTITY_DIR / "summaries.json"
 SEGMENT_CHARS = 45_000  # long conversations are split, not truncated
 # One writer at a time on the graph's files (raw cache, curation, groups,
 # docs, index). A re-extract runs for minutes in the background, beside
@@ -581,6 +583,16 @@ def load_index() -> dict:
     """The built index, name -> info; empty before the first build."""
     path = ENTITY_DIR / "index.json"
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+def load_summaries() -> dict:
+    """curation key -> summary record (entity_summaries.py writes them)."""
+    return json.loads(SUMMARY_FILE.read_text(encoding="utf-8")) if SUMMARY_FILE.exists() else {}
+
+
+def save_summaries(summaries: dict):
+    ENTITY_DIR.mkdir(parents=True, exist_ok=True)
+    SUMMARY_FILE.write_text(json.dumps(summaries, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def save_curation(curation: dict):
@@ -1312,6 +1324,7 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
     reviewed_keys = {r.lower() for r in curation["reviewed"]}
     not_mixed = {k.lower() for k in curation["not_mixed"]}
     retired_gs = retired_groups(groups)
+    summaries = load_summaries()
 
     # Clear generated docs so merged/deleted entities don't leave stale files
     for kind_dir in GROUP_FOR_KIND.values():
@@ -1362,6 +1375,12 @@ def build_entity_docs(records: list[dict], _again: bool = True) -> dict:
             lines.append("status: retired (a past chapter). Don't bring them "
                          "up unless the author does.")
         lines += ["---", ""]
+        # the profile first: the companion reads a doc's opening 4000
+        # characters, which for someone long known is otherwise only the
+        # oldest observations
+        summary = summaries.get(curation_key(kind, ent["name"]))
+        if summary:
+            lines += ["## Summary", "", summary["text"], "", "## Observations", ""]
         for date, title, observations in ent["timeline"]:
             lines.append(f"### {date} — {title}")
             for obs in observations:
@@ -1472,7 +1491,8 @@ def _restore_curation(fields: dict):
 
 def record_change(description: str, kind: str, before, after, filename: str = ""):
     """kind: 'curation' (before/after are curation dicts), 'groups'
-    (before/after are the groups list), 'raw' (file text), or 'batch'
+    (before/after are the groups list), 'raw' (file text), 'summary'
+    (one entity's summary record or None, filename its key), or 'batch'
     ({"files": {name: text}, "curation": dict, "groups": list}, any part
     optional) for one change that touches several of them."""
     if kind == "curation":
@@ -1513,6 +1533,14 @@ def _apply_snapshot(entry: dict, direction: str):
             else:
                 g.pop("rollup", None)
         save_groups(payload)
+    elif entry["kind"] == "summary":
+        with WRITE_LOCK:
+            summaries = load_summaries()
+            if payload is None:
+                summaries.pop(entry["file"], None)
+            else:
+                summaries[entry["file"]] = payload
+            save_summaries(summaries)
     else:  # raw file content
         (RAW_DIR / Path(entry["file"]).name).write_text(payload, encoding="utf-8")
 

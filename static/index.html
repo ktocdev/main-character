@@ -571,9 +571,22 @@
 
       <div class="help-step">
         <span class="step-n">5</span>
+        <div class="step-h"><h3>summaries for the ones you know well</h3><span class="where">entities → clean up → api call: entity summaries…</span></div>
+        <div class="step-body"><p>Once an entity has 10 observations from at least 3 entries, its page opens with a short
+        summary of what it is in your life, and the observations fold away under it. The summary is discreet on purpose:
+        it leaves out health, money, romantic and legal details and the specifics of arguments, and names a hard stretch once,
+        kindly, if at all. The observations keep the full record. Closing a chapter writes up to ten: new ones, and refreshes of the ones
+        that have gained a few observations. <em>entity summaries…</em> catches up all at once, with a cost estimate first;
+        run it after the fixes above, so the summaries are written from a clean graph.
+        <em>edit</em> on a summary keeps your wording until you ask for a <em>rewrite</em>. The companion reads the summary
+        first when someone comes up.</p></div>
+      </div>
+
+      <div class="help-step">
+        <span class="step-n">6</span>
         <div class="step-h"><h3>ongoing habit</h3></div>
         <div class="step-body"><p>Memory now updates at the <em>summarize point</em>. Closing a chapter tags it, extracts
-        its entities, refreshes the week's arc, its summary, and the domain documents, scans it
+        its entities (and refreshes their summaries), refreshes the week's arc, its summary, and the domain documents, scans it
         for dreams, and integrates the chapter into a <em>life summary candidate</em>, a draft of the rolling
         summary you co-edit. When a banner on the write tab announces it, read the candidate
         through, edit it, and save it. The saved document is what every chapter opens with,
@@ -687,6 +700,7 @@
               </div>
               <button class="menu-item paid" id="things-review" data-tip-place="menu" title="Ask Claude which projects and places are really things (a game, a show, a band), then accept or skip each (uses the API)">things review</button>
               <button class="menu-item paid" id="parts-review" data-tip-place="menu" title="One-time: which merged names are really parts of something (Tabs of a project, a beach in a town). Claude suggests, you choose (uses the API)">parts review</button>
+              <button class="menu-item" id="summaries-open" data-tip-place="menu" title="Write a short summary for every entity with enough observations; the close keeps them current after that (uses the API, estimate first)">entity summaries…</button>
               <button class="menu-item" id="reextract-open" data-tip-place="menu" title="Re-run extraction for just the entries that mention a word or name (uses the API, estimate first)">re-extract…</button>
             </div>
           </div>
@@ -827,6 +841,7 @@
               <button class="quiet" id="group-add-btn">add</button>
             </div>
           </div>
+          <div id="entity-summary"></div>
           <div id="entity-doc"></div>
         </div>
         <div class="none" id="entity-none">

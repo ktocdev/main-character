@@ -43,6 +43,7 @@ import companion
 import config
 import demo_script
 import entities
+import entity_summaries
 import entry_catalog
 import metering
 import sessions
@@ -612,6 +613,8 @@ def _close_reserve() -> str:
                     "running -- wait for it to finish before closing again.")
         if _REEXTRACT["running"]:
             return "a re-extract is running -- close the chapter when it's done."
+        if _SUMMARIES["running"]:
+            return "entity summaries are being written -- close the chapter when they're done."
         _CLOSE["active"] = True
         return ""
 
@@ -671,6 +674,7 @@ def _after_close_refresh():
         try:
             with _close_step("entities"):
                 STATE["entity_index"] = entities.build(quiet=True)
+                _close_entity_summaries()
         except Exception as e:
             print(f"  post-close refresh: entities failed: {e}")
         try:
@@ -684,6 +688,29 @@ def _after_close_refresh():
         except Exception as e:
             print(f"  post-close refresh: dreams failed: {e}")
         _close_finish()
+
+
+def _close_entity_summaries():
+    """The close's part of entity summaries: write the missing and due ones
+    (entity_summaries.status), a few per close so a journal without any yet
+    doesn't hold the close up for minutes, then rebuild so the docs carry
+    them. Never
+    in the demo, which has recordings for its close and nothing else. A
+    failure here is logged and leaves the entities step done: the graph
+    itself is built."""
+    if MOCK_MODE:
+        return
+    try:
+        written = bool(entity_summaries.refresh(STATE["entity_index"],
+                                                limit=entity_summaries.PER_CLOSE)["done"])
+    except caps.CapExceeded as exc:
+        print(f"  post-close refresh: entity summaries stopped: {exc.detail}")
+        written = True  # whatever was written before the cap
+    except Exception as e:
+        print(f"  post-close refresh: entity summaries failed: {e}")
+        return
+    if written:
+        STATE["entity_index"] = entities.build(quiet=True)
 
 
 def _after_close_seed(archive_key: str):
@@ -2291,6 +2318,10 @@ def rename_entity(body: MergeIn):
     curation["rename"][entities.index_key(index, name)] = new_name
     entities.save_curation(curation)
     _record_curation(f"rename {name} to {new_name}", before)
+    # its summary comes along (undoing the rename leaves it here: the old
+    # name's next close writes it a new one)
+    entity_summaries.move(entities.curation_key(kind, entities.base_name(index, name)),
+                          entities.curation_key(kind, new_name))
     _rebuild()
     return {"ok": True, "renamed": name, "to": _display_for(kind, new_name, new_name)}
 
@@ -2331,10 +2362,69 @@ def entity_observations(name: str):
     if not canonical:
         return JSONResponse({"error": "not found"}, status_code=404)
     kind = index[canonical]["type"]
+    observations = entities.list_observations(kind, entities.base_name(index, canonical))
     return {
-        "name": canonical, "type": kind,
-        "observations": entities.list_observations(kind, entities.base_name(index, canonical)),
+        "name": canonical, "type": kind, "observations": observations,
+        "summary": entity_summaries.for_entity(index, canonical, observations),
     }
+
+
+class SummaryIn(BaseModel):
+    name: str
+    text: str = ""
+
+
+def _summary_target(name: str):
+    canonical = companion.resolve_entity(STATE["entity_index"], name)
+    if not canonical:
+        return None, JSONResponse({"error": "not found"}, status_code=404)
+    return canonical, None
+
+
+def _record_summary(description: str, change: dict):
+    entities.record_change(description, "summary", change["before"], change["after"], change["key"])
+
+
+@app.post("/api/entities/summary")
+@_entity_write
+def edit_entity_summary(body: SummaryIn):
+    """The author's own wording for an entity's summary. Kept as written:
+    the close never rewrites an edited one."""
+    name, err = _summary_target(body.name)
+    if err:
+        return err
+    if not body.text.strip():
+        return JSONResponse({"error": "a summary can't be empty"}, status_code=400)
+    change = entity_summaries.edit(STATE["entity_index"], name, body.text)
+    _record_summary(f"edit the summary of {name}", change)
+    _rebuild()
+    return {"ok": True, "name": name}
+
+
+@app.post("/api/entities/summary/rewrite")
+def rewrite_entity_summary(body: SummaryIn):
+    """Claude writes this one summary again, now, over whatever is there
+    (an edit included: undo brings it back). The call runs outside the
+    write lock; only storing it and the rebuild take it."""
+    if MOCK_MODE:
+        return JSONResponse({"error": "writing summaries needs your own journal and key, not the demo"},
+                            status_code=400)
+    name, err = _summary_target(body.name)
+    if err:
+        return err
+    cand = entity_summaries.candidate(STATE["entity_index"], name)
+    if not cand:
+        return JSONResponse({"error": f"nothing is noted about {name} yet"}, status_code=400)
+    try:
+        text = entity_summaries.write_one(get_client(), cand)
+    except caps.CapExceeded as exc:
+        return _refused(exc)
+    except Exception as exc:
+        return JSONResponse({"error": f"couldn't write it: {exc}"}, status_code=502)
+    with entities.WRITE_LOCK:
+        _record_summary(f"rewrite the summary of {name}", entity_summaries.store(cand, text))
+        _rebuild()
+    return {"ok": True, "name": name}
 
 
 @app.post("/api/observation")
@@ -3424,6 +3514,67 @@ def reextract(body: TermsIn, background_tasks: BackgroundTasks):
 @app.get("/api/entities/reextract/status")
 def reextract_status():
     return _REEXTRACT
+
+
+# ---- entity summaries, all at once (the clean up menu) ----
+# The first run writes one for every entity that qualifies; later ones
+# only what the close hasn't. Same shape as a re-extract: an estimate,
+# then a background run with a status to poll.
+_SUMMARIES = {"running": False, "done": 0, "total": 0, "current": "",
+              "result": None, "error": ""}
+
+
+@app.get("/api/entities/summaries/estimate")
+def summaries_estimate():
+    return entity_summaries.estimate(STATE["entity_index"])
+
+
+def _run_summaries():
+    def progress(i, total, name):
+        _SUMMARIES.update(done=i, total=total, current=name)
+    try:
+        result = entity_summaries.refresh(STATE["entity_index"], progress=progress)
+        _SUMMARIES.update(result=result, done=_SUMMARIES["total"], current="")
+    except caps.CapExceeded as exc:
+        _SUMMARIES.update(error=exc.detail, current="")
+    except Exception as exc:
+        _SUMMARIES.update(error=str(exc), current="")
+    finally:
+        # however it stopped, what's written goes into the docs
+        try:
+            with entities.WRITE_LOCK:
+                _rebuild()
+        except Exception as exc:
+            print(f"  entity summaries: rebuild failed: {exc}")
+            _SUMMARIES["error"] = _SUMMARIES["error"] or f"written, but the rebuild failed: {exc}"
+        _SUMMARIES["running"] = False
+
+
+@app.post("/api/entities/summaries")
+def write_summaries(background_tasks: BackgroundTasks):
+    if MOCK_MODE:
+        return JSONResponse({"error": "writing summaries needs your own journal and key, not the demo"},
+                            status_code=400)
+    try:
+        caps.check()
+    except caps.CapExceeded as exc:
+        return _refused(exc)
+    # under the close's lock, like a re-extract: the two never overlap
+    with _REEXTRACT_LOCK, _CLOSE_LOCK:
+        if _CLOSE["active"]:
+            return JSONResponse({"error": "a chapter is closing; try again when it's done"},
+                                status_code=409)
+        if _REEXTRACT["running"] or _SUMMARIES["running"]:
+            return JSONResponse({"error": "a re-extract or a summaries run is already going"},
+                                status_code=409)
+        _SUMMARIES.update(running=True, done=0, total=0, current="", result=None, error="")
+    _tracked(background_tasks, _run_summaries)
+    return {"ok": True}
+
+
+@app.get("/api/entities/summaries/status")
+def summaries_status():
+    return _SUMMARIES
 
 
 @app.get("/api/entities/deleted")

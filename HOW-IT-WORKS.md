@@ -21,7 +21,7 @@ The companion never reads the whole journal. It reads what the search picked, pl
 | `journal_entries/` | Every entry as markdown | Through the passage index |
 | `chroma_data/` | Local vector indexes: the journal (each entry stored in chunks of up to ~6,000 characters), the passage index (the same entries in short, overlapping passages, used only for search), the summaries, and dreams | Yes |
 | `summaries/` | Entry summaries, weekly arcs, domain docs, the life summary (`seed_summary.md`) | Through the summary index |
-| `entity_graph/` | People, projects, places, things (bands, podcasts, games, shows, movies, books, recurring events, and kinds you add yourself) and animals (pets, and other people's), with a profile doc each | Through the summary index, and by name |
+| `entity_graph/` | People, projects, places, things (bands, podcasts, games, shows, movies, books, recurring events, and kinds you add yourself) and animals (pets, and other people's), with a profile doc each, which opens with a short summary once there are 10 observations from 3 entries (`summaries.json`) | Through the summary index, and by name |
 | `patterns/`, `categories/`, `dreams/` | Pattern library, tags, dream realm | Dreams have their own index |
 
 Embeddings are computed locally, so building and searching the indexes never calls an API. Two small models do it:

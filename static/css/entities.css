@@ -303,6 +303,26 @@
     text-decoration: underline; text-underline-offset: .2em;
   }
 
+  /* summary: a short profile over the observations, which fold under it */
+  #entity-summary:not(:empty) { margin-top: 2rem; }
+  #entity-summary .rule { margin-bottom: .6rem; }
+  .summary-text { font-size: 1.05rem; line-height: 1.55; text-wrap: pretty; max-width: 40rem; }
+  .summary-meta {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4);
+    margin-top: var(--space-3); font: var(--font-2xs) var(--font-ui); color: var(--text-muted);
+  }
+  .summary-meta button.link {
+    border: 0; background: transparent; color: var(--text-muted); font: inherit; padding: 0; cursor: pointer;
+    text-decoration: underline; text-underline-offset: .2em;
+  }
+  .summary-meta button.link:hover { color: var(--text-default); }
+  .summary-edit { width: 100%; max-width: 40rem; font-size: 1rem; line-height: 1.5; }
+  #entity-summary .ent-actions { margin-top: var(--space-3); }
+  #entity-summary:not(:empty) + #entity-doc { margin-top: 1.2rem; }
+  .obs-fold { border-top: 1px solid var(--border-default); }
+  .obs-fold > summary { font-size: 1.1rem; }
+  .obs-fold .disclosure-body { display: block; padding-left: 0; }
+
   /* observations: a section rule, date eyebrows, one serif line each */
   #entity-doc { margin-top: 2rem; }
   #entity-doc .rule { margin-bottom: .2rem; }

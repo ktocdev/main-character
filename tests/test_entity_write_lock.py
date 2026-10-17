@@ -34,7 +34,9 @@ def test_every_entity_and_group_write_holds_the_lock():
     reads = {"/api/entities/suggest", "/api/entities/suggest-things", "/api/entities/suggest-parts",
              "/api/entities/reextract/preview",
              # only schedules the background run, whose writes take the lock
-             "/api/entities/reextract"}
+             "/api/entities/reextract", "/api/entities/summaries",
+             # the paid call runs unlocked; storing it and the rebuild take the lock
+             "/api/entities/summary/rewrite"}
     unlocked = [r.path for r in server.app.routes
                 if isinstance(r, APIRoute) and "POST" in r.methods
                 and (r.path.startswith(("/api/entities", "/api/groups")) or r.path in writes)
