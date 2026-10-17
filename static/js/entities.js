@@ -1104,12 +1104,26 @@ export async function showEntity(name) {
     }, `remove from group ${g}`));
   }
 
-  // observations grouped by date, each editable
+  renderSummary(r);
+
+  // observations grouped by date, each editable. Under a summary they
+  // fold away; splitting opens them, since that's picking among them
   const docEl = $('entity-doc');
-  docEl.innerHTML = '<div class="rule eyebrow">observations</div>';
   // splitting: a bar on top, a checkbox per observation, "all" per entry
   const splitting = splitFor === r.name && r.type === 'person';
   const pickKey = o => `${o.file}|${o.group}|${o.ent_index}|${o.obs_index}`;
+  let list = docEl;
+  if (r.summary?.text && !splitting) {
+    docEl.innerHTML = '<details class="disclosure obs-fold"><summary><span class="mark"></span><span></span></summary><div class="disclosure-body"></div></details>';
+    const fold = docEl.firstChild;
+    const n = r.observations.length;
+    fold.querySelector('summary span:last-child').textContent = `all ${n} observation${n === 1 ? '' : 's'}`;
+    fold.open = obsOpen.has(r.name);
+    fold.ontoggle = () => { fold.open ? obsOpen.add(r.name) : obsOpen.delete(r.name); };
+    list = fold.querySelector('.disclosure-body');
+  } else {
+    docEl.innerHTML = '<div class="rule eyebrow">observations</div>';
+  }
   if (splitting) docEl.appendChild(splitBar(r, info));
   // each entry's mention gets a date line saying what that entry called
   // it ("as coworker"), which is how two people under one name tell apart
@@ -1146,7 +1160,7 @@ export async function showEntity(name) {
         });
         d.append(' ', rel);
       }
-      docEl.appendChild(d);
+      list.appendChild(d);
     }
     const row = document.createElement('div');
     row.className = 'obs';
@@ -1191,13 +1205,140 @@ export async function showEntity(name) {
     }, 'x');
     row.appendChild(t);
     row.appendChild(ops);
-    docEl.appendChild(row);
+    list.appendChild(row);
   }
   if (!r.observations.length) {
     const e = document.createElement('p');
     e.className = 'gp-empty';
     e.textContent = 'nothing noted yet.';
-    docEl.appendChild(e);
+    list.appendChild(e);
+  }
+}
+
+// The summary: a short profile over the observations, once an entity has
+// enough of them (entity_summaries.py). The close writes and refreshes
+// them; edit keeps the author's wording until they ask for a rewrite.
+const obsOpen = new Set();   // entities whose folded observations are open
+function renderSummary(r) {
+  const el = $('entity-summary');
+  el.innerHTML = '';
+  const s = r.summary || {};
+  if (!s.text && !s.qualifies) return;
+  el.innerHTML = '<div class="rule eyebrow">summary</div>';
+  if (s.text) {
+    const p = document.createElement('p');
+    p.className = 'summary-text';
+    p.textContent = s.text;
+    el.appendChild(p);
+  }
+  const meta = document.createElement('div');
+  meta.className = 'summary-meta';
+  if (s.text) {
+    const since = r.observations.length - s.count;
+    meta.append((s.edited ? `your wording, ${fmtDate(s.written)}` : `written ${fmtDate(s.written)} from ${s.count} observations`)
+      + (s.status === 'due' || s.status === 'changed'
+        ? (since > 0 ? ` · ${since} new since` : ' · observations changed since') : ''));
+  } else {
+    meta.append('no summary yet; the next chapter close writes one');
+  }
+  const link = (label, title, fn) => {
+    const b = document.createElement('button');
+    b.className = 'link';
+    b.textContent = label;
+    b.title = title;
+    b.onclick = () => busy(b, fn, ...meta.querySelectorAll('button'));
+    meta.append(b);
+  };
+  if (s.text) link('edit', 'change the wording; yours is kept until you rewrite it', async () => editSummary(r, s));
+  link(s.text ? 'rewrite' : 'write it now', 'Claude writes it again from the observations (uses the API)', async () => {
+    if (s.edited && !confirm('Replace your wording with a new summary? Undo brings yours back.')) return;
+    if (await paid('a summary', () => api('/api/entities/summary/rewrite', {name: r.name}))) await reloadEntity(r.name);
+  });
+  el.appendChild(meta);
+}
+function editSummary(r, s) {
+  const el = $('entity-summary');
+  const ta = document.createElement('textarea');
+  ta.className = 'summary-edit';
+  ta.rows = 6;
+  ta.maxLength = 2000;
+  ta.value = s.text;
+  ta.setAttribute('aria-label', `summary of ${r.name}`);
+  const row = document.createElement('div');
+  row.className = 'ent-actions';
+  row.innerHTML = '<button class="filled sm">save</button><button class="quiet sm">cancel</button>';
+  const [save, cancel] = row.querySelectorAll('button');
+  el.querySelector('.summary-text').replaceWith(ta);
+  el.querySelector('.summary-meta').replaceWith(row);
+  cancel.onclick = () => renderSummary(r);
+  save.onclick = () => busy(save, async () => {
+    const text = ta.value.trim();
+    if (!text || text === s.text) { renderSummary(r); return; }
+    if (await api('/api/entities/summary', {name: r.name, text})) await reloadEntity(r.name);
+  }, cancel, ta);
+  ta.onkeydown = e => {
+    if (e.key === 'Escape') { e.stopPropagation(); renderSummary(r); }
+    else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) save.click();
+  };
+  ta.focus();
+}
+
+// ---- entity summaries, all at once ----
+// The first run writes a summary for every entity that has enough
+// observations; after that the close keeps them up to date, and this
+// only catches up what it missed. Estimate first, then a background run.
+async function summariesPanel() {
+  const panel = suggestPanel('entity summaries');
+  const w = panelSay(panel, 'counting…');
+  let r;
+  try { r = await (await fetch('/api/entities/summaries/estimate')).json(); }
+  catch { w.textContent = 'couldn\'t reach the server.'; return; }
+  w.remove();
+  // a run started earlier (this panel closed, the page reloaded) is still
+  // going: show it rather than offer a second one
+  const s = await (await fetch('/api/entities/summaries/status')).json().catch(() => ({}));
+  if (s.running) { watchSummaries(panel); return; }
+  if (!r.count) {
+    panelSay(panel, 'Every entity with enough observations has an up-to-date summary. The close keeps them that way.');
+    return;
+  }
+  panelSay(panel, `${r.count} entit${r.count === 1 ? 'y needs' : 'ies need'} a summary`
+    + (r.missing < r.count ? ` (${r.count - r.missing} to bring up to date)` : '')
+    + `. Writing them costs about $${r.estimate.toFixed(2)} on ${r.model}. Summaries leave out sensitive details; the observations under each keep the full record.`);
+  const go = document.createElement('button');
+  go.className = 'filled sm';
+  go.textContent = `write ${r.count} summar${r.count === 1 ? 'y' : 'ies'} (~$${r.estimate.toFixed(2)})`;
+  go.onclick = async () => {
+    if (await busy(go, () => paid('entity summaries', () => api('/api/entities/summaries', {})))) watchSummaries(panel);
+  };
+  panel.appendChild(go);
+}
+async function watchSummaries(panel) {
+  for (const b of panel.querySelectorAll('button.filled')) b.remove();
+  const line = panelSay(panel, 'starting…');
+  let misses = 0;
+  for (;;) {
+    let s;
+    try { s = await (await fetch('/api/entities/summaries/status')).json(); }
+    catch {
+      if (++misses > 20) { line.textContent = 'lost touch with the server. Open entity summaries again to check on it.'; return; }
+      await new Promise(r => setTimeout(r, 1500));
+      continue;
+    }
+    misses = 0;
+    if (!s.running) {
+      if (s.error) line.textContent = `stopped: ${s.error}`;
+      else {
+        const res = s.result || {done: [], failed: []};
+        line.textContent = `wrote ${res.done.length} summar${res.done.length === 1 ? 'y' : 'ies'}`
+          + (res.failed.length ? `; ${res.failed.length} failed and will be tried at the next close` : '') + '.';
+      }
+      await loadEntities();
+      if (state.selected && state.entities[state.selected]) showEntity(state.selected);
+      return;
+    }
+    line.textContent = s.total ? `${s.done + 1} of ${s.total} · ${s.current}` : 'starting…';
+    await new Promise(r => setTimeout(r, 1500));
   }
 }
 
@@ -1466,6 +1607,7 @@ export function init() {
   const tools = {
     'find-dups': findDups, 'find-generic': genericCleanup, 'animals-review': animalsReview,
     'things-review': thingsReview, 'parts-review': partsReview, 'reextract-open': reextractPanel,
+    'summaries-open': summariesPanel,
   };
   const held = b => paidRunning && b.classList.contains('paid');
   for (const [id, fn] of Object.entries(tools)) $(id).onclick = () => { if (held($(id))) return; setCleanupOpen(false); fn(); };
